@@ -1,0 +1,20 @@
+{
+  "name" : "jgap",
+  "version" : "1.0.0",
+  "dependencies" : [
+    {
+      "name" : "nlohmann-json",
+      "version>=" : "3.11.2"
+    },
+    "tbb",
+    "parallelstl",
+    {
+      "name" : "spdlog",
+      "version>=" : "1.15.1#1"
+    },
+    {
+      "name" : "eigen3",
+      "version>=": "3.4.0#5"
+    }
+  ]
+}
