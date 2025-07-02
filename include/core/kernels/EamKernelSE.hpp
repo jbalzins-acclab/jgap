@@ -5,6 +5,7 @@
 #include "data/kernels/EamKernelIndex.hpp"
 
 
+
 namespace jgap {
 
     class EamKernelSE : public Kernel<double, EamKernelIndex> {

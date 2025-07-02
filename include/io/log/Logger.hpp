@@ -4,6 +4,8 @@
 #include <string_view>
 #include <string>
 
+#include <stdexcept>
+
 using namespace std;
 
 namespace jgap {

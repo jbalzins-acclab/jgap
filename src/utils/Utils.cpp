@@ -10,7 +10,7 @@
 #include <Python.h>
 #include <sstream>
 #include <fstream>
-#include <Eigen/dense>
+#include <Eigen/Dense>
 
 using namespace std;
 

@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 #include <memory>
-#include <Eigen/dense>
+#include <Eigen/Dense>
 
 using namespace std;
 

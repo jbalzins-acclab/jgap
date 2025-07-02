@@ -26,29 +26,29 @@ int main() {
     Eigen::setNbThreads(6);
 
     const auto params2b = jgap::TwoBodyDescriptorParams{
-        .cutoff = 4.5,
-        .cutoffTransitionWidth = 1.0,
         .kernelType = jgap::TwoBodyDescriptorParams::KernelType::GAUSS,
         .sparsificationMethod = jgap::TwoBodyDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 20,
+        .cutoff = 4.5,
+        .cutoffTransitionWidth = 1.0,
         .energyScale = 10.0,
-        .lengthScale = 1.0
+        .lengthScale = 1.0,
+        .nSparsePointsPerSpeciesPair = 20,
     };
     shared_ptr<jgap::Descriptor> desc2b = make_shared<jgap::TwoBodyDescriptor>(params2b);
 
     constexpr auto densityParams = jgap::EamDensityCalculationParams{
         .pairFunction = jgap::EamDensityCalculationParams::PairFunction::POLYCUTOFF,
+        .speciesUse = jgap::EamDensityCalculationParams::SpeciesUse::BLIND,
         .cutoff = 4.5,
-        .rmin = 0,
-        .speciesUse = jgap::EamDensityCalculationParams::SpeciesUse::BLIND
+        .rmin = 0
     };
 
     const auto paramsEAM = jgap::EamDescriptorParams{
         .kernelType = jgap::EamDescriptorParams::KernelType::GAUSS,
         .sparsificationMethod = jgap::EamDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM,
         .nSparsePoints = 20,
-        .energyScale = 1.0,
         .lengthScale = 1.0,
+        .energyScale = 1.0,
         .defaultDensityCalculationParams = densityParams
     };
     shared_ptr<jgap::Descriptor> descEAM = make_shared<jgap::EamDescriptor>(paramsEAM);
@@ -56,11 +56,11 @@ int main() {
     const auto params3b = jgap::ThreeBodyDescriptorParams{
         .kernelType = jgap::ThreeBodyDescriptorParams::KernelType::GAUSS,
         .sparsificationMethod = jgap::ThreeBodyDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM,
-        .nSparsePointsPerSpecies = 500,
-        .energyScale = 1.0,
-        .lengthScale = 1.0,
         .cutoff = 3.7,
         .cutoffTransitionWidth = 0.6,
+        .lengthScale = 1.0,
+        .energyScale = 1.0,
+        .nSparsePointsPerSpecies = 500,
     };
     shared_ptr<jgap::Descriptor> desc3b = make_shared<jgap::ThreeBodyDescriptor>(params3b);
 

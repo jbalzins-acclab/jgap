@@ -2,6 +2,7 @@
 #define KERNEL_HPP
 
 #include "data/BasicDataTypes.hpp"
+#include <memory>
 
 namespace jgap {
 
