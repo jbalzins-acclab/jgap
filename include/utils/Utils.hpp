@@ -12,10 +12,7 @@
 using namespace std;
 
 namespace jgap {
-    string runBash(string_view command);
-    string executePythonScript(string_view pythonCode);
-    string xyzToJgapInput(string_view xyzFileName);
-    vector<AtomicStructure> readXyz(string_view fileName);
+    vector<AtomicStructure> readXyz(const string& fileName);
     Vector3 toInvariantTriplet(const pair<double, double> &distanceToNodes, double distanceBetweenNodes);
     vector<string> split(const string& s, char delimiter);
     void saveArray(const vector<double>& data, const string& filename);

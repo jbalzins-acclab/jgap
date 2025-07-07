@@ -3,7 +3,6 @@ project(jgap)
 
 set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 # cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +17,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(ParallelSTL CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
+#find_package(Boost REQUIRED COMPONENTS filesystem regex property_tree)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -52,15 +52,14 @@ set(APP_SOURCE_FILES
 
 add_executable(jgap_app ${APP_SOURCE_FILES})
 
-target_include_directories(jgap PRIVATE ${Python3_INCLUDE_DIRS})
-
 target_link_libraries(jgap PRIVATE
         TBB::tbb TBB::tbbmalloc
         pstl::ParallelSTL
         nlohmann_json::nlohmann_json
         spdlog::spdlog
-        ${Python3_LIBRARIES}
         Eigen3::Eigen
+        #Boost::filesystem
+        #Boost::regex
 )
 
 target_link_libraries(jgap_app PRIVATE
@@ -68,6 +67,7 @@ target_link_libraries(jgap_app PRIVATE
         nlohmann_json::nlohmann_json
 )
 
+# TODO doesn't work in CLion's cmake-build-debug ?
 add_custom_command(TARGET jgap_app POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources

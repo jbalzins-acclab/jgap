@@ -172,7 +172,7 @@ AtomicStructure makeDimer(Species species, double x) {
                 .position = {x,0,0}
             }
         },
-        .latticeVectors = {
+        .lattice = {
             Vector3{30.0, 0.0, 0.0},
             Vector3{0.0, 30.0, 0.0},
             Vector3{0.0, 0.0, 30.0},
@@ -223,7 +223,7 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
 
 
 auto equilateralTriangle_2b = AtomicStructure{
-    .latticeVectors = {
+    .lattice = {
         Vector3{100.0, 0.0, 0.0},
         Vector3{0.0, 100.0, 0.0},
         Vector3{0.0, 0.0, 100.0}

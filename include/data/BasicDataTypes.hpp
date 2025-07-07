@@ -146,7 +146,7 @@ namespace jgap {
     struct PotentialPrediction {
         optional<double> energy;
         optional<vector<Vector3>> forces;
-        optional<array<array<double, 3>, 3>> virials;
+        optional<array<Vector3, 3>> virials;
 
         PotentialPrediction operator+(const PotentialPrediction& other) const {
             optional<double> _energy;
@@ -171,7 +171,7 @@ namespace jgap {
     };
 
     struct AtomicStructure {
-        array<Vector3, 3> latticeVectors;
+        array<Vector3, 3> lattice;
         vector<AtomData> atoms;
 
         optional<string> configType;
@@ -179,7 +179,7 @@ namespace jgap {
         optional<double> energy;
         optional<double> energySigma;
 
-        optional<array<array<double, 3>, 3>> virials;
+        optional<array<Vector3, 3>> virials;
 
         void set(const PotentialPrediction& prediction);
         void adjust(const PotentialPrediction& prediction, bool subtract, bool setEmpty);

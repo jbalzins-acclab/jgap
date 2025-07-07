@@ -13,7 +13,7 @@ ThreeBodyDescriptorParams params3b;
 
 void initPythagorian3b() {
     pythagorian3b = AtomicStructure{
-        .latticeVectors = {
+        .lattice = {
             Vector3{20, 0, 0},
             Vector3{0, 20, 0},
             Vector3{0, 0, 20},
@@ -83,7 +83,7 @@ TEST(TestThreeBodyDescriptor, CovarianceEnergy) {
 
     auto result = desc3b.covariate({pythagorian3b});
     ASSERT_EQ(result.size(), 1);
-    ASSERT_NEAR(result[0].total, 2.0 * exp(-3.0/2.0) + exp(-2.0), 1e-6);
+    ASSERT_NEAR(result[0].total, 2.0 * (2.0 * exp(-3.0/2.0) + exp(-2.0)), 1e-6);
 }
 
 TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
@@ -103,18 +103,18 @@ TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
 
     auto result = desc3b.covariate({pythagorian3b});
     ASSERT_EQ(result.size(), 1);
-    ASSERT_NEAR(result[0].total, exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].total, 2.0 * exp(-3.0/2.0), 1e-6);
     ASSERT_NEAR(result[0].derivatives[0].z, 0, 1e-6);
     ASSERT_NEAR(result[0].derivatives[1].z, 0, 1e-6);
     ASSERT_NEAR(result[0].derivatives[2].z, 0, 1e-6);
 
-    ASSERT_NEAR(result[0].derivatives[0].x, -3.0 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].derivatives[0].y, 1.0 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[0].x, 2.0 * -3.0 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[0].y, 2.0 * 1.0 * exp(-3.0/2.0), 1e-6);
 
-    ASSERT_NEAR(result[0].derivatives[1].x, 2.2 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].derivatives[1].y, 0.6 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[1].x, 2.0 * 2.2 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[1].y, 2.0 * 0.6 * exp(-3.0/2.0), 1e-6);
 
-    ASSERT_NEAR(result[0].derivatives[2].x, 0.8 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].derivatives[2].y, -1.6 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[2].x, 2.0 * 0.8 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].derivatives[2].y, 2.0 * -1.6 * exp(-3.0/2.0), 1e-6);
 }
 

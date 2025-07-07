@@ -10,7 +10,7 @@
 using namespace jgap;
 
 auto equilateralTriangleEAM = AtomicStructure{
-    .latticeVectors = {
+    .lattice = {
         Vector3{100.0, 0.0, 0.0},
         Vector3{0.0, 100.0, 0.0},
         Vector3{0.0, 0.0, 100.0}
@@ -54,16 +54,16 @@ TEST(EamDescriptorTest, equilateralTriangle) {
 
     auto result = desc.covariate(equilateralTriangleEAM);
 
-    ASSERT_NEAR(result[0].total, 3*exp(-0.5), 1e-4);
-    ASSERT_NEAR(result[1].total, 3*exp(-0.5), 1e-4);
+    ASSERT_NEAR(result[0].total, 3.0*exp(-0.5), 1e-4);
+    ASSERT_NEAR(result[1].total, 3.0*exp(-0.5), 1e-4);
 
     auto atoms = equilateralTriangleEAM.atoms;
     for (int i: {0, 1, 2}) {
         Vector3 total0{0,0,0}, total2{0,0,0};
         for (int j: {0, 1, 2}) {
             if (i == j) continue;
-            total0 = total0 + (atoms[i].position - atoms[j].position).normalize() * 0.3125 * exp(-0.5);
-            total2 = total2 + (atoms[i].position - atoms[j].position).normalize() * -0.3125 * exp(-0.5);
+            total0 = total0 + (atoms[i].position - atoms[j].position).normalize() * 0.3125 * exp(-0.5) * 2.0;
+            total2 = total2 + (atoms[i].position - atoms[j].position).normalize() * -0.3125 * exp(-0.5) * 2.0;
         }
         ASSERT_NEAR((result[0].derivatives[i] - total0).norm(), 0, 1e-4);
         ASSERT_NEAR((result[1].derivatives[i] - total2).norm(), 0, 1e-4);

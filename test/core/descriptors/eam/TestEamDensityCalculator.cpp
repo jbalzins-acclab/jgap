@@ -8,7 +8,7 @@
 using namespace jgap;
 
 auto equilateralTriangleEDC = AtomicStructure{
-    .latticeVectors = {
+    .lattice = {
         Vector3{100.0, 0.0, 0.0},
         Vector3{0.0, 100.0, 0.0},
         Vector3{0.0, 0.0, 100.0}

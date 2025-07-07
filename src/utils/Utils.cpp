@@ -7,231 +7,155 @@
 #include <array>
 #include <string_view>
 #include <sstream>
-#include <Python.h>
 #include <sstream>
 #include <fstream>
 #include <Eigen/Dense>
 
+#include "io/log/Logger.hpp"
+
 using namespace std;
 
 namespace jgap {
-    string runBash(const string_view command) {
-        static array<char, 1000> buffer{};
-        string result;
-        const unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.data(), "r"), pclose);
-        if (!pipe) {
-            throw runtime_error("popen() failed!");
-        }
-        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-            result += buffer.data();
-        }
-        return result;
-    }
 
-    string executePythonScript(string_view pythonCode) {
+    vector<AtomicStructure> readXyz(const string& fileName) {
 
-        if (!Py_IsInitialized()) {
-            Py_Initialize();
+        vector<AtomicStructure> result;
+        ifstream file(fileName);
+
+        if (!file) {
+            Logger::logger->error( format("Error opening file {}", fileName), true);
         }
 
-        // Redirect stdout to capture output
-        PyRun_SimpleString("import sys, io\nsys.stdout = io.StringIO()");
-
-        // Get __main__ module and its namespace
-        PyObject* pModule = PyImport_AddModule("__main__");
-        if (!pModule) throw runtime_error("Failed to get __main__ module");
-
-        PyObject* pDict = PyModule_GetDict(pModule);
-
-        // Execute user code
-        PyObject* pResult = PyRun_String(pythonCode.data(), Py_file_input, pDict, pDict);
-        if (!pResult) {
-            PyErr_Print();
-            throw runtime_error("Python script execution failed");
-        }
-        Py_DECREF(pResult);
-
-        // Fetch sys.stdout.getvalue()
-        PyObject* sysModule = PyImport_ImportModule("sys");
-        if (!sysModule) throw runtime_error("Failed to import sys");
-
-        PyObject* stdoutObj = PyObject_GetAttrString(sysModule, "stdout");
-        PyObject* getvalueFunc = PyObject_GetAttrString(stdoutObj, "getvalue");
-
-        if (!stdoutObj || !getvalueFunc || !PyCallable_Check(getvalueFunc)) {
-            Py_XDECREF(sysModule);
-            Py_XDECREF(stdoutObj);
-            Py_XDECREF(getvalueFunc);
-            throw runtime_error("Failed to access sys.stdout.getvalue");
-        }
-
-        PyObject* outputStr = PyObject_CallObject(getvalueFunc, nullptr);
-        if (!outputStr) {
-            PyErr_Print();
-            throw runtime_error("Failed to call sys.stdout.getvalue()");
-        }
-
-        const char* output = PyUnicode_AsUTF8(outputStr);
-        string result = output ? output : "";
-
-        // Cleanup
-        Py_DECREF(outputStr);
-        Py_DECREF(getvalueFunc);
-        Py_DECREF(stdoutObj);
-        Py_DECREF(sysModule);
-
-        return result;
-    }
-
-    string xyzToJgapInput(const string_view xyzFileName) {
-        string pythonScript = R"(
-import ase.io, os
-boxes = ase.io.read('__filename__', index=':')
-
-print(len(boxes))
-for box in boxes:
-    # Mandatory:
-    for i in range(3):
-        for j in range(3):
-            print(box.get_cell(complete=True)[i][j])
-    print(len(box))
-    for atom in box:
-        print(atom.symbol, atom.position[0], atom.position[1], atom.position[2])
-
-    # Optional (1 - spec, 0 - not spec)
-    try:
-        print(1, box.get_potential_energy())
-    except RuntimeError:
-        print(0)
-
-    if 'config_type' in box.info:
-        print(1, box.info['config_type'])
-    else:
-        print(0)
-
-    varr = None
-    if 'virial' in box.info:
-        varr = box.info['virial']
-    elif 'virials' in box.info:
-        varr = box.info['virials']
-    else:
-        print(0)
-
-    if varr is not None:
-        print(1)
-        for i in range(3):
-            for j in range(3):
-                print(varr[i][j])
-
-    if 'momenta' in box.arrays:
-        print(1)
-        for velocity in box.get_velocities():
-            print(velocity[0], velocity[1], velocity[2])
-    else:
-        print(0)
-
-    farr = None
-    if 'forces' in box.arrays:
-        farr = box.arrays['forces']
-    elif 'force' in box.arrays:
-        farr = box.arrays['force']
-    else:
-        print(0)
-
-    if farr is not None:
-        print(1)
-        for force in farr:
-            print(force[0], force[1], force[2])
-)";
-        string placeholder = "__filename__";
-        pythonScript.replace(pythonScript.find(placeholder), placeholder.size(), xyzFileName);
-        return executePythonScript(pythonScript);
-    }
-
-    vector<AtomicStructure> readXyz(string_view fileName) {
-
-        string xyzMod = xyzToJgapInput(fileName);
-        istringstream inStream(xyzMod);
-
-        size_t nBoxes;
-        inStream >> nBoxes;
-
-        vector<AtomicStructure> result(nBoxes);
-        for (size_t boxIndex = 0; boxIndex < nBoxes; boxIndex++) {
-
-            array<Vector3, 3> cell{};
-
-            for (int i = 0; i < 3; i++) {
-                    inStream >> cell[i].x >> cell[i].y >> cell[i].z;
+        string line;
+        istringstream iss;
+        while (getline(file, line)) {
+            // n_atoms
+            size_t n;
+            iss = istringstream(line);
+            iss >> n;
+            if (!iss.eof()) {
+                Logger::logger->error( format("Expected single integer, got {}", line), true);
             }
 
-            result[boxIndex].latticeVectors = cell;
+            // metadata
+            getline(file, line);
 
-            size_t nAtoms;
-            inStream >> nAtoms;
+            if (!line.contains("pbc=\"T T T\"")) {
+                Logger::logger->error(format("No PBC? : {}", line), true);
+            }
 
+            array<Vector3, 3> lattice{};
+            if (size_t latticeStartIdx = line.find("Lattice=\""); latticeStartIdx != string::npos) {
+                latticeStartIdx += string("Lattice=\"").size();
+
+                size_t latticeEndIdx = line.find('\"', latticeStartIdx);
+                if (latticeEndIdx == string::npos) {
+                    Logger::logger->error(format("Lattice unspecified in {}", line), true);
+                }
+
+                string latticeStr = line.substr(latticeStartIdx, latticeEndIdx - latticeStartIdx);
+                iss = istringstream(latticeStr);
+                iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
+                    >> lattice[1].x >> lattice[1].y >> lattice[1].z
+                    >> lattice[2].x >> lattice[2].y >> lattice[2].z;
+            }
+            else {
+                Logger::logger->error(format("Lattice unspecified in {}", line), true);
+            }
+
+            optional<string> configType{};
+            if (size_t configTypeStartIdx = line.find("config_type="); configTypeStartIdx != string::npos) {
+                configTypeStartIdx += string("config_type=").size();
+                size_t configTypeEndIdx = line.find(' ', configTypeStartIdx);
+                if (configTypeEndIdx == string::npos) {
+                    Logger::logger->error(format("Config type formatting error in: {}", line), true);
+                }
+
+                configType = line.substr(configTypeStartIdx, configTypeEndIdx - configTypeStartIdx);
+            }
+
+            optional<double> energy{};
+            if (size_t energyStartIdx = line.find("energy="); energyStartIdx != string::npos) {
+                energyStartIdx += string("energy=").size();
+                size_t energyEndIdx = line.find(' ', energyStartIdx);
+                if (energyEndIdx == string::npos) {
+                    Logger::logger->error(format("Config type formatting error in: {}", line), true);
+                }
+
+                string energyStr = line.substr(energyStartIdx, energyEndIdx - energyStartIdx);
+                iss = istringstream(energyStr);
+                double energyVal;
+                iss >> energyVal;
+                energy = energyVal;
+            }
+
+            optional<array<Vector3, 3>> virials{};
+            size_t virialsStartIdx = line.find("virial=\"");
+            if (virialsStartIdx == string::npos) {
+                virialsStartIdx = line.find("virials=\"");
+                virialsStartIdx += string("virials=\"").size();
+            } else {
+                virialsStartIdx += string("virial=\"").size();
+            }
+            if (virialsStartIdx != string::npos) {
+
+                size_t virialsEndIdx = line.find('\"', virialsStartIdx);
+                if (virialsEndIdx == string::npos) {
+                    Logger::logger->error(format("Virials parsing error in: {}", line), true);
+                }
+
+                string virialsStr = line.substr(virialsStartIdx, virialsEndIdx - virialsStartIdx);
+                iss = istringstream(virialsStr);
+                array<Vector3, 3> virialsVal{};
+                iss >> virialsVal[0].x >> virialsVal[0].y >> virialsVal[0].z
+                    >> virialsVal[1].x >> virialsVal[1].y >> virialsVal[1].z
+                    >> virialsVal[2].x >> virialsVal[2].y >> virialsVal[2].z;
+                virials = virialsVal;
+            }
+
+            // coordinates + forces
             vector<AtomData> atoms;
-            for (size_t atomIndex = 0; atomIndex < nAtoms; atomIndex++) {
-                string species;
-                double x, y, z;
-                inStream >> species >> x >> y >> z;
-                atoms.push_back({
-                    .position={x, y, z},
-                    .species=species
-                });
-            }
-
-            result[boxIndex].atoms = atoms;
-
-            bool hasEnergy = false;
-            inStream >> hasEnergy;
-
-            if (hasEnergy) {
-                double energy;
-                inStream >> energy;
-                result[boxIndex].energy = energy;
-            }
-
-            bool hasConfigType = false;
-            inStream >> hasConfigType;
-
-            if (hasConfigType) {
-                string configType;
-                inStream >> configType;
-                result[boxIndex].configType = configType;
-            }
-
-            bool hasVirials = false;
-            inStream >> hasVirials;
-            if (hasVirials) {
-                array<array<double, 3>, 3> virials{};
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        inStream >> virials[i][j];
-                    }
+            // todo
+            if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
+                for (size_t i = 0; i < n; i++) {
+                    getline(file, line);
+                    iss = istringstream(line);
+                    string species;
+                    Vector3 pos{}, force{};
+                    iss >> species;
+                    iss >> pos.x >> pos.y >> pos.z;
+                    iss >> force.x >> force.y >> force.z;
+                    atoms.push_back(AtomData{
+                        .position = pos,
+                        .species = species,
+                        .force = force
+                    });
                 }
-                result[boxIndex].virials = virials;
+            } else if (line.contains("Properties=species:S:1:pos:R:3")) {
+                for (size_t i = 0; i < n; i++) {
+                    getline(file, line);
+                    iss = istringstream(line);
+                    string species;
+                    Vector3 pos{};
+                    iss >> species;
+                    iss >> pos.x >> pos.y >> pos.z;
+                    atoms.push_back(AtomData{
+                        .position = pos,
+                        .species = species
+                    });
+                }
+            } else {
+                Logger::logger->error(format("Unknown properties string: {}", line), true);
             }
 
-            bool hasVelocities = false;
-            inStream >> hasVelocities;
-            if (hasVelocities) {
-                for (size_t i = 0; i < nAtoms; i++) {
-                    double x, y, z;
-                    inStream >> x >> y >> z;
-                    result[boxIndex].atoms[i].velocity = {x, y, z};
-                }
-            }
-
-            bool hasForces = false;
-            inStream >> hasForces;
-            if (hasForces) {
-                for (size_t i = 0; i < nAtoms; i++) {
-                    double x, y, z;
-                    inStream >> x >> y >> z;
-                    result[boxIndex].atoms[i].force = {x, y, z};
-                }
-            }
+            result.push_back(AtomicStructure{
+                .lattice = lattice,
+                .atoms = atoms,
+                .configType = configType,
+                .energy = energy,
+                // .energySigma TODO ?
+                .virials = virials
+            });
         }
 
         return result;

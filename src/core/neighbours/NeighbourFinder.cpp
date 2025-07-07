@@ -13,9 +13,9 @@ namespace jgap {
     }
 
     tuple<int, int, int> findMaxRep(AtomicStructure& structure, const double cutoff) {
-        const Vector3 side1 = structure.latticeVectors[0],
-                      side2 = structure.latticeVectors[1],
-                      side3 = structure.latticeVectors[2];
+        const Vector3 side1 = structure.lattice[0],
+                      side2 = structure.lattice[1],
+                      side3 = structure.lattice[2];
 
         tuple<int, int, int> maxRep = {
             cutoff / side1.norm() + 2,
@@ -56,9 +56,9 @@ namespace jgap {
                 for (int rep2 = -get<2>(maxRep); rep2 <= get<2>(maxRep); rep2++) {
 
                     auto offset = zeroVec
-                        + structure.latticeVectors[0] * rep0
-                        + structure.latticeVectors[1] * rep1
-                        + structure.latticeVectors[2] * rep2;
+                        + structure.lattice[0] * rep0
+                        + structure.lattice[1] * rep1
+                        + structure.lattice[2] * rep2;
 
                     possibleOffsets.push_back(offset);
                 }

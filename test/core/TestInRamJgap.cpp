@@ -16,7 +16,7 @@ using namespace jgap;
 AtomicStructure equilateralTriangle;
 void setupEquilateralTriangle() {
     equilateralTriangle = AtomicStructure{
-        .latticeVectors = {
+        .lattice = {
             Vector3{100.0, 0.0, 0.0},
             Vector3{0.0, 100.0, 0.0},
             Vector3{0.0, 0.0, 100.0}
@@ -90,7 +90,7 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
 TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility) {
     // TODO: split
     auto twoAtoms = AtomicStructure{
-        .latticeVectors = {
+        .lattice = {
             Vector3{100.0, 0.0, 0.0},
             Vector3{0.0, 100.0, 0.0},
             Vector3{0.0, 0.0, 100.0}
@@ -270,7 +270,7 @@ TEST(TestInRamJgap, twoBodyQuipCompatibilityRealBox) {
 
 TEST(TestInRamJgap, twoAtomsEamQuipCompatibility) {
     auto twoAtoms = AtomicStructure{
-        .latticeVectors = {
+        .lattice = {
             Vector3{100.0, 0.0, 0.0},
             Vector3{0.0, 100.0, 0.0},
             Vector3{0.0, 0.0, 100.0}
@@ -412,7 +412,7 @@ AtomicStructure pythagorian;
 
 void initPythagorian() {
     pythagorian = AtomicStructure{
-        .latticeVectors = {
+        .lattice = {
             Vector3{20, 0, 0},
             Vector3{0, 20, 0},
             Vector3{0, 0, 20},

@@ -13,7 +13,7 @@ jgap::AtomicStructure makeIsolated(jgap::Species species) {
                 .position = {0,0,0}
             }
         },
-        .latticeVectors = {
+        .lattice = {
             jgap::Vector3{30.0, 0.0, 0.0},
             jgap::Vector3{0.0, 30.0, 0.0},
             jgap::Vector3{0.0, 0.0, 30.0},

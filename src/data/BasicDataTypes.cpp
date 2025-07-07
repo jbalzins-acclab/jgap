@@ -36,12 +36,10 @@ namespace jgap {
 
         if (prediction.virials.has_value() && (this->virials.has_value() || setEmpty)) {
             if (!this->virials.has_value()) {
-                this->virials = array{array{0.0,0.0,0.0}, array{0.0,0.0,0.0}, array{0.0,0.0,0.0}};
+                this->virials = array{Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}};
             }
             for (size_t i = 0; i < 3; i++) {
-                for (size_t j = 0; j < 3; j++) {
-                    (*this->virials)[i][j] += sign * prediction.virials.value()[i][j];
-                }
+                (*this->virials)[i] = (*this->virials)[i] + prediction.virials.value()[i] * sign;
             }
         }
     }
@@ -49,9 +47,9 @@ namespace jgap {
     AtomicStructure AtomicStructure::repeat(size_t a, size_t b, size_t c) {
         auto cpy = AtomicStructure(*this);
 
-        cpy.latticeVectors[0] = cpy.latticeVectors[0] * a;
-        cpy.latticeVectors[1] = cpy.latticeVectors[1] * b;
-        cpy.latticeVectors[2] = cpy.latticeVectors[2] * c;
+        cpy.lattice[0] = cpy.lattice[0] * a;
+        cpy.lattice[1] = cpy.lattice[1] * b;
+        cpy.lattice[2] = cpy.lattice[2] * c;
 
         cpy.atoms = {};
         for (size_t i = 0; i < a; i++) {
@@ -60,9 +58,9 @@ namespace jgap {
                     for (auto& atom: this->atoms) {
                         auto newAtom = AtomData(atom);
                         newAtom.position = newAtom.position
-                            + this->latticeVectors[0] * i
-                            + this->latticeVectors[1] * j
-                            + this->latticeVectors[2] * k;
+                            + this->lattice[0] * i
+                            + this->lattice[1] * j
+                            + this->lattice[2] * k;
                         cpy.atoms.push_back(newAtom);
                     }
                 }
