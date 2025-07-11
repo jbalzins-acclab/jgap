@@ -12,7 +12,7 @@ namespace jgap {
         );
     }
 
-    tuple<int, int, int> findMaxRep(AtomicStructure& structure, const double cutoff) {
+    tuple<int, int, int> findMaxRep(const AtomicStructure& structure, const double cutoff) {
         const Vector3 side1 = structure.lattice[0],
                       side2 = structure.lattice[1],
                       side3 = structure.lattice[2];
@@ -33,7 +33,7 @@ namespace jgap {
         return maxRep;
     }
 
-    void NeighbourFinder::findNeighbours(AtomicStructure& structure, double cutoff) {
+    void NeighbourFinder::findNeighbours(AtomicStructure& structure, const double cutoff) {
 
         /*
         vector<Vector3> corners;

@@ -23,12 +23,6 @@ namespace jgap {
         void warn(string_view msg) override;
         void error(string_view msg) override;
 
-        static void init(string_view logFilePrefix = "log-jgap-",
-                         string_view logDirectory = "logs/jgap",
-                         bool debug = false) {
-            logger = new SpdlogWrapper(logFilePrefix, logDirectory, debug);
-        }
-
     private:
         shared_ptr<spdlog::logger> _logger;
     };

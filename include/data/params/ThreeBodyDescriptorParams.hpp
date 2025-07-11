@@ -31,7 +31,7 @@ namespace jgap {
         double energyScale = 2;
 
         // TODO: sub-class?
-        array<array<optional<double>, 2/*from, to*/>, 3/*spec in each direction*/> sparseRanges;
+        array<array<double, 2/*from, to*/>, 3/*spec in each direction*/> sparseRanges;
         optional<array<size_t, 3>> nSparsePointsPerSpeciesPerDirection;
         optional<size_t> nSparsePointsPerSpecies;
 

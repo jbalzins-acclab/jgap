@@ -2,24 +2,86 @@
 
 #include <random>
 
-#include "core/kernels/ThreeBodySE.hpp"
+#include "core/descriptors/kernels/ThreeBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {
-    ThreeBodyDescriptor::ThreeBodyDescriptor(ThreeBodyDescriptorParams params) : _params(std::move(params)) {
-
-        _name = params.name.value_or("-");
-        auto cutoffFunction = make_shared<DefaultCutoffFunction>(_params.cutoff, _params.cutoffTransitionWidth);
-
-        switch (params.kernelType) {
-            case ThreeBodyDescriptorParams::KernelType::GAUSS:
-                _kernel = make_shared<ThreeBodySE>(cutoffFunction, _params.energyScale, _params.lengthScale);
-                break;
-            default:
-                Logger::logger->error("ThreeBodyDescriptor: Unknown kernel type");
-                throw runtime_error("ThreeBodyDescriptor: Unknown kernel type");
+    ThreeBodyDescriptor::ThreeBodyDescriptor(const nlohmann::json &params) {
+        if (params["kernel"]["cutoff"].is_number()) {
+            _cutoff = params["kernel"]["cutoff"];
+        } else {
+            _cutoff = params["kernel"]["cutoff"]["cutoff"];
         }
+
+        _kernel = ParserRegistry<ThreeBodyKernel>::get(params["kernel"]);
+
+        _sparsePointsPerSpeciesTriplet = {};
+        _coefficients = {};
+        if (params.contains("sparse_data")) {
+            _sparsifier = nullptr;
+
+            size_t nPts = 0;
+            for (auto &[speciesStr, perTripletData]: params["sparse_data"].items()) {
+                SpeciesTriplet speciesTriplet = {
+                    .root=split(speciesStr, ',')[0],
+                    .nodes={split(speciesStr, ',')[1], split(speciesStr, ',')[2]}
+                };
+                _sparsePointsPerSpeciesTriplet[speciesTriplet] = {};
+
+                for (const auto &triplet: perTripletData["sparse_points"]) {
+                    _sparsePointsPerSpeciesTriplet[speciesTriplet].emplace_back(
+                        triplet["x"], triplet["y"], triplet["z"]
+                    );
+                    nPts++;
+                }
+
+                if (perTripletData.contains("coefficients")) {
+                    for (const auto &coeff: perTripletData["coefficients"]) {
+                        _coefficients.push_back(coeff);
+                    }
+                }
+            }
+
+            if (!_coefficients.empty() && nPts != _coefficients.size()) {
+                CurrentLogger::get()->error("Number of coefficients doesn't match number of 3b sparse points", true);
+            }
+
+        } else {
+            _sparsifier = ParserRegistry<PerSpecies3bSparsifier>::get(params["sparsify"]);
+        }
+    }
+
+    nlohmann::json ThreeBodyDescriptor::serialize() {
+        nlohmann::json sparseData;
+
+        size_t counter = 0;
+        for (auto &[speciesTriplet, sparseVectors]: _sparsePointsPerSpeciesTriplet) {
+            vector<map<string, double>> converted;
+            for (auto &vec: sparseVectors) {
+                converted.push_back({
+                        {"x", vec.x},
+                        {"y", vec.y},
+                        {"z", vec.z},
+                    });
+            }
+            sparseData[speciesTriplet.toString()] = {};
+            sparseData[speciesTriplet.toString()]["sparse_points"] = converted;
+            if (_coefficients.size() == nSparsePoints()) {
+                sparseData[speciesTriplet.toString()]["coefficients"] = vector(
+                    _coefficients.begin() + counter, _coefficients.begin() + counter + sparseVectors.size()
+                );
+            }
+            counter += sparseVectors.size();
+        }
+
+        auto kernelData = _kernel->serialize();
+        kernelData["type"] = _kernel->getType();
+
+        return {
+            {"sparse_data", sparseData},
+            {"kernel", kernelData}
+        };
     }
 
     size_t ThreeBodyDescriptor::nSparsePoints() {
@@ -32,96 +94,13 @@ namespace jgap {
         return result;
     }
 
-    nlohmann::json ThreeBodyDescriptor::serialize() {
-        nlohmann::json root;
-
-        size_t counter = 0;
-        for (auto &[speciesTriplet, sparseVectors]: _sparsePointsPerSpeciesTriplet) {
-            vector<map<string, double>> converted;
-            for (auto &vec: sparseVectors) {
-                converted.push_back({
-                    {"x", vec.x},
-                    {"y", vec.y},
-                    {"z", vec.z},
-                    });
-            }
-            root[speciesTriplet.toString()] = {};
-            root[speciesTriplet.toString()]["sparse_points"] = converted;
-            if (_coefficients.size() == nSparsePoints()) {
-                root[speciesTriplet.toString()]["coefficients"] = vector(
-                    _coefficients.begin() + counter, _coefficients.begin() + counter + sparseVectors.size()
-                );
-            }
-            counter += sparseVectors.size();
-        }
-
-        return {
-            {"name", _name},
-            {"type", "3b"},
-            {"data", root}
-        };
-    }
-
     void ThreeBodyDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
-
-        map<SpeciesTriplet, vector<Vector3>> all3b;
-
-        if (_params.speciesTriplets.has_value()) {
-            for (auto &speciesTriplet : _params.speciesTriplets.value()) {
-                all3b[speciesTriplet] = {};
-            }
+        if (_sparsifier == nullptr) {
+            CurrentLogger::get()->error("3b sparsifier not set", true);
         }
 
-        for (const auto& structure: fromData) {
-            for (const auto& atom0 : structure.atoms) {
-                if (!atom0.neighbours.has_value()) {
-                    Logger::logger -> error("Neighbour list missing | 3b");
-                    throw runtime_error("Neighbour list missing | 3b");
-                }
-
-                for (size_t idx1 = 0; idx1 < atom0.neighbours->size(); idx1++) {
-
-                    auto neighbour1 = atom0.neighbours->at(idx1);
-                    if (neighbour1.distance > _params.cutoff) continue;
-
-                    for (size_t idx2 = idx1+1; idx2 < atom0.neighbours->size(); idx2++) {
-                        auto neighbour2 = atom0.neighbours->at(idx2);
-
-                        if (neighbour2.distance > _params.cutoff) continue;
-                        if (neighbour1.index == neighbour2.index && neighbour1.offset == neighbour2.offset) continue; //??
-
-                        auto atom1 = structure.atoms[neighbour1.index], atom2 = structure.atoms[neighbour2.index];
-
-                        auto species = SpeciesTriplet{
-                            atom0.species,
-                            {atom1.species, atom2.species}
-                        };
-
-                        if (!all3b.contains(species)) {
-                            if (_params.speciesTriplets.has_value()) continue;
-                            // pairs-not explicitly defined => from data
-                            all3b[species] = {};
-                        }
-                        all3b[species].emplace_back(
-                            neighbour1.distance,
-                            neighbour2.distance,
-                            (atom1.position + neighbour1.offset - (atom2.position + neighbour2.offset)).norm() // rename
-                        );
-                    }
-                }
-            }
-        }
-
-        switch (_params.sparsificationMethod) {
-            case ThreeBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM:
-                sparsifyTrueUniform(all3b);
-                break;
-            case ThreeBodyDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM:
-                sparsifyQuipUniform(all3b);
-                break;
-            default:
-                Logger::logger -> error("3b sparsification method not implemented", true);
-        }
+        _sparsePointsPerSpeciesTriplet = _sparsifier->sparsifyFromData(fromData);
+        _coefficients.clear();
     }
 
     vector<Covariance> ThreeBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -163,157 +142,6 @@ namespace jgap {
         return result;
     }
 
-    void ThreeBodyDescriptor::sparsifyTrueUniform(const map<SpeciesTriplet, vector<Vector3>> &all3b) {
-        for (auto &[speciesTriplet, tripletVectors] : all3b) {
-            _sparsePointsPerSpeciesTriplet[speciesTriplet] = {};
-
-            Vector3 maxPoint = {0, 0, 0}, minPoint = {_params.cutoff*2, pow(_params.cutoff*2, 2), _params.cutoff*2};
-
-            for (auto &triplet : tripletVectors) {
-                auto invariantTriplet = toInvariantTriplet({triplet.x, triplet.y}, triplet.z);
-
-                minPoint.x = min(minPoint.x, invariantTriplet.x);
-                minPoint.y = min(minPoint.y, invariantTriplet.y);
-                minPoint.z = min(minPoint.z, invariantTriplet.z);
-
-                maxPoint.x = max(maxPoint.x, invariantTriplet.x);
-                maxPoint.y = max(maxPoint.y, invariantTriplet.y);
-                maxPoint.z = max(maxPoint.z, invariantTriplet.z);
-            }
-
-            if (_params.sparseRanges[0][0].has_value()) minPoint.x = _params.sparseRanges[0][0].value();
-            if (_params.sparseRanges[1][0].has_value()) minPoint.y = _params.sparseRanges[1][0].value();
-            if (_params.sparseRanges[2][0].has_value()) minPoint.z = _params.sparseRanges[2][0].value();
-
-            if (_params.sparseRanges[0][1].has_value()) maxPoint.x = _params.sparseRanges[0][1].value();
-            if (_params.sparseRanges[1][1].has_value()) maxPoint.y = _params.sparseRanges[1][1].value();
-            if (_params.sparseRanges[2][1].has_value()) maxPoint.z = _params.sparseRanges[2][1].value();
-
-            array<size_t, 3> nSteps{};
-
-            if (_params.nSparsePointsPerSpeciesPerDirection.has_value()) {
-                nSteps = _params.nSparsePointsPerSpeciesPerDirection.value();
-            }
-            else {
-                Logger::logger->error("N_sparse_per_direction must be specified for FULL_GRID_UNIFORM");
-            }
-
-            array steps = {
-                Vector3{(maxPoint.x - minPoint.x) / static_cast<double>(nSteps[0] - 1), 0, 0},
-                Vector3{0, (maxPoint.y - minPoint.y) / static_cast<double>(nSteps[1] - 1), 0},
-                Vector3{0, 0, (maxPoint.z - minPoint.z) / static_cast<double>(nSteps[2] - 1)}
-            };
-
-            Logger::logger->debug("3b " + speciesTriplet.toString() + " sparse points:");
-            for (int i = 0; i < nSteps[0]; i++) {
-                for (int j = 0; j < nSteps[1]; j++) {
-                    for (int k = 0; k < nSteps[2]; k++) {
-                        _sparsePointsPerSpeciesTriplet[speciesTriplet].push_back(
-                            minPoint + steps[0] * i + steps[1] * j + steps[2] * k
-                            );
-                        Logger::logger->debug(_sparsePointsPerSpeciesTriplet[speciesTriplet].back().toString());
-                    }
-                }
-            }
-        }
-    }
-
-    void ThreeBodyDescriptor::sparsifyQuipUniform(const map<SpeciesTriplet, vector<Vector3>> &all3b) {
-        for (auto &[speciesTriplet, tripletVectors] : all3b) {
-            _sparsePointsPerSpeciesTriplet[speciesTriplet] = {};
-
-            Vector3 maxPoint = {0, 0, 0}, minPoint = {_params.cutoff*2, pow(_params.cutoff*2, 2), _params.cutoff*2};
-
-            for (auto &triplet : tripletVectors) {
-                auto invariantTriplet = toInvariantTriplet({triplet.x, triplet.y}, triplet.z);
-
-                minPoint.x = min(minPoint.x, invariantTriplet.x);
-                minPoint.y = min(minPoint.y, invariantTriplet.y);
-                minPoint.z = min(minPoint.z, invariantTriplet.z);
-
-                maxPoint.x = max(maxPoint.x, invariantTriplet.x);
-                maxPoint.y = max(maxPoint.y, invariantTriplet.y);
-                maxPoint.z = max(maxPoint.z, invariantTriplet.z);
-            }
-
-            if (_params.sparseRanges[0][0].has_value()) minPoint.x = _params.sparseRanges[0][0].value();
-            if (_params.sparseRanges[1][0].has_value()) minPoint.y = _params.sparseRanges[1][0].value();
-            if (_params.sparseRanges[2][0].has_value()) minPoint.z = _params.sparseRanges[2][0].value();
-
-            if (_params.sparseRanges[0][1].has_value()) maxPoint.x = _params.sparseRanges[0][1].value();
-            if (_params.sparseRanges[1][1].has_value()) maxPoint.y = _params.sparseRanges[1][1].value();
-            if (_params.sparseRanges[2][1].has_value()) maxPoint.z = _params.sparseRanges[2][1].value();
-
-            size_t n;
-            array<size_t, 3> nSteps{};
-
-            if (_params.nSparsePointsPerSpeciesPerDirection.has_value()) {
-                nSteps = _params.nSparsePointsPerSpeciesPerDirection.value();
-                n = nSteps[0] * nSteps[1] * nSteps[2];
-            }
-            else {
-                n = _params.nSparsePointsPerSpecies.value();
-                const size_t side = floor(pow(_params.nSparsePointsPerSpecies.value(), 1.0/3.0));
-                nSteps = {side, side, side};
-            }
-
-            array steps = {
-                Vector3{(maxPoint.x - minPoint.x) / static_cast<double>(nSteps[0]), 0, 0},
-                Vector3{0, (maxPoint.y - minPoint.y) / static_cast<double>(nSteps[1]), 0},
-                Vector3{0, 0, (maxPoint.z - minPoint.z) / static_cast<double>(nSteps[2])}
-            };
-
-            vector hist(nSteps[0], vector(nSteps[1], vector<size_t>(nSteps[2], 0)));
-            vector<array<size_t, 3>> usefulIndexes;
-
-            Logger::logger->info(format(
-                "3b histogram of sides {},{},{} in range {} - {}",
-                nSteps[0], nSteps[1], nSteps[2], minPoint.toString(), maxPoint.toString()
-                ));
-            Logger::logger->debug("3b " + speciesTriplet.toString() + " sparse points:");
-            for (const Vector3 &point: tripletVectors) {
-                const auto xIndex = static_cast<size_t>((point.x - minPoint.x) / steps[0].x);
-                const auto yIndex = static_cast<size_t>((point.y - minPoint.y) / steps[1].y);
-                const auto zIndex = static_cast<size_t>((point.z - minPoint.z) / steps[2].z);
-
-                if (++hist[xIndex][yIndex][zIndex] == 1) {
-                    _sparsePointsPerSpeciesTriplet[speciesTriplet].push_back(point);
-                    Logger::logger->debug(point.toString());
-
-                    usefulIndexes.push_back({xIndex, yIndex, zIndex});
-                }
-            }
-
-            if (_sparsePointsPerSpeciesTriplet.size() == n) {
-                return;
-            }
-
-            Logger::logger->debug("Not all 3b histogram bins have values => random selection:");
-
-            mt19937 gen(9138741034);
-            uniform_real_distribution<> marginDistX(0, steps[0].x);
-            uniform_real_distribution<> marginDistY(0, steps[1].y);
-            uniform_real_distribution<> marginDistZ(0, steps[2].z);
-            uniform_int_distribution<> indexDist(0, usefulIndexes.size() - 1);
-
-            while (_sparsePointsPerSpeciesTriplet[speciesTriplet].size() < n) {
-                // select bin randomly
-                const auto index = usefulIndexes[indexDist(gen)];
-
-                _sparsePointsPerSpeciesTriplet[speciesTriplet].push_back(
-                    minPoint
-                    + steps[0] * static_cast<double>(index[0])
-                    + steps[1] * static_cast<double>(index[1])
-                    + steps[2] * static_cast<double>(index[2])
-                    + steps[0] * marginDistX(gen)
-                    + steps[1] * marginDistY(gen)
-                    + steps[2] * marginDistZ(gen)
-                );
-                Logger::logger->debug(_sparsePointsPerSpeciesTriplet[speciesTriplet].back().toString());
-            }
-        }
-    }
-
     map<SpeciesTriplet, ThreeBodyKernelIndex> ThreeBodyDescriptor::doIndex(
         const AtomicStructure &atomicStructure) const {
 
@@ -325,11 +153,11 @@ namespace jgap {
             // "nl" = neighbourList
             for (size_t nlIndex1 = 0; nlIndex1 < atom.neighbours->size(); nlIndex1++) {
                 auto neighbour1 = atom.neighbours->at(nlIndex1);
-                if (neighbour1.distance > _params.cutoff) continue;
+                if (neighbour1.distance > _cutoff) continue;
 
                 for (size_t nlIndex2 = nlIndex1 + 1; nlIndex2 < atom.neighbours->size(); nlIndex2++) {
                     auto neighbour2 = atom.neighbours->at(nlIndex2);
-                    if (neighbour2.distance > _params.cutoff) continue;
+                    if (neighbour2.distance > _cutoff) continue;
 
                     auto speciesTriplet = SpeciesTriplet{atom.species,{
                         atomicStructure.atoms[neighbour1.index].species,

@@ -9,7 +9,7 @@
 #include <cmath>
 #include <format>
 
-#include "io/log/Logger.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 using namespace std;
 
@@ -181,7 +181,7 @@ namespace jgap {
 
         optional<array<Vector3, 3>> virials;
 
-        void set(const PotentialPrediction& prediction);
+        void setEnergyData(const PotentialPrediction& prediction);
         void adjust(const PotentialPrediction& prediction, bool subtract, bool setEmpty);
         AtomicStructure repeat(size_t a, size_t b, size_t c);
     };

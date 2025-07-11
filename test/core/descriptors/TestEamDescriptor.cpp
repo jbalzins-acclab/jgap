@@ -1,56 +1,60 @@
 #include <gtest/gtest.h>
-#include <gtest/gtest.h>
 
 #include "core/descriptors/EamDescriptor.hpp"
-#include "core/descriptors/eam/EamDensityCalculator.hpp"
-#include "core/descriptors/eam/pair_functions/PolycutoffPairFunction.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
 
 using namespace jgap;
 
-auto equilateralTriangleEAM = AtomicStructure{
-    .lattice = {
-        Vector3{100.0, 0.0, 0.0},
-        Vector3{0.0, 100.0, 0.0},
-        Vector3{0.0, 0.0, 100.0}
-    },
-    .atoms = {
-        AtomData{
-            .position = {0.0, 0.0, 0.0},
-            .species = "Fe"
-        },
-        AtomData{
-            .position = {3.0, 0.0, 0.0},
-            .species = "Fe"
-        },
-        AtomData{
-            .position = {1.5, 2.598, 0.0},
-            .species = "Fe"
-        }
-    }
-};
+TEST(EamDescriptorTest, equilateralTriangleEamTest) {
 
-TEST(EamDescriptorTest, equilateralTriangle) {
-    auto params = EamDescriptorParams{
-        .defaultDensityCalculationParams = EamDensityCalculationParams{
-            .pairFunction = EamDensityCalculationParams::PairFunction::POLYCUTOFF,
-            .speciesUse = EamDensityCalculationParams::SpeciesUse::BLIND,
-            .cutoff = 6,
-            .rmin = 0.0
+    auto equilateralTriangleEAM = AtomicStructure{
+        .lattice = {
+            Vector3{100.0, 0.0, 0.0},
+            Vector3{0.0, 100.0, 0.0},
+            Vector3{0.0, 0.0, 100.0}
+        },
+        .atoms = {
+            AtomData{
+                .position = {0.0, 0.0, 0.0},
+                .species = "Fe"
             },
-        .nSparsePoints = 2,
-        .energyScale = 1,
-        .lengthScale = 1,
-        .sparseRange = {0, 2},
-        .kernelType = EamDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = EamDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM
+            AtomData{
+                .position = {3.0, 0.0, 0.0},
+                .species = "Fe"
+            },
+            AtomData{
+                .position = {1.5, 2.598, 0.0},
+                .species = "Fe"
+            }
+        }
     };
 
+    auto params = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 1.0
+        },
+        "pair_functions": [
+            {
+                "type": "polycutoff",
+                "r_min": 0,
+                "cutoff": 6.0
+            }
+        ],
+        "sparse_data": {
+            "Fe": {
+                "sparse_points": [0, 2]
+            }
+        }
+    }
+    )");
     auto desc = EamDescriptor(params);
 
     NeighbourFinder::findNeighbours(equilateralTriangleEAM, 6.0);
-    desc.setSparsePoints({equilateralTriangleEAM});
+    // desc.setSparsePoints({equilateralTriangleEAM});
 
     auto result = desc.covariate(equilateralTriangleEAM);
 

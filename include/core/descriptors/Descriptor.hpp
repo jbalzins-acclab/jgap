@@ -2,15 +2,13 @@
 #define DESCRIPTOR_HPP
 
 #include "data/BasicDataTypes.hpp"
-#include "io/log/Logger.hpp"
+#include "io/log/CurrentLogger.hpp"
 #include "memory/MatrixBlock.hpp"
 
 #include <memory>
 #include <utility>
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
-
-#include "io/log/StdoutLogger.hpp"
 
 using namespace std;
 
@@ -19,9 +17,6 @@ namespace jgap {
     class Descriptor {
     public:
 
-        explicit Descriptor() {
-            StdoutLogger::initIfNotInitialized();
-        }
         virtual ~Descriptor() = default;
 
         // Sparsification strategy to constructor
@@ -33,17 +28,18 @@ namespace jgap {
         virtual vector<pair<size_t/*sparse point id*/, shared_ptr<MatrixBlock>>> selfCovariate() = 0;
 
         virtual nlohmann::json serialize() = 0;
+        virtual string getType() = 0;
 
         void setCoefficients(const vector<double>& c) {
             if (c.size() != nSparsePoints()) {
-                Logger::logger->error("Number of coefficients doesn't match the number of sparse points");
+                CurrentLogger::get()->error("Number of coefficients doesn't match the number of sparse points");
             }
             _coefficients = c;
         }
 
         PotentialPrediction predict(const AtomicStructure &atomicStructure) {
             if (_coefficients.size() != nSparsePoints()) {
-                Logger::logger->error("Coefficients not set");
+                CurrentLogger::get()->error("Coefficients not set");
             }
 
             const auto covariance = covariate(atomicStructure);
@@ -59,8 +55,8 @@ namespace jgap {
             }
 
             return {
-            energy,
-            forces,
+                energy,
+                forces,
                 {}
             };
         }

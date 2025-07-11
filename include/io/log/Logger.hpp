@@ -24,8 +24,6 @@ namespace jgap {
                 throw runtime_error(string(msg));
             }
         }
-
-        inline static Logger* logger = nullptr;
     };
 }
 

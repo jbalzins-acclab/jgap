@@ -4,7 +4,7 @@
 #include <utility>
 #include <concepts>
 
-#include "io/log/Logger.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 using namespace std;
 
@@ -15,12 +15,12 @@ namespace jgap {
         MatrixBlock(const size_t rows, const size_t columns)
             : _rows(rows), _columns(columns) {
             try {
-                Logger::logger->info("Allocating matrix block");
+                CurrentLogger::get()->debug(format ("Allocating {}x{} matrix block", rows, columns));
                 _data = vector<double>(rows * columns);
             } catch (const std::bad_alloc& e) {
-                Logger::logger->error("Memory allocation failed");
+                CurrentLogger::get()->error("Memory allocation failed");
             }
-            Logger::logger->info("Matrix block allocated");
+            CurrentLogger::get()->info("Matrix block allocated");
         };
         ~MatrixBlock() = default;
 

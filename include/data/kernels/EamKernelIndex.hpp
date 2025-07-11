@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <vector>
+#include <map>
 
 using namespace std;
 
@@ -17,7 +18,8 @@ namespace jgap {
         vector<pair<NeighbourData, double>> densityDerivatives; // drho_i / dr_ij (j = NeighbourData.index)
     };
 
-     using EamKernelIndex = vector<EamDensityData>;
+    using EamKernelIndexPerSpecies = vector<EamDensityData>;
+    using EamKernelIndex = map<Species, EamKernelIndexPerSpecies>;
 }
 
 #endif //EAMKERNELINDEX_HPP

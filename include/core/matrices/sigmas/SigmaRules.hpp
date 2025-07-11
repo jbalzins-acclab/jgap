@@ -8,7 +8,7 @@
 
 namespace jgap {
     class SigmaRules {
-        public:
+    public:
         virtual ~SigmaRules() = default;
         virtual void fillSigmas(AtomicStructure& structure) = 0;
     };

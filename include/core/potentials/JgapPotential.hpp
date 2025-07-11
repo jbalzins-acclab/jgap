@@ -5,40 +5,29 @@
 #include <utility>
 #include <nlohmann/json.hpp>
 
+#include "core/descriptors/Descriptor.hpp"
 #include "core/potentials/Potential.hpp"
+#include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
     class JgapPotential : public Potential {
     public:
-        JgapPotential(vector<shared_ptr<Descriptor>> descriptors)
-            : _descriptors(descriptors) {}
-
+        explicit JgapPotential(const nlohmann::json& params);
+        explicit JgapPotential(map<string, shared_ptr<Descriptor>> descriptors)
+            : _descriptors(std::move(descriptors)) {
+        }
         ~JgapPotential() override = default;
 
-        PotentialPrediction predict(const AtomicStructure &structure) override {
-            PotentialPrediction prediction{};
-            for (const auto &descriptor : _descriptors) {
-                prediction = prediction + descriptor->predict(structure);
-            }
-            return prediction;
-        }
+        PotentialPrediction predict(const AtomicStructure &structure) override;
 
-        nlohmann::json serialize() override {
-            nlohmann::json descriptors = nlohmann::json::array();
-
-            for (const auto &descriptor : _descriptors) {
-                descriptors.push_back(descriptor->serialize());
-            }
-
-            return {
-                {"potential", "jgap"},
-                {"descriptors", descriptors}
-            };
-        }
+        nlohmann::json serialize() override;
+        string getType() override { return "jgap"; }
+        double getCutoff() override;
 
     private:
-        vector<shared_ptr<Descriptor>> _descriptors;
+        map<string, shared_ptr<Descriptor>> _descriptors;
     };
-}
 
+    REGISTER_PARSER("jgap", Potential, JgapPotential);
+}
 #endif

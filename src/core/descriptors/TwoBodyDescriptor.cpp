@@ -4,27 +4,76 @@
 #include <set>
 #include <nlohmann/json.hpp>
 
-#include "core/kernels/TwoBodySE.hpp"
+#include "core/descriptors/kernels/TwoBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
+#include "io/parse/ParserRegistry.hpp"
 #include "utils/Utils.hpp"
 
 using namespace std;
 
 namespace jgap {
-
-    TwoBodyDescriptor::TwoBodyDescriptor(TwoBodyDescriptorParams params) : _params(std::move(params)) {
-
-        _name = params.name.value_or("-");
-        _cutoffFunction = make_shared<DefaultCutoffFunction>(_params.cutoff, _params.cutoffTransitionWidth);
-
-        switch (_params.kernelType) {
-            case TwoBodyDescriptorParams::KernelType::GAUSS:
-                _kernel = make_shared<TwoBodySE>(_cutoffFunction, _params.energyScale,_params.lengthScale);
-                break;
-            default:
-                Logger::logger->error("Kernel type not implemented for 2b descriptor");
-                throw runtime_error("Kernel type not implemented for 2b descriptor");
+    TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
+        // Either explicitly in kernel or in cutoff obj specs
+        if (params["kernel"]["cutoff"].is_number()) {
+            _cutoff = params["kernel"]["cutoff"];
+        } else {
+            _cutoff = params["kernel"]["cutoff"]["cutoff"];
         }
+
+        _kernel = ParserRegistry<TwoBodyKernel>::get(params["kernel"]);
+
+        _sparsePointsPerSpeciesPair = {};
+        _coefficients = {};
+        if (params.contains("sparse_data")) {
+            _sparsifier = nullptr;
+
+            size_t nPts = 0;
+            for (auto &[speciesStr, perPairData]: params["sparse_data"].items()) {
+                SpeciesPair speciesPair = {split(speciesStr, ',')[0], split(speciesStr, ',')[1]};
+                _sparsePointsPerSpeciesPair[speciesPair] = {};
+
+                for (const auto &distance: perPairData["sparse_points"]) {
+                    _sparsePointsPerSpeciesPair[speciesPair].push_back(distance);
+                    nPts++;
+                }
+
+                if (perPairData.contains("coefficients")) {
+                    for (const auto &coeff: perPairData["coefficients"]) {
+                        _coefficients.push_back(coeff);
+                    }
+                }
+            }
+
+            if (!_coefficients.empty() && nPts != _coefficients.size()) {
+                CurrentLogger::get()->error("Number of coefficients doesn't match number of 2b sparse points", true);
+            }
+        } else {
+            _sparsifier = ParserRegistry<PerSpecies2bSparsifier>::get(params["sparsify"]);
+        }
+    }
+
+    nlohmann::json TwoBodyDescriptor::serialize() {
+
+        nlohmann::json sparseData;
+        size_t counter = 0;
+        for (auto &[speciesPair, sparsePoints] : _sparsePointsPerSpeciesPair) {
+            sparseData[speciesPair.toString()] = {};
+            sparseData[speciesPair.toString()]["sparse_points"] = sparsePoints;
+            if (_coefficients.size() == nSparsePoints()) {
+                sparseData[speciesPair.toString()]["coefficients"] = vector(
+                    _coefficients.begin() + counter, _coefficients.begin() + counter + sparsePoints.size()
+                );
+            }
+            counter += sparsePoints.size();
+        }
+
+        auto kernelData = _kernel->serialize();
+        kernelData["type"] = _kernel->getType();
+
+        return {
+            {"sparse_data", sparseData},
+            {"kernel", kernelData}
+        };
     }
 
     size_t TwoBodyDescriptor::nSparsePoints() {
@@ -35,68 +84,13 @@ namespace jgap {
         return result;
     }
 
-    nlohmann::json TwoBodyDescriptor::serialize() {
-        nlohmann::json root;
-
-        size_t counter = 0;
-        for (auto &[speciesPair, sparsePoints] : _sparsePointsPerSpeciesPair) {
-            root[speciesPair.toString()] = {};
-            root[speciesPair.toString()]["sparse_points"] = sparsePoints;
-            if (_coefficients.size() == nSparsePoints()) {
-                root[speciesPair.toString()]["coefficients"] = vector(
-                    _coefficients.begin() + counter, _coefficients.begin() + counter + sparsePoints.size()
-                );
-            }
-            counter += sparsePoints.size();
-        }
-
-        return {
-            {"name", _name},
-            {"type", "2b"},
-            {"data", root}
-        };
-    }
-
     void TwoBodyDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
-
-        map<SpeciesPair, vector<double>> all2b;
-        // Explicitly defined pairs
-        if (_params.speciesPairs.has_value()) {
-            for (auto &speciesPair : _params.speciesPairs.value()) {
-                all2b[speciesPair] = {};
-            }
+        if (_sparsifier == nullptr) {
+            CurrentLogger::get()->error("2b sparsifier not set", true);
         }
 
-        for (const auto& structure: fromData) {
-            for (const auto& atomData : structure.atoms) {
-                if (!atomData.neighbours.has_value()) {
-                    Logger::logger -> error("Neighbour list missing | 2b", true);
-                }
-
-                for (const NeighbourData& neighbour : atomData.neighbours.value()) {
-                    if (neighbour.distance > _params.cutoff) continue;
-
-                    auto species = SpeciesPair(atomData.species, structure.atoms[neighbour.index].species);
-                    if (!all2b.contains(species)) {
-                        if (_params.speciesPairs.has_value()) continue;
-                        // pairs-not explicitly defined => from data
-                        all2b[species] = {};
-                    }
-                    all2b[species].push_back(neighbour.distance);
-                }
-            }
-        }
-
-        switch (_params.sparsificationMethod) {
-            case TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM:
-                sparsifyTrueUniform(all2b);
-                break;
-            case TwoBodyDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM:
-                sparsifyQuipUniform(all2b);
-                break;
-            default:
-                Logger::logger -> error("2b sparsification method not implemented");
-        }
+        _sparsePointsPerSpeciesPair = _sparsifier->sparsifyFromData(fromData);
+        _coefficients.clear();
     }
 
     vector<Covariance> TwoBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -138,91 +132,6 @@ namespace jgap {
         return result;
     }
 
-    void TwoBodyDescriptor::sparsifyTrueUniform(const map<SpeciesPair, vector<double>>& all2b) {
-        for (const auto& [speciesPair, distances] : all2b) {
-            _sparsePointsPerSpeciesPair[speciesPair] = vector<double>();
-
-            double minDist, maxDist;
-            if (_params.sparseRange.first.has_value()) {
-                minDist = _params.sparseRange.first.value();
-            } else {
-                minDist = *ranges::min_element(distances);
-            }
-            if (_params.sparseRange.second.has_value()) {
-                maxDist = _params.sparseRange.second.value();
-            } else {
-                maxDist = min(*ranges::max_element(distances), _params.cutoff);
-            }
-
-            Logger::logger->info("2b sparse range = " + to_string(minDist) + "-" + to_string(maxDist));
-
-            const double step = (maxDist - minDist) / (static_cast<double>(_params.nSparsePointsPerSpeciesPair) - 1.0);
-
-            Logger::logger->debug("2b " + speciesPair.toString() + " sparse points:");
-            for (int i = 0; i < _params.nSparsePointsPerSpeciesPair; i++) {
-                _sparsePointsPerSpeciesPair[speciesPair].push_back(minDist + step * static_cast<double>(i));
-                Logger::logger->debug(to_string(_sparsePointsPerSpeciesPair[speciesPair].back()));
-            }
-        }
-    }
-
-    void TwoBodyDescriptor::sparsifyQuipUniform(const map<SpeciesPair, vector<double>> &all2b) {
-        for (const auto& [speciesPair, distances] : all2b) {
-
-            _sparsePointsPerSpeciesPair[speciesPair] = vector<double>();
-
-            double minDist, maxDist;
-            if (_params.sparseRange.first.has_value()) {
-                minDist = _params.sparseRange.first.value();
-            } else {
-                minDist = *ranges::min_element(distances);
-            }
-            if (_params.sparseRange.second.has_value()) {
-                maxDist = _params.sparseRange.second.value();
-            } else {
-                maxDist = min(*ranges::max_element(distances), _params.cutoff);
-            }
-
-            Logger::logger->info("2b sparse range = " + to_string(minDist) + "-" + to_string(maxDist));
-
-            const auto n = _params.nSparsePointsPerSpeciesPair;
-
-            const double step = (maxDist + 1e-6 - minDist) / static_cast<double>(n);
-            vector<size_t> hist(n, 0);
-
-            vector<size_t> usefulIndexes;
-
-            Logger::logger->debug("2b " + speciesPair.toString() + " main sparse points:");
-            for (double distance: distances) {
-                const auto index = static_cast<size_t>((distance - minDist) / step);
-                if (++hist[index] == 1) {
-                    _sparsePointsPerSpeciesPair[speciesPair].push_back(distance);
-                    Logger::logger->debug(to_string(distance));
-                    usefulIndexes.push_back(index);
-                }
-            }
-
-            if (_sparsePointsPerSpeciesPair[speciesPair].size() == n) {
-                return;
-            }
-
-            Logger::logger->debug("Not all 2b histogram bins have values => random selection:");
-
-            mt19937 gen(9138741034);
-            uniform_real_distribution<> marginDist(0, step);
-            uniform_int_distribution<> indexDist(0, usefulIndexes.size() - 1);
-
-            while (_sparsePointsPerSpeciesPair[speciesPair].size() < n) {
-                // select bin randomly
-                const auto index = usefulIndexes[indexDist(gen)];
-                _sparsePointsPerSpeciesPair[speciesPair].push_back(
-                    static_cast<double>(index) * step + marginDist(gen)
-                );
-                Logger::logger->debug(to_string(_sparsePointsPerSpeciesPair[speciesPair].back()));
-            }
-        }
-    }
-
     map<SpeciesPair, TwoBodyKernelIndex> TwoBodyDescriptor::doIndex(const AtomicStructure &atomicStructure) const {
 
         map<SpeciesPair, TwoBodyKernelIndex> indexes;
@@ -234,7 +143,7 @@ namespace jgap {
                 auto neighbour = atom.neighbours->at(neighbourListIndex);
 
                 if (neighbour.index < atomIndex) continue;
-                if (neighbour.distance > _params.cutoff) continue;
+                if (neighbour.distance > _cutoff) continue;
 
                 auto speciesPair = SpeciesPair{atom.species, atomicStructure.atoms[neighbour.index].species};
                 if (!indexes.contains(speciesPair)) {

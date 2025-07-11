@@ -9,7 +9,7 @@
 using namespace jgap;
 
 AtomicStructure pythagorian3b;
-ThreeBodyDescriptorParams params3b;
+nlohmann::json params3b;
 
 void initPythagorian3b() {
     pythagorian3b = AtomicStructure{
@@ -37,36 +37,21 @@ void initPythagorian3b() {
 }
 
 void initThreeBodyParams() {
-    params3b = ThreeBodyDescriptorParams{
-        .cutoff = 10.0,
-        .kernelType = ThreeBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = ThreeBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPerDirection = array<size_t, 3>{2,2,2},
-        .energyScale = 1.0,
-        .lengthScale = 1.0
-    };
-}
-
-TEST(TestThreeBodyDescriptor, TrueUniformSimple) {
-    initPythagorian3b();
-    initThreeBodyParams();
-
-    auto desc3b = ThreeBodyDescriptor(params3b);
-    desc3b.setSparsePoints({pythagorian3b});
-    // cout << desc3b.serialize();
-
-    auto result = desc3b.serialize();
-
-    ASSERT_EQ(result["data"].size(), 1);
-    ASSERT_EQ(result["data"]["Fe,Fe,Fe"]["sparse_points"].size(), 8);
-
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][0]["x"].get<double>(), 7.0, 1e-6);
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][0]["y"].get<double>(), 1.0, 1e-6);
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][0]["z"].get<double>(), 3.0, 1e-6);
-
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][7]["x"].get<double>(), 9.0, 1e-6);
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][7]["y"].get<double>(), 4.0, 1e-6);
-    ASSERT_NEAR(result["data"]["Fe,Fe,Fe"]["sparse_points"][7]["z"].get<double>(), 5.0, 1e-6);
+    params3b = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 1.0,
+            "cutoff": {
+                "type": "perriot",
+                "cutoff_transition_width": 0.5,
+                "cutoff": 10.0
+            }
+        },
+        "sparse_data": {}
+    }
+    )");
 }
 
 TEST(TestThreeBodyDescriptor, CovarianceEnergy) {
@@ -76,8 +61,7 @@ TEST(TestThreeBodyDescriptor, CovarianceEnergy) {
     auto desc3b = ThreeBodyDescriptor(params3b);
     desc3b.setSparsePoints(map<SpeciesTriplet, vector<Vector3>>{
         {
-            SpeciesTriplet{.root = "Fe", .nodes = SpeciesPair{"Fe", "Fe"}},
-            {Vector3{8, 2, 4}}
+            SpeciesTriplet{.root = "Fe", .nodes = SpeciesPair{"Fe", "Fe"}}, {Vector3{8, 2, 4}}
         }
     });
 

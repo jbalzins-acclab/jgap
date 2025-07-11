@@ -6,149 +6,133 @@
 
 #include <random>
 
-#include "core/kernels/EamKernelSE.hpp"
+#include "core/descriptors/kernels/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
+#include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    EamDescriptor::EamDescriptor(const EamDescriptorParams& params) : _params(params) {
+    EamDescriptor::EamDescriptor(const nlohmann::json &params) {
 
-        _name = params.name.value_or("-");
-        _densityCalculator = make_shared<EamDensityCalculator>(params);
+        _sparsePointsPerSpecies = {};
+        _coefficients = {};
 
-        switch (params.kernelType) {
-            case EamDescriptorParams::KernelType::GAUSS:
-                _kernel = make_shared<EamKernelSE>(params.energyScale, params.lengthScale);
-                break;
-            default:
-                Logger::logger->error("EAMDescriptor: Unknown kernel type");
-                throw runtime_error("EAMDescriptor: Unknown kernel type");
+        _kernel = ParserRegistry<EamKernel>::get(params["kernel"]);
+
+        if (params.contains("sparse_data")) {
+            _sparsifier = nullptr; // TODO ?
+
+            size_t nPts = 0;
+            for (const auto &[species, sparseData] : params["sparse_data"].items()) {
+                _sparsePointsPerSpecies[species] = {};
+                for (const auto& density: sparseData["sparse_points"]) {
+                    _sparsePointsPerSpecies[species].push_back(density);
+                    nPts++;
+                }
+
+                if (sparseData.contains("coefficients")) {
+                    for (const auto& coeff: sparseData["coefficients"]) {
+                        _coefficients.push_back(coeff);
+                    }
+                }
+            }
+
+            if (!_coefficients.empty() && nPts != _coefficients.size()) {
+                CurrentLogger::get()->error("Coefficients can't be provided partially for EAM descriptor", true);
+            }
+        } else {
+            _sparsifier = ParserRegistry<PerSpeciesEamSparsifier>::get(params["sparsify"]);
         }
+
+        _cutoff = 0;
+        for (const auto& pfParams: params["pair_functions"]) {
+
+            auto pf = ParserRegistry<EamPairFunction>::get(pfParams);
+
+            // TODO: error on speciefied double
+            if (pfParams.contains("species")) {
+                auto s1 = pfParams["species"][0];
+                auto s2 = pfParams["species"][1];
+                _pairFunctions[{s1, s2}] = pf;
+                _pairFunctions[{s2, s1}] = pf;
+            } else if (pfParams.contains("species_ordered")) {
+                auto s1 = pfParams["species_ordered"][0];
+                auto s2 = pfParams["species_ordered"][1];
+                _pairFunctions[{s1, s2}] = pf;
+            } else { // default
+                _defaultPairFunction = pf;
+            }
+
+            _cutoff = max(_cutoff, pfParams["cutoff"].get<double>());
+        }
+    }
+
+    nlohmann::json EamDescriptor::serialize() {
+
+        nlohmann::json sparseData{};
+        size_t counter = 0;
+
+        for (const auto &[species, sparseDensities] : _sparsePointsPerSpecies) {
+            sparseData[species] = {
+                {"sparse_points", sparseDensities},
+                {"coefficients", vector(
+                    _coefficients.begin() + counter,
+                    _coefficients.begin() + counter + sparseDensities.size()
+                    )
+                }
+            };
+            counter += sparseDensities.size();
+        }
+
+        auto kernelData = _kernel->serialize();
+        kernelData["type"] = _kernel->getType();
+
+        nlohmann::json pfData = nlohmann::json::array();
+        pfData.push_back(_defaultPairFunction->serialize());
+        for (const auto& [orderedSpeciesPair, pf]: _pairFunctions) {
+            pfData.push_back(pf->serialize());
+            pfData.back()["type"] = pf->getType();
+            pfData.back()["species_ordered"] = vector{orderedSpeciesPair.first, orderedSpeciesPair.second};
+        }
+
+        return {
+            {"sparse_data", sparseData},
+            {"kernel", kernelData},
+            {"pair_functions", pfData}
+        };
     }
 
     void EamDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
-        switch (_params.sparsificationMethod) {
-            case EamDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM:
-                sparsifyTrueUniform(fromData);
-                break;
-            case EamDescriptorParams::SparsificationMethod::SAMPLE_SPACE_UNIFORM:
-                sparsifyQuipUniform(fromData);
-                break;
-            case EamDescriptorParams::SparsificationMethod::EQUI_DENSE:
-            default:
-                Logger::logger -> error("EAM sparsification method not implemented", true);
-        }
-    }
-
-    void EamDescriptor::sparsifyTrueUniform(const vector<AtomicStructure> &fromData) {
-
-        double eamMinInData = 1e9, eamMaxInData = -1e9; // I hope noone goes too crazy
-        if (!_params.sparseRange.first.has_value() && !_params.sparseRange.second.has_value()) {
-
-            Logger::logger->debug("Detecting sparse range");
-            for (auto &structure: fromData) {
-                for (auto &[density, densityDerivatives]: _densityCalculator -> calculate(structure)) {
-                    if (density > eamMaxInData) {
-                        eamMaxInData = density;
-                    }
-                    if (density < eamMinInData) {
-                        eamMinInData = density;
-                    }
-                }
-            }
+        if (_sparsifier == nullptr) {
+            CurrentLogger::get()->error("EAM sparsifier not set", true);
         }
 
-        const auto rangeMin = _params.sparseRange.first.value_or(eamMinInData);
-        const auto rangeMax = _params.sparseRange.second.value_or(eamMaxInData);
-
-        Logger::logger->info("EAM sparse range = " + to_string(rangeMin) + "-" + to_string(rangeMax));
-        const double step = (rangeMax - rangeMin) / static_cast<double>(_params.nSparsePoints - 1);
-
-        _sparsePoints = {};
-        Logger::logger->debug("EAM sparse points:");
-        for (size_t i = 0; i < _params.nSparsePoints; i++) {
-            _sparsePoints.push_back(rangeMin + static_cast<double>(i) * step);
-            Logger::logger->debug(to_string(_sparsePoints.back()));
+        vector<EamKernelIndex> indexArr;
+        for (const auto& structure : fromData) {
+            indexArr.push_back(doIndex(structure));
         }
-    }
-
-    void EamDescriptor::sparsifyQuipUniform(const vector<AtomicStructure> &fromData) {
-
-        double eamMinInData = 1e9, eamMaxInData = -1e9; // I hope noone goes too crazy
-        vector<double> densities;
-        if (!_params.sparseRange.first.has_value() && !_params.sparseRange.second.has_value()) {
-
-            Logger::logger->debug("Detecting sparse range");
-            for (auto &structure: fromData) {
-                for (auto &[density, densityDerivatives]: _densityCalculator -> calculate(structure)) {
-                    if (density > eamMaxInData) {
-                        eamMaxInData = density;
-                    }
-                    if (density < eamMinInData) {
-                        eamMinInData = density;
-                    }
-                    densities.push_back(density);
-                }
-            }
-        }
-
-        const auto rangeMin = _params.sparseRange.first.value_or(eamMinInData);
-        const auto rangeMax = _params.sparseRange.second.value_or(eamMaxInData);
-
-        const auto n = _params.nSparsePoints;
-
-        Logger::logger->info("EAM sparse range = " + to_string(rangeMin) + "-" + to_string(rangeMax));
-        const double step = (rangeMax - rangeMin) / static_cast<double>(n);
-
-        vector<size_t> hist(n, 0);
-        vector<size_t> usefulIndexes;
-
-        _sparsePoints = {};
-        Logger::logger->debug("EAM sparse points:");
-        for (double density: densities) {
-            const auto index = static_cast<size_t>((density - rangeMin) / step);
-
-            //Logger::logger->debug(to_string(index) + "a");
-            //Logger::logger->debug(to_string(n) + "b");
-            if (++hist[index] == 1) {
-                _sparsePoints.push_back(density);
-                Logger::logger->debug(to_string(_sparsePoints.back()));
-                usefulIndexes.push_back(index);
-            }
-        }
-        Logger::logger->debug("Done");
-
-        if (_sparsePoints.size() == n) {
-            return;
-        }
-
-        Logger::logger->debug("Not all EAM histogram bins have values => random selection:");
-        mt19937 gen(9138741034);
-        uniform_real_distribution<> marginDist(0, step);
-        uniform_int_distribution<> indexDist(0, usefulIndexes.size() - 1);
-
-        while (_sparsePoints.size() < n) {
-            // select bin randomly
-            const auto index = usefulIndexes[indexDist(gen)];
-            _sparsePoints.push_back(
-                static_cast<double>(index) * step + marginDist(gen)
-            );
-            Logger::logger->debug(to_string(_sparsePoints.back()));
-        }
+        _sparsePointsPerSpecies = _sparsifier->sparsifyFromData(indexArr);
+        _coefficients.clear();
     }
 
     size_t EamDescriptor::nSparsePoints() {
-        return _sparsePoints.size();
+        size_t result = 0;
+        for (const auto &densities: _sparsePointsPerSpecies | views::values) {
+            result += densities.size();
+        }
+        return result;
     }
 
     vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
         vector<Covariance> result;
 
-        const EamKernelIndex kernelIndex = _densityCalculator->calculate(atomicStructure);
+        const EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
-        for (double sparseDensity: _sparsePoints) {
-            double u = _kernel->covariance(atomicStructure, kernelIndex, sparseDensity);
-            const auto f = _kernel->derivatives(atomicStructure, kernelIndex, sparseDensity);
-            result.push_back({u, f});
+        for ( auto &[species, sparseDensities]: _sparsePointsPerSpecies) {
+            for (double sparseDensity: sparseDensities) {
+                double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
+                const auto f = _kernel->derivatives(atomicStructure, kernelIndex.at(species), sparseDensity);
+                result.push_back({u, f});
+            }
         }
 
         return result;
@@ -156,28 +140,57 @@ namespace jgap {
 
     vector<pair<size_t, shared_ptr<MatrixBlock>>> EamDescriptor::selfCovariate() {
 
-        auto result = make_shared<MatrixBlock>(_sparsePoints.size(), _sparsePoints.size());
+        vector<pair<size_t, shared_ptr<MatrixBlock>>> result;
+        size_t startingRC = 0;
 
-        for (size_t i = 0; i < _sparsePoints.size(); i++) {
-            for (size_t j = 0; j < _sparsePoints.size(); j++) {
-                (*result)(i, j) = _kernel->covariance(_sparsePoints[i], _sparsePoints[j]);
+        for (const auto &densities: _sparsePointsPerSpecies | views::values) {
+
+            auto elementBlock = make_shared<MatrixBlock>(densities.size(), densities.size());
+            for (size_t i = 0; i < densities.size(); i++) {
+                for (size_t j = 0; j < densities.size(); j++) {
+                    (*elementBlock)(i, j) = _kernel->covariance(densities[i], densities[j]);
+                }
             }
+
+            result.push_back({startingRC, elementBlock});
+            startingRC += densities.size();
         }
-        return {{0, result}};
+
+        return result;
     }
 
-    nlohmann::json EamDescriptor::serialize() {
-        nlohmann::json root;
+    EamKernelIndex EamDescriptor::doIndex(const AtomicStructure &structure) const {
 
-        root["sparse_points"] = _sparsePoints;
-        if (_coefficients.size() == nSparsePoints()) {
-            root["coefficients"] = _coefficients;
+        EamKernelIndex result{};
+
+        for (size_t atomIdx = 0; atomIdx < structure.atoms.size(); atomIdx++) {
+
+            double totalDensity = 0;
+            vector<pair<NeighbourData, double>> densityDerivatives;
+
+            auto atom = structure.atoms[atomIdx];
+
+            for (NeighbourData neighbour : atom.neighbours.value()) {
+                if (neighbour.distance > _cutoff) continue;
+
+                pair orderedSpeciesPair = {
+                    structure.atoms[neighbour.index].species, atom.species
+                };
+
+                if (!_pairFunctions.contains(orderedSpeciesPair)) {
+                    if (_defaultPairFunction == nullptr) continue;
+
+                    totalDensity += _defaultPairFunction->evaluate(neighbour.distance);
+                    densityDerivatives.emplace_back(
+                        neighbour,
+                        _defaultPairFunction->differentiate(neighbour.distance)
+                    );
+                }
+            }
+
+            result[atom.species].push_back({totalDensity, densityDerivatives});
         }
 
-        return {
-            {"name", _name},
-            {"type", "eam"},
-            {"data", root}
-        };
-    }//9015128865602.326
+        return result;
+    }
 }

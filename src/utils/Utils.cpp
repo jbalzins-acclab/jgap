@@ -11,7 +11,8 @@
 #include <fstream>
 #include <Eigen/Dense>
 
-#include "io/log/Logger.hpp"
+#include "core/neighbours/NeighbourFinder.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 using namespace std;
 
@@ -23,7 +24,7 @@ namespace jgap {
         ifstream file(fileName);
 
         if (!file) {
-            Logger::logger->error( format("Error opening file {}", fileName), true);
+            CurrentLogger::get()->error( format("Error opening file {}", fileName), true);
         }
 
         string line;
@@ -34,14 +35,14 @@ namespace jgap {
             iss = istringstream(line);
             iss >> n;
             if (!iss.eof()) {
-                Logger::logger->error( format("Expected single integer, got {}", line), true);
+                CurrentLogger::get()->error( format("Expected single integer, got {}", line), true);
             }
 
             // metadata
             getline(file, line);
 
             if (!line.contains("pbc=\"T T T\"")) {
-                Logger::logger->error(format("No PBC? : {}", line), true);
+                CurrentLogger::get()->error(format("No PBC? : {}", line), true);
             }
 
             array<Vector3, 3> lattice{};
@@ -50,7 +51,7 @@ namespace jgap {
 
                 size_t latticeEndIdx = line.find('\"', latticeStartIdx);
                 if (latticeEndIdx == string::npos) {
-                    Logger::logger->error(format("Lattice unspecified in {}", line), true);
+                    CurrentLogger::get()->error(format("Lattice unspecified in {}", line), true);
                 }
 
                 string latticeStr = line.substr(latticeStartIdx, latticeEndIdx - latticeStartIdx);
@@ -60,7 +61,7 @@ namespace jgap {
                     >> lattice[2].x >> lattice[2].y >> lattice[2].z;
             }
             else {
-                Logger::logger->error(format("Lattice unspecified in {}", line), true);
+                CurrentLogger::get()->error(format("Lattice unspecified in {}", line), true);
             }
 
             optional<string> configType{};
@@ -68,7 +69,7 @@ namespace jgap {
                 configTypeStartIdx += string("config_type=").size();
                 size_t configTypeEndIdx = line.find(' ', configTypeStartIdx);
                 if (configTypeEndIdx == string::npos) {
-                    Logger::logger->error(format("Config type formatting error in: {}", line), true);
+                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
                 }
 
                 configType = line.substr(configTypeStartIdx, configTypeEndIdx - configTypeStartIdx);
@@ -79,7 +80,7 @@ namespace jgap {
                 energyStartIdx += string("energy=").size();
                 size_t energyEndIdx = line.find(' ', energyStartIdx);
                 if (energyEndIdx == string::npos) {
-                    Logger::logger->error(format("Config type formatting error in: {}", line), true);
+                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
                 }
 
                 string energyStr = line.substr(energyStartIdx, energyEndIdx - energyStartIdx);
@@ -101,7 +102,7 @@ namespace jgap {
 
                 size_t virialsEndIdx = line.find('\"', virialsStartIdx);
                 if (virialsEndIdx == string::npos) {
-                    Logger::logger->error(format("Virials parsing error in: {}", line), true);
+                    CurrentLogger::get()->error(format("Virials parsing error in: {}", line), true);
                 }
 
                 string virialsStr = line.substr(virialsStartIdx, virialsEndIdx - virialsStartIdx);
@@ -145,7 +146,7 @@ namespace jgap {
                     });
                 }
             } else {
-                Logger::logger->error(format("Unknown properties string: {}", line), true);
+                CurrentLogger::get()->error(format("Unknown properties string: {}", line), true);
             }
 
             result.push_back(AtomicStructure{
@@ -159,6 +160,64 @@ namespace jgap {
         }
 
         return result;
+    }
+
+    vector<AtomicStructure> readXyz(const string &fileName, double cutoff) {
+        auto result = readXyz(fileName);
+        NeighbourFinder::findNeighbours(result, cutoff);
+        return result;
+    }
+
+    void writeXyz(const string &fileName, const vector<AtomicStructure> &structures) {
+        ofstream file(fileName);
+        for (auto& structure: structures) {
+            file << structure.atoms.size() << endl;
+
+            string meta = "";
+            meta += "pbc=\"T T T\" ";
+            meta += "Lattice=\"";
+            meta += format(
+                "{} {} {} {} {} {} {} {} {}",
+                structure.lattice[0].x, structure.lattice[0].y, structure.lattice[0].z,
+                structure.lattice[1].x, structure.lattice[1].y, structure.lattice[1].z,
+                structure.lattice[2].x, structure.lattice[2].y, structure.lattice[2].z
+                );
+            meta += "\" ";
+            if (structure.configType.has_value()) {
+                meta += "config_type=" + structure.configType.value() + " ";
+            }
+            if (structure.energy.has_value()) {
+                meta += "energy=" + to_string(structure.energy.value()) + " ";
+            }
+            if (structure.virials.has_value()) {
+                meta += "virials=\"";
+                meta += format(
+                    "{} {} {} {} {} {} {} {} {}",
+                    structure.virials.value()[0].x, structure.virials.value()[0].y, structure.virials.value()[0].z,
+                    structure.virials.value()[1].x, structure.virials.value()[1].y, structure.virials.value()[1].z,
+                    structure.virials.value()[2].x, structure.virials.value()[2].y, structure.virials.value()[2].z
+                );
+                meta += "\" ";
+            }
+            if (structure.atoms[0].force.has_value()) {
+                meta += "Properties=species:S:1:pos:R:3:force:R:3";
+            } else {
+                meta += "Properties=species:S:1:pos:R:3";
+            }
+
+            file << meta << endl;
+
+            for (const auto& atom: structure.atoms) {
+                file << atom.species << " ";
+                file << atom.position.x << " " << atom.position.y << " " << atom.position.z << " ";
+                if (atom.force.has_value()) {
+                    file << atom.force.value().x << " " << atom.force.value().y << " " << atom.force.value().z;
+                }
+                file << endl;
+            }
+        }
+        file.flush();
+        file.close();
     }
 
     // TODO: separate class and play around
@@ -209,5 +268,28 @@ namespace jgap {
             ss << "\n";
         }
         return ss.str();
+    }
+
+    double rms(const vector<double> &x) {
+        double rms = 0.0;
+        for (int i = 0; i < x.size(); ++i) {
+            rms += pow(x[i], 2);
+        }
+        return sqrt(rms / x.size());
+    }
+
+    double std(const vector<double> &x) {
+        double mean = 0.0;
+        for (int i = 0; i < x.size(); ++i) {
+            mean += x[i];
+        }
+        mean /= x.size();
+
+        double stdev = 0.0;
+        for (int i = 0; i < x.size(); ++i) {
+            stdev += pow(x[i] - mean, 2);
+        }
+        stdev = sqrt(stdev / x.size());
+        return stdev;
     }
 }

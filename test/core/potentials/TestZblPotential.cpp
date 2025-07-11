@@ -10,10 +10,7 @@ using namespace std;
 using namespace jgap;
 
 TEST(TestZblPotential, DimersData) {
-    ifstream file("resources/dmol-screening-fit/dmol-fit.json");
-    nlohmann::json dmolData;
-    file >> dmolData;
-    auto zblPot = ZblPotential(dmolData);
+    auto zblPot = ZblPotential(nlohmann::json::parse("{}"));
 
     string xyzDataFn = "test/resources/zbl/quip-test.out.xyz";
     auto structs = readXyz(xyzDataFn);
@@ -43,10 +40,7 @@ TEST(TestZblPotential, DimersData) {
 // TODO: re-fit/check quip cutoff
 void testVsQuipPairpot(const string& xyzDataFn) {
 
-    ifstream file("resources/dmol-screening-fit/dmol-fit.json");
-    nlohmann::json dmolData;
-    file >> dmolData;
-    auto zblPot = ZblPotential(dmolData);
+    auto zblPot = ZblPotential(nlohmann::json::parse("{}"));
 
     auto structs = readXyz(xyzDataFn);
     NeighbourFinder::findNeighbours(structs, 5);

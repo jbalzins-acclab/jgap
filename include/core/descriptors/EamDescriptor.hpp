@@ -4,45 +4,53 @@
 #include <nlohmann/json.hpp>
 
 #include "core/descriptors/Descriptor.hpp"
-#include "core/kernels/Kernel.hpp"
+#include "core/descriptors/kernels/Kernel.hpp"
 #include "data/kernels/EamKernelIndex.hpp"
 #include "data/params/EamDescriptorParams.hpp"
-#include "eam/EamDensityCalculator.hpp"
+#include "eam/pair_functions/EamPairFunction.hpp"
+#include "io/parse/ParserRegistry.hpp"
+#include "kernels/EamSE.hpp"
 #include "memory/MatrixBlock.hpp"
+#include "core/descriptors/sparsification/eam/PerSpeciesEamSparsifier.hpp"
 
 namespace jgap {
 
     class EamDescriptor : public Descriptor {
     public:
-        explicit EamDescriptor(const EamDescriptorParams& params);
+        explicit EamDescriptor(const nlohmann::json &params);
+        nlohmann::json serialize() override;
+        string getType() override { return "eam"; };
 
         ~EamDescriptor() override = default;
 
         void setSparsePoints(const vector<AtomicStructure> &fromData) override;
 
-        void setSparsePoints(vector<double> sparsePoints) {
-            _sparsePoints = std::move(sparsePoints);
+        void setSparsePoints(map<Species, vector<double>> sparsePoints) {
+            _sparsePointsPerSpecies = std::move(sparsePoints);
         }
 
-        double getCutoff() override { return _densityCalculator->getCutoff(); }
-
         size_t nSparsePoints() override;
+        map<Species, vector<double>> getSparsePoints() { return _sparsePointsPerSpecies; }
+
+        double getCutoff() override { return _cutoff; }
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
 
-        nlohmann::json serialize() override;
     private:
-        string _name;
-        EamDescriptorParams _params;
-        shared_ptr<Kernel<double, EamKernelIndex>> _kernel;
-        shared_ptr<EamDensityCalculator> _densityCalculator;
+        double _cutoff;
+        shared_ptr<EamKernel> _kernel;
+        shared_ptr<PerSpeciesEamSparsifier> _sparsifier;
 
-        vector<double> _sparsePoints;
+        shared_ptr<EamPairFunction> _defaultPairFunction;
+        map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> _pairFunctions;
 
-        void sparsifyTrueUniform(const vector<AtomicStructure> &fromData);
-        void sparsifyQuipUniform(const vector<AtomicStructure> &fromData);
+        map<Species, vector<double>> _sparsePointsPerSpecies;
+
+        [[nodiscard]] EamKernelIndex doIndex(const AtomicStructure &structure) const;
     };
+
+    REGISTER_PARSER("eam", Descriptor, EamDescriptor)
 }
 
 

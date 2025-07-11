@@ -1,15 +1,17 @@
 #include "core/potentials/ZblPotential.hpp"
-
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
+
+#include <fstream>
+
+using namespace std;
 
 namespace jgap {
 
-    ZblPotential::ZblPotential(nlohmann::json dmolFitCoefficients, double cutoffLow, double cutoffHigh) {
+    void ZblPotential::parseDmolFitCoefficients() {
 
-        StdoutLogger::initIfNotInitialized();
-
-        _cutoff = cutoffHigh;
-        _cutoffFunction = make_shared<PerriotPolynomialCutoff>(cutoffLow, cutoffHigh);
+        ifstream fIn(_dmolFile);
+        nlohmann::json dmolFitCoefficients;
+        fIn >> dmolFitCoefficients;
 
         _dmolFitCoefficients = {};
         for (auto& [key, val]: dmolFitCoefficients.items()) {
@@ -18,6 +20,39 @@ namespace jgap {
                 val[0], val[1], val[2], val[3], val[4], val[5]
             };
         }
+    }
+
+    ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
+
+        if (zblParams.contains("cutoff")) {
+            _cutoff = zblParams["cutoff"]["cutoff"];
+            _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
+        } else {
+            _cutoff = DEFAULT_ZBL_CUTOFF;
+            _cutoffFunction = make_shared<PerriotPolynomialCutoff>(DEFAULT_ZBL_RMIN, _cutoff);
+        }
+
+        // TODO: not sure if default value is a good idea here
+
+        _dmolFile = zblParams.value("dmol_fit_coefficients_file", DEFAULT_DMOL_FILE_PATH);
+        parseDmolFitCoefficients();
+    }
+
+    nlohmann::json ZblPotential::serialize() {
+
+        auto cutoffData = _cutoffFunction->serialize();
+        cutoffData["type"] = _cutoffFunction->getType();
+
+        if (_dmolFile != DEFAULT_DMOL_FILE_PATH) {
+            return {
+                {"cutoff", cutoffData},
+                {"dmol_fit_coefficients_file", _dmolFile}
+            };
+        }
+
+        return {
+            {"cutoff", cutoffData}
+        };
     }
 
     PotentialPrediction ZblPotential::predict(const AtomicStructure &structure) {
@@ -54,10 +89,6 @@ namespace jgap {
             energy,
             forces
         };
-    }
-
-    nlohmann::json ZblPotential::serialize() {
-        return {"name", "zbl"};
     }
 
     double ZblPotential::zbl_eV(const SpeciesPair& speciesPair, double r) {

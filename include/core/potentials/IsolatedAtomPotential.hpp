@@ -9,24 +9,29 @@
 #include <nlohmann/json.hpp>
 
 #include "Potential.hpp"
+#include "io/parse/ParserRegistry.hpp"
 
 using namespace std;
 
 namespace jgap {
     class IsolatedAtomPotential : public Potential {
     public:
-        explicit IsolatedAtomPotential(const vector<AtomicStructure> &containsIsolatedAtoms,
-                                       bool errorOnUnknownSpecies = true);
         ~IsolatedAtomPotential() override = default;
+
+        explicit IsolatedAtomPotential(const nlohmann::json& params);
+        nlohmann::json serialize() override;
+        string getType() override { return "isolated_atom"; }
+        double getCutoff() override { return 0.0; }
 
         PotentialPrediction predict(const AtomicStructure& structure) override;
 
-        nlohmann::json serialize() override;
 
     private:
         bool _errorOnUnknownSpecies;
         map<Species, double> _isolatedEnergies;
     };
+
+    REGISTER_PARSER("isolated_atom", Potential, IsolatedAtomPotential);
 }
 
 #endif //ISOLATEDATOMPOTENTIAL_HPP

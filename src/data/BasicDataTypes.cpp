@@ -1,7 +1,12 @@
 #include "data/BasicDataTypes.hpp"
 
 namespace jgap {
-    void AtomicStructure::set(const PotentialPrediction &prediction) {
+    void AtomicStructure::setEnergyData(const PotentialPrediction &prediction) {
+        energy = {};
+        for (auto& atom: atoms) {
+            atom.force = {};
+        }
+        virials = {};
         adjust(prediction, false, true);
     }
 
@@ -22,8 +27,8 @@ namespace jgap {
                     prediction.forces.value().size(),
                     this->atoms.size()
                 );
-                if (Logger::logger != nullptr) {
-                    Logger::logger->error(errMsg);
+                if (CurrentLogger::get() != nullptr) {
+                    CurrentLogger::get()->error(errMsg);
                 }
                 throw runtime_error(errMsg);
             }

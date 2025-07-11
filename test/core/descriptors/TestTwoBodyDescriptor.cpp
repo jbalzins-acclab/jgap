@@ -4,89 +4,9 @@
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "utils/Utils.hpp"
+#include "ParserRegistryAuto.hpp"
 
 using namespace jgap;
-
-TEST(TestTwoBodyDescriptor, TrueUniformSimple) {
-
-    auto structs = readXyz("test/resources/xyz-samples/iter-3-3-test.xyz");
-    vector<AtomicStructure> selectedStructs;
-    copy_n(structs.begin(), 20, back_inserter(selectedStructs));
-
-    NeighbourFinder::findNeighbours(selectedStructs, 5.0);
-
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 5.0,
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 3,
-        .energyScale = 10.0,
-        .lengthScale = 1.0,
-        .sparseRange = {1, 2},
-        .speciesPairs = vector<SpeciesPair>{
-            {"Mn", "Cr"},
-            {"Cr", "Cr"}
-        }
-    };
-
-    auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(selectedStructs);
-    const auto res = desc2b.serialize()["data"];
-    ASSERT_EQ(res.size(), 2);
-    ASSERT_EQ(res["Cr,Cr"]["sparse_points"].dump(), "[1.0,1.5,2.0]");
-    ASSERT_EQ(res["Cr,Mn"]["sparse_points"].dump(), "[1.0,1.5,2.0]");
-}
-
-TEST(TestTwoBodyDescriptor, TrueUniformRangeFromFile) {
-
-    auto structs = readXyz("test/resources/xyz-samples/iter-3-3-test.xyz");
-    vector<AtomicStructure> selectedStructs;
-    copy_n(structs.begin(), 20, back_inserter(selectedStructs));
-
-    NeighbourFinder::findNeighbours(selectedStructs, 5.0);
-
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 5.0,
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 3,
-        .energyScale = 10.0,
-        .lengthScale = 1.0,
-        .speciesPairs = vector<SpeciesPair>{
-                {"Cr", "Cr"}
-        }
-    };
-
-    auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(selectedStructs);
-    const auto res = desc2b.serialize()["data"];
-    ASSERT_EQ(res.size(), 1);
-    ASSERT_EQ(res["Cr,Cr"]["sparse_points"].dump(), "[3.48275862,3.68965517,3.89655172]");
-}
-
-TEST(TestTwoBodyDescriptor, TrueUniformSpeciesFromFile) {
-
-    auto structs = readXyz("test/resources/xyz-samples/iter-3-3-test.xyz");
-    vector<AtomicStructure> selectedStructs = structs;
-    // copy_n(structs.begin(), 20, back_inserter(selectedStructs));
-
-    NeighbourFinder::findNeighbours(selectedStructs, 5.0);
-
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 5.0,
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 3,
-        .energyScale = 10.0,
-        .lengthScale = 1.0
-    };
-
-    auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(selectedStructs);
-    cout << desc2b.serialize().dump()<<endl;
-    const auto res = desc2b.serialize()["data"]; // num pairs
-    ASSERT_EQ(res.size(), 4*5/2);
-}
 
 TEST(TestTwoBodyDescriptor, covariance) {
 
@@ -95,25 +15,33 @@ TEST(TestTwoBodyDescriptor, covariance) {
     vector<AtomicStructure> selectedStructs = structs;
     // copy_n(structs.begin(), 20, back_inserter(selectedStructs));
 
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 3.5, // => no self-interaction in x direction
-        .cutoffTransitionWidth = 0.7, // => should alter CrCr 2.89132 -> ~9.94112 to ~9.52948
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 2,
-        .energyScale = 10.0,
-        .lengthScale = 1.0,
-        .sparseRange = {2, 3},
-        .speciesPairs = vector<SpeciesPair>{
-            {"Mn", "Cr"},
-            {"Cr", "Cr"}
+    const auto params2b = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 10.0,
+            "cutoff": {
+                "type": "coscutoff",
+                "r_min": 2.8,
+                "cutoff": 3.5
+            }
+        },
+        "sparse_data": {
+            "Mn,Cr": {
+                "sparse_points": [2.0, 3.0]
+            },
+            "Cr,Cr": {
+                "sparse_points": [2.0, 3.0]
+            }
         }
-    };
+    }
+    )");
 
     auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(selectedStructs);
+    // desc2b.setSparsePoints(selectedStructs);
 
-    const auto resSparse = desc2b.serialize()["data"];
+    const auto resSparse = desc2b.serialize()["sparse_data"];
     ASSERT_EQ(resSparse.size(), 2);
     ASSERT_EQ(resSparse["Cr,Cr"]["sparse_points"].dump(), "[2.0,3.0]");
     ASSERT_EQ(resSparse["Cr,Mn"]["sparse_points"].dump(), "[2.0,3.0]");
@@ -160,15 +88,15 @@ TEST(TestTwoBodyDescriptor, covariance) {
     }
 }
 
-AtomicStructure makeDimer(Species species, double x) {
+AtomicStructure makeDimer(const Species &species, double x) {
     return AtomicStructure{
         .atoms = {
             AtomData{
-                .species = std::move(species),
+                .species = species,
                 .position = {0,0,0}
             },
             AtomData{
-                .species = std::move(species),
+                .species = species,
                 .position = {x,0,0}
             }
         },
@@ -188,19 +116,27 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
         };
     NeighbourFinder::findNeighbours(structures, 5.0);
 
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 5, // => no self-interaction in x direction
-        .cutoffTransitionWidth = 0.7, // => should alter CrCr 2.89132 -> ~9.94112 to ~9.52948
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 2,
-        .energyScale = 1.0,
-        .lengthScale = 1.0,
-        .sparseRange = {2, 3}
-    };
+    const auto params2b = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 1.0,
+            "cutoff": {
+                "type": "perriot",
+                "r_min": 4.3,
+                "cutoff": 5.0
+            }
+        },
+        "sparse_data": {
+            "Fe,Fe": {
+                "sparse_points": [2.0, 3.0]
+            }
+        }
+    }
+    )");
 
     auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(structures);
 
     auto res0 = desc2b.covariate(structures[0]);
     ASSERT_TRUE(res0[0].derivatives[0].x < 0);
@@ -245,23 +181,27 @@ auto equilateralTriangle_2b = AtomicStructure{
 };
 
 TwoBodyDescriptor setupDesc2bSimple_2b() {
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 10, // => no self-interaction in x direction
-        .cutoffTransitionWidth = 0.7, // => should alter CrCr 2.89132 -> ~9.94112 to ~9.52948
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 2,
-        .energyScale = 1.0,
-        .lengthScale = 1.0,
-        .sparseRange = {2, 3}
-    };
+    const auto params2b = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 1.0,
+            "cutoff": {
+                "type": "perriot",
+                "r_min": 9.3,
+                "cutoff": 10.0
+            }
+        },
+        "sparse_data": {
+            "Fe,Fe": {
+                "sparse_points": [2.0, 4.0]
+            }
+        }
+    }
+    )");
 
-    auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints({
-        {SpeciesPair{"Fe", "Fe"}, vector{2.0, 4.0}}
-    });
-
-    return desc2b;
+    return TwoBodyDescriptor(params2b);
 }
 
 TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
@@ -292,25 +232,34 @@ TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
         ASSERT_NEAR((res[1].derivatives[i]-derivatives_at4).norm(), 0, 1e-4);
     }
 
-    desc.serialize();
+    cout << desc.serialize().dump() << endl;
 }
 
 TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
     vector structs = readXyz("test/resources/xyz-samples/FeOnly.xyz");
     NeighbourFinder::findNeighbours(structs, 5.0);
 
-    const auto params2b = TwoBodyDescriptorParams{
-        .cutoff = 5.0,
-        .kernelType = TwoBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = TwoBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .nSparsePointsPerSpeciesPair = 3,
-        .energyScale = 10.0,
-        .lengthScale = 1.0,
-        .sparseRange = {1, 2}
-    };
+    const auto params2b = nlohmann::json::parse(R"(
+    {
+        "kernel": {
+            "type": "squared_exp",
+            "length_scale": 1.0,
+            "energy_scale": 10.0,
+            "cutoff": {
+                "type": "perriot",
+                "r_min": 4.5,
+                "cutoff": 5.0
+            }
+        },
+        "sparse_data": {
+            "Fe,Fe": {
+                "sparse_points": [1.0, 1.5, 2.0]
+            }
+        }
+    }
+    )");
 
     auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setSparsePoints(structs);
     desc2b.setCoefficients({1, 1, 1});
 
     for (size_t i = 71; i < 440; i++) {

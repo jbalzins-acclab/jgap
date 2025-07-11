@@ -1,0 +1,81 @@
+{
+    "output_file": "fe-out.jgap.json",
+    "training_data_xyz": "resources/xyz-samples/ni-train.xyz",
+    "testing_data_xyzs": [
+        "resources/xyz-samples/ni-train.xyz",
+        "resources/xyz-samples/ni-test.xyz"
+    ],
+    "external": {
+        "type": "zbl"
+    },
+    "fits": {
+        "isolated_atom": {
+            "type": "isolated_atom"
+        },
+        "jgap_fe": {
+            "type": "in_ram_jgap",
+            "sigma_rules": {
+                "type": "simple",
+                "E_per_root_n_atoms": 0.001,
+                "F_component": 0.04,
+                "liquid": 10.0,
+                "short_range": 10.0
+            },
+            "descriptors": {
+                "my_2b": {
+                    "type": "2b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 10.0,
+                        "cutoff": {
+                            "type": "perriot",
+                            "cutoff_transition_width": 1.0,
+                            "cutoff": 5.2
+                        }
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse_per_pair": 20
+                    }
+                },
+                "my_3b": {
+                    "type": "3b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0,
+                        "cutoff": {
+                            "type": "perriot",
+                            "cutoff_transition_width": 0.6,
+                            "cutoff": 4.0
+                        }
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse_per_triplet": 700
+                    }
+                },
+                "my_eam": {
+                    "type": "eam",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0
+                    },
+                    "pair_functions": [
+                        {
+                            "type": "polycutoff",
+                            "cutoff": 5.2,
+                            "r_min": 0
+                        }
+                    ],
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse_per_species": 20
+                    }
+                }
+            }
+        }
+    }
+}

@@ -15,14 +15,6 @@ namespace jgap {
         void warn(const string_view msg) override { print(msg, "WARN", true); }
         void error(const string_view msg) override { print(msg, "ERROR", true); }
 
-        static void init(const bool debug = true) {
-            logger = new StdoutLogger(debug);
-        }
-
-        static void initIfNotInitialized() {
-            if (logger == nullptr) logger = new StdoutLogger();
-        }
-
     private:
         bool _debug;
         void print(string_view msg, string_view type, bool isError);
