@@ -89,9 +89,10 @@ namespace jgap {
         nlohmann::json pfData = nlohmann::json::array();
         pfData.push_back(_defaultPairFunction->serialize());
         for (const auto& [orderedSpeciesPair, pf]: _pairFunctions) {
-            pfData.push_back(pf->serialize());
-            pfData.back()["type"] = pf->getType();
-            pfData.back()["species_ordered"] = vector{orderedSpeciesPair.first, orderedSpeciesPair.second};
+            auto newPfData = pf->serialize();
+            newPfData["type"] = pf->getType();
+            newPfData["species_ordered"] = vector{orderedSpeciesPair.first, orderedSpeciesPair.second};
+            pfData.push_back(newPfData);
         }
 
         return {

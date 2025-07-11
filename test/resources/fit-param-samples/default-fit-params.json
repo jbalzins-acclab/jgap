@@ -1,10 +1,6 @@
 {
-    "output_file": "fe-out.jgap.json",
+    "output_file": "ni-out-latest.jgap.json",
     "training_data_xyz": "resources/xyz-samples/ni-train.xyz",
-    "testing_data_xyzs": [
-        "resources/xyz-samples/ni-train.xyz",
-        "resources/xyz-samples/ni-test.xyz"
-    ],
     "external": {
         "type": "zbl"
     },

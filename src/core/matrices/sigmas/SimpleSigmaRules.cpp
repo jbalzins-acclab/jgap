@@ -25,10 +25,12 @@ namespace jgap {
 
     void SimpleSigmaRules::fillSigmas(AtomicStructure &structure) {
         double multiplier = 1.0;
-        if (structure.configType.value_or("default").contains("liquid")) {
+        auto ct = structure.configType.value_or("default");
+        if (ct.contains("liquid")) {
             multiplier = _liquidMultiplier;
         }
-        if (structure.configType.value_or("default").contains("short")) {
+
+        if (ct.contains("short") || ct.contains("traj") || ct.contains("dimer") || ct.contains("trimer")) {
             multiplier = _shortRangeMultiplier;
         }
 
