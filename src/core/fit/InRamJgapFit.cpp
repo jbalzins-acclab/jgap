@@ -28,7 +28,11 @@ namespace jgap {
         double maxCutoff = 0;
 
         CurrentLogger::get()->info("Checking sparse points");
+
+        auto descriptorsAsVec = vector<shared_ptr<Descriptor>>();
         for (const auto& descriptor: _descriptors | views::values) {
+            descriptorsAsVec.push_back(descriptor);
+
             // To avoid ugly "cutoff" in sparse json
             NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff());
             if (descriptor->nSparsePoints() == 0) {
@@ -55,12 +59,12 @@ namespace jgap {
         //// ----------------------------------------------------------------------------------------------------
 
         CurrentLogger::get()->info("Making matrix A");
-        auto A = makeA(vector(from_range, std::views::values(_descriptors)), _trainingData);
+        auto A = makeA(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making matrix A");
         //CurrentLogger::get()->info(matrixToString(A));
 
         CurrentLogger::get()->info("Making feature vector b");
-        auto b = makeB(vector(from_range, std::views::values(_descriptors)), _trainingData);
+        auto b = makeB(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making feature vector b");
 
         //// ----------------------------------------------------------------------------------------------------
