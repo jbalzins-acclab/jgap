@@ -186,16 +186,15 @@ namespace jgap {
                 double contr = contribution[colInc].total; // debug
                 A(startingRow, currentColumn + colInc) = contr * pow(atomicStructure.energySigma.value(), -1);
                 //CurrentLogger::get()->debug(format("E_{}: {}", colInc,A(startingRow, currentColumn + colInc)));
-                CurrentLogger::get()->debug(format("U_ff{}:{}:{}", A(startingRow, currentColumn + colInc), startingRow,  currentColumn + colInc));
                 for (size_t rowInc = 0; rowInc < contribution[colInc].derivatives.size(); rowInc++) {
                     const auto derivative = contribution[colInc].derivatives[rowInc]; // FORCE IS NEGATIVE
                     const auto fSigmas = atomicStructure.atoms[rowInc].forceSigmas.value();
                     A(startingRow + rowInc * 3 + 1, currentColumn + colInc) = - derivative.x / fSigmas.x;
                     A(startingRow + rowInc * 3 + 2, currentColumn + colInc) = - derivative.y / fSigmas.y;
                     A(startingRow + rowInc * 3 + 3, currentColumn + colInc) = - derivative.z / fSigmas.z;
-                CurrentLogger::get()->debug(format("U_ffX{}:{}:{}", A(startingRow + rowInc * 3 + 1, currentColumn + colInc), startingRow + rowInc * 3 + 1,  currentColumn + colInc));
-                CurrentLogger::get()->debug(format("U_ffY{}:{}:{}", A(startingRow + rowInc * 3 + 2, currentColumn + colInc), startingRow + rowInc * 3 + 2,  currentColumn + colInc));
-                CurrentLogger::get()->debug(format("U_ffZ{}:{}:{}", A(startingRow + rowInc * 3 + 3, currentColumn + colInc), startingRow + rowInc * 3 + 3,  currentColumn + colInc));
+                CurrentLogger::get()->debug(format("U_ffX{}:{}:{}", derivative.x, startingRow + rowInc * 3 + 1,  currentColumn + colInc));
+                CurrentLogger::get()->debug(format("U_ffY{}:{}:{}", derivative.y, startingRow + rowInc * 3 + 2,  currentColumn + colInc));
+                CurrentLogger::get()->debug(format("U_ffZ{}:{}:{}", derivative.z, startingRow + rowInc * 3 + 3,  currentColumn + colInc));
 
                     /*CurrentLogger::get()->debug(format("f_{}: {}|{}|{}", rowInc,
                     A(startingRow + rowInc * 3 + 1, currentColumn + colInc),
