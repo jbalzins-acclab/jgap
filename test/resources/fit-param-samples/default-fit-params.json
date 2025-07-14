@@ -1,6 +1,6 @@
 {
     "output_file": "feni-out.jgap.json",
-    "training_data_xyz": "resources/xyz-samples/fe-ni-train.xyz",
+    "training_data_xyz": "resources/xyz-samples/feni-train.xyz",
     "external": {
         "type": "zbl"
     },

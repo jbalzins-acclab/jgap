@@ -9,6 +9,18 @@
 #include <Eigen/Dense>
 #include <ParserRegistryAuto.hpp>
 #include <tbb/parallel_for_each.h>
+#include <execinfo.h>
+
+void print_backtrace() {
+    void* callstack[128];
+    int frames = backtrace(callstack, 128);
+    char** symbols = backtrace_symbols(callstack, frames);
+    std::cerr << "Stack trace:\n";
+    for (int i = 0; i < frames; ++i) {
+        std::cerr << symbols[i] << "\n";
+    }
+    free(symbols);
+}
 
 using namespace std;
 
@@ -108,6 +120,7 @@ int main(int argc, char** argv) {
 
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
+        print_backtrace();
         throw;
     }
 
