@@ -88,7 +88,11 @@ namespace jgap {
         kernelData["type"] = _kernel->getType();
 
         nlohmann::json pfData = nlohmann::json::array();
-        pfData.push_back(_defaultPairFunction->serialize());
+
+        auto defaultPairFunctionData = _defaultPairFunction->serialize();
+        defaultPairFunctionData["type"] = _defaultPairFunction->getType();
+        pfData.push_back(defaultPairFunctionData);
+
         for (const auto& [orderedSpeciesPair, pf]: _pairFunctions) {
             auto newPfData = pf->serialize();
             newPfData["type"] = pf->getType();
@@ -136,6 +140,18 @@ namespace jgap {
                 const double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
                 const auto f = _kernel->derivatives(atomicStructure, kernelIndex.at(species), sparseDensity);
                 result.push_back({u, f});
+                if (isnan(u)) {
+                    CurrentLogger::get()->error("Kernel covariance is NaN");
+                }
+                if (isnan(f[0].x)) {
+                    CurrentLogger::get()->error("Kernel covariance is NaN x");
+                }
+                if (isnan(f[0].y)) {
+                    CurrentLogger::get()->error("Kernel covariance is NaN y");
+                }
+                if (isnan(f[0].z)) {
+                    CurrentLogger::get()->error("Kernel covariance is NaN z");
+                }
             }
         }
 
