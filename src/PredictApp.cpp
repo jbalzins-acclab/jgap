@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    //try {
+    try {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
         jgap::CurrentLogger::get()->info(format(
@@ -58,10 +58,10 @@ int main(int argc, char** argv) {
 
         jgap::writeXyz(argv[3], result);
 
-    /*} catch (exception& e) {
+    } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
-        return EXIT_FAILURE;
-    }*/
+        throw;
+    }
 
     return EXIT_SUCCESS;
 }

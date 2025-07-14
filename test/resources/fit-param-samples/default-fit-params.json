@@ -1,6 +1,6 @@
 {
-    "output_file": "ni-out-latest.jgap.json",
-    "training_data_xyz": "resources/xyz-samples/ni-train.xyz",
+    "output_file": "feni-out.jgap.json",
+    "training_data_xyz": "resources/xyz-samples/fe-ni-train.xyz",
     "external": {
         "type": "zbl"
     },
@@ -8,14 +8,14 @@
         "isolated_atom": {
             "type": "isolated_atom"
         },
-        "jgap_fe": {
+        "jgap_feni": {
             "type": "in_ram_jgap",
             "sigma_rules": {
                 "type": "simple",
-                "E_per_root_n_atoms": 0.001,
-                "F_component": 0.04,
-                "liquid": 10.0,
-                "short_range": 10.0
+                "E_per_root_n_atoms": 0.002,
+                "F_component": 0.1,
+                "liquid": 5.0,
+                "short_range": 5.0
             },
             "descriptors": {
                 "my_2b": {
@@ -26,8 +26,8 @@
                         "energy_scale": 10.0,
                         "cutoff": {
                             "type": "perriot",
-                            "cutoff_transition_width": 1.0,
-                            "cutoff": 5.2
+                            "cutoff_transition_width": 0.5,
+                            "cutoff": 5
                         }
                     },
                     "sparsify": {
@@ -49,7 +49,7 @@
                     },
                     "sparsify": {
                         "type": "sample_space_uniform",
-                        "n_sparse_per_triplet": 700
+                        "n_sparse_per_triplet": 500
                     }
                 },
                 "my_eam": {
@@ -62,7 +62,7 @@
                     "pair_functions": [
                         {
                             "type": "polycutoff",
-                            "cutoff": 5.2,
+                            "cutoff": 5.0,
                             "r_min": 0
                         }
                     ],

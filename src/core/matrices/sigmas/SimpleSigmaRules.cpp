@@ -26,7 +26,7 @@ namespace jgap {
     void SimpleSigmaRules::fillSigmas(AtomicStructure &structure) {
         double multiplier = 1.0;
         auto ct = structure.configType.value_or("default");
-        if (ct.contains("liquid")) {
+        if (ct.contains("liquid") || ct.contains("melt")) {
             multiplier = _liquidMultiplier;
         }
 
