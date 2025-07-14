@@ -178,17 +178,25 @@ namespace jgap {
                     structure.atoms[neighbour.index].species, atom.species
                 };
 
-                if (!_pairFunctions.contains(orderedSpeciesPair)) {
-                    if (_defaultPairFunction == nullptr) continue;
-
-                    totalDensity += _defaultPairFunction->evaluate(neighbour.distance);
-                    densityDerivatives.emplace_back(
-                        neighbour,
-                        _defaultPairFunction->differentiate(neighbour.distance)
-                    );
+                shared_ptr<EamPairFunction> pf;
+                if (_pairFunctions.contains(orderedSpeciesPair)) {
+                    pf = _pairFunctions.at(orderedSpeciesPair);
+                } else if (_defaultPairFunction == nullptr) {
+                    pf = _defaultPairFunction;
+                } else {
+                    continue;
                 }
+
+                totalDensity += pf->evaluate(neighbour.distance);
+                densityDerivatives.emplace_back(
+                    neighbour,
+                    pf->differentiate(neighbour.distance)
+                );
             }
 
+            if (!result.contains(atom.species)) {
+                result[atom.species] = {};
+            }
             result[atom.species].push_back({totalDensity, densityDerivatives});
         }
 
