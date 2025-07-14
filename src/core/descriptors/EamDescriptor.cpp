@@ -49,7 +49,7 @@ namespace jgap {
 
             auto pf = ParserRegistry<EamPairFunction>::get(pfParams);
 
-            // TODO: error on speciefied double
+            // TODO: error on specified double
             if (pfParams.contains("species")) {
                 auto s1 = pfParams["species"][0];
                 auto s2 = pfParams["species"][1];

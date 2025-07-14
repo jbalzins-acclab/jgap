@@ -39,7 +39,7 @@ namespace jgap {
                                              const EamKernelIndexPerSpecies &indexes,
                                              const double &sparseDensity) {
 
-        vector<Vector3> result(structure.atoms.size());
+        vector result(structure.atoms.size(), Vector3{0.0, 0.0, 0.0});
 
         for (size_t i = 0; i < indexes.size(); i++) {
             double dK_drho_i = derivative(indexes[i].density, sparseDensity);
