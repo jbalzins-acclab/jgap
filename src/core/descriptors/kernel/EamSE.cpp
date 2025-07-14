@@ -39,7 +39,7 @@ namespace jgap {
                                        const EamKernelIndexPerSpecies &indexes,
                                        const double &sparseDensity) {
 
-        vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
+        vector<Vector3> result(structure.atoms.size(), {0.0, 0.0, 0.0});
 
         for (size_t i = 0; i < indexes.size(); i++) {
             double dK_drho_i = derivative(indexes[i].density, sparseDensity);
@@ -51,6 +51,8 @@ namespace jgap {
                                     - atom.position;
                 Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
             CurrentLogger::get()->debug(format("df {}: {} !! {}", df.toString(), indexes[i].density, sparseDensity));
+            CurrentLogger::get()->debug(format("disp {}: {} !! {}", displacement.normalize().toString(), indexes[i].density, sparseDensity));
+            CurrentLogger::get()->debug(format("d_rho_i_dr_ij {}: {} !! {}", d_rho_i_dr_ij, indexes[i].density, sparseDensity));
                 result[i] = result[i] - df;
                 result[neighbourData.index] = result[neighbourData.index] + df;
             }
