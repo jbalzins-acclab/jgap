@@ -28,7 +28,7 @@ namespace jgap {
 
         double result = 0;
 
-        for (const auto &[density, densityDerivatives] : indexes) {
+        for (const auto &[atAtomIndex, density, densityDerivatives] : indexes) {
             result += covariance(density, sparseDensity);
         }
 
@@ -41,23 +41,18 @@ namespace jgap {
 
         vector<Vector3> result(structure.atoms.size(), {0.0, 0.0, 0.0});
 
-        for (size_t i = 0; i < indexes.size(); i++) {
-            double dK_drho_i = derivative(indexes[i].density, sparseDensity);
-            CurrentLogger::get()->debug(format("dK_drho_i {}: {} !! {}", dK_drho_i, indexes[i].density, sparseDensity));
-            auto atom = structure.atoms[i];
+        for (const auto &index : indexes) {
+            const double dK_drho_i = derivative(index.density, sparseDensity);
+            auto atom = structure.atoms[index.atAtomIndex];
 
-            for (auto &[neighbourData, d_rho_i_dr_ij]: indexes[i].densityDerivatives) {
+            for (auto &[neighbourData, d_rho_i_dr_ij]: index.densityDerivatives) {
                 Vector3 displacement = structure.atoms[neighbourData.index].position + neighbourData.offset
-                                    - atom.position;
+                                        - atom.position;
                 Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
-            CurrentLogger::get()->debug(format("df {}: {} !! {}", df.toString(), indexes[i].density, sparseDensity));
-            CurrentLogger::get()->debug(format("disp {}: {} !! {}", displacement.normalize().toString(), indexes[i].density, sparseDensity));
-            CurrentLogger::get()->debug(format("d_rho_i_dr_ij {}: {} !! {}", d_rho_i_dr_ij, indexes[i].density, sparseDensity));
-                result[i] = result[i] - df;
+                result[index.atAtomIndex] = result[index.atAtomIndex] - df;
                 result[neighbourData.index] = result[neighbourData.index] + df;
             }
         }
-
 
         return result;
     }

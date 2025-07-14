@@ -120,22 +120,16 @@ namespace jgap {
             // chain rule x2 ( remember: gradWrtDistances = d/d{r01, r02, r12} )
 
             //  ======================== "root" atom =============================
-            Vector3 dK_dr0 = grad_r01_wrt_r1 * gradWrtDistances.x * (-1)
-                    - grad_r02_wrt_r2 * gradWrtDistances.y;
+            Vector3 dK_dr0 = grad_r01_wrt_r1 * -gradWrtDistances.x - grad_r02_wrt_r2 * gradWrtDistances.y;
             result[index.atomIndex] = result[index.atomIndex] + dK_dr0 * 2.0;
 
             //  ======================== "node1" atom =============================
-            Vector3 dK_dr1 = grad_r01_wrt_r1 * gradWrtDistances.x -
-                grad_r12_wrt_r2 * gradWrtDistances.z;
+            Vector3 dK_dr1 = grad_r01_wrt_r1 * gradWrtDistances.x - grad_r12_wrt_r2 * gradWrtDistances.z;
             result[neighbour1.index] = result[neighbour1.index] + dK_dr1 * 2.0;
 
             //  ======================== "node1" atom =============================
-            Vector3 dK_dr2 = grad_r02_wrt_r2 * gradWrtDistances.y +
-                grad_r12_wrt_r2 * gradWrtDistances.z;
+            Vector3 dK_dr2 = grad_r02_wrt_r2 * gradWrtDistances.y + grad_r12_wrt_r2 * gradWrtDistances.z;
             result[neighbour2.index] = result[neighbour2.index] + dK_dr2 * 2.0;
-            if (isnan(result[neighbour2.index].x)) {
-                continue;
-            }
         }
 
         return result;

@@ -204,7 +204,8 @@ namespace jgap {
             if (!result.contains(atom.species)) {
                 result[atom.species] = {};
             }
-            result[atom.species].push_back({totalDensity, densityDerivatives});
+
+            result[atom.species].push_back({atomIdx, totalDensity, densityDerivatives});
         }
 
         return result;

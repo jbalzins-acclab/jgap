@@ -111,8 +111,8 @@ namespace jgap {
         for (const auto& [speciesTriplet, sparsePoints]: _sparsePointsPerSpeciesTriplet) {
             for (const Vector3 sparsePoint : sparsePoints) {
 
-                auto u = _kernel->covariance(atomicStructure, indexMap[speciesTriplet], sparsePoint);
-                auto ddrs = _kernel->derivatives(atomicStructure, indexMap[speciesTriplet], sparsePoint);
+                const auto u = _kernel->covariance(atomicStructure, indexMap[speciesTriplet], sparsePoint);
+                const auto ddrs = _kernel->derivatives(atomicStructure, indexMap[speciesTriplet], sparsePoint);
 
                 covariates.push_back({u, ddrs});
             }
