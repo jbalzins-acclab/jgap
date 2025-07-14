@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
-        return EXIT_FAILURE;
+        throw;
     }
 
     return EXIT_SUCCESS;
