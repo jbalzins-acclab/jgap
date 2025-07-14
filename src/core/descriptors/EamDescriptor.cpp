@@ -11,12 +11,6 @@
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
-std::string get_thread_id_str() {
-    std::ostringstream oss;
-    oss << std::this_thread::get_id();
-    return oss.str();
-}
-
 namespace jgap {
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
 
@@ -135,7 +129,7 @@ namespace jgap {
 
         EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
-        for ( auto &[species, sparseDensities]: _sparsePointsPerSpecies) {
+        for (auto &[species, sparseDensities]: _sparsePointsPerSpecies) {
             if (!kernelIndex.contains(species)) kernelIndex[species] = {};
 
             for (double sparseDensity: sparseDensities) {
