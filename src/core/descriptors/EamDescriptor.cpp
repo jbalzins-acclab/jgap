@@ -140,18 +140,6 @@ namespace jgap {
                 const double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
                 const auto f = _kernel->derivatives(atomicStructure, kernelIndex.at(species), sparseDensity);
                 result.push_back({u, f});
-                if (isnan(u)) {
-                    CurrentLogger::get()->error("Kernel covariance is NaN");
-                }
-                if (isnan(f[0].x)) {
-                    CurrentLogger::get()->error("Kernel covariance is NaN x");
-                }
-                if (isnan(f[0].y)) {
-                    CurrentLogger::get()->error("Kernel covariance is NaN y");
-                }
-                if (isnan(f[0].z)) {
-                    CurrentLogger::get()->error("Kernel covariance is NaN z");
-                }
             }
         }
 
