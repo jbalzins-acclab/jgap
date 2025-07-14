@@ -5,10 +5,17 @@
 #include "core/descriptors/EamDescriptor.hpp"
 
 #include <random>
+#include <thread>
 
 #include "core/descriptors/kernels/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
+
+std::string get_thread_id_str() {
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    return oss.str();
+}
 
 namespace jgap {
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
@@ -126,11 +133,13 @@ namespace jgap {
     vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
         vector<Covariance> result;
 
-        const EamKernelIndex kernelIndex = doIndex(atomicStructure);
+        EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
         for ( auto &[species, sparseDensities]: _sparsePointsPerSpecies) {
+            if (!kernelIndex.contains(species)) kernelIndex[species] = {};
+
             for (double sparseDensity: sparseDensities) {
-                double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
+                const double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
                 const auto f = _kernel->derivatives(atomicStructure, kernelIndex.at(species), sparseDensity);
                 result.push_back({u, f});
             }
