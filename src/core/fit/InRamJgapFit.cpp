@@ -192,9 +192,6 @@ namespace jgap {
                     A(startingRow + rowInc * 3 + 1, currentColumn + colInc) = - derivative.x / fSigmas.x;
                     A(startingRow + rowInc * 3 + 2, currentColumn + colInc) = - derivative.y / fSigmas.y;
                     A(startingRow + rowInc * 3 + 3, currentColumn + colInc) = - derivative.z / fSigmas.z;
-                CurrentLogger::get()->debug(format("U_ffX{}:{}:{}", derivative.x, startingRow + rowInc * 3 + 1,  currentColumn + colInc));
-                CurrentLogger::get()->debug(format("U_ffY{}:{}:{}", derivative.y, startingRow + rowInc * 3 + 2,  currentColumn + colInc));
-                CurrentLogger::get()->debug(format("U_ffZ{}:{}:{}", derivative.z, startingRow + rowInc * 3 + 3,  currentColumn + colInc));
 
                     /*CurrentLogger::get()->debug(format("f_{}: {}|{}|{}", rowInc,
                     A(startingRow + rowInc * 3 + 1, currentColumn + colInc),

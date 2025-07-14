@@ -36,19 +36,21 @@ namespace jgap {
     }
 
     vector<Vector3> EamSE::derivatives(const AtomicStructure &structure,
-                                             const EamKernelIndexPerSpecies &indexes,
-                                             const double &sparseDensity) {
+                                       const EamKernelIndexPerSpecies &indexes,
+                                       const double &sparseDensity) {
 
-        vector result(structure.atoms.size(), Vector3{0.0, 0.0, 0.0});
+        vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
 
         for (size_t i = 0; i < indexes.size(); i++) {
             double dK_drho_i = derivative(indexes[i].density, sparseDensity);
+            CurrentLogger::get()->debug(format("dK_drho_i {}", dK_drho_i));
             auto atom = structure.atoms[i];
 
             for (auto &[neighbourData, d_rho_i_dr_ij]: indexes[i].densityDerivatives) {
                 Vector3 displacement = structure.atoms[neighbourData.index].position + neighbourData.offset
                                     - atom.position;
                 Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
+                CurrentLogger::get()->debug(format("df {}", df.toString()));
                 result[i] = result[i] - df;
                 result[neighbourData.index] = result[neighbourData.index] + df;
             }
