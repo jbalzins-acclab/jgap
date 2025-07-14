@@ -181,7 +181,7 @@ namespace jgap {
                 shared_ptr<EamPairFunction> pf;
                 if (_pairFunctions.contains(orderedSpeciesPair)) {
                     pf = _pairFunctions.at(orderedSpeciesPair);
-                } else if (_defaultPairFunction == nullptr) {
+                } else if (_defaultPairFunction != nullptr) {
                     pf = _defaultPairFunction;
                 } else {
                     continue;
