@@ -3,7 +3,6 @@
 #include "core/descriptors/ThreeBodyDescriptor.hpp"
 
 #include "core/neighbours/NeighbourFinder.hpp"
-#include "data/params/TwoBodyDescriptorParams.hpp"
 #include "utils/Utils.hpp"
 
 using namespace jgap;

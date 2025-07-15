@@ -37,4 +37,14 @@ namespace jgap {
         }
         return cutoff;
     }
+
+    TabulationData JgapPotential::tabulate(const TabulationParams &params) {
+        TabulationData result{};
+
+        for (const auto& descriptor: _descriptors | views::values) {
+            result = result + descriptor->tabulate(params);
+        }
+
+        return result;
+    }
 }

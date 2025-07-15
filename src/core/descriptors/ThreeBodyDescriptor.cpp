@@ -1,6 +1,7 @@
 #include "core/descriptors/ThreeBodyDescriptor.hpp"
 
 #include <random>
+#include <tbb/parallel_for_each.h>
 
 #include "core/descriptors/kernels/ThreeBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -137,6 +138,45 @@ namespace jgap {
 
             result.emplace_back(counter, covariance);
             counter += sparsePoints.size();
+        }
+
+        return result;
+    }
+
+    TabulationData ThreeBodyDescriptor::tabulate(const TabulationParams &params) {
+
+        TabulationData result{};
+
+        size_t counter = 0;
+        for (const auto &[speciesTriplet, sparsePoints]: _sparsePointsPerSpeciesTriplet) {
+            vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + sparsePoints.size());
+            counter += sparsePoints.size();
+
+            auto tripletEnergies = vector(params.grid3b.size(), 0.0);
+
+            vector<size_t> grid3bIndexes{};
+            for (size_t i = 0; i < params.grid3b.size(); i++) {
+                grid3bIndexes.push_back(i);
+            }
+            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](size_t iGrid) {
+
+                const Vector3 invariantTriplet{
+                    .x = params.grid3b[iGrid].x + params.grid3b[iGrid].y,
+                    .y = pow(params.grid3b[iGrid].x - params.grid3b[iGrid].y, 2),
+                    .z = sqrt(
+                        pow(params.grid3b[iGrid].x, 2)
+                        + pow(params.grid3b[iGrid].y, 2)
+                        - 2.0 * params.grid3b[iGrid].x * params.grid3b[iGrid].x * params.grid3b[iGrid].z
+                        )
+                };
+
+                for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
+                    tripletEnergies[iGrid] += coefficients[indexSparse]
+                                                * _kernel->covariance(invariantTriplet, sparsePoints[indexSparse]);
+                }
+            });
+
+            result.tripletEnergies[speciesTriplet] = tripletEnergies;
         }
 
         return result;

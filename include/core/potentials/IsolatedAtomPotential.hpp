@@ -25,6 +25,7 @@ namespace jgap {
 
         PotentialPrediction predict(const AtomicStructure& structure) override;
 
+        TabulationData tabulate(const TabulationParams &params) override;
 
     private:
         bool _errorOnUnknownSpecies;

@@ -1,6 +1,6 @@
 {
     "output_file": "feni-out.jgap.json",
-    "training_data_xyz": "resources/xyz-samples/feni-train-compact.xyz",
+    "training_data_xyz": "resources/xyz-samples/feni-train.xyz",
     "external": {
         "type": "zbl"
     },
@@ -18,6 +18,40 @@
                 "short_range": 5.0
             },
             "descriptors": {
+                "my_2b": {
+                    "type": "2b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 10.0,
+                        "cutoff": {
+                            "type": "perriot",
+                            "cutoff_transition_width": 0.5,
+                            "cutoff": 5
+                        }
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse_per_pair": 20
+                    }
+                },
+                "my_3b": {
+                    "type": "3b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0,
+                        "cutoff": {
+                            "type": "perriot",
+                            "cutoff_transition_width": 0.6,
+                            "cutoff": 4.0
+                        }
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse_per_triplet": 500
+                    }
+                },
                 "my_eam": {
                     "type": "eam",
                     "kernel": {

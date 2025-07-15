@@ -55,6 +55,29 @@ namespace jgap {
         };
     }
 
+    TabulationData ZblPotential::tabulate(const TabulationParams &params) {
+        TabulationData result{};
+
+        for (size_t i = 0; params.species.size(); i++) {
+            for (size_t j = i; params.species.size(); j++) {
+                auto speciesPair = SpeciesPair{params.species[i], params.species[j]};
+                result.pairEnergies[speciesPair] = {};
+
+                for (const double& r: params.grid2b) {
+                    if (abs(r) < 1e-4) {
+                        result.pairEnergies[speciesPair].push_back(0); // I don't like .eam.fs format :(
+                    } else {
+                        result.pairEnergies[speciesPair].push_back(
+                            zblWithCutoff_eV(speciesPair, r)
+                        );
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     PotentialPrediction ZblPotential::predict(const AtomicStructure &structure) {
 
         double energy = 0;

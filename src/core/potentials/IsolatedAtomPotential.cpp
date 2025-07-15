@@ -40,4 +40,10 @@ namespace jgap {
 
         return PotentialPrediction{.energy = result};
     }
+
+    TabulationData IsolatedAtomPotential::tabulate(const TabulationParams &params) {
+        TabulationData result;
+        result.isolatedEnergies = _isolatedEnergies;
+        return result;
+    }
 }

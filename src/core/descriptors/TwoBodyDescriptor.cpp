@@ -3,6 +3,7 @@
 #include <random>
 #include <set>
 #include <nlohmann/json.hpp>
+#include <tbb/parallel_for_each.h>
 
 #include "core/descriptors/kernels/TwoBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -127,6 +128,30 @@ namespace jgap {
 
             result.emplace_back(counter, covariance);
             counter += sparsePoints.size();
+        }
+
+        return result;
+    }
+
+    TabulationData TwoBodyDescriptor::tabulate(const TabulationParams &params) {
+
+        TabulationData result{};
+
+        size_t counter = 0;
+        for (const auto &[speciesPair, sparsePoints]: _sparsePointsPerSpeciesPair) {
+            vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + sparsePoints.size());
+            counter += sparsePoints.size();
+
+            auto pairEnergies = vector(params.grid2b.size(), 0.0);
+
+            for (size_t iGrid = 0; iGrid < params.grid2b.size(); iGrid++) {
+                for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
+                    pairEnergies[iGrid] += coefficients[indexSparse]
+                                        * _kernel->covariance(params.grid2b[iGrid], sparsePoints[indexSparse]);
+                }
+            }
+
+            result.pairEnergies[speciesPair] = pairEnergies;
         }
 
         return result;

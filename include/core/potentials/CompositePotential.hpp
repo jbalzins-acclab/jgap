@@ -17,6 +17,8 @@ namespace jgap {
 
         PotentialPrediction predict(const AtomicStructure &structure) override;
 
+        TabulationData tabulate(const TabulationParams& params) override;
+
     private:
         map<string, shared_ptr<Potential>> _potentials;
     };

@@ -41,4 +41,16 @@ namespace jgap {
         }
         return result;
     }
+
+    TabulationData CompositePotential::tabulate(const TabulationParams& params) {
+
+        TabulationData result{};
+
+        for (const auto &potential : _potentials | views::values) {
+            TabulationData potentialTabulated = potential->tabulate(params);
+            result = result + potentialTabulated;
+        }
+
+        return result;
+    }
 }

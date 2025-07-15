@@ -7,7 +7,6 @@
 #include "core/descriptors/Descriptor.hpp"
 #include "core/descriptors/kernels/ThreeBodySE.hpp"
 
-#include "data/params/ThreeBodyDescriptorParams.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "memory/MatrixBlock.hpp"
 #include "sparsification/3b/PerSpecies3bSparsifier.hpp"
@@ -32,6 +31,8 @@ namespace jgap {
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
+
+        TabulationData tabulate(const TabulationParams &params) override;
 
     private:
         double _cutoff;

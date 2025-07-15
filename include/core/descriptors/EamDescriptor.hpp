@@ -6,7 +6,6 @@
 #include "core/descriptors/Descriptor.hpp"
 #include "core/descriptors/kernels/Kernel.hpp"
 #include "data/kernels/EamKernelIndex.hpp"
-#include "data/params/EamDescriptorParams.hpp"
 #include "eam/pair_functions/EamPairFunction.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "kernels/EamSE.hpp"
@@ -36,6 +35,8 @@ namespace jgap {
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
+
+        TabulationData tabulate(const TabulationParams &params) override;
 
     private:
         double _cutoff;

@@ -28,6 +28,8 @@ namespace jgap {
         string getType() override { return "zbl"; }
         double getCutoff() override { return _cutoff; }
 
+        TabulationData tabulate(const TabulationParams &params) override;
+
     private:
         double _cutoff;
         string _dmolFile;

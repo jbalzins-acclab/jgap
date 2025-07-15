@@ -76,48 +76,6 @@ int main(int argc, char** argv) {
         outFile.flush();
         outFile.close();
 
-        // ------------------------ TEST IF REQUESTED -------------------------------
-
-        if (!fitParams.contains("testing_data_xyzs")) return EXIT_SUCCESS;
-
-        for (const auto& testFileName: fitParams["testing_data_xyzs"]) {
-
-            jgap::CurrentLogger::get()->info(format("Testing at {}", testFileName.get<string>()));
-
-            auto testingData = jgap::readXyz(testFileName);
-            jgap::NeighbourFinder::findNeighbours(testingData, resultingPotential->getCutoff());
-
-            vector<double> dE, dF;
-
-            for (const auto& structure : testingData) {
-                if (dE.size() % max(testingData.size()/100, 1uz) == 0) {
-                    jgap::CurrentLogger::get()->debug(format(
-                        "Testing at {}%",
-                        dE.size() * 100 / testingData.size()
-                        ));
-                }
-
-                auto prediction = resultingPotential->predict(structure);
-                if (structure.energy.has_value() && prediction.energy.has_value()) {
-                    dE.push_back((structure.energy.value() - prediction.energy.value())
-                                        / static_cast<double>(structure.atoms.size()));
-                }
-
-                if (!prediction.forces.has_value()) continue;
-
-                for (size_t i = 0; i < structure.atoms.size(); i++) {
-                    if (structure.atoms[i].force.has_value()) {
-                        dF.push_back((structure.atoms[i].force.value() - prediction.forces.value()[i]).norm());
-                    }
-                }
-            }
-
-            jgap::CurrentLogger::get()->info(format("E_rmse = {}eV/A", jgap::rms(dE)));
-            jgap::CurrentLogger::get()->info(format("E_std = {}eV", jgap::std(dE)));
-            jgap::CurrentLogger::get()->info(format("F_rmse = {}eV/A", jgap::rms(dF)));
-            jgap::CurrentLogger::get()->info(format("F_std = {}eV/A", jgap::std(dF)));
-        }
-
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
         print_backtrace();

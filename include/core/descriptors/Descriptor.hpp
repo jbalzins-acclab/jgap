@@ -10,6 +10,8 @@
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
 
+#include "data/TabulationData.hpp"
+
 using namespace std;
 
 namespace jgap {
@@ -29,6 +31,8 @@ namespace jgap {
 
         virtual nlohmann::json serialize() = 0;
         virtual string getType() = 0;
+
+        virtual TabulationData tabulate(const TabulationParams &params) = 0;
 
         void setCoefficients(const vector<double>& c) {
             if (c.size() != nSparsePoints()) {

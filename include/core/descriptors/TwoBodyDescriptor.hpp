@@ -9,7 +9,6 @@
 #include "core/descriptors/kernels/Kernel.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
 #include "data/kernels/TwoBodyKernelIndex.hpp"
-#include "data/params/TwoBodyDescriptorParams.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "core/descriptors/kernels/TwoBodySE.hpp"
 #include "memory/MatrixBlock.hpp"
@@ -36,6 +35,8 @@ namespace jgap {
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
+
+        TabulationData tabulate(const TabulationParams &params) override;
 
     private:
         double _cutoff;

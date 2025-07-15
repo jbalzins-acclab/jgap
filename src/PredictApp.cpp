@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         jgap::NeighbourFinder::findNeighbours(toBePredicted, potential->getCutoff());
         vector<jgap::PotentialPrediction> predictions(toBePredicted.size());
         tbb::parallel_for(0uz, toBePredicted.size(), [&](const size_t i) {
-            cout << i << endl;
+            jgap::CurrentLogger::get()->debug(format("Doing box #{}", i));
             predictions[i] = potential->predict(toBePredicted[i]);
         });
 

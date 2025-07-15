@@ -7,8 +7,6 @@
 #include "core/matrices/sigmas/SimpleSigmaRules.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
-#include "data/params/EamDescriptorParams.hpp"
-#include "data/params/ThreeBodyDescriptorParams.hpp"
 #include "utils/Utils.hpp"
 
 using namespace jgap;
@@ -460,15 +458,6 @@ TEST(TestInRamJgap, pythagorian3bQuipCompatibility) {
 
 TEST(TestInRamJgap, hard3bQuipCompatibility) {
     auto box = readXyz("test/resources/xyz-samples/FeOnly.xyz")[15];
-
-    const auto params3b = ThreeBodyDescriptorParams{
-        .cutoff = 4.5,
-        .cutoffTransitionWidth = 0.6,
-        .kernelType = ThreeBodyDescriptorParams::KernelType::GAUSS,
-        .sparsificationMethod = ThreeBodyDescriptorParams::SparsificationMethod::FULL_GRID_UNIFORM,
-        .energyScale = 3.0,
-        .lengthScale = 0.5
-    };
 
     const auto params = makeFitParams(
     makeParams3bDesc(0.5, 3.0, 3.9, 4.5, vector{

@@ -167,6 +167,57 @@ namespace jgap {
         return result;
     }
 
+    TabulationData EamDescriptor::tabulate(const TabulationParams &params) {
+        EamTabulationData result;
+
+        result.rhoMax = 0.0;
+        for (const auto& points: _sparsePointsPerSpecies | views::values) {
+            result.rhoMax = max(result.rhoMax, ranges::max(points));
+        }
+
+        const double rhoStep = result.rhoMax / static_cast<double>(params.nDensities-1);
+
+        size_t counter = 0;
+        for (const auto& [species, points]: _sparsePointsPerSpecies) {
+            vector energiesPerSpecies(params.nDensities, 0.0);
+            vector coefficients(_coefficients.begin()+counter, coefficients.begin()+counter + params.nDensities);
+
+            for (size_t iGrid = 0; iGrid < params.nDensities; iGrid++) {
+                double density = rhoStep * static_cast<double>(iGrid);
+
+                for (size_t indexSparse = 0; indexSparse < points.size(); indexSparse++) {
+                    energiesPerSpecies[iGrid] += coefficients[indexSparse]
+                                                  * _kernel->covariance(points[indexSparse], density);
+                }
+            }
+
+            result.embeddingEnergies[species] = energiesPerSpecies;
+        }
+
+        for (const auto& species1: _sparsePointsPerSpecies | views::keys) {
+            for (const auto& species2: _sparsePointsPerSpecies | views::keys) {
+
+                auto speciesPair = OrderedSpeciesPair{species1, species2};
+
+                auto pairFunction = _defaultPairFunction;
+                if (_pairFunctions.contains(speciesPair)) {
+                    pairFunction = _pairFunctions[speciesPair];
+                }
+
+                vector<double> pairDensities{};
+                for (const double& gridDensity: params.grid2b) {
+                    pairDensities.push_back(pairFunction->evaluate(gridDensity));
+                }
+
+                result.eamDensities[speciesPair] = pairDensities;
+            }
+        }
+
+        TabulationData resultFull{};
+        resultFull.eamTabulationData = vector{result}; // TODO? c++20
+        return resultFull;
+    }
+
     EamKernelIndex EamDescriptor::doIndex(const AtomicStructure &structure) const {
 
         EamKernelIndex result{};

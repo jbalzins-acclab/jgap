@@ -24,6 +24,8 @@ namespace jgap {
         string getType() override { return "jgap"; }
         double getCutoff() override;
 
+        TabulationData tabulate(const TabulationParams &params) override;
+
     private:
         map<string, shared_ptr<Descriptor>> _descriptors;
     };
