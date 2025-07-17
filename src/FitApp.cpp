@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
         nlohmann::json fitParams;
         paramFile >> fitParams;
 
+        jgap::CurrentLogger::get()->info("Checking output file");
         string outputFileName = fitParams["output_file"];
         ofstream outFileTest(outputFileName);
         if (!outFileTest.is_open()) {
@@ -54,9 +55,11 @@ int main(int argc, char** argv) {
         }
         outFileTest.close();
 
+        jgap::CurrentLogger::get()->info("Picking fit logic");
         fitParams["type"] = fitParams.value("type", "composite");
         auto fit = jgap::ParserRegistry<jgap::Fit>::get(fitParams);
 
+        jgap::CurrentLogger::get()->info("Reading training data");
         auto trainingData = jgap::readXyz(fitParams["training_data_xyz"]);
 
         // ------------------------ FIT -------------------------------
