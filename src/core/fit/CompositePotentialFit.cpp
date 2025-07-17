@@ -11,6 +11,7 @@ namespace jgap {
 
         _fits = {};
         for (const auto &[label, fitParams]: params["fits"].items()) {
+            CurrentLogger::get()->info("Picking fitting logic for " + label);
             _fits[label] = ParserRegistry<Fit>::get(fitParams);
         }
 
