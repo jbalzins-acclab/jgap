@@ -25,18 +25,18 @@ namespace jgap {
             const EamKernelIndexPerSpecies &indexes,
             const double &sparseDensity) override;
 
-        [[nodiscard]] double covariance(const double &density1, const double &density2) override;
+        double covariance(const double &density1, const double &density2) override;
 
         string getType() override { return "squared_exp"; }
         nlohmann::json serialize() override;
 
     private:
-
-        [[nodiscard]] double derivative(const double &density1, const double &density2);
-
         double _energyScaleSquared;
         double _lengthScale;
         double _inverse2ThetaSq;
+
+        [[nodiscard]] double covarianceNoCutoffs(const double &density1, const double &density2) const;
+        [[nodiscard]] double derivative(const double &density1, const double &density2) const;
     };
 
     REGISTER_PARSER("squared_exp", EamKernel, EamSE)

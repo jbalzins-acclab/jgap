@@ -132,7 +132,7 @@ namespace jgap {
 
             for (size_t i = 0; i < sparsePoints.size(); i++) {
                 for (size_t j = 0; j < sparsePoints.size(); j++) {
-                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]);
+                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]); // TODO: cutoff??
                 }
             }
 
@@ -152,27 +152,36 @@ namespace jgap {
             vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + sparsePoints.size());
             counter += sparsePoints.size();
 
-            auto tripletEnergies = vector(params.grid3b.size(), 0.0);
+            auto tripletEnergies = vector(
+                params.grid3b.size(),
+                vector(params.grid3b[0].size(), vector(params.grid3b[0][0].size(), 0.0))
+                );
 
-            vector<size_t> grid3bIndexes{};
+            vector<array<size_t, 3>> grid3bIndexes{};
             for (size_t i = 0; i < params.grid3b.size(); i++) {
-                grid3bIndexes.push_back(i);
+                for (size_t j = i; j < params.grid3b[i].size(); j++) {
+                    for (size_t k = 0; k < params.grid3b[i][j].size(); k++) {
+                        grid3bIndexes.push_back({i, j, k});
+                    }
+                }
             }
-            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](size_t iGrid) {
+            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](array<size_t, 3> iGrid) {
+
+                const Vector3 gridPoint = params.grid3b[iGrid[0]][iGrid[1]][iGrid[2]];
 
                 const Vector3 invariantTriplet{
-                    .x = params.grid3b[iGrid].x + params.grid3b[iGrid].y,
-                    .y = pow(params.grid3b[iGrid].x - params.grid3b[iGrid].y, 2),
-                    .z = sqrt(
-                        pow(params.grid3b[iGrid].x, 2)
-                        + pow(params.grid3b[iGrid].y, 2)
-                        - 2.0 * params.grid3b[iGrid].x * params.grid3b[iGrid].x * params.grid3b[iGrid].z
-                        )
+                    gridPoint.x + gridPoint.y,
+                    pow(gridPoint.x - gridPoint.y, 2),
+                    sqrt(max/*numeric safety*/(
+                        pow(gridPoint.x, 2) + pow(gridPoint.y, 2) - 2.0 * gridPoint.x * gridPoint.y * gridPoint.z, 0.0
+                        ))
                 };
 
                 for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
-                    tripletEnergies[iGrid] += coefficients[indexSparse]
-                                                * _kernel->covariance(invariantTriplet, sparsePoints[indexSparse]);
+                    const double contribution = coefficients[indexSparse]
+                                * _kernel->covariance(invariantTriplet, sparsePoints[indexSparse]);
+                    tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]] += contribution;
+                    tripletEnergies[iGrid[1]][iGrid[0]][iGrid[2]] += contribution;
                 }
             });
 

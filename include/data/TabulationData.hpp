@@ -15,7 +15,7 @@ namespace jgap {
         vector<Species> species{};
         size_t nDensities{};
         vector<double> grid2b{}; // nRho = grid2b.size() TODO ?
-        vector<Vector3> grid3b{};
+        vector<vector<vector<Vector3>>> grid3b{};
     };
 
     struct EamTabulationData {
@@ -29,7 +29,7 @@ namespace jgap {
 
         map<Species, double> isolatedEnergies{};
         map<SpeciesPair, vector<double>> pairEnergies{};
-        map<SpeciesTriplet, vector<double>> tripletEnergies{};
+        map<SpeciesTriplet, vector<vector<vector<double>>>> tripletEnergies{};
 
         vector<EamTabulationData> eamTabulationData{};
 
@@ -62,7 +62,11 @@ namespace jgap {
                 } else {
                     if (result.tripletEnergies[speciesTriplet].size() != energies.size()) {
                         for (size_t i = 0; i < energies.size(); i++) {
-                            result.tripletEnergies[speciesTriplet][i] += energies[i];
+                            for (size_t j = 0; j < energies[i].size(); j++) {
+                                for (size_t k = 0; k < energies[i][j].size(); k++) {
+                                    result.tripletEnergies[speciesTriplet][i][j][k] += energies[i][j][k];
+                                }
+                            }
                         }
                     }
                 }

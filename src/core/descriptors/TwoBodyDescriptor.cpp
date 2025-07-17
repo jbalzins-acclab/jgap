@@ -122,7 +122,7 @@ namespace jgap {
 
             for (size_t i = 0; i < sparsePoints.size(); i++) {
                 for (size_t j = 0; j < sparsePoints.size(); j++) {
-                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]);
+                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]); // TODO: cutoff??
                 }
             }
 

@@ -34,12 +34,16 @@ namespace jgap {
         nlohmann::json serialize() override;
 
     private:
-        shared_ptr<CutoffFunction> _cutoffFunction;
         double _energyScaleSquared;
         double _lengthScale;
         double _inverse2ThetaSq;
 
-        [[nodiscard]] Vector3 gradient(const Vector3 &changingTriplet, const Vector3 &constTriplet);
+        shared_ptr<CutoffFunction> _cutoffFunction;
+
+        [[nodiscard]] double invariantTripletToCutoff(const Vector3 &t) const;
+
+        [[nodiscard]] double covarianceNoCutoffs(const Vector3 &t1, const Vector3 &t2) const;
+        [[nodiscard]] Vector3 gradient(const Vector3 &changingTriplet, const Vector3 &constTriplet) const;
     };
 
     REGISTER_PARSER("squared_exp", ThreeBodyKernel, ThreeBodySE);

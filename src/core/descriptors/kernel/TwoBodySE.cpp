@@ -1,7 +1,5 @@
 #include "core/descriptors/kernels/TwoBodySE.hpp"
 
-#include <iostream>
-
 #include "io/parse/ParserRegistry.hpp"
 #include "utils/Utils.hpp"
 
@@ -37,6 +35,8 @@ namespace jgap {
                                  const double &rSparse) {
         double total = 0;
 
+        const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
+
         for (const TwoBodyKernelIndexEntity &index: indexes) {
             auto atom = structure.atoms[index.atomIndex];
             auto neighbourData = structure.atoms[index.atomIndex].neighbours->at(index.neighbourListIndex);
@@ -44,7 +44,8 @@ namespace jgap {
             const double fCut = _cutoffFunction -> evaluate(neighbourData.distance);
             // if (fCut == 0.0) continue; - upon indexing !
 
-            auto cov = 2.0/*K(r_ij,)+K(r_ji)?????*/ * covariance(rSparse, neighbourData.distance) * fCut;
+            auto cov = 2.0/*K(r_ij,)+K(r_ji)?????*/ * covarianceNoCutoffs(rSparse, neighbourData.distance)
+                                * sparseCutoff* fCut;
              if (index.atomIndex == neighbourData.index) cov /= 2.0;
             // cout << descriptor.speciesPair.toString() << descriptor.distance << currentPair.toString()<< neighbour.distance << " "<<cov<<" "<<fCut<< endl;
             total += cov;
@@ -59,6 +60,8 @@ namespace jgap {
 
         vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
 
+        const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
+
         for (const TwoBodyKernelIndexEntity &index: indexes) {
             auto atom = structure.atoms[index.atomIndex];
             auto neighbourData = structure.atoms[index.atomIndex].neighbours->at(index.neighbourListIndex);
@@ -66,11 +69,12 @@ namespace jgap {
 
             const double fCut = _cutoffFunction -> evaluate(neighbourData.distance);
 
-            double d_dr = derivative(neighbourData.distance, rSparse) * fCut;
+            double d_dr = derivativeNoCutoffs(neighbourData.distance, rSparse) * fCut;
 
             if (fCut != 1.0) {
-                d_dr += covariance(rSparse, neighbourData.distance)
-                        * _cutoffFunction->differentiate(neighbourData.distance);
+                d_dr += covarianceNoCutoffs(rSparse, neighbourData.distance)
+                        * _cutoffFunction->differentiate(neighbourData.distance)
+                        * sparseCutoff;
             }
 
             auto displacement = atom.position - (structure.atoms[neighbourData.index].position + neighbourData.offset);
@@ -83,11 +87,16 @@ namespace jgap {
         return result;
     }
 
-    double TwoBodySE::covariance(const double &r1, const double &r2) {
+    double TwoBodySE::covarianceNoCutoffs(const double &r1, const double &r2) const {
         return _energyScaleSquared * exp(-pow(r1-r2, 2.0) * _inverse2ThetaSq);
     }
 
-    double TwoBodySE::derivative(const double &changingR, const double &constR) {
-        return (constR - changingR) * 2.0/*compensate 2 in const*/ * _inverse2ThetaSq * covariance(changingR, constR);
+    double TwoBodySE::covariance(const double &cutoffBase, const double &sparsePoint) {
+        return covarianceNoCutoffs(cutoffBase, sparsePoint) * _cutoffFunction->evaluate(cutoffBase)
+                                                   * _cutoffFunction->evaluate(sparsePoint);
+    }
+
+    double TwoBodySE::derivativeNoCutoffs(const double &changingR, const double &constR) {
+        return (constR - changingR) * 2.0/*compensate 2 in const*/ * _inverse2ThetaSq * covarianceNoCutoffs(changingR, constR);
     }
 }

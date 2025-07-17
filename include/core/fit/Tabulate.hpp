@@ -17,7 +17,9 @@ namespace jgap {
     private:
         static TabulationParams parse(const nlohmann::json& params);
         static vector<double> make2bGrid(const nlohmann::json& params);
-        static vector<Vector3> make3bGrid(const nlohmann::json& params);
+        static vector<vector<vector<Vector3>>> make3bGrid(const nlohmann::json& params);
+        static vector<double> toSplineCoefficients(const vector<double>& energies, double spacing);
+        static vector<double> toSplineCoefficients(const vector<vector<vector<double>>>& energies, const Vector3 &spacing);
         static void writeH5(const shared_ptr<Potential> &potential,
                             const nlohmann::json& params,
                             const TabulationParams &tabulationParams,

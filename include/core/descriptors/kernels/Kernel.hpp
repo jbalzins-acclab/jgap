@@ -25,7 +25,7 @@ namespace jgap {
                                             const TIndex &indexes,
                                             const TDescriptorData &descriptor) = 0;
 
-        virtual double covariance(const TDescriptorData &d1, const TDescriptorData &d2) = 0;
+        virtual double covariance(const TDescriptorData &cutoffBase, const TDescriptorData &sparsePoint) = 0;
     };
 }
 

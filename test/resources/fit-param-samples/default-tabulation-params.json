@@ -1,0 +1,15 @@
+{
+    "output_file_prefix": "tab",
+    "potential_file": "potential.jgap.json",
+    "species": ["Fe", "Ni"],
+
+    "nDensities": 1000,
+
+    "r_min_3b": 0.1,
+    "r_max_3b": 4.0,
+    "n3b_r": 80,
+    "n3b_angle": 80,
+
+    "n2b": 1000,
+    "r_max_2b": 5.0
+}

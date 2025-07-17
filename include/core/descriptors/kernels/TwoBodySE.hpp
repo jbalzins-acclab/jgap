@@ -24,7 +24,7 @@ namespace jgap {
                                     const TwoBodyKernelIndex &indexes,
                                     const double &rSparse) override;
 
-        double covariance(const double &r1, const double &r2) override;
+        double covariance(const double &cutoffBase, const double &sparsePoint) override;
 
         string getType() override { return "squared_exp"; }
         nlohmann::json serialize() override;
@@ -35,8 +35,8 @@ namespace jgap {
         double _lengthScale;
         double _inverse2ThetaSq;
 
-        // TODO: is this the best way to organize it?
-        double derivative(const double &changingR, const double &constR);
+        double covarianceNoCutoffs(const double &r1, const double &r2) const;
+        double derivativeNoCutoffs(const double &changingR, const double &constR);
     };
 
     REGISTER_PARSER("squared_exp", TwoBodyKernel, TwoBodySE)

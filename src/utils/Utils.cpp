@@ -269,27 +269,4 @@ namespace jgap {
         }
         return ss.str();
     }
-
-    double rms(const vector<double> &x) {
-        double rms = 0.0;
-        for (int i = 0; i < x.size(); ++i) {
-            rms += pow(x[i], 2);
-        }
-        return sqrt(rms / x.size());
-    }
-
-    double std(const vector<double> &x) {
-        double mean = 0.0;
-        for (int i = 0; i < x.size(); ++i) {
-            mean += x[i];
-        }
-        mean /= x.size();
-
-        double stdev = 0.0;
-        for (int i = 0; i < x.size(); ++i) {
-            stdev += pow(x[i] - mean, 2);
-        }
-        stdev = sqrt(stdev / x.size());
-        return stdev;
-    }
 }

@@ -20,8 +20,6 @@ namespace jgap {
     void saveArray(const vector<double>& data, const string& filename);
     vector<double> loadArray(const string& filename);
     string matrixToString(const Eigen::MatrixXd& mat);
-    double rms(const vector<double> &x);
-    double std(const vector<double> &x);
 }
 
 #endif

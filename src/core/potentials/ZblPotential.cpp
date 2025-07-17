@@ -58,8 +58,8 @@ namespace jgap {
     TabulationData ZblPotential::tabulate(const TabulationParams &params) {
         TabulationData result{};
 
-        for (size_t i = 0; params.species.size(); i++) {
-            for (size_t j = i; params.species.size(); j++) {
+        for (size_t i = 0; i < params.species.size(); i++) {
+            for (size_t j = i; j < params.species.size(); j++) {
                 auto speciesPair = SpeciesPair{params.species[i], params.species[j]};
                 result.pairEnergies[speciesPair] = {};
 

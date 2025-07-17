@@ -37,6 +37,8 @@ namespace jgap {
                                    const Vector3 &descriptorInvariantDistances) {
         double total = 0;
 
+        const double sparseCutoff = invariantTripletToCutoff(descriptorInvariantDistances);
+
         for (ThreeBodyKernelIndexEntity index: indexes) {
             // index to data
             auto atom0 = structure.atoms[index.atomIndex];
@@ -55,7 +57,8 @@ namespace jgap {
                 );
 
             // double parts = 1.0; ???
-            total += 2.0/*double count*/ * covariance(thisTriplet, descriptorInvariantDistances) * fCut1 * fCut2 ;
+            total += 2.0/*double count*/ * covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances)
+                        * fCut1 * fCut2 * sparseCutoff;
         }
 
         return total;
@@ -66,6 +69,8 @@ namespace jgap {
                                              const Vector3 &descriptorInvariantDistances) {
 
         vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
+
+        const double sparseCutoff = invariantTripletToCutoff(descriptorInvariantDistances);
 
         for (ThreeBodyKernelIndexEntity index: indexes) {
             // index to data
@@ -101,12 +106,12 @@ namespace jgap {
             // Product rule with cutoffs
             if (fCut01 < 1.0) {
                 gradWrtDistances = gradWrtDistances + Vector3{
-                    covariance(thisTriplet, descriptorInvariantDistances) * dfcut01_dr01 * fCut02, 0, 0
+                    covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances) * dfcut01_dr01 * fCut02, 0, 0
                 };
             }
             if (fCut02 < 1.0) {
                 gradWrtDistances = gradWrtDistances + Vector3{
-                    0, covariance(thisTriplet, descriptorInvariantDistances) * fCut01 * dfcut02_dr02,0
+                    0, covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances) * fCut01 * dfcut02_dr02,0
                 };
             }
 
@@ -121,26 +126,41 @@ namespace jgap {
 
             //  ======================== "root" atom =============================
             Vector3 dK_dr0 = grad_r01_wrt_r1 * -gradWrtDistances.x - grad_r02_wrt_r2 * gradWrtDistances.y;
-            result[index.atomIndex] = result[index.atomIndex] + dK_dr0 * 2.0;
+            result[index.atomIndex] = result[index.atomIndex] + dK_dr0 * 2.0 * sparseCutoff;
 
             //  ======================== "node1" atom =============================
             Vector3 dK_dr1 = grad_r01_wrt_r1 * gradWrtDistances.x - grad_r12_wrt_r2 * gradWrtDistances.z;
-            result[neighbour1.index] = result[neighbour1.index] + dK_dr1 * 2.0;
+            result[neighbour1.index] = result[neighbour1.index] + dK_dr1 * 2.0 * sparseCutoff;
 
             //  ======================== "node1" atom =============================
             Vector3 dK_dr2 = grad_r02_wrt_r2 * gradWrtDistances.y + grad_r12_wrt_r2 * gradWrtDistances.z;
-            result[neighbour2.index] = result[neighbour2.index] + dK_dr2 * 2.0;
+            result[neighbour2.index] = result[neighbour2.index] + dK_dr2 * 2.0 * sparseCutoff;
         }
 
         return result;
     }
 
-    double ThreeBodySE::covariance(const Vector3 &t1, const Vector3 &t2) {
+    double ThreeBodySE::covariance(const Vector3 &t1/*invariant triplet*/,
+                                   const Vector3 &t2) {
+        return covarianceNoCutoffs(t1, t2) * invariantTripletToCutoff(t1) * invariantTripletToCutoff(t2);
+    }
+
+
+    double ThreeBodySE::invariantTripletToCutoff(const Vector3 &t) const {
+        const double dDiff = sqrt(t.y);
+        const double d1 = (dDiff + t.x) / 2.0;
+        const double d2 = (t.x - dDiff) / 2.0;
+
+        return _cutoffFunction->evaluate(d1) * _cutoffFunction->evaluate(d2);
+    }
+
+    double ThreeBodySE::covarianceNoCutoffs(const Vector3 &t1, const Vector3 &t2) const {
         return _energyScaleSquared * exp(-(t1 - t2).square() * _inverse2ThetaSq);
     }
 
     // Invariant triplets
-    Vector3 ThreeBodySE::gradient(const Vector3 &changingTriplet, const Vector3 &constTriplet) {
-        return (constTriplet - changingTriplet) * ((2 * _inverse2ThetaSq) * covariance(changingTriplet, constTriplet));
+    Vector3 ThreeBodySE::gradient(const Vector3 &changingTriplet, const Vector3 &constTriplet) const {
+        return (constTriplet - changingTriplet)
+                * (2.0 * _inverse2ThetaSq * covarianceNoCutoffs(changingTriplet, constTriplet));
     }
 }

@@ -29,7 +29,7 @@ namespace jgap {
         double result = 0;
 
         for (const auto &[atAtomIndex, density, densityDerivatives] : indexes) {
-            result += covariance(density, sparseDensity);
+            result += covarianceNoCutoffs(density, sparseDensity);
         }
 
         return result;
@@ -57,12 +57,15 @@ namespace jgap {
         return result;
     }
 
-    double EamSE::covariance(const double &density1, const double &density2) {
+    double EamSE::covarianceNoCutoffs(const double &density1, const double &density2) const {
         return _energyScaleSquared * exp(-pow(density1-density2, 2) * _inverse2ThetaSq);
     }
+    double EamSE::covariance(const double &density1, const double &density2) {
+        return covarianceNoCutoffs(density1, density2);
+    }
 
-    double EamSE::derivative(const double &changingDensity, const double &constantDensity) {
+    double EamSE::derivative(const double &changingDensity, const double &constantDensity) const {
         return (constantDensity - changingDensity) * 2/*compensate constant*/
-                    * _inverse2ThetaSq * covariance(changingDensity, constantDensity);
+                    * _inverse2ThetaSq * covarianceNoCutoffs(changingDensity, constantDensity);
     }
 }

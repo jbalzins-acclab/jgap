@@ -121,7 +121,7 @@ target_link_libraries(jgap_predict_app PRIVATE
         TBB::tbb TBB::tbbmalloc
 )
 
-target_link_libraries(jgap_predict_app PRIVATE
+target_link_libraries(jgap_tabulate_app PRIVATE
         jgap
         nlohmann_json::nlohmann_json
         TBB::tbb TBB::tbbmalloc

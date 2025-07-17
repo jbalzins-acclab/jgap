@@ -46,8 +46,11 @@ namespace jgap {
 
         TabulationData result{};
 
-        for (const auto &potential : _potentials | views::values) {
+        for (const auto &[label, potential] : _potentials) {
+            CurrentLogger::get()->debug(format("Tabulating {} potential", label));
             TabulationData potentialTabulated = potential->tabulate(params);
+
+            CurrentLogger::get()->debug(format("Merging tabulation data"));
             result = result + potentialTabulated;
         }
 

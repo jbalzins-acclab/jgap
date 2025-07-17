@@ -41,7 +41,8 @@ namespace jgap {
     TabulationData JgapPotential::tabulate(const TabulationParams &params) {
         TabulationData result{};
 
-        for (const auto& descriptor: _descriptors | views::values) {
+        for (const auto& [label, descriptor]: _descriptors) {
+            CurrentLogger::get()->debug(format("Tabulating {} descriptor", label));
             result = result + descriptor->tabulate(params);
         }
 
