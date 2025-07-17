@@ -6,7 +6,6 @@
                 "r_min": 1.2,
                 "type": "perriot"
             },
-            "dmol_fit_coefficients_file": "/scratch/djurabek/balzinsj/jgap_test/resources/dmol-screening-fit/dmol-fit.json",
             "type": "zbl"
         },
         "isolated_atom": {

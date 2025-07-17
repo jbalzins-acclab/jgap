@@ -36,7 +36,7 @@ namespace jgap {
         double _inverse2ThetaSq;
 
         [[nodiscard]] double covarianceNoCutoffs(const double &density1, const double &density2) const;
-        [[nodiscard]] double derivative(const double &density1, const double &density2) const;
+        [[nodiscard]] double derivative(const double &changingDensity, const double &constantDensity) const;
     };
 
     REGISTER_PARSER("squared_exp", EamKernel, EamSE)

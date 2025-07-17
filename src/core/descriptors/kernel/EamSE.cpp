@@ -65,7 +65,7 @@ namespace jgap {
     }
 
     double EamSE::derivative(const double &changingDensity, const double &constantDensity) const {
-        return (constantDensity - changingDensity) * 2/*compensate constant*/
-                    * _inverse2ThetaSq * covarianceNoCutoffs(changingDensity, constantDensity);
+        return (constantDensity - changingDensity) * (2/*compensate constant*/* _inverse2ThetaSq)
+                     * covarianceNoCutoffs(changingDensity, constantDensity);
     }
 }

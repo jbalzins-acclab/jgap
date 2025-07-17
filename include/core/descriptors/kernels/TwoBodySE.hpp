@@ -24,7 +24,7 @@ namespace jgap {
                                     const TwoBodyKernelIndex &indexes,
                                     const double &rSparse) override;
 
-        double covariance(const double &cutoffBase, const double &sparsePoint) override;
+        double covariance(const double &r1, const double &r2) override;
 
         string getType() override { return "squared_exp"; }
         nlohmann::json serialize() override;

@@ -57,7 +57,7 @@ namespace jgap {
                 );
 
             // double parts = 1.0; ???
-            total += 2.0/*double count*/ * covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances)
+            total += 2.0/*q_ijk + q_jik*/ * covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances)
                         * fCut1 * fCut2 * sparseCutoff;
         }
 

@@ -165,7 +165,7 @@ namespace jgap {
                     }
                 }
             }
-            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](array<size_t, 3> iGrid) {
+            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](const array<size_t, 3> &iGrid) {
 
                 const Vector3 gridPoint = params.grid3b[iGrid[0]][iGrid[1]][iGrid[2]];
 
@@ -178,11 +178,11 @@ namespace jgap {
                 };
 
                 for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
-                    const double contribution = coefficients[indexSparse]
+                    const double contribution = 2.0/*q_ijk + q_jik*/ * coefficients[indexSparse]
                                 * _kernel->covariance(invariantTriplet, sparsePoints[indexSparse]);
                     tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]] += contribution;
-                    tripletEnergies[iGrid[1]][iGrid[0]][iGrid[2]] += contribution;
                 }
+                tripletEnergies[iGrid[1]][iGrid[0]][iGrid[2]] = tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]];
             });
 
             result.tripletEnergies[speciesTriplet] = tripletEnergies;

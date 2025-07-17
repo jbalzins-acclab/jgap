@@ -41,27 +41,27 @@ namespace jgap {
                            const TabulationData &tabulationData,
                            const string &outputFileNamePrefix) {
 
-        HighFive::File tabgapFile(outputFileNamePrefix + ".tabgap.h5", HighFive::File::Overwrite);
+        HighFive::File tabGapFile(outputFileNamePrefix + ".tabgap.h5", HighFive::File::Overwrite);
 
         const string comment1 = format("Tabulated jGAP: {}", potential->serialize().dump());
-        tabgapFile.createDataSet<string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
+        tabGapFile.createDataSet<string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
         const string comment2 = format("Tabulation params: {}", params.dump());
-        tabgapFile.createDataSet<string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
+        tabGapFile.createDataSet<string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
 
-        auto e0Group = tabgapFile.createGroup("e0");
+        auto e0Group = tabGapFile.createGroup("e0");
         e0Group.createAttribute("Nelements", tabulationData.isolatedEnergies.size())
                .write(tabulationData.isolatedEnergies.size());
-        for (const auto& [element, value] : tabulationData.isolatedEnergies) {
+        for (const auto& [element, value]: tabulationData.isolatedEnergies) {
             e0Group.createAttribute(element, value).write(value);
         }
 
         if (tabulationData.eamTabulationData.empty()) {
-            tabgapFile.createDataSet(
+            tabGapFile.createDataSet(
                 "npots", vector{tabulationData.pairEnergies.size(), tabulationData.tripletEnergies.size()}
                 );
 
             for (const auto& [speciesPair, energies] : tabulationData.pairEnergies) {
-                auto pairGroup = tabgapFile.createGroup(format("{}-{}", speciesPair.first(), speciesPair.second()));
+                auto pairGroup = tabGapFile.createGroup(format("{}-{}", speciesPair.first(), speciesPair.second()));
 
                 pairGroup.createAttribute("element_i", speciesPair.first()).write(speciesPair.first());
                 pairGroup.createAttribute("element_j", speciesPair.second()).write(speciesPair.second());
@@ -79,11 +79,11 @@ namespace jgap {
             }
 
         } else {
-            tabgapFile.createDataSet("npots", vector{0, tabulationData.tripletEnergies.size()});
+            tabGapFile.createDataSet("npots", vector{0, tabulationData.tripletEnergies.size()});
         }
 
         for (const auto& [speciesTriplet, energies] : tabulationData.tripletEnergies) {
-            auto tripletGroup = tabgapFile.createGroup(
+            auto tripletGroup = tabGapFile.createGroup(
                 format("{}-{}-{}", speciesTriplet.root, speciesTriplet.nodes.first(), speciesTriplet.nodes.second())
                 );
             tripletGroup.createAttribute("element_i", speciesTriplet.root).write(speciesTriplet.root);
@@ -114,7 +114,7 @@ namespace jgap {
             tripletGroup.createDataSet("energies", splineCoefficients);
         }
 
-        tabgapFile.flush();
+        tabGapFile.flush();
     }
 
     // TODO: looks monstrous
@@ -127,6 +127,10 @@ namespace jgap {
                               const bool writePairEnergies) {
 
         ofstream eamFsFile(outputFileNamePrefix + ".eam.fs");
+        if (!eamFsFile.is_open()) {
+            CurrentLogger::get()->error("Could not open " + outputFileNamePrefix + ".eam.fs", true);
+        }
+        eamFsFile << fixed << setprecision(17);
 
         // Lines 1–3: Comments/metadata.
         eamFsFile << "# UNITS: metal" << endl;
@@ -156,7 +160,7 @@ namespace jgap {
             * Density functions \rho_{\alpha\beta}(r): For each element α (total N curves, each with Nr points)
          */
         for (const Species& species1 : elements) {
-            eamFsFile << Z_default[species1] << " ";
+            eamFsFile << static_cast<size_t>(Z_default[species1]) << " ";
             eamFsFile << mass_default[species1] << " 1.0 ZZZ" << endl;
 
             for (const double& energy : data.embeddingEnergies.at(species1)) {
@@ -178,8 +182,9 @@ namespace jgap {
 
         for (size_t i = 0; i < elements.size(); i++) {
             for (size_t j = i; j < elements.size(); j++) {
-                for (const double& energy: pairEnergies.at({elements[i], elements[j]})) {
-                    eamFsFile << (writePairEnergies ? energy : 0) << endl;
+                const auto& energies = pairEnergies.at({elements[i], elements[j]});
+                for (size_t k = 0; k < energies.size(); k++) {
+                    eamFsFile << (writePairEnergies ? energies[k]*tabulationParams.grid2b[k] : 0) << endl;
                 }
             }
         }

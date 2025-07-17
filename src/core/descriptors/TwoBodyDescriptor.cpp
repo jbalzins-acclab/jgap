@@ -146,7 +146,7 @@ namespace jgap {
 
             for (size_t iGrid = 0; iGrid < params.grid2b.size(); iGrid++) {
                 for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
-                    pairEnergies[iGrid] += coefficients[indexSparse]
+                    pairEnergies[iGrid] += 2.0/*bond energy => r_ij+r_ji in quip*/ * coefficients[indexSparse]
                                         * _kernel->covariance(params.grid2b[iGrid], sparsePoints[indexSparse]);
                 }
             }
@@ -165,7 +165,7 @@ namespace jgap {
             auto atom = atomicStructure.atoms[atomIndex];
 
             for (size_t neighbourListIndex = 0; neighbourListIndex < atom.neighbours->size(); neighbourListIndex++) {
-                auto neighbour = atom.neighbours->at(neighbourListIndex);
+                const auto neighbour = atom.neighbours->at(neighbourListIndex);
 
                 if (neighbour.index < atomIndex) continue;
                 if (neighbour.distance > _cutoff) continue;

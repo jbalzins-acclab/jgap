@@ -49,9 +49,10 @@ namespace jgap {
                     result.pairEnergies[speciesPair] = energies;
                 } else {
                     if (result.pairEnergies[speciesPair].size() != energies.size()) {
-                        for (size_t i = 0; i < energies.size(); i++) {
-                            result.pairEnergies[speciesPair][i] += energies[i];
-                        }
+                        CurrentLogger::get()->error("Pair energy table size mismatch", true);
+                    }
+                    for (size_t i = 0; i < energies.size(); i++) {
+                        result.pairEnergies[speciesPair][i] += energies[i];
                     }
                 }
             }
@@ -61,11 +62,12 @@ namespace jgap {
                     result.tripletEnergies[speciesTriplet] = energies;
                 } else {
                     if (result.tripletEnergies[speciesTriplet].size() != energies.size()) {
-                        for (size_t i = 0; i < energies.size(); i++) {
-                            for (size_t j = 0; j < energies[i].size(); j++) {
-                                for (size_t k = 0; k < energies[i][j].size(); k++) {
-                                    result.tripletEnergies[speciesTriplet][i][j][k] += energies[i][j][k];
-                                }
+                        CurrentLogger::get()->error("Triplet energy table size mismatch", true);
+                    }
+                    for (size_t i = 0; i < energies.size(); i++) {
+                        for (size_t j = 0; j < energies[i].size(); j++) {
+                            for (size_t k = 0; k < energies[i][j].size(); k++) {
+                                result.tripletEnergies[speciesTriplet][i][j][k] += energies[i][j][k];
                             }
                         }
                     }

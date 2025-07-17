@@ -174,15 +174,15 @@ namespace jgap {
         for (const auto& points: _sparsePointsPerSpecies | views::values) {
             result.rhoMax = max(result.rhoMax, ranges::max(points));
         }
-        result.rhoMax += 3.0; // TODO: this is very SqExp specific
+        result.rhoMax += 3.5; // TODO: this is very SqExp specific
 
         const double rhoStep = result.rhoMax / static_cast<double>(params.nDensities-1);
 
         size_t counter = 0;
         for (const auto& [species, points]: _sparsePointsPerSpecies) {
             vector energiesPerSpecies(params.nDensities, 0.0);
-            vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + params.nDensities);
-            counter += params.nDensities;
+            vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + points.size());
+            counter += points.size();
 
             for (size_t iGrid = 0; iGrid < params.nDensities; iGrid++) {
                 double density = rhoStep * static_cast<double>(iGrid);

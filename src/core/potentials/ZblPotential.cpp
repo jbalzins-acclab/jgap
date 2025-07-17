@@ -10,6 +10,9 @@ namespace jgap {
     void ZblPotential::parseDmolFitCoefficients() {
 
         ifstream fIn(_dmolFile);
+        if (!fIn.is_open()) {
+            CurrentLogger::get()->error("Could not open dmol_fit_coefficients_file: " + _dmolFile, true);
+        }
         nlohmann::json dmolFitCoefficients;
         fIn >> dmolFitCoefficients;
 

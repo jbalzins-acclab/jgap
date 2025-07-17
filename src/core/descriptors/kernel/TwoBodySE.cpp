@@ -91,9 +91,9 @@ namespace jgap {
         return _energyScaleSquared * exp(-pow(r1-r2, 2.0) * _inverse2ThetaSq);
     }
 
-    double TwoBodySE::covariance(const double &cutoffBase, const double &sparsePoint) {
-        return covarianceNoCutoffs(cutoffBase, sparsePoint) * _cutoffFunction->evaluate(cutoffBase)
-                                                   * _cutoffFunction->evaluate(sparsePoint);
+    double TwoBodySE::covariance(const double &r1, const double &r2) {
+        return covarianceNoCutoffs(r1, r2) * _cutoffFunction->evaluate(r1)
+                                           * _cutoffFunction->evaluate(r2);
     }
 
     double TwoBodySE::derivativeNoCutoffs(const double &changingR, const double &constR) {
