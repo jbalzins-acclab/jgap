@@ -24,7 +24,7 @@ namespace jgap {
 
     ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
 
-        CurrentLogger::get()->info("Parsing ZblPotential");
+        CurrentLogger::get()->info("Parsing ZblPotential " + zblParams.dump());
         if (zblParams.contains("cutoff")) {
             _cutoff = zblParams["cutoff"]["cutoff"];
             _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
