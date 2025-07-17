@@ -4,6 +4,7 @@
 namespace jgap {
     CompositePotentialFit::CompositePotentialFit(const nlohmann::json &params) {
         if (params.contains("external")) {
+            CurrentLogger::get()->info("External potential setup");
             _externalPotential = ParserRegistry<Potential>::get(params["external"]);
         } else {
             _externalPotential = {};
