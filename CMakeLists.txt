@@ -16,7 +16,6 @@ set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(ParallelSTL CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 
@@ -102,7 +101,6 @@ add_executable(jgap_tabulate_app ${TABULATE_APP_SOURCE_FILES})
 
 target_link_libraries(jgap PRIVATE
         TBB::tbb TBB::tbbmalloc
-        pstl::ParallelSTL
         nlohmann_json::nlohmann_json
         spdlog::spdlog
         Eigen3::Eigen
