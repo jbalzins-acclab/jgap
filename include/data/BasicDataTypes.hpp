@@ -179,8 +179,19 @@ namespace jgap {
             } else if (other.forces.has_value()) {
                 _forces = other.forces.value();
             }
+            optional<array<Vector3, 3>> _virials;
+            if (virials.has_value() && other.virials.has_value()) {
+                _virials = virials;
+                (*_virials)[0] += other.virials.value()[0];
+                (*_virials)[1] += other.virials.value()[1];
+                (*_virials)[2] += other.virials.value()[2];
+            } else if (virials.has_value()) {
+                _virials = virials.value();
+            } else if (other.virials.has_value()) {
+                _virials = other.virials.value();
+            }
             return PotentialPrediction{
-                _energy, _forces,
+                _energy, _forces, _virials
             };
         }
     };
