@@ -137,12 +137,12 @@ namespace jgap {
             }
 
             result.push_back(AtomicStructure{
-                .lattice = lattice,
                 .configType = configType,
-                .species = species,
+                .lattice = lattice,
                 .positions = positions,
-                .forces = forces,
+                .species = species,
                 .energy = energy,
+                .forces = forces,
                 .virials = virials
             });
         }
