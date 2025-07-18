@@ -108,7 +108,7 @@ namespace jgap {
         size_t r = 0;
         vector<pair<size_t, AtomicStructure>> startingRowsK_nm;
         for (const auto& structure : atomicStructures) {
-            startingRowsK_nm.push_back({r, structure});
+            startingRowsK_nm.emplace_back(r, structure);
             if (structure.energy.has_value()) r += 1;
             if (structure.forces.has_value()) r += 3 * structure.size();
             if (structure.virials.has_value()) r += 6;
@@ -221,14 +221,20 @@ namespace jgap {
 
                 if (atomicStructure.virials.has_value()) {
                     array virials = calculateVirials(volume, atomicStructure.positions, contribution.forces);
-                    A(currentRow++, contributionColumn) = virials[0].x * atomicStructure.virialSigmasInverse.value()[0].x;
-                    A(currentRow++, contributionColumn) = virials[0].y * atomicStructure.virialSigmasInverse.value()[0].y;
-                    A(currentRow++, contributionColumn) = virials[0].z * atomicStructure.virialSigmasInverse.value()[0].z;
+                    A(currentRow++, contributionColumn) = virials[0].x
+                        * atomicStructure.virialSigmasInverse.value()[0].x;
+                    A(currentRow++, contributionColumn) = virials[0].y
+                        * atomicStructure.virialSigmasInverse.value()[0].y;
+                    A(currentRow++, contributionColumn) = virials[0].z
+                        * atomicStructure.virialSigmasInverse.value()[0].z;
 
-                    A(currentRow++, contributionColumn) = virials[1].y * atomicStructure.virialSigmasInverse.value()[1].y;
-                    A(currentRow++, contributionColumn) = virials[1].z * atomicStructure.virialSigmasInverse.value()[1].z;
+                    A(currentRow++, contributionColumn) = virials[1].y
+                        * atomicStructure.virialSigmasInverse.value()[1].y;
+                    A(currentRow++, contributionColumn) = virials[1].z
+                        * atomicStructure.virialSigmasInverse.value()[1].z;
 
-                    A(currentRow++, contributionColumn) = virials[2].z * atomicStructure.virialSigmasInverse.value()[2].z;
+                    A(currentRow++, contributionColumn) = virials[2].z
+                        * atomicStructure.virialSigmasInverse.value()[2].z;
                 }
 
                 contributionColumn++;

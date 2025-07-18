@@ -11,6 +11,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include "data/TabulationData.hpp"
+#include "utils/Utils.hpp"
 
 using namespace std;
 
@@ -60,7 +61,8 @@ namespace jgap {
 
             return {
                 energy,
-                forces
+                forces,
+                calculateVirials(atomicStructure.volume(), atomicStructure.positions, forces)
             };
         }
 
