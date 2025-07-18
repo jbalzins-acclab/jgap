@@ -8,6 +8,7 @@
 
 namespace jgap {
     IsolatedAtomPotential::IsolatedAtomPotential(const nlohmann::json& params) {
+        CurrentLogger::get()->debug("Parsing isolated atom potentials params");
         _errorOnUnknownSpecies = params.value("error_on_unknown", true);
         _isolatedEnergies = {};
         for (const auto& [element, energy]: params["energies"].items()) {
@@ -26,14 +27,12 @@ namespace jgap {
 
         double result = 0;
 
-        for (const auto &atom: structure.atoms) {
-            const auto species = atom.species;
-
-            if (_isolatedEnergies.contains(species)) {
-                result += _isolatedEnergies[species];
+        for (const auto &atom: structure) {
+            if (_isolatedEnergies.contains(atom.species())) {
+                result += _isolatedEnergies[atom.species()];
             } else {
                 if (_errorOnUnknownSpecies) {
-                    CurrentLogger::get() -> error("Unknown isolated_atom energy for " + species,true);
+                    CurrentLogger::get() -> error("Unknown isolated_atom energy for " + atom.species(),true);
                 }
             }
         }

@@ -76,46 +76,72 @@ namespace jgap {
         Vector3 operator+(const Vector3& other) const {
             return Vector3{x + other.x, y + other.y, z + other.z};
         }
-
+        Vector3& operator+=(const Vector3& other) {
+            x += other.x;
+            y += other.y;
+            z += other.z;
+            return *this;
+        }
         Vector3 operator-(const Vector3& other) const {
             return Vector3{x - other.x, y - other.y, z - other.z};
         };
+        Vector3& operator-=(const Vector3& other) {
+            x -= other.x;
+            y -= other.y;
+            z -= other.z;
+            return *this;
+        }
         Vector3 operator*(const double scalar) const {
             return Vector3{x * scalar, y * scalar, z * scalar};
         };
-        [[nodiscard]] double dot(const Vector3& other) const {
+        Vector3& operator*=(const double scalar) {
+            x *= scalar;
+            y *= scalar;
+            z *= scalar;
+            return *this;
+        }
+        Vector3 operator/(const double scalar) const {
+            return Vector3{x / scalar, y / scalar, z / scalar};
+        }
+        Vector3& operator/=(const double scalar) {
+            x /= scalar;
+            y /= scalar;
+            z /= scalar;
+            return *this;
+        }
+        double dot(const Vector3& other) const {
             return x * other.x + y * other.y + z * other.z;
         };
-        [[nodiscard]] Vector3 cross(const Vector3& other) const {
+        Vector3 cross(const Vector3& other) const {
             return Vector3{
                 y * other.z - z * other.y,
                 z * other.x - x * other.z,
                 x * other.y - y * other.x
             };
         }
-        [[nodiscard]] double square() const {
+        double square() const {
             return x * x + y * y + z * z;
         }
-        [[nodiscard]] double norm() const {
+        double norm() const {
             return sqrt(x * x + y * y + z * z);
         };
-        [[nodiscard]] double project(const Vector3& other) const {
+        double project(const Vector3& other) const {
             return dot(other) / other.norm();
         }
-        [[nodiscard]] double aproject(const Vector3& other) const {
+        double aproject(const Vector3& other) const {
             return sqrt(norm() * norm() - project(other) * project(other));
         }
-        [[nodiscard]] Vector3 normalize() const {
+        Vector3 normalize() const {
             return *this * (1.0 / norm());
         };
-        [[nodiscard]] double min() const {
+        double min() const {
             const double t = abs(x) < abs(y) ? x : y;
             return abs(t) < abs(z) ? abs(t) : abs(z);
         }
-        [[nodiscard]] string toString() const {
+        string toString() const {
             return to_string(x) + ", " + to_string(y) + ", " + to_string(z);
         }
-        [[nodiscard]] double aproject(const Vector3& u, const Vector3& v) const {
+        double aproject(const Vector3& u, const Vector3& v) const {
             Vector3 _cross = u.cross(v);
             if (_cross.norm() == 0.0) return this->aproject(u);
             return abs(this->project(_cross));
@@ -130,17 +156,6 @@ namespace jgap {
         Vector3 offset;
 
         double distance;
-    };
-
-    struct AtomData {
-        Vector3 position;
-        Species species;
-
-        // TODO: use KE+std(T) from relaxation in kernel?
-        optional<Vector3> velocity; // why not
-        optional<Vector3> force;
-        optional<Vector3> forceSigmas;
-        optional<vector<NeighbourData>> neighbours;
     };
 
     struct PotentialPrediction {
@@ -170,25 +185,110 @@ namespace jgap {
         }
     };
 
-    struct AtomicStructure {
-        array<Vector3, 3> lattice;
-        vector<AtomData> atoms;
+    using NeighboursData = vector<NeighbourData>;
 
+    struct AtomicStructure {
         optional<string> configType;
+        array<Vector3, 3> lattice;
+        vector<Vector3> positions;
+        vector<Species> species;
+
+        optional<vector<NeighboursData>> neighbours;
 
         optional<double> energy;
-        optional<double> energySigma;
-
+        optional<vector<Vector3>> forces;
         optional<array<Vector3, 3>> virials;
+
+        optional<double> energySigmaInverse;
+        optional<vector<Vector3>> forceSigmasInverse;
+        optional<array<Vector3, 3>> virialSigmasInverse;
+
+        struct AtomProxy {
+            size_t index;
+            AtomicStructure* structure;
+
+            Vector3& position() const { return structure->positions[index]; }
+            Species& species() const { return structure->species[index]; }
+
+            Vector3& force() const {
+                if (!structure->forces)
+                    throw std::runtime_error("Forces not set");
+                return (*structure->forces)[index];
+            }
+            Vector3& forceSigmasInverse() const {
+                if (!structure->forceSigmasInverse)
+                    throw std::runtime_error("Forces not set");
+                return (*structure->forceSigmasInverse)[index];
+            }
+            NeighboursData& neighbours() const {
+                if (!structure->neighbours)
+                    throw std::runtime_error("Neighbours not set");
+                return (*structure->neighbours)[index];
+            }
+        };
+
+        struct ConstAtomProxy {
+            size_t index;
+            const AtomicStructure* structure;
+
+            Vector3 position() const { return structure->positions[index]; }
+            Species species() const { return structure->species[index]; }
+
+            Vector3 force() const {
+                if (!structure->forces)
+                    throw std::runtime_error("Forces not set");
+                return (*structure->forces)[index];
+            }
+            Vector3 forceSigmasInverse() const {
+                if (!structure->forceSigmasInverse)
+                    throw std::runtime_error("Forces not set");
+                return (*structure->forceSigmasInverse)[index];
+            }
+            NeighboursData neighbours() const {
+                if (!structure->neighbours)
+                    throw std::runtime_error("Neighbours not set");
+                return (*structure->neighbours)[index];
+            }
+        };
+
+        struct Iterator {
+            AtomicStructure* structure;
+            size_t index;
+
+            Iterator& operator++() { ++index; return *this; }
+            bool operator!=(const Iterator& other) const { return index != other.index; }
+            AtomProxy operator*() const { return AtomProxy{index, structure}; }
+        };
+
+        struct ConstIterator {
+            const AtomicStructure* structure;
+            size_t index;
+
+            ConstIterator& operator++() { ++index; return *this; }
+            bool operator!=(const ConstIterator& other) const { return index != other.index; }
+            ConstAtomProxy operator*() const { return ConstAtomProxy{index, structure}; }
+        };
+
+        Iterator begin() { return Iterator{this, 0}; }
+        Iterator end() { return Iterator{this, positions.size()}; }
+
+        ConstIterator begin() const { return ConstIterator{this, 0}; }
+        ConstIterator end() const { return ConstIterator{this, positions.size()}; }
+
+        AtomProxy operator[](const size_t i) { return AtomProxy{i, this}; }
+        ConstAtomProxy operator[](const size_t i) const { return ConstAtomProxy{i, this}; }
 
         void setEnergyData(const PotentialPrediction& prediction);
         void adjust(const PotentialPrediction& prediction, bool subtract, bool setEmpty);
         AtomicStructure repeat(size_t a, size_t b, size_t c);
+
+        double volume() const;
+        size_t size() const { return positions.size(); }
     };
 
     struct Covariance {
         double total;
-        vector<Vector3> derivatives;
+        vector<Vector3> forces;
     };
 }
 

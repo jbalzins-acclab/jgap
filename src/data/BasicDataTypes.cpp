@@ -1,11 +1,11 @@
 #include "data/BasicDataTypes.hpp"
 
+#include <format>
+
 namespace jgap {
     void AtomicStructure::setEnergyData(const PotentialPrediction &prediction) {
         energy = {};
-        for (auto& atom: atoms) {
-            atom.force = {};
-        }
+        forces = {};
         virials = {};
         adjust(prediction, false, true);
     }
@@ -20,12 +20,12 @@ namespace jgap {
             energy = energy.value_or(0) + sign * prediction.energy.value();
         }
 
-        if (prediction.forces.has_value() && (setEmpty || atoms[0].force.has_value())) {
-            if (this->atoms.size() != prediction.forces.value().size()) {
+        if (prediction.forces.has_value() && (setEmpty || forces.has_value())) {
+            if (size() != prediction.forces.value().size()) {
                 const string errMsg = format(
                     "Found force {} predictions for a {} atom system",
                     prediction.forces.value().size(),
-                    this->atoms.size()
+                    size()
                 );
                 if (CurrentLogger::get() != nullptr) {
                     CurrentLogger::get()->error(errMsg);
@@ -33,9 +33,11 @@ namespace jgap {
                 throw runtime_error(errMsg);
             }
 
-            for (size_t i = 0; i < this->atoms.size(); i++) {
-                atoms[i].force = atoms[i].force.value_or(Vector3{0,0,0})
-                                 + prediction.forces.value()[i] * sign;
+            if (!forces.has_value()) {
+                forces = vector(size(), Vector3{0.0, 0.0, 0.0});
+            }
+            for (size_t i = 0; i < size(); i++) {
+                (*forces)[i] += prediction.forces.value()[i] * sign;
             }
         }
 
@@ -50,28 +52,45 @@ namespace jgap {
     }
 
     AtomicStructure AtomicStructure::repeat(size_t a, size_t b, size_t c) {
-        auto cpy = AtomicStructure(*this);
+        auto cpy = AtomicStructure{};
+        cpy.configType = this->configType;
 
-        cpy.lattice[0] = cpy.lattice[0] * a;
-        cpy.lattice[1] = cpy.lattice[1] * b;
-        cpy.lattice[2] = cpy.lattice[2] * c;
+        cpy.energy = this->energy.transform([&](const double val) -> double {
+            return val * static_cast<double>(a) * static_cast<double>(b) * static_cast<double>(c);
+        });
 
-        cpy.atoms = {};
+        cpy.lattice[0] = cpy.lattice[0] * static_cast<double>(a);
+        cpy.lattice[1] = cpy.lattice[1] * static_cast<double>(b);
+        cpy.lattice[2] = cpy.lattice[2] * static_cast<double>(c);
+
+        cpy.species = {};
+        cpy.positions = {};
+        cpy.forces = {};
+        cpy.forceSigmasInverse = {};
+
+        if (forces.has_value()) {
+            cpy.forces = vector<Vector3>{};
+        }
         for (size_t i = 0; i < a; i++) {
             for (size_t j = 0; j < b; j++) {
                 for (size_t k = 0; k < c; k++) {
-                    for (auto& atom: this->atoms) {
-                        auto newAtom = AtomData(atom);
-                        newAtom.position = newAtom.position
-                            + this->lattice[0] * i
-                            + this->lattice[1] * j
-                            + this->lattice[2] * k;
-                        cpy.atoms.push_back(newAtom);
+                    for (const auto& atom: *this) {
+                        cpy.species.push_back(atom.species());
+                        cpy.positions.push_back(
+                            atom.position() + this->lattice[0] * i + this->lattice[1] * j + this->lattice[2] * k
+                            );
+                        if (forces.has_value()) {
+                            cpy.forces->push_back(atom.force());
+                        }
                     }
                 }
             }
         }
 
         return cpy;
+    }
+
+    double AtomicStructure::volume() const {
+        return abs(lattice[0].cross(lattice[1]).dot(lattice[2]));
     }
 }

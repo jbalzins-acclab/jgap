@@ -27,7 +27,7 @@ namespace jgap {
 
     ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
 
-        CurrentLogger::get()->info("Parsing ZblPotential " + zblParams.dump());
+        CurrentLogger::get()->debug("Parsing ZblPotential " + zblParams.dump());
         if (zblParams.contains("cutoff")) {
             _cutoff = zblParams["cutoff"]["cutoff"];
             _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
@@ -85,18 +85,18 @@ namespace jgap {
     PotentialPrediction ZblPotential::predict(const AtomicStructure &structure) {
 
         double energy = 0;
-        vector forces(structure.atoms.size(), Vector3{0, 0, 0});
-        // TODO: virials?
-        for (size_t i = 0; i < structure.atoms.size(); i++) {
+        vector forces(structure.size(), Vector3{0, 0, 0});
 
-            auto atom1 = structure.atoms[i];
+        for (size_t i = 0; i < structure.size(); i++) {
 
-            for (const NeighbourData& neighbour: atom1.neighbours.value()) {
+            auto atom1 = structure[i];
+
+            for (const NeighbourData& neighbour: atom1.neighbours()) {
                 if (neighbour.index < i || neighbour.distance > _cutoff) continue;
 
-                auto atom2 = structure.atoms[neighbour.index];
+                auto atom2 = structure[neighbour.index];
 
-                double dE = zblWithCutoff_eV({atom1.species, atom2.species}, neighbour.distance);
+                double dE = zblWithCutoff_eV({atom1.species(), atom2.species()}, neighbour.distance);
 
                 if (neighbour.index == i) {
                     energy += dE / 2;
@@ -105,8 +105,10 @@ namespace jgap {
 
                 energy += dE;
 
-                double dzbl_dr = zblWithCutoffDerivative_eV_per_Ang({atom1.species, atom2.species}, neighbour.distance);
-                Vector3 f = (atom1.position - (atom2.position + neighbour.offset)).normalize() * dzbl_dr;
+                double dzbl_dr = zblWithCutoffDerivative_eV_per_Ang(
+                    {atom1.species(), atom2.species()}, neighbour.distance
+                    );
+                Vector3 f = (atom1.position() - (atom2.position() + neighbour.offset)).normalize() * dzbl_dr;
                 forces[i] = forces[i] - f;
                 forces[neighbour.index] = forces[neighbour.index] + f;
             }
@@ -114,7 +116,8 @@ namespace jgap {
 
         return PotentialPrediction{
             energy,
-            forces
+            forces,
+            calculateVirials(structure.volume(), structure.positions, forces)
         };
     }
 

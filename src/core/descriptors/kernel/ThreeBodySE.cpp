@@ -32,65 +32,42 @@ namespace jgap {
         _energyScaleSquared = energyScale * energyScale;
     }
 
-    double ThreeBodySE::covariance(const AtomicStructure &structure,
+    Covariance ThreeBodySE::covariance(const AtomicStructure &structure,
                                    const ThreeBodyKernelIndex &indexes,
                                    const Vector3 &descriptorInvariantDistances) {
-        double total = 0;
+        double energy = 0;
+        vector<Vector3> forces(structure.size(), {0, 0, 0});
 
         const double sparseCutoff = invariantTripletToCutoff(descriptorInvariantDistances);
 
         for (ThreeBodyKernelIndexEntity index: indexes) {
+            // ---------------------- ENERGY --------------------------------
             // index to data
-            auto atom0 = structure.atoms[index.atomIndex];
-            auto neighbour1 = atom0.neighbours->at(index.neighbourListIndex1);
-            auto neighbour2 = atom0.neighbours->at(index.neighbourListIndex2);
-            auto atom1 = structure.atoms[neighbour1.index];
-            auto atom2 = structure.atoms[neighbour2.index];
+            auto atom0 = structure[index.atomIndex];
+            auto neighbour1 = atom0.neighbours().at(index.neighbourListIndex1);
+            auto neighbour2 = atom0.neighbours().at(index.neighbourListIndex2);
+            auto node1 = structure[neighbour1.index];
+            auto node2 = structure[neighbour2.index];
 
             // >>>>>>>>>>>>>>>> CALCULATION
-            double fCut1 = _cutoffFunction->evaluate(neighbour1.distance);
-            double fCut2 = _cutoffFunction->evaluate(neighbour2.distance);
+            double fCut01 = _cutoffFunction->evaluate(neighbour1.distance);
+            double fCut02 = _cutoffFunction->evaluate(neighbour2.distance);
 
             auto thisTriplet = toInvariantTriplet(
                 {neighbour1.distance, neighbour2.distance},
-                (atom2.position + neighbour2.offset - atom1.position - neighbour1.offset).norm()
+                (node2.position() + neighbour2.offset - node1.position() - neighbour1.offset).norm()
                 );
 
             // double parts = 1.0; ???
-            total += 2.0/*q_ijk + q_jik*/ * covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances)
-                        * fCut1 * fCut2 * sparseCutoff;
-        }
+            energy += 2.0/*q_ijk + q_jik*/ * covarianceNoCutoffs(thisTriplet, descriptorInvariantDistances)
+                        * fCut01 * fCut02 * sparseCutoff;
 
-        return total;
-    }
 
-    vector<Vector3> ThreeBodySE::derivatives(const AtomicStructure &structure,
-                                             const ThreeBodyKernelIndex &indexes,
-                                             const Vector3 &descriptorInvariantDistances) {
-
-        vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
-
-        const double sparseCutoff = invariantTripletToCutoff(descriptorInvariantDistances);
-
-        for (ThreeBodyKernelIndexEntity index: indexes) {
-            // index to data
-            auto atom0 = structure.atoms[index.atomIndex];
-            auto neighbour1 = atom0.neighbours->at(index.neighbourListIndex1);
-            auto neighbour2 = atom0.neighbours->at(index.neighbourListIndex2);
-            auto node1 = structure.atoms.at(neighbour1.index);
-            auto node2 = structure.atoms.at(neighbour2.index);
+            // ---------------------- FORCES --------------------------------
 
             // calc
-            double fCut01 = _cutoffFunction->evaluate(neighbour1.distance);
             double dfcut01_dr01 = _cutoffFunction->differentiate(neighbour1.distance);
-
-            double fCut02 = _cutoffFunction->evaluate(neighbour2.distance);
             double dfcut02_dr02 = _cutoffFunction->differentiate(neighbour2.distance);
-
-            auto thisTriplet = toInvariantTriplet(
-                {neighbour1.distance, neighbour2.distance},
-                (node1.position + neighbour1.offset - node2.position - neighbour2.offset).norm()
-                );
 
             // e.g. d/d{r01+r02, (r02-r01)^2, r12}
             Vector3 gradWrtInvariantCoords = gradient(thisTriplet, descriptorInvariantDistances);
@@ -116,28 +93,28 @@ namespace jgap {
             }
 
             // for chain rule x2
-            Vector3 grad_r01_wrt_r1 = (node1.position + neighbour1.offset - atom0.position).normalize();
-            Vector3 grad_r02_wrt_r2 = (node2.position + neighbour2.offset - atom0.position).normalize();
+            Vector3 grad_r01_wrt_r1 = (node1.position() + neighbour1.offset - atom0.position()).normalize();
+            Vector3 grad_r02_wrt_r2 = (node2.position() + neighbour2.offset - atom0.position()).normalize();
             Vector3 grad_r12_wrt_r2 = (
-                node2.position + neighbour2.offset - (node1.position + neighbour1.offset)
+                node2.position() + neighbour2.offset - (node1.position() + neighbour1.offset)
                 ).normalize();
 
             // chain rule x2 ( remember: gradWrtDistances = d/d{r01, r02, r12} )
 
             //  ======================== "root" atom =============================
             Vector3 dK_dr0 = grad_r01_wrt_r1 * -gradWrtDistances.x - grad_r02_wrt_r2 * gradWrtDistances.y;
-            result[index.atomIndex] = result[index.atomIndex] + dK_dr0 * 2.0 * sparseCutoff;
+            forces[index.atomIndex] -= dK_dr0 * 2.0 * sparseCutoff;
 
             //  ======================== "node1" atom =============================
             Vector3 dK_dr1 = grad_r01_wrt_r1 * gradWrtDistances.x - grad_r12_wrt_r2 * gradWrtDistances.z;
-            result[neighbour1.index] = result[neighbour1.index] + dK_dr1 * 2.0 * sparseCutoff;
+            forces[neighbour1.index] -= dK_dr1 * 2.0 * sparseCutoff;
 
             //  ======================== "node1" atom =============================
             Vector3 dK_dr2 = grad_r02_wrt_r2 * gradWrtDistances.y + grad_r12_wrt_r2 * gradWrtDistances.z;
-            result[neighbour2.index] = result[neighbour2.index] + dK_dr2 * 2.0 * sparseCutoff;
+            forces[neighbour2.index] -= dK_dr2 * 2.0 * sparseCutoff;
         }
 
-        return result;
+        return {energy, forces};
     }
 
     double ThreeBodySE::covariance(const Vector3 &t1/*invariant triplet*/,

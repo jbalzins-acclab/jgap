@@ -17,12 +17,9 @@ namespace jgap {
 
         ~TwoBodySE() override = default;
 
-        double covariance(const AtomicStructure &structure,
-                          const TwoBodyKernelIndex &indexes,
-                          const double &rSparse) override;
-        vector<Vector3> derivatives(const AtomicStructure &structure,
-                                    const TwoBodyKernelIndex &indexes,
-                                    const double &rSparse) override;
+        Covariance covariance(const AtomicStructure &structure,
+                              const TwoBodyKernelIndex &indexes,
+                              const double &rSparse) override;
 
         double covariance(const double &r1, const double &r2) override;
 
@@ -36,7 +33,7 @@ namespace jgap {
         double _inverse2ThetaSq;
 
         double covarianceNoCutoffs(const double &r1, const double &r2) const;
-        double derivativeNoCutoffs(const double &changingR, const double &constR);
+        double derivativeNoCutoffs(const double &changingR, const double &constR) const;
     };
 
     REGISTER_PARSER("squared_exp", TwoBodyKernel, TwoBodySE)

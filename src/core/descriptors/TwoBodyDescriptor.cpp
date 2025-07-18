@@ -14,6 +14,8 @@ using namespace std;
 
 namespace jgap {
     TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
+        CurrentLogger::get()->debug("Parsing 2b descriptor params");
+
         // Either explicitly in kernel or in cutoff obj specs
         if (params["kernel"]["cutoff"].is_number()) {
             _cutoff = params["kernel"]["cutoff"];
@@ -101,11 +103,7 @@ namespace jgap {
 
         for (const auto& [speciesPair, sparsePoints]: _sparsePointsPerSpeciesPair) {
             for (const double sparsePoint : sparsePoints) {
-
-                auto u = _kernel->covariance(atomicStructure, indexes[speciesPair], sparsePoint);
-                auto ddrs = _kernel->derivatives(atomicStructure, indexes[speciesPair], sparsePoint);
-
-                covariates.push_back({u, ddrs});
+                covariates.push_back(_kernel->covariance(atomicStructure, indexes[speciesPair], sparsePoint));
             }
         }
 
@@ -161,16 +159,16 @@ namespace jgap {
 
         map<SpeciesPair, TwoBodyKernelIndex> indexes;
 
-        for (size_t atomIndex = 0; atomIndex < atomicStructure.atoms.size(); atomIndex++) {
-            auto atom = atomicStructure.atoms[atomIndex];
+        for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
+            auto atom = atomicStructure[atomIndex];
 
-            for (size_t neighbourListIndex = 0; neighbourListIndex < atom.neighbours->size(); neighbourListIndex++) {
-                const auto neighbour = atom.neighbours->at(neighbourListIndex);
+            for (size_t neighbourListIndex = 0; neighbourListIndex < atom.neighbours().size(); neighbourListIndex++) {
+                const auto neighbour = atom.neighbours()[neighbourListIndex];
 
                 if (neighbour.index < atomIndex) continue;
                 if (neighbour.distance > _cutoff) continue;
 
-                auto speciesPair = SpeciesPair{atom.species, atomicStructure.atoms[neighbour.index].species};
+                auto speciesPair = SpeciesPair{atom.species(), atomicStructure.species[neighbour.index]};
                 if (!indexes.contains(speciesPair)) {
                     indexes[speciesPair] = TwoBodyKernelIndex();
                 }

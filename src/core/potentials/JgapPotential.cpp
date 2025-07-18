@@ -3,6 +3,7 @@
 
 namespace jgap {
     JgapPotential::JgapPotential(const nlohmann::json &params) {
+        CurrentLogger::get()->debug("Parsing jGAP potential params");
         _descriptors = {};
         for (const auto& [label, descriptorParams]: params["descriptors"].items()) {
             _descriptors[label] = ParserRegistry<Descriptor>::get(descriptorParams);

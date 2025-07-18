@@ -13,6 +13,7 @@
 
 namespace jgap {
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
+        CurrentLogger::get()->debug("Parsing EAM descriptor params");
 
         _sparsePointsPerSpecies = {};
         _coefficients = {};
@@ -137,9 +138,9 @@ namespace jgap {
             if (!kernelIndex.contains(species)) kernelIndex[species] = {};
 
             for (double sparseDensity: sparseDensities) {
-                const double u = _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity);
-                const auto f = _kernel->derivatives(atomicStructure, kernelIndex.at(species), sparseDensity);
-                result.push_back({u, f});
+                result.push_back(
+                    _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity)
+                    );
             }
         }
 
@@ -224,18 +225,17 @@ namespace jgap {
 
         EamKernelIndex result{};
 
-        for (size_t atomIdx = 0; atomIdx < structure.atoms.size(); atomIdx++) {
+        for (size_t atomIdx = 0; atomIdx < structure.size(); atomIdx++) {
 
             double totalDensity = 0;
             vector<pair<NeighbourData, double>> densityDerivatives;
 
-            auto atom = structure.atoms[atomIdx];
-
-            for (NeighbourData neighbour : atom.neighbours.value()) {
+            Species species = structure.species[atomIdx];
+            for (NeighbourData neighbour: structure.neighbours.value()[atomIdx]) {
                 if (neighbour.distance > _cutoff) continue;
 
                 pair orderedSpeciesPair = {
-                    structure.atoms[neighbour.index].species, atom.species
+                    structure.species[neighbour.index],  species
                 };
 
                 shared_ptr<EamPairFunction> pf;
@@ -254,11 +254,11 @@ namespace jgap {
                 );
             }
 
-            if (!result.contains(atom.species)) {
-                result[atom.species] = {};
+            if (!result.contains( species)) {
+                result[species] = {};
             }
 
-            result[atom.species].push_back({atomIdx, totalDensity, densityDerivatives});
+            result[species].push_back({atomIdx, totalDensity, densityDerivatives});
         }
 
         return result;

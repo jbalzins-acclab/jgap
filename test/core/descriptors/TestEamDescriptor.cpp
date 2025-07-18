@@ -69,7 +69,7 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
             total0 = total0 + (atoms[i].position - atoms[j].position).normalize() * 0.3125 * exp(-0.5) * 2.0;
             total2 = total2 + (atoms[i].position - atoms[j].position).normalize() * -0.3125 * exp(-0.5) * 2.0;
         }
-        ASSERT_NEAR((result[0].derivatives[i] - total0).norm(), 0, 1e-4);
-        ASSERT_NEAR((result[1].derivatives[i] - total2).norm(), 0, 1e-4);
+        ASSERT_NEAR((result[0].forces[i] - total0).norm(), 0, 1e-4);
+        ASSERT_NEAR((result[1].forces[i] - total2).norm(), 0, 1e-4);
     }
 }

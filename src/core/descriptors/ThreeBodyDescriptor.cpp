@@ -9,6 +9,8 @@
 
 namespace jgap {
     ThreeBodyDescriptor::ThreeBodyDescriptor(const nlohmann::json &params) {
+        CurrentLogger::get()->debug("Parsing 3b descriptor params");
+
         if (params["kernel"]["cutoff"].is_number()) {
             _cutoff = params["kernel"]["cutoff"];
         } else {
@@ -111,11 +113,7 @@ namespace jgap {
 
         for (const auto& [speciesTriplet, sparsePoints]: _sparsePointsPerSpeciesTriplet) {
             for (const Vector3 sparsePoint : sparsePoints) {
-
-                const auto u = _kernel->covariance(atomicStructure, indexMap[speciesTriplet], sparsePoint);
-                const auto ddrs = _kernel->derivatives(atomicStructure, indexMap[speciesTriplet], sparsePoint);
-
-                covariates.push_back({u, ddrs});
+                covariates.push_back(_kernel->covariance(atomicStructure, indexMap[speciesTriplet], sparsePoint));
             }
         }
 
@@ -192,25 +190,25 @@ namespace jgap {
     }
 
     map<SpeciesTriplet, ThreeBodyKernelIndex> ThreeBodyDescriptor::doIndex(
-        const AtomicStructure &atomicStructure) const {
+                                                const AtomicStructure &atomicStructure) const {
 
         map<SpeciesTriplet, ThreeBodyKernelIndex> indexes;
 
-        for (size_t atomIndex = 0; atomIndex < atomicStructure.atoms.size(); atomIndex++) {
-            auto atom = atomicStructure.atoms[atomIndex];
+        for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
+            auto atom = atomicStructure[atomIndex];
 
             // "nl" = neighbourList
-            for (size_t nlIndex1 = 0; nlIndex1 < atom.neighbours->size(); nlIndex1++) {
-                auto neighbour1 = atom.neighbours->at(nlIndex1);
+            for (size_t nlIndex1 = 0; nlIndex1 < atom.neighbours().size(); nlIndex1++) {
+                auto neighbour1 = atom.neighbours()[nlIndex1];
                 if (neighbour1.distance > _cutoff) continue;
 
-                for (size_t nlIndex2 = nlIndex1 + 1; nlIndex2 < atom.neighbours->size(); nlIndex2++) {
-                    auto neighbour2 = atom.neighbours->at(nlIndex2);
+                for (size_t nlIndex2 = nlIndex1 + 1; nlIndex2 < atom.neighbours().size(); nlIndex2++) {
+                    auto neighbour2 = atom.neighbours()[nlIndex2];
                     if (neighbour2.distance > _cutoff) continue;
 
-                    auto speciesTriplet = SpeciesTriplet{atom.species,{
-                        atomicStructure.atoms[neighbour1.index].species,
-                        atomicStructure.atoms[neighbour2.index].species
+                    auto speciesTriplet = SpeciesTriplet{atom.species(),{
+                        atomicStructure.species[neighbour1.index],
+                        atomicStructure.species[neighbour2.index],
                     }};
 
                     if (!indexes.contains(speciesTriplet)) {

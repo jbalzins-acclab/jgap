@@ -8,24 +8,15 @@ namespace jgap {
 
     SimpleSigmaRules::SimpleSigmaRules(const nlohmann::json &params) {
         _defaultEPerAtom = params["E_per_root_n_atoms"];
-        _defaultF = params["F_component"];
+        _defaultF = params.value("F_component", _defaultEPerAtom * 50.0);
+        _defaultVirials = params.value("virials", _defaultEPerAtom * 100.0);
         _liquidMultiplier = params["liquid"];
         _shortRangeMultiplier = params["short_range"];
     }
 
-    SimpleSigmaRules::SimpleSigmaRules(double defaultEPerAtom,
-                                       double defaultF,
-                                       double liquidMultiplier,
-                                       double shortRangeMultiplier) {
-        _defaultEPerAtom = defaultEPerAtom;
-        _defaultF = defaultF;
-        _liquidMultiplier = liquidMultiplier;
-        _shortRangeMultiplier = shortRangeMultiplier;
-    }
-
     void SimpleSigmaRules::fillSigmas(AtomicStructure &structure) {
         double multiplier = 1.0;
-        auto ct = structure.configType.value_or("default");
+        const auto ct = structure.configType.value_or("default");
 
         if (ct == "isolated_atom") {
             multiplier = 0.001;
@@ -39,18 +30,23 @@ namespace jgap {
             multiplier = _shortRangeMultiplier;
         }
 
-        if (!structure.energySigma.has_value()) {
-            structure.energySigma = multiplier * _defaultEPerAtom * pow(structure.atoms.size(), 0.5);
+        if (!structure.energySigmaInverse.has_value()) {
+            structure.energySigmaInverse = 1.0 / (multiplier * _defaultEPerAtom * pow(structure.size(), 0.5));
             //structure.energySigma = 3.0;
         }
 
-        double dF = multiplier * _defaultF;
-        for (auto& atom: structure.atoms) {
-            if (!atom.forceSigmas.has_value()) {
-                atom.forceSigmas = Vector3{dF, dF, dF};
-            } else {
-                CurrentLogger::get()->info("skibidi");
-            }
+        const double dF = 1.0 / (multiplier * _defaultF);
+        if (!structure.forceSigmasInverse.has_value()) {
+            structure.forceSigmasInverse = vector(structure.size(),  Vector3{dF, dF, dF});
+        }
+
+        const double dV = 1.0 / (multiplier * _defaultVirials);
+        if (!structure.virialSigmasInverse.has_value()) {
+            structure.virialSigmasInverse = {
+                Vector3{dV, dV, dV},
+                Vector3{dV, dV, dV},
+                Vector3{dV, dV, dV}
+            };
         }
     }
 }

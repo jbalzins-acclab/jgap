@@ -17,13 +17,9 @@ namespace jgap {
 
         // TODO:
         //virtual map<TDescriptorData, > index(shared_ptr<AtomicStructure>& structure, vector<TDescriptorData> sparsePoints);
-        virtual double covariance(const AtomicStructure& structure,
-                                  const TIndex &indexes,
-                                  const TDescriptorData &descriptor) = 0;
-
-        virtual vector<Vector3> derivatives(const AtomicStructure& structure,
-                                            const TIndex &indexes,
-                                            const TDescriptorData &descriptor) = 0;
+        virtual Covariance covariance(const AtomicStructure& structure,
+                                      const TIndex &indexes,
+                                      const TDescriptorData &descriptor) = 0;
 
         virtual double covariance(const TDescriptorData &cutoffBase, const TDescriptorData &sparsePoint) = 0;
     };

@@ -30,16 +30,18 @@ namespace jgap {
         _energyScaleSquared = energyScale * energyScale;
     }
 
-    double TwoBodySE::covariance(const AtomicStructure &structure,
-                                 const TwoBodyKernelIndex &indexes,
-                                 const double &rSparse) {
-        double total = 0;
+    Covariance TwoBodySE::covariance(const AtomicStructure &structure,
+                                     const TwoBodyKernelIndex &indexes,
+                                     const double &rSparse) {
+        double energy = 0;
+        vector<Vector3> forces(structure.size(), {0, 0, 0});
 
         const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
 
         for (const TwoBodyKernelIndexEntity &index: indexes) {
-            auto atom = structure.atoms[index.atomIndex];
-            auto neighbourData = structure.atoms[index.atomIndex].neighbours->at(index.neighbourListIndex);
+            // ---------------------- ENERGY --------------------------------
+
+            auto neighbourData = (*structure.neighbours)[index.atomIndex].at(index.neighbourListIndex);
 
             const double fCut = _cutoffFunction -> evaluate(neighbourData.distance);
             // if (fCut == 0.0) continue; - upon indexing !
@@ -48,26 +50,10 @@ namespace jgap {
                                 * sparseCutoff* fCut;
              if (index.atomIndex == neighbourData.index) cov /= 2.0;
             // cout << descriptor.speciesPair.toString() << descriptor.distance << currentPair.toString()<< neighbour.distance << " "<<cov<<" "<<fCut<< endl;
-            total += cov;
-        }
+            energy += cov;
 
-        return total;
-    }
-
-    vector<Vector3> TwoBodySE::derivatives(const AtomicStructure &structure,
-                                           const TwoBodyKernelIndex &indexes,
-                                           const double &rSparse) {
-
-        vector<Vector3> result(structure.atoms.size(), {0, 0, 0});
-
-        const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
-
-        for (const TwoBodyKernelIndexEntity &index: indexes) {
-            auto atom = structure.atoms[index.atomIndex];
-            auto neighbourData = structure.atoms[index.atomIndex].neighbours->at(index.neighbourListIndex);
+            // ---------------------- FORCES --------------------------------
             if (index.atomIndex == neighbourData.index) continue;
-
-            const double fCut = _cutoffFunction -> evaluate(neighbourData.distance);
 
             double d_dr = derivativeNoCutoffs(neighbourData.distance, rSparse) * fCut;
 
@@ -77,14 +63,15 @@ namespace jgap {
                         * sparseCutoff;
             }
 
-            auto displacement = atom.position - (structure.atoms[neighbourData.index].position + neighbourData.offset);
-            auto contribution = displacement.normalize() * d_dr * 2.0/*K(r_ij,)+K(r_ji)?????*/;
+            auto displacement = structure.positions[index.atomIndex]
+                                        - (structure.positions[neighbourData.index] + neighbourData.offset);
+            const auto contribution = displacement.normalize() * d_dr * 2.0/*K(r_ij,)+K(r_ji)?????*/;
 
-            result[index.atomIndex] = result[index.atomIndex] + contribution;
-            result[neighbourData.index] = result[neighbourData.index] - contribution;
+            forces[index.atomIndex] -= contribution;
+            forces[neighbourData.index] += contribution;
         }
 
-        return result;
+        return {energy, forces};
     }
 
     double TwoBodySE::covarianceNoCutoffs(const double &r1, const double &r2) const {
@@ -96,7 +83,7 @@ namespace jgap {
                                            * _cutoffFunction->evaluate(r2);
     }
 
-    double TwoBodySE::derivativeNoCutoffs(const double &changingR, const double &constR) {
+    double TwoBodySE::derivativeNoCutoffs(const double &changingR, const double &constR) const {
         return (constR - changingR) * 2.0/*compensate 2 in const*/ * _inverse2ThetaSq * covarianceNoCutoffs(changingR, constR);
     }
 }

@@ -64,7 +64,7 @@ namespace jgap {
         // CurrentLogger::get()->info(matrixToString(A));
 
         CurrentLogger::get()->info("Making feature vector b");
-        auto b = makeB(descriptorsAsVec, _trainingData);
+        const auto b = makeB(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making feature vector b");
 
         //// ----------------------------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace jgap {
 
         size_t counter = 0;
         for (const auto &descriptor: _descriptors | views::values) {
-            size_t n = descriptor->nSparsePoints();
+            const size_t n = descriptor->nSparsePoints();
 
             // auto bb = vector<double>{c.data() + counter, c.data() + counter + n};
             descriptor->setCoefficients(vector<double>{c.data() + counter, c.data() + counter + n});
@@ -108,8 +108,10 @@ namespace jgap {
         size_t r = 0;
         vector<pair<size_t, AtomicStructure>> startingRowsK_nm;
         for (const auto& structure : atomicStructures) {
-            startingRowsK_nm.emplace_back(r, structure);
-            r += 1 + 3 * structure.atoms.size();
+            startingRowsK_nm.push_back({r, structure});
+            if (structure.energy.has_value()) r += 1;
+            if (structure.forces.has_value()) r += 3 * structure.size();
+            if (structure.virials.has_value()) r += 6;
         }
 
         vector<tuple<size_t/*row*/, size_t/*col*/, size_t/*desc_idx*/>> startingPointsK_mm;
@@ -157,14 +159,24 @@ namespace jgap {
         vector<double> b;
         for (auto& structure: atomicStructures) {
             if (structure.energy.has_value()) {
-                b.push_back(structure.energy.value() * pow(structure.energySigma.value(), -1));
+                b.push_back(structure.energy.value() * structure.energySigmaInverse.value());
             }
-            for (auto& atom: structure.atoms) {
-                if (atom.force.has_value()) {
-                    b.push_back(atom.force.value().x / atom.forceSigmas.value().x);
-                    b.push_back(atom.force.value().y / atom.forceSigmas.value().y);
-                    b.push_back(atom.force.value().z / atom.forceSigmas.value().z);
+            if (structure.forces.has_value()) {
+                for (const auto& atom: structure) {
+                    b.push_back(atom.force().x * atom.forceSigmasInverse().x);
+                    b.push_back(atom.force().y * atom.forceSigmasInverse().y);
+                    b.push_back(atom.force().z * atom.forceSigmasInverse().z);
                 }
+            }
+            if (structure.virials.has_value()) {
+                b.push_back(structure.virials.value()[0].x * structure.virialSigmasInverse.value()[0].x);
+                b.push_back(structure.virials.value()[0].y * structure.virialSigmasInverse.value()[0].y);
+                b.push_back(structure.virials.value()[0].z * structure.virialSigmasInverse.value()[0].z);
+
+                b.push_back(structure.virials.value()[1].y * structure.virialSigmasInverse.value()[1].y);
+                b.push_back(structure.virials.value()[1].z * structure.virialSigmasInverse.value()[1].z);
+
+                b.push_back(structure.virials.value()[2].z * structure.virialSigmasInverse.value()[2].z);
             }
         }
 
@@ -176,36 +188,57 @@ namespace jgap {
     }
 
     void InRamJgapFit::fillInverseRootSigmaK_nm(const vector<shared_ptr<Descriptor>> &descriptors,
-        const AtomicStructure &atomicStructure, Eigen::MatrixXd &A, size_t startingRow) {
+                                                const AtomicStructure &atomicStructure,
+                                                Eigen::MatrixXd &A,
+                                                const size_t startingRow) {
 
-        size_t currentColumn = 0;
+        const double volume = atomicStructure.volume();
+
+        size_t contributionColumn = 0;
         for (const auto& descriptor : descriptors) {
-            auto contribution = descriptor->covariate(atomicStructure);
+            auto contributions = descriptor->covariate(atomicStructure);
 
-            for (size_t colInc = 0; colInc < contribution.size(); colInc++) {
-                double contr = contribution[colInc].total; // debug
-                A(startingRow, currentColumn + colInc) = contr * pow(atomicStructure.energySigma.value(), -1);
-                //CurrentLogger::get()->debug(format("E_{}: {}", colInc,A(startingRow, currentColumn + colInc)));
-                for (size_t rowInc = 0; rowInc < contribution[colInc].derivatives.size(); rowInc++) {
-                    const auto derivative = contribution[colInc].derivatives[rowInc]; // FORCE IS NEGATIVE
-                    const auto fSigmas = atomicStructure.atoms[rowInc].forceSigmas.value();
-                    A(startingRow + rowInc * 3 + 1, currentColumn + colInc) = - derivative.x / fSigmas.x;
-                    A(startingRow + rowInc * 3 + 2, currentColumn + colInc) = - derivative.y / fSigmas.y;
-                    A(startingRow + rowInc * 3 + 3, currentColumn + colInc) = - derivative.z / fSigmas.z;
+            for (const auto& contribution: contributions) {
 
-                    /*CurrentLogger::get()->debug(format("f_{}: {}|{}|{}", rowInc,
-                    A(startingRow + rowInc * 3 + 1, currentColumn + colInc),
-                    A(startingRow + rowInc * 3 + 2, currentColumn + colInc),
-                    A(startingRow + rowInc * 3 + 3, currentColumn + colInc)
-                    ));*/
+                size_t currentRow = startingRow;
+
+                if (atomicStructure.energy.has_value()) {
+                    A(currentRow++, contributionColumn) = contribution.total
+                                                                    * atomicStructure.energySigmaInverse.value();
                 }
+
+                if (atomicStructure.forces.has_value()) {
+                    for (size_t rowInc = 0; rowInc < contribution.forces.size(); rowInc++) {
+
+                        const auto force = contribution.forces[rowInc]; // FORCE IS NEGATIVE
+                        const auto fSigmasInverse = (*atomicStructure.forceSigmasInverse)[rowInc];
+
+                        A(currentRow++, contributionColumn) = force.x * fSigmasInverse.x;
+                        A(currentRow++, contributionColumn) = force.y * fSigmasInverse.y;
+                        A(currentRow++, contributionColumn) = force.z * fSigmasInverse.z;
+                    }
+                }
+
+                if (atomicStructure.virials.has_value()) {
+                    array virials = calculateVirials(volume, atomicStructure.positions, contribution.forces);
+                    A(currentRow++, contributionColumn) = virials[0].x * atomicStructure.virialSigmasInverse.value()[0].x;
+                    A(currentRow++, contributionColumn) = virials[0].y * atomicStructure.virialSigmasInverse.value()[0].y;
+                    A(currentRow++, contributionColumn) = virials[0].z * atomicStructure.virialSigmasInverse.value()[0].z;
+
+                    A(currentRow++, contributionColumn) = virials[1].y * atomicStructure.virialSigmasInverse.value()[1].y;
+                    A(currentRow++, contributionColumn) = virials[1].z * atomicStructure.virialSigmasInverse.value()[1].z;
+
+                    A(currentRow++, contributionColumn) = virials[2].z * atomicStructure.virialSigmasInverse.value()[2].z;
+                }
+
+                contributionColumn++;
             }
-            currentColumn += contribution.size();
         }
     }
 
-    void InRamJgapFit::fillU_mm(size_t startingRow, size_t startingCol, Descriptor &descriptor,
-        Eigen::MatrixXd &A) const {
+    void InRamJgapFit::fillU_mm(const size_t startingRow, const size_t startingCol,
+                                Descriptor &descriptor, Eigen::MatrixXd &A) const {
+
         for (auto &[sparseId, K_mmPart]: descriptor.selfCovariate()) {
 
             size_t n = K_mmPart->rows();

@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include <string>
 #include <array>
-#include <string_view>
-#include <sstream>
 #include <sstream>
 #include <fstream>
 #include <Eigen/Dense>
@@ -114,36 +112,25 @@ namespace jgap {
                 virials = virialsVal;
             }
 
-            // coordinates + forces
-            vector<AtomData> atoms;
+            vector<Vector3> positions(n);
+            optional<vector<Vector3>> forces;
+            vector<Species> species(n);
             // todo
             if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
+                forces = vector<Vector3>(n);
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
                     iss = istringstream(line);
-                    string species;
-                    Vector3 pos{}, force{};
-                    iss >> species;
-                    iss >> pos.x >> pos.y >> pos.z;
-                    iss >> force.x >> force.y >> force.z;
-                    atoms.push_back(AtomData{
-                        .position = pos,
-                        .species = species,
-                        .force = force
-                    });
+                    iss >> species[i];
+                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
+                    iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
                 }
             } else if (line.contains("Properties=species:S:1:pos:R:3")) {
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
                     iss = istringstream(line);
-                    string species;
-                    Vector3 pos{};
-                    iss >> species;
-                    iss >> pos.x >> pos.y >> pos.z;
-                    atoms.push_back(AtomData{
-                        .position = pos,
-                        .species = species
-                    });
+                    iss >> species[i];
+                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
                 }
             } else {
                 CurrentLogger::get()->error(format("Unknown properties string: {}", line), true);
@@ -151,10 +138,11 @@ namespace jgap {
 
             result.push_back(AtomicStructure{
                 .lattice = lattice,
-                .atoms = atoms,
                 .configType = configType,
+                .species = species,
+                .positions = positions,
+                .forces = forces,
                 .energy = energy,
-                // .energySigma TODO ?
                 .virials = virials
             });
         }
@@ -171,7 +159,7 @@ namespace jgap {
     void writeXyz(const string &fileName, const vector<AtomicStructure> &structures) {
         ofstream file(fileName);
         for (auto& structure: structures) {
-            file << structure.atoms.size() << endl;
+            file << structure.size() << endl;
 
             string meta = "";
             meta += "pbc=\"T T T\" ";
@@ -199,7 +187,7 @@ namespace jgap {
                 );
                 meta += "\" ";
             }
-            if (structure.atoms[0].force.has_value()) {
+            if (structure.forces.has_value()) {
                 meta += "Properties=species:S:1:pos:R:3:force:R:3";
             } else {
                 meta += "Properties=species:S:1:pos:R:3";
@@ -207,11 +195,11 @@ namespace jgap {
 
             file << meta << endl;
 
-            for (const auto& atom: structure.atoms) {
-                file << atom.species << " ";
-                file << atom.position.x << " " << atom.position.y << " " << atom.position.z << " ";
-                if (atom.force.has_value()) {
-                    file << atom.force.value().x << " " << atom.force.value().y << " " << atom.force.value().z;
+            for (const auto& atom: structure) {
+                file << atom.species() << " ";
+                file << atom.position().x << " " << atom.position().y << " " << atom.position().z << " ";
+                if (structure.forces.has_value()) {
+                    file << atom.force().x << " " << atom.force().y << " " << atom.force().z;
                 }
                 file << endl;
             }
@@ -268,5 +256,31 @@ namespace jgap {
             ss << "\n";
         }
         return ss.str();
+    }
+
+    array<Vector3, 3> calculateVirials(const double volume,
+                                       const vector<Vector3> &positions,
+                                       const vector<Vector3> &forces) {
+
+        array<Vector3, 3> result{};
+
+        for (size_t i = 0; i < positions.size(); ++i) {
+            result[0].x -= positions[i].x * forces[i].x;
+            result[0].y -= positions[i].x * forces[i].y;
+            result[0].z -= positions[i].x * forces[i].z;
+
+            result[1].x -= positions[i].y * forces[i].x;
+            result[1].y -= positions[i].y * forces[i].y;
+            result[1].z -= positions[i].y * forces[i].z;
+
+            result[2].x -= positions[i].z * forces[i].x;
+            result[2].y -= positions[i].z * forces[i].y;
+            result[2].z -= positions[i].z * forces[i].z;
+        }
+
+        result[0] /= volume;
+        result[1] /= volume;
+        result[2] /= volume;
+        return result;
     }
 }

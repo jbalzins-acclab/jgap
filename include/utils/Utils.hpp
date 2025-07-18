@@ -20,6 +20,7 @@ namespace jgap {
     void saveArray(const vector<double>& data, const string& filename);
     vector<double> loadArray(const string& filename);
     string matrixToString(const Eigen::MatrixXd& mat);
+    array<Vector3, 3> calculateVirials(double volume, const vector<Vector3> &positions, const vector<Vector3> &forces);
 }
 
 #endif

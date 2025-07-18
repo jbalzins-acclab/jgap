@@ -15,15 +15,9 @@ namespace jgap {
         explicit EamSE(const nlohmann::json &params);
         explicit EamSE(double energyScale, double lengthScale);
 
-        double covariance(
-            const AtomicStructure &structure,
-            const EamKernelIndexPerSpecies &indexes,
-            const double &sparseDensity) override;
-
-        vector<Vector3> derivatives(
-            const AtomicStructure &structure,
-            const EamKernelIndexPerSpecies &indexes,
-            const double &sparseDensity) override;
+        Covariance covariance(const AtomicStructure &structure,
+                              const EamKernelIndexPerSpecies &indexes,
+                              const double &sparseDensity) override;
 
         double covariance(const double &density1, const double &density2) override;
 

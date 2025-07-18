@@ -21,12 +21,9 @@ namespace jgap {
 
         ~ThreeBodySE() override = default;
 
-        double covariance(const AtomicStructure &structure,
-                          const ThreeBodyKernelIndex &indexes,
-                          const Vector3 &descriptorInvariantDistances) override;
-        vector<Vector3> derivatives(const AtomicStructure &structure,
-                                    const ThreeBodyKernelIndex &indexes,
-                                    const Vector3 &descriptorInvariantDistances) override;
+        Covariance covariance(const AtomicStructure &structure,
+                              const ThreeBodyKernelIndex &indexes,
+                              const Vector3 &descriptorInvariantDistances) override;
 
         double covariance(const Vector3 &t1, const Vector3 &t2) override;
 

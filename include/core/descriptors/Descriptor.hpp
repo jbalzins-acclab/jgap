@@ -49,19 +49,18 @@ namespace jgap {
             const auto covariance = covariate(atomicStructure);
 
             double energy = 0.0;
-            vector forces(atomicStructure.atoms.size(), Vector3(0.0, 0.0, 0.0));
+            vector forces(atomicStructure.size(), Vector3(0.0, 0.0, 0.0));
 
             for (size_t i = 0; i < _coefficients.size(); i++) {
                 energy += _coefficients[i] * covariance[i].total;
-                for (size_t j = 0; j < atomicStructure.atoms.size(); j++) {
-                    forces[j] = forces[j] - covariance[i].derivatives[j] * _coefficients[i];
+                for (size_t j = 0; j < atomicStructure.size(); j++) {
+                    forces[j] += covariance[i].forces[j] * _coefficients[i];
                 }
             }
 
             return {
                 energy,
-                forces,
-                {}
+                forces
             };
         }
 

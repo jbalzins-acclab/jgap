@@ -65,21 +65,27 @@ namespace jgap {
             }
         }
 
-        vector<vector<NeighbourData>> neighbours(structure.atoms.size());
+        // avoid heap corruption
+        if (!structure.neighbours.has_value()) {
+            structure.neighbours = vector(structure.size(), NeighboursData());
+        } else {
+            for (size_t i = 0; i < structure.size(); i++) {
+                (*structure.neighbours)[i].clear();
+            }
+        }
 
-        for (size_t i = 0; i < structure.atoms.size(); i++) {
-            for (size_t j = i; j < structure.atoms.size(); j++) {
+        for (size_t i = 0; i < structure.size(); i++) {
+            for (size_t j = i; j < structure.size(); j++) {
                 for (const auto &offset : possibleOffsets) {
-                    auto dist = (structure.atoms[i].position - (structure.atoms[j].position + offset)).norm();
+                    auto dist = (structure[i].position() - (structure[j].position() + offset)).norm();
                     if (0 < dist && dist <= cutoff) {
-                        neighbours[i].push_back({.index=j, .offset=offset, .distance = dist});
+                        (*structure.neighbours)[i].push_back({.index=j, .offset=offset, .distance = dist});
                         if (i != j) {
-                            neighbours[j].push_back({.index=i, .offset=offset * -1, .distance = dist});
+                            (*structure.neighbours)[j].push_back({.index=i, .offset=offset * -1, .distance = dist});
                         }
                     }
                 }
             }
-            structure.atoms[i].neighbours = neighbours[i];
         }
     }
 }

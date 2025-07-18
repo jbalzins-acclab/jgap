@@ -8,7 +8,6 @@ namespace jgap {
     class SimpleSigmaRules : public SigmaRules {
     public:
         SimpleSigmaRules(const nlohmann::json &params);
-        SimpleSigmaRules(double defaultEPerAtom, double defaultF, double liquidMultiplier, double shortRangeMultiplier);
 
         ~SimpleSigmaRules() override = default;
 
@@ -17,6 +16,7 @@ namespace jgap {
     private:
         double _defaultEPerAtom;
         double _defaultF;
+        double _defaultVirials;
         double _liquidMultiplier;
         double _shortRangeMultiplier;
     };

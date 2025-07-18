@@ -9,6 +9,7 @@ namespace jgap {
     }
 
     CompositePotential::CompositePotential(const nlohmann::json &params) {
+        CurrentLogger::get()->debug("Parsing composite potential");
         _potentials = {};
         for (const auto &[label, potentialParams] : params["potentials"].items()) {
             _potentials[label] = ParserRegistry<Potential>::get(potentialParams);

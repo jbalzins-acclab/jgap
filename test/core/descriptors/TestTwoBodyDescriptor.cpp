@@ -60,31 +60,31 @@ TEST(TestTwoBodyDescriptor, covariance) {
     // Mn atom
     // no CrCr covariance
     for (int j = 0; j < 2; j++) {
-        EXPECT_NEAR(covariance[j].derivatives[0].x, 0, 1e-9);
-        EXPECT_NEAR(covariance[j].derivatives[0].y, 0, 1e-9);
-        EXPECT_NEAR(covariance[j].derivatives[0].z, 0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[0].x, 0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[0].y, 0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[0].z, 0, 1e-9);
     }
     // sparseDist = 2 & (x++ => dist->2) => K_se++
-    ASSERT_TRUE(covariance[2].derivatives[0].x > 0);
+    ASSERT_TRUE(covariance[2].forces[0].x > 0);
     // opposite
-    ASSERT_TRUE(covariance[3].derivatives[0].x < 0);
+    ASSERT_TRUE(covariance[3].forces[0].x < 0);
 
     // Cr atom
     // pull opposite to manganese
-    ASSERT_TRUE(covariance[2].derivatives[1].x < 0);
-    ASSERT_TRUE(covariance[3].derivatives[1].x > 0);
+    ASSERT_TRUE(covariance[2].forces[1].x < 0);
+    ASSERT_TRUE(covariance[3].forces[1].x > 0);
     // symmetry
     for (int j = 0; j < 2; j++) {
-        EXPECT_NEAR(covariance[j].derivatives[1].x, 0.0, 1e-9);
-        EXPECT_NEAR(covariance[j].derivatives[1].y, 0.0, 1e-9);
-        EXPECT_NEAR(covariance[j].derivatives[1].z, 0.0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[1].x, 0.0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[1].y, 0.0, 1e-9);
+        EXPECT_NEAR(covariance[j].forces[1].z, 0.0, 1e-9);
     }
 
     // Non-Cr/Mn atoms
     for (int j = 0; j < 4; j++) {
-        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].derivatives[i].x, 0, 1e-9);
-        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].derivatives[i].y, 0, 1e-9);
-        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].derivatives[i].z, 0, 1e-9);
+        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].forces[i].x, 0, 1e-9);
+        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].forces[i].y, 0, 1e-9);
+        for (int i = 2; i < 3; i++) EXPECT_NEAR(covariance[j].forces[i].z, 0, 1e-9);
     }
 }
 
@@ -139,22 +139,22 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
     auto desc2b = TwoBodyDescriptor(params2b);
 
     auto res0 = desc2b.covariate(structures[0]);
-    ASSERT_TRUE(res0[0].derivatives[0].x < 0);
-    ASSERT_TRUE(res0[1].derivatives[0].x < 0);
-    ASSERT_TRUE(res0[0].derivatives[1].x > 0);
-    ASSERT_TRUE(res0[1].derivatives[1].x > 0);
+    ASSERT_TRUE(res0[0].forces[0].x < 0);
+    ASSERT_TRUE(res0[1].forces[0].x < 0);
+    ASSERT_TRUE(res0[0].forces[1].x > 0);
+    ASSERT_TRUE(res0[1].forces[1].x > 0);
 
     auto res1 = desc2b.covariate(structures[1]);
-    ASSERT_TRUE(res1[0].derivatives[0].x > 0);
-    ASSERT_TRUE(res1[1].derivatives[0].x < 0);
-    ASSERT_TRUE(res1[0].derivatives[1].x < 0);
-    ASSERT_TRUE(res1[1].derivatives[1].x > 0);
+    ASSERT_TRUE(res1[0].forces[0].x > 0);
+    ASSERT_TRUE(res1[1].forces[0].x < 0);
+    ASSERT_TRUE(res1[0].forces[1].x < 0);
+    ASSERT_TRUE(res1[1].forces[1].x > 0);
 
     auto res2 = desc2b.covariate(structures[2]);
-    ASSERT_TRUE(res2[0].derivatives[0].x > 0);
-    ASSERT_TRUE(res2[1].derivatives[0].x > 0);
-    ASSERT_TRUE(res2[0].derivatives[1].x < 0);
-    ASSERT_TRUE(res2[1].derivatives[1].x < 0);
+    ASSERT_TRUE(res2[0].forces[0].x > 0);
+    ASSERT_TRUE(res2[1].forces[0].x > 0);
+    ASSERT_TRUE(res2[0].forces[1].x < 0);
+    ASSERT_TRUE(res2[1].forces[1].x < 0);
 }
 
 
@@ -228,8 +228,8 @@ TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
         }
         cout << i << " at 2: " << derivatives_at2.toString() << endl;
         cout << i << " at 4: " << derivatives_at4.toString() << endl;
-        ASSERT_NEAR((res[0].derivatives[i]-derivatives_at2).norm(), 0, 1e-4);
-        ASSERT_NEAR((res[1].derivatives[i]-derivatives_at4).norm(), 0, 1e-4);
+        ASSERT_NEAR((res[0].forces[i]-derivatives_at2).norm(), 0, 1e-4);
+        ASSERT_NEAR((res[1].forces[i]-derivatives_at4).norm(), 0, 1e-4);
     }
 
     cout << desc.serialize().dump() << endl;

@@ -24,14 +24,14 @@ namespace jgap {
         }
 
         for (const auto& structure: fromData) {
-            for (const auto& atomData : structure.atoms) {
-                if (!atomData.neighbours.has_value()) {
+            for (const auto& atomData: structure) {
+                if (!structure.neighbours.has_value()) {
                     CurrentLogger::get() -> error("Neighbour list missing | 2b", true);
                 }
 
-                for (const NeighbourData& neighbour : atomData.neighbours.value()) {
+                for (const NeighbourData& neighbour : atomData.neighbours()) {
 
-                    auto species = SpeciesPair(atomData.species, structure.atoms[neighbour.index].species);
+                    auto species = SpeciesPair(atomData.species(), structure[neighbour.index].species());
                     if (!all2b.contains(species)) {
                         if (_speciesPairs.has_value()) continue;
                         // pairs-not explicitly defined => from data

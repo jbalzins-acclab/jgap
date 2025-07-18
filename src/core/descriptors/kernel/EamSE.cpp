@@ -22,39 +22,29 @@ namespace jgap {
         _energyScaleSquared = energyScale * energyScale;
     }
 
-    double EamSE::covariance(const AtomicStructure &structure,
-                             const EamKernelIndexPerSpecies &indexes,
-                             const double &sparseDensity) {
+    Covariance EamSE::covariance(const AtomicStructure &structure,
+                                 const EamKernelIndexPerSpecies &indexes,
+                                 const double &sparseDensity) {
 
-        double result = 0;
-
-        for (const auto &[atAtomIndex, density, densityDerivatives] : indexes) {
-            result += covarianceNoCutoffs(density, sparseDensity);
-        }
-
-        return result;
-    }
-
-    vector<Vector3> EamSE::derivatives(const AtomicStructure &structure,
-                                       const EamKernelIndexPerSpecies &indexes,
-                                       const double &sparseDensity) {
-
-        vector<Vector3> result(structure.atoms.size(), {0.0, 0.0, 0.0});
+        double energy = 0;
+        vector forces(structure.size(), Vector3{0.0, 0.0, 0.0});
 
         for (const auto &index : indexes) {
+            energy += covarianceNoCutoffs(index.density, sparseDensity);
+
             const double dK_drho_i = derivative(index.density, sparseDensity);
-            auto atom = structure.atoms[index.atAtomIndex];
+            auto atomPosition = structure.positions[index.atAtomIndex];
 
             for (auto &[neighbourData, d_rho_i_dr_ij]: index.densityDerivatives) {
-                Vector3 displacement = structure.atoms[neighbourData.index].position + neighbourData.offset
-                                        - atom.position;
-                Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
-                result[index.atAtomIndex] = result[index.atAtomIndex] - df;
-                result[neighbourData.index] = result[neighbourData.index] + df;
+                const Vector3 displacement = structure.positions[neighbourData.index] + neighbourData.offset
+                                             - atomPosition;
+                const Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
+                forces[index.atAtomIndex] -= df;
+                forces[neighbourData.index] += df;
             }
         }
 
-        return result;
+        return {energy, forces};
     }
 
     double EamSE::covarianceNoCutoffs(const double &density1, const double &density2) const {
