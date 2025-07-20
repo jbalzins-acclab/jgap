@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    try {
+    //try {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
 
@@ -62,6 +62,27 @@ int main(int argc, char** argv) {
         jgap::CurrentLogger::get()->info("Reading training data");
         auto trainingData = jgap::readXyz(fitParams["training_data_xyz"]);
 
+        if (!fitParams.value("use_virials", false)) {
+            jgap::CurrentLogger::get()->warn("Not using virials in training data");
+
+            for (auto& structure: trainingData) {
+                structure.virials.reset();
+            }
+        } else {
+            double mul = 1.0;
+            if (fitParams["virials_units"] == "kilo_bars") {
+                mul /= 1602.1766208;
+            } else if (fitParams["virials_units"] != "ev_A3") {
+                jgap::CurrentLogger::get()->error("Virials units not specified", true);
+            }
+
+            for (auto& structure: trainingData) {
+                (*structure.virials)[0] *= mul;
+                (*structure.virials)[1] *= mul;
+                (*structure.virials)[2] *= mul;
+            }
+        }
+
         // ------------------------ FIT -------------------------------
 
         jgap::CurrentLogger::get()->info(format(
@@ -79,11 +100,11 @@ int main(int argc, char** argv) {
         outFile.flush();
         outFile.close();
 
-    } catch (exception& e) {
+   /* } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
         print_backtrace();
         throw;
-    }
+    }*/
 
     return EXIT_SUCCESS;
 }

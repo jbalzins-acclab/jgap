@@ -11,7 +11,12 @@ namespace jgap {
 
         ifstream fIn(_dmolFile);
         if (!fIn.is_open()) {
-            CurrentLogger::get()->error("Could not open dmol_fit_coefficients_file: " + _dmolFile, true);
+            CurrentLogger::get()->error("Could not open dmol_fit_coefficients_file: " + _dmolFile, false);
+            fIn = ifstream(DEFAULT_DMOL_FILE_PATH);
+            if (!fIn.is_open()) {
+                CurrentLogger::get()->error("Could not open default dmol_fit_coefficients_file", true);
+            }
+            CurrentLogger::get()->warn("Using default dmol fit coefficients file");
         }
         nlohmann::json dmolFitCoefficients;
         fIn >> dmolFitCoefficients;
