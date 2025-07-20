@@ -35,7 +35,7 @@ namespace jgap {
             }
         }
 
-        structure.energySigmaInverse = 1.0 / (maxSigmaF * _E_F_RATIO);
+        structure.energySigmaInverse = 1.0 / (maxSigmaF * _E_F_RATIO * pow(structure.size(), 0.5));
 
         const double dV = 1.0 / (maxSigmaF * _V_F_RATIO);
         structure.virialSigmasInverse = {
