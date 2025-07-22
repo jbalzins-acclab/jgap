@@ -28,23 +28,29 @@ namespace jgap {
 
         double energy = 0;
         vector forces(structure.size(), Vector3{0.0, 0.0, 0.0});
+        array<Vector3, 3> virials{};
 
         for (const auto &index : indexes) {
             energy += covarianceNoCutoffs(index.density, sparseDensity);
 
-            const double dK_drho_i = derivative(index.density, sparseDensity);
+            const double dU_drho_i = derivative(index.density, sparseDensity);
             auto atomPosition = structure.positions[index.atAtomIndex];
 
             for (auto &[neighbourData, d_rho_i_dr_ij]: index.densityDerivatives) {
-                const Vector3 displacement = structure.positions[neighbourData.index] + neighbourData.offset
+                const Vector3 r10 = structure.positions[neighbourData.index] + neighbourData.offset
                                              - atomPosition;
-                const Vector3 df = displacement.normalize() * d_rho_i_dr_ij * dK_drho_i;
-                forces[index.atAtomIndex] -= df;
-                forces[neighbourData.index] += df;
+                const Vector3 f10 = r10.normalize() * -d_rho_i_dr_ij * dU_drho_i;
+                forces[index.atAtomIndex] += f10;
+                forces[neighbourData.index] -= f10;
+
+                // x2 since r10.x * f10.x = r01.x * f01.x
+                virials[0] += f10 * r10.x;
+                virials[1] += f10 * r10.y;
+                virials[2] += f10 * r10.z;
             }
         }
 
-        return {energy, forces};
+        return {energy, forces, virials};
     }
 
     double EamSE::covarianceNoCutoffs(const double &density1, const double &density2) const {

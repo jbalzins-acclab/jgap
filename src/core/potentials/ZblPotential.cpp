@@ -91,6 +91,7 @@ namespace jgap {
 
         double energy = 0;
         vector forces(structure.size(), Vector3{0, 0, 0});
+        array<Vector3, 3> virials{};
 
         for (size_t i = 0; i < structure.size(); i++) {
 
@@ -113,16 +114,22 @@ namespace jgap {
                 double dzbl_dr = zblWithCutoffDerivative_eV_per_Ang(
                     {atom1.species(), atom2.species()}, neighbour.distance
                     );
-                Vector3 f = (atom1.position() - (atom2.position() + neighbour.offset)).normalize() * dzbl_dr;
-                forces[i] = forces[i] - f;
-                forces[neighbour.index] = forces[neighbour.index] + f;
+                Vector3 r21 = atom1.position() - (atom2.position() + neighbour.offset);
+                Vector3 f21 = r21.normalize() * -dzbl_dr;
+                forces[i] = forces[i] + f21;
+                forces[neighbour.index] = forces[neighbour.index] - f21;
+
+                // x2 since r21.x * f21.x = r12.x * f12.x
+                virials[0] += f21 * r21.x;
+                virials[1] += f21 * r21.y;
+                virials[2] += f21 * r21.z;
             }
         }
 
         return PotentialPrediction{
             energy,
             forces,
-            calculateVirials(structure.volume(), structure.positions, forces)
+            virials
         };
     }
 

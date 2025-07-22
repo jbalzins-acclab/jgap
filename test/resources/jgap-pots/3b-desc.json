@@ -1,0 +1,36 @@
+{
+    "potentials": {
+        "fe_test": {
+            "type": "jgap",
+            "descriptors": {
+                "my_3b": {
+                    "type": "3b",
+                    "kernel": {
+                        "cutoff": {
+                            "cutoff": 10.0,
+                            "r_min": 9.0,
+                            "type": "perriot"
+                        },
+                        "energy_scale": 1.0,
+                        "length_scale": 1.0,
+                        "type": "squared_exp"
+                    },
+                    "sparse_data": {
+                        "Fe,Fe,Fe": {
+                            "coefficients": [
+                                0.54956531178948653
+                            ],
+                            "sparse_points": [
+                                {
+                                    "x": 6.0,
+                                    "y": 1.0,
+                                    "z": 3.0
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

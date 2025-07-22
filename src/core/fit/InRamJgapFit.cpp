@@ -220,7 +220,7 @@ namespace jgap {
                 }
 
                 if (atomicStructure.virials.has_value()) {
-                    array virials = calculateVirials(volume, atomicStructure.positions, contribution.forces);
+                    array virials = contribution.virials;
                     A(currentRow++, contributionColumn) = virials[0].x
                         * atomicStructure.virialSigmasInverse.value()[0].x;
                     A(currentRow++, contributionColumn) = virials[0].y

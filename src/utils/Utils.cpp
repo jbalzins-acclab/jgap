@@ -257,30 +257,4 @@ namespace jgap {
         }
         return ss.str();
     }
-
-    array<Vector3, 3> calculateVirials(const double volume,
-                                       const vector<Vector3> &positions,
-                                       const vector<Vector3> &forces) {
-
-        array<Vector3, 3> result{};
-
-        for (size_t i = 0; i < positions.size(); ++i) {
-            result[0].x -= positions[i].x * forces[i].x;
-            result[0].y -= positions[i].x * forces[i].y;
-            result[0].z -= positions[i].x * forces[i].z;
-
-            result[1].x -= positions[i].y * forces[i].x;
-            result[1].y -= positions[i].y * forces[i].y;
-            result[1].z -= positions[i].y * forces[i].z;
-
-            result[2].x -= positions[i].z * forces[i].x;
-            result[2].y -= positions[i].z * forces[i].y;
-            result[2].z -= positions[i].z * forces[i].z;
-        }
-
-        result[0] /= volume;
-        result[1] /= volume;
-        result[2] /= volume;
-        return result;
-    }
 }

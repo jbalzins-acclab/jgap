@@ -36,7 +36,8 @@ namespace jgap {
                                    const ThreeBodyKernelIndex &indexes,
                                    const Vector3 &descriptorInvariantDistances) {
         double energy = 0;
-        vector<Vector3> forces(structure.size(), {0, 0, 0});
+        vector forces(structure.size(), Vector3{0, 0, 0});
+        array<Vector3, 3> virials{};
 
         const double sparseCutoff = invariantTripletToCutoff(descriptorInvariantDistances);
 
@@ -93,28 +94,38 @@ namespace jgap {
             }
 
             // for chain rule x2
-            Vector3 grad_r01_wrt_r1 = (node1.position() + neighbour1.offset - atom0.position()).normalize();
-            Vector3 grad_r02_wrt_r2 = (node2.position() + neighbour2.offset - atom0.position()).normalize();
-            Vector3 grad_r12_wrt_r2 = (
-                node2.position() + neighbour2.offset - (node1.position() + neighbour1.offset)
-                ).normalize();
+            Vector3 r01 = node1.position() + neighbour1.offset - atom0.position();
+            Vector3 r02 = node2.position() + neighbour2.offset - atom0.position();
+            Vector3 r12 = node2.position() + neighbour2.offset - (node1.position() + neighbour1.offset);
+            Vector3 grad_r01_wrt_r1 = r01.normalize();
+            Vector3 grad_r02_wrt_r2 = r02.normalize();
+            Vector3 grad_r12_wrt_r2 = r12.normalize();
 
             // chain rule x2 ( remember: gradWrtDistances = d/d{r01, r02, r12} )
 
-            //  ======================== "root" atom =============================
-            Vector3 dK_dr0 = grad_r01_wrt_r1 * -gradWrtDistances.x - grad_r02_wrt_r2 * gradWrtDistances.y;
-            forces[index.atomIndex] -= dK_dr0 * 2.0 * sparseCutoff;
+            const Vector3 f10 = grad_r01_wrt_r1 * gradWrtDistances.x * 2.0 * sparseCutoff;
+            forces[index.atomIndex] += f10;
+            forces[neighbour1.index] -= f10;
+            virials[0] -= f10 * r01.x;
+            virials[1] -= f10 * r01.y;
+            virials[2] -= f10 * r01.z;
 
-            //  ======================== "node1" atom =============================
-            Vector3 dK_dr1 = grad_r01_wrt_r1 * gradWrtDistances.x - grad_r12_wrt_r2 * gradWrtDistances.z;
-            forces[neighbour1.index] -= dK_dr1 * 2.0 * sparseCutoff;
+            const Vector3 f20 = grad_r02_wrt_r2 * gradWrtDistances.y * 2.0 * sparseCutoff;
+            forces[index.atomIndex] += f20;
+            forces[neighbour2.index] -= f20;
+            virials[0] -= f20 * r02.x;
+            virials[1] -= f20 * r02.y;
+            virials[2] -= f20 * r02.z;
 
-            //  ======================== "node1" atom =============================
-            Vector3 dK_dr2 = grad_r02_wrt_r2 * gradWrtDistances.y + grad_r12_wrt_r2 * gradWrtDistances.z;
-            forces[neighbour2.index] -= dK_dr2 * 2.0 * sparseCutoff;
+            const Vector3 f21 = grad_r12_wrt_r2 * gradWrtDistances.z * 2.0 * sparseCutoff;
+            forces[neighbour1.index] += f21;
+            forces[neighbour2.index] -= f21;
+            virials[0] -= f21 * r12.x;
+            virials[1] -= f21 * r12.y;
+            virials[2] -= f21 * r12.z;
         }
 
-        return {energy, forces};
+        return {energy, forces, virials};
     }
 
     double ThreeBodySE::covariance(const Vector3 &t1/*invariant triplet*/,

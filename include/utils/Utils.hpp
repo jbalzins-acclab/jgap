@@ -13,14 +13,13 @@ using namespace std;
 
 namespace jgap {
     vector<AtomicStructure> readXyz(const string& fileName);
-    vector<AtomicStructure> readXyz(const string& fileName, double cutoff);
+    vector<AtomicStructure> readXyz(const string& fileName, double cutoff); // mainly for testing
     void writeXyz(const string& fileName, const vector<AtomicStructure> &);
     Vector3 toInvariantTriplet(const pair<double, double> &distanceToNodes, double distanceBetweenNodes);
     vector<string> split(const string& s, char delimiter);
     void saveArray(const vector<double>& data, const string& filename);
     vector<double> loadArray(const string& filename);
     string matrixToString(const Eigen::MatrixXd& mat);
-    array<Vector3, 3> calculateVirials(double volume, const vector<Vector3> &positions, const vector<Vector3> &forces);
 }
 
 #endif

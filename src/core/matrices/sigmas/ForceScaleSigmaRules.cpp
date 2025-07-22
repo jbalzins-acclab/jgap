@@ -17,7 +17,7 @@ namespace jgap {
         structure.forceSigmasInverse = vector<Vector3>();
 
         //double maxSigmaF = 0.0;
-        double meanSigmaF = 0.0;
+        double varianceE = 0;
         for (size_t i = 0; i < structure.size(); i++) {
             if (_componentWise) {
 
@@ -27,27 +27,24 @@ namespace jgap {
                 structure.forceSigmasInverse->push_back(Vector3{1.0 / sigmaX, 1.0 / sigmaY, 1.0 / sigmaZ});
 
                 // maxSigmaF = max(maxSigmaF, sqrt(sigmaX * sigmaX + sigmaY * sigmaY + sigmaZ * sigmaZ));
-                meanSigmaF += sqrt(sigmaX * sigmaX + sigmaY * sigmaY + sigmaZ * sigmaZ);
+                varianceE += (sigmaX * sigmaX + sigmaY * sigmaY + sigmaZ * sigmaZ) * _E_F_RATIO * _E_F_RATIO;
 
             } else {
                 const double sigmaF = calculateSigma((*structure.forces)[i].norm());
                 structure.forceSigmasInverse->push_back(Vector3{1.0 / sigmaF, 1.0 / sigmaF, 1.0 / sigmaF});
 
                 // maxSigmaF = max(maxSigmaF, sigmaF);
-                meanSigmaF += sigmaF;
+                varianceE += sigmaF * sigmaF * _E_F_RATIO * _E_F_RATIO;
             }
         }
-        meanSigmaF /= static_cast<double>(structure.size());
-
-        const double sigmaE = max(0.002 * sqrt(structure.size()), meanSigmaF * _E_F_RATIO * sqrt(structure.size()));
-        structure.energySigmaInverse = 1.0 / sigmaE;
+        structure.energySigmaInverse = 1.0 / sqrt(varianceE);
 
         CurrentLogger::get()->debug(format(
-            "Sigmas:F{}-E{}(n={})",
-            meanSigmaF, sigmaE, structure.size()
+            "Sigmas:E{}",
+            sqrt(varianceE/static_cast<double>(structure.size()))
             ));
 
-        const double dV = 1.0 / (meanSigmaF * _V_F_RATIO);
+        const double dV = 1.0 / (sqrt(varianceE) * _V_E_RATIO);
         structure.virialSigmasInverse = {
             Vector3{dV, dV, dV},
             Vector3{dV, dV, dV},

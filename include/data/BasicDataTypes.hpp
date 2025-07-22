@@ -300,6 +300,7 @@ namespace jgap {
     struct Covariance {
         double total;
         vector<Vector3> forces;
+        array<Vector3, 3> virials;
     };
 }
 

@@ -35,6 +35,7 @@ namespace jgap {
                                      const double &rSparse) {
         double energy = 0;
         vector<Vector3> forces(structure.size(), {0, 0, 0});
+        array<Vector3, 3> virials{};
 
         const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
 
@@ -48,30 +49,39 @@ namespace jgap {
 
             auto cov = 2.0/*K(r_ij,)+K(r_ji)?????*/ * covarianceNoCutoffs(rSparse, neighbourData.distance)
                                 * sparseCutoff* fCut;
-             if (index.atomIndex == neighbourData.index) cov /= 2.0;
+            if (index.atomIndex == neighbourData.index) cov /= 2.0;
             // cout << descriptor.speciesPair.toString() << descriptor.distance << currentPair.toString()<< neighbour.distance << " "<<cov<<" "<<fCut<< endl;
             energy += cov;
 
             // ---------------------- FORCES --------------------------------
-            if (index.atomIndex == neighbourData.index) continue;
+            //if (index.atomIndex == neighbourData.index) continue;
 
-            double d_dr = derivativeNoCutoffs(neighbourData.distance, rSparse) * fCut;
+            double dE_dr = derivativeNoCutoffs(neighbourData.distance, rSparse) * fCut;
 
             if (fCut != 1.0) {
-                d_dr += covarianceNoCutoffs(rSparse, neighbourData.distance)
+                dE_dr += covarianceNoCutoffs(rSparse, neighbourData.distance)
                         * _cutoffFunction->differentiate(neighbourData.distance)
                         * sparseCutoff;
             }
 
-            auto displacement = structure.positions[index.atomIndex]
+            auto r10 = structure.positions[index.atomIndex]
                                         - (structure.positions[neighbourData.index] + neighbourData.offset);
-            const auto contribution = displacement.normalize() * d_dr * 2.0/*K(r_ij,)+K(r_ji)?????*/;
+            auto f10 = r10.normalize() * -dE_dr * 2.0/*K(r_ij,)+K(r_ji)?????*/;
 
-            forces[index.atomIndex] -= contribution;
-            forces[neighbourData.index] += contribution;
+            forces[index.atomIndex] += f10;
+            forces[neighbourData.index] -= f10;
+
+            if (index.atomIndex == neighbourData.index) {
+                f10 /= 2;
+            }
+
+            // x2 since r10.x * f10.x = r01.x * f01.x
+            virials[0] += f10 * r10.x;
+            virials[1] += f10 * r10.y;
+            virials[2] += f10 * r10.z;
         }
 
-        return {energy, forces};
+        return {energy, forces, virials};
     }
 
     double TwoBodySE::covarianceNoCutoffs(const double &r1, const double &r2) const {
