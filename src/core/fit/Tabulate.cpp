@@ -181,7 +181,12 @@ namespace jgap {
          */
 
         for (size_t i = 0; i < elements.size(); i++) {
-            for (size_t j = i; j < elements.size(); j++) {
+            for (size_t j = 0; j < elements.size(); j++) {
+                if (i < j) {
+                    continue; // AAAAAAAA why not i <= j????????
+                }
+                //cout << i << " " << j << endl;
+                //cout << elements[i] << " " << elements[j] << endl;
                 const auto& energies = pairEnergies.at({elements[i], elements[j]});
                 for (size_t k = 0; k < energies.size(); k++) {
                     eamFsFile << (writePairEnergies ? energies[k]*tabulationParams.grid2b[k] : 0) << endl;

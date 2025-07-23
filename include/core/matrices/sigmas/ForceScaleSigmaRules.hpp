@@ -17,11 +17,12 @@ namespace jgap {
         void fillSigmas(AtomicStructure &structure) override;
 
     private:
-        const double _E_F_RATIO = 0.01;
-        const double _V_E_RATIO = 100.0;
-
-        double _Fmin;
+        double _EFratio;
+        double _VFratio;
+        double _sigmaFmin;
         double _scalingFactor;
+        double _referenceF;
+        double _referenceSigmaF;
         bool _componentWise;
 
         double calculateSigma(double F) const;
