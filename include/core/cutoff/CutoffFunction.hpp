@@ -17,6 +17,7 @@ namespace jgap {
 
         virtual string getType() = 0;
         virtual nlohmann::json serialize() = 0;
+        virtual double getCutoff() = 0;
     };
 }
 

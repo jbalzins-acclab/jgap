@@ -3,9 +3,10 @@
 #include "core/matrices/sigmas/SimpleSigmaRules.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/StdoutLogger.hpp"
-#include "utils/Utils.hpp"
 
 #include <tbb/parallel_for_each.h>
+
+#include "utils/Utils.hpp"
 
 namespace jgap {
 
@@ -50,6 +51,8 @@ namespace jgap {
         CurrentLogger::get()->debug("Full neighbour-list");
         NeighbourFinder::findNeighbours(_trainingData, maxCutoff);
 
+        //// ----------------------------------------------------------------------------------------------------
+
         CurrentLogger::get()->info("Per-structure regularization setup");
         for (auto& structure: _trainingData) {
             _sigmaRules->fillSigmas(structure);
@@ -64,13 +67,29 @@ namespace jgap {
         // CurrentLogger::get()->info(matrixToString(A));
 
         CurrentLogger::get()->info("Making feature vector b");
-        const auto b = makeB(descriptorsAsVec, _trainingData);
+        auto b = makeB(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making feature vector b");
 
         //// ----------------------------------------------------------------------------------------------------
 
         CurrentLogger::get()->info("Doing linear algebra");
+        vector c = leastSquares(A, b);
+        CurrentLogger::get()->info("Finished linear algebra");
 
+        size_t counter = 0;
+        for (const auto &descriptor: _descriptors | views::values) {
+            const size_t n = descriptor->nSparsePoints();
+
+            // auto bb = vector<double>{c.data() + counter, c.data() + counter + n};
+            descriptor->setCoefficients(vector<double>(c.begin() + counter, c.begin() + counter + n));
+
+            counter += n;
+        }
+
+        return make_shared<JgapPotential>(_descriptors);
+    }
+
+    vector<double> InRamJgapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
         CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
         const Eigen::HouseholderQR<Eigen::MatrixXd> qr(A);
 
@@ -87,19 +106,7 @@ namespace jgap {
         Eigen::VectorXd c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.cols()));
         CurrentLogger::get()->debug("c" + to_string(c[0]));
 
-        CurrentLogger::get()->info("Finished linear algebra");
-
-        size_t counter = 0;
-        for (const auto &descriptor: _descriptors | views::values) {
-            const size_t n = descriptor->nSparsePoints();
-
-            // auto bb = vector<double>{c.data() + counter, c.data() + counter + n};
-            descriptor->setCoefficients(vector<double>{c.data() + counter, c.data() + counter + n});
-
-            counter += n;
-        }
-
-        return make_shared<JgapPotential>(_descriptors);
+        return vector<double>{c.data(), c.data() + c.size()};
     }
 
     Eigen::MatrixXd InRamJgapFit::makeA(const vector<shared_ptr<Descriptor>> &descriptors,
@@ -139,7 +146,7 @@ namespace jgap {
                             ));
                 }
 
-                fillInverseRootSigmaK_nm(descriptors, structId.second, resultingA, structId.first);
+                fillInverseSigmaK_nm(descriptors, structId.second, resultingA, structId.first);
             }
         );
 
@@ -155,7 +162,7 @@ namespace jgap {
     }
 
     Eigen::VectorXd InRamJgapFit::makeB(const vector<shared_ptr<Descriptor>> &descriptors,
-                                        const vector<AtomicStructure> &atomicStructures) {
+                                                    const vector<AtomicStructure> &atomicStructures) {
         vector<double> b;
         for (auto& structure: atomicStructures) {
             if (structure.energy.has_value()) {
@@ -187,13 +194,10 @@ namespace jgap {
         return Eigen::Map<Eigen::VectorXd>(b.data(), b.size());
     }
 
-    void InRamJgapFit::fillInverseRootSigmaK_nm(const vector<shared_ptr<Descriptor>> &descriptors,
+    void InRamJgapFit::fillInverseSigmaK_nm(const vector<shared_ptr<Descriptor>> &descriptors,
                                                 const AtomicStructure &atomicStructure,
                                                 Eigen::MatrixXd &A,
                                                 const size_t startingRow) {
-
-        const double volume = atomicStructure.volume();
-
         size_t contributionColumn = 0;
         for (const auto& descriptor : descriptors) {
             auto contributions = descriptor->covariate(atomicStructure);

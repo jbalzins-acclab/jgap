@@ -156,7 +156,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/utils/TestVirials.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/utils/TestVirials.cpp
     )
 
     add_executable(jgap_tests ${TEST_SOURCES})

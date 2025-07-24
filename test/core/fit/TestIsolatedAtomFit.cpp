@@ -8,17 +8,13 @@
 
 jgap::AtomicStructure makeIsolated(jgap::Species species) {
     return jgap::AtomicStructure{
-        .atoms = {
-            jgap::AtomData{
-                .species = std::move(species),
-                .position = {0,0,0}
-            }
-        },
         .lattice = {
             jgap::Vector3{30.0, 0.0, 0.0},
             jgap::Vector3{0.0, 30.0, 0.0},
             jgap::Vector3{0.0, 0.0, 30.0},
-        }
+        },
+        .positions = {jgap::Vector3{0, 0, 0}},
+        .species = {species}
     };
 }
 

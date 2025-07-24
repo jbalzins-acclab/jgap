@@ -59,9 +59,9 @@ namespace jgap {
             return val * static_cast<double>(a) * static_cast<double>(b) * static_cast<double>(c);
         });
 
-        cpy.lattice[0] = cpy.lattice[0] * static_cast<double>(a);
-        cpy.lattice[1] = cpy.lattice[1] * static_cast<double>(b);
-        cpy.lattice[2] = cpy.lattice[2] * static_cast<double>(c);
+        cpy.lattice[0] = this->lattice[0] * static_cast<double>(a);
+        cpy.lattice[1] = this->lattice[1] * static_cast<double>(b);
+        cpy.lattice[2] = this->lattice[2] * static_cast<double>(c);
 
         cpy.species = {};
         cpy.positions = {};

@@ -5,7 +5,6 @@
 #include "core/descriptors/EamDescriptor.hpp"
 
 #include <random>
-#include <thread>
 
 #include "core/descriptors/kernels/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -42,10 +41,10 @@ namespace jgap {
                 CurrentLogger::get()->error("Coefficients can't be provided partially for EAM descriptor", true);
             }
         } else {
-            _sparsifier = ParserRegistry<PerSpeciesEamSparsifier>::get(params["sparsify"]);
+            _sparsifier = ParserRegistry<Sparsifier>::get(params["sparsify"]);
         }
 
-        _cutoff = 0;
+        _maxCutoff = 0;
         for (const auto& pfParams: params["pair_functions"]) {
 
             auto pf = ParserRegistry<EamPairFunction>::get(pfParams);
@@ -64,7 +63,7 @@ namespace jgap {
                 _defaultPairFunction = pf;
             }
 
-            _cutoff = max(_cutoff, pfParams["cutoff"].get<double>());
+            _maxCutoff = max(_maxCutoff, pfParams["cutoff"].get<double>());
         }
     }
 
@@ -112,12 +111,29 @@ namespace jgap {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("EAM sparsifier not set", true);
         }
+        CurrentLogger::get()->info("Doing EAM sparsification from data");
 
+        map<Species, vector<Eigen::VectorXd>> allDensitiesPerSpecies;
         vector<EamKernelIndex> indexArr;
         for (const auto& structure : fromData) {
-            indexArr.push_back(doIndex(structure));
+            for (auto structureIndex = doIndex(structure);
+                 const auto& [species, densities]: structureIndex) {
+                if (!allDensitiesPerSpecies.contains(species)) {
+                    allDensitiesPerSpecies[species] = {};
+                }
+                for (const auto& densityData: densities) {
+                    allDensitiesPerSpecies[species].push_back(Eigen::VectorXd::Constant(1, densityData.density));
+                }
+            }
         }
-        _sparsePointsPerSpecies = _sparsifier->sparsifyFromData(indexArr);
+
+        _sparsePointsPerSpecies = {};
+        for (const auto& [species, densities]: allDensitiesPerSpecies) {
+            _sparsePointsPerSpecies[species] = {};
+            for (const Eigen::VectorXd& density: _sparsifier->selectSparsePoints(densities)) {
+                _sparsePointsPerSpecies[species].push_back(density[0]);
+            }
+        }
         _coefficients.clear();
     }
 
@@ -161,7 +177,7 @@ namespace jgap {
                 }
             }
 
-            result.push_back({startingRC, elementBlock});
+            result.emplace_back(startingRC, elementBlock);
             startingRC += densities.size();
         }
 
@@ -232,7 +248,7 @@ namespace jgap {
 
             Species species = structure.species[atomIdx];
             for (NeighbourData neighbour: structure.neighbours.value()[atomIdx]) {
-                if (neighbour.distance > _cutoff) continue;
+                if (neighbour.distance > _maxCutoff) continue;
 
                 pair orderedSpeciesPair = {
                     structure.species[neighbour.index],  species

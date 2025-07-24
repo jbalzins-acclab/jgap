@@ -8,77 +8,46 @@ namespace jgap {
         _lengthScale = params["length_scale"].get<double>();
         _energyScaleSquared = pow(params["energy_scale"].get<double>(), 2);
         _inverse2ThetaSq = 1.0 / (2.0 * _lengthScale * _lengthScale);
-
-        _cutoffFunction = ParserRegistry<CutoffFunction>::get(params["cutoff"]);
+        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
     }
 
     nlohmann::json TwoBodySE::serialize() {
-
-        auto cutoffData = _cutoffFunction->serialize();
-        cutoffData["type"] = _cutoffFunction->getType();
-
         return {
             {"length_scale", _lengthScale},
-            {"energy_scale", sqrt(_energyScaleSquared)},
-            {"cutoff", cutoffData}
+            {"energy_scale", sqrt(_energyScaleSquared)}
         };
-    }
-
-    TwoBodySE::TwoBodySE(const shared_ptr<CutoffFunction> &cutoffFunction, const double energyScale,
-                         const double lengthScale): _cutoffFunction(cutoffFunction), _lengthScale(lengthScale) {
-        _inverse2ThetaSq = 1.0 / (2.0 * _lengthScale * _lengthScale);
-        _energyScaleSquared = energyScale * energyScale;
     }
 
     Covariance TwoBodySE::covariance(const AtomicStructure &structure,
                                      const TwoBodyKernelIndex &indexes,
-                                     const double &rSparse) {
+                                     const TwoBodyDescriptorData &rSparse) {
         double energy = 0;
         vector<Vector3> forces(structure.size(), {0, 0, 0});
         array<Vector3, 3> virials{};
 
-        const double sparseCutoff = _cutoffFunction->evaluate(rSparse);
-
         for (const TwoBodyKernelIndexEntity &index: indexes) {
             // ---------------------- ENERGY --------------------------------
-
-            auto neighbourData = (*structure.neighbours)[index.atomIndex].at(index.neighbourListIndex);
-
-            const double fCut = _cutoffFunction -> evaluate(neighbourData.distance);
-            // if (fCut == 0.0) continue; - upon indexing !
-
-            auto cov = 2.0/*K(r_ij,)+K(r_ji)?????*/ * covarianceNoCutoffs(rSparse, neighbourData.distance)
-                                * sparseCutoff* fCut;
-            if (index.atomIndex == neighbourData.index) cov /= 2.0;
-            // cout << descriptor.speciesPair.toString() << descriptor.distance << currentPair.toString()<< neighbour.distance << " "<<cov<<" "<<fCut<< endl;
+            auto cov = covarianceNoCutoffs(rSparse.r, index.r) * rSparse.fCut * index.fCut;
+            if (index.atomIndex0 != index.atomIndex1) cov *= 2; // K(r_ij,)+K(r_ji)(?)
             energy += cov;
 
             // ---------------------- FORCES --------------------------------
-            //if (index.atomIndex == neighbourData.index) continue;
+            double dE_dr = derivativeNoCutoffs(index.r, rSparse.r) * index.fCut * rSparse.fCut;
 
-            double dE_dr = derivativeNoCutoffs(neighbourData.distance, rSparse) * fCut;
-
-            if (fCut != 1.0) {
-                dE_dr += covarianceNoCutoffs(rSparse, neighbourData.distance)
-                        * _cutoffFunction->differentiate(neighbourData.distance)
-                        * sparseCutoff;
+            if (index.fCut != 1.0) {
+                dE_dr += covarianceNoCutoffs(rSparse.r, index.r) * index.dCut_dr * rSparse.fCut;
             }
 
-            auto r10 = structure.positions[index.atomIndex]
-                                        - (structure.positions[neighbourData.index] + neighbourData.offset);
-            auto f10 = r10.normalize() * -dE_dr * 2.0/*K(r_ij,)+K(r_ji)?????*/;
-
-            forces[index.atomIndex] += f10;
-            forces[neighbourData.index] -= f10;
-
-            if (index.atomIndex == neighbourData.index) {
-                f10 /= 2;
+            auto f10 = index.r01.normalize() * dE_dr;
+            if (index.atomIndex0 != index.atomIndex1) {
+                f10 *= 2;
+                forces[index.atomIndex0] += f10;
+                forces[index.atomIndex1] -= f10;
             }
 
-            // x2 since r10.x * f10.x = r01.x * f01.x
-            virials[0] += f10 * r10.x;
-            virials[1] += f10 * r10.y;
-            virials[2] += f10 * r10.z;
+            virials[0] -= f10 * index.r01.x;
+            virials[1] -= f10 * index.r01.y;
+            virials[2] -= f10 * index.r01.z;
         }
 
         return {energy, forces, virials};
@@ -88,12 +57,11 @@ namespace jgap {
         return _energyScaleSquared * exp(-pow(r1-r2, 2.0) * _inverse2ThetaSq);
     }
 
-    double TwoBodySE::covariance(const double &r1, const double &r2) {
-        return covarianceNoCutoffs(r1, r2) * _cutoffFunction->evaluate(r1)
-                                           * _cutoffFunction->evaluate(r2);
+    double TwoBodySE::covariance(const TwoBodyDescriptorData &r1, const TwoBodyDescriptorData &r2) {
+        return covarianceNoCutoffs(r1.r, r2.r) * r1.fCut * r2.fCut;
     }
 
     double TwoBodySE::derivativeNoCutoffs(const double &changingR, const double &constR) const {
-        return (constR - changingR) * 2.0/*compensate 2 in const*/ * _inverse2ThetaSq * covarianceNoCutoffs(changingR, constR);
+        return (constR - changingR) * _inverseThetaSq * covarianceNoCutoffs(changingR, constR);
     }
 }

@@ -10,11 +10,12 @@ namespace jgap {
         explicit PerriotPolynomialCutoff(const nlohmann::json& params);
         explicit PerriotPolynomialCutoff(double rMin, double cutoff);
 
-        double evaluate(double r) override;
-        double differentiate(double r) override;
-
         string getType() override { return "perriot"; }
         nlohmann::json serialize() override;
+        double getCutoff() override { return _cutoff; }
+
+        double evaluate(double r) override;
+        double differentiate(double r) override;
 
     private:
         double _cutoff;

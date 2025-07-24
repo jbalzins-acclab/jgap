@@ -18,9 +18,9 @@ namespace jgap {
                       side3 = structure.lattice[2];
 
         tuple<int, int, int> maxRep = {
-            cutoff / side1.norm() + 2,
-            cutoff / side2.norm() + 2,
-            cutoff / side3.norm() + 2
+            cutoff / side1.len() + 2,
+            cutoff / side2.len() + 2,
+            cutoff / side3.len() + 2
         };
 
         // triclinic
@@ -77,7 +77,7 @@ namespace jgap {
         for (size_t i = 0; i < structure.size(); i++) {
             for (size_t j = i; j < structure.size(); j++) {
                 for (const auto &offset : possibleOffsets) {
-                    auto dist = (structure[i].position() - (structure[j].position() + offset)).norm();
+                    auto dist = (structure[i].position() - (structure[j].position() + offset)).len();
                     if (0 < dist && dist <= cutoff) {
                         (*structure.neighbours)[i].push_back({.index=j, .offset=offset, .distance = dist});
                         if (i != j) {

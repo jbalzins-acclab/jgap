@@ -24,9 +24,9 @@ TEST(TestZblPotential, DimersData) {
             }
             ofstream ffout(format("jgap-dimers-{}-{}.dat",i, j));
             for (double d = 1; d <= 2; d+=0.01) {
-                structs[1].atoms[1].position.x = d;
-                structs[1].atoms[0].species = Z_inverse[i];
-                structs[1].atoms[1].species = Z_inverse[j];
+                structs[1].positions[1].x = d;
+                structs[1].species[0] = Z_inverse[i];
+                structs[1].species[1] = Z_inverse[j];
                 NeighbourFinder::findNeighbours(selected, 3);
 
                 auto pred = zblPot.predict(structs[1]).energy.value();
@@ -56,17 +56,17 @@ void testVsQuipPairpot(const string& xyzDataFn) {
             ASSERT_NEAR((pred.energy.value()-structs[i].energy.value())/structs[i].energy.value(), 0, 0.08);
         }
 
-        for (size_t j = 0; j < structs[i].atoms.size(); j++) {
+        for (size_t j = 0; j < structs[i].size(); j++) {
             double closestNeighbour = 5;
-            for (NeighbourData& neigh: structs[i].atoms[j].neighbours.value()) {
+            for (const NeighbourData& neigh: structs[i][j].neighbours()) {
                 if (neigh.distance < closestNeighbour) {
                     closestNeighbour = neigh.distance;
                 }
             }
 
-            Vector3 fDiff = structs[i].atoms[j].force.value() - pred.forces.value()[j];
+            Vector3 fDiff = structs[i][j].force() - pred.forces.value()[j];
             if (closestNeighbour < 1.5) {
-                ASSERT_NEAR(fDiff.norm() / structs[i].atoms[j].force.value().norm(), 0, 0.4);
+                ASSERT_NEAR(fDiff.len() / structs[i][j].force().len(), 0, 0.4);
             }
         }
     }

@@ -122,17 +122,17 @@ namespace jgap {
         double square() const {
             return x * x + y * y + z * z;
         }
-        double norm() const {
+        double len() const {
             return sqrt(x * x + y * y + z * z);
         };
         double project(const Vector3& other) const {
-            return dot(other) / other.norm();
+            return dot(other) / other.len();
         }
         double aproject(const Vector3& other) const {
-            return sqrt(norm() * norm() - project(other) * project(other));
+            return sqrt(len() * len() - project(other) * project(other));
         }
         Vector3 normalize() const {
-            return *this * (1.0 / norm());
+            return *this * (1.0 / len());
         };
         double min() const {
             const double t = abs(x) < abs(y) ? x : y;
@@ -143,7 +143,7 @@ namespace jgap {
         }
         double aproject(const Vector3& u, const Vector3& v) const {
             Vector3 _cross = u.cross(v);
-            if (_cross.norm() == 0.0) return this->aproject(u);
+            if (_cross.len() == 0.0) return this->aproject(u);
             return abs(this->project(_cross));
         }
         bool operator==(const Vector3& other) const {

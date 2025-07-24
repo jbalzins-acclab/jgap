@@ -1,9 +1,7 @@
 #include "core/descriptors/TwoBodyDescriptor.hpp"
 
-#include <random>
 #include <set>
 #include <nlohmann/json.hpp>
-#include <tbb/parallel_for_each.h>
 
 #include "core/descriptors/kernels/TwoBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -16,16 +14,10 @@ namespace jgap {
     TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
         CurrentLogger::get()->debug("Parsing 2b descriptor params");
 
-        // Either explicitly in kernel or in cutoff obj specs
-        if (params["kernel"]["cutoff"].is_number()) {
-            _cutoff = params["kernel"]["cutoff"];
-        } else {
-            _cutoff = params["kernel"]["cutoff"]["cutoff"];
-        }
-
+        _cutoffFunction = ParserRegistry<CutoffFunction>::get(params["cutoff"]);
         _kernel = ParserRegistry<TwoBodyKernel>::get(params["kernel"]);
 
-        _sparsePointsPerSpeciesPair = {};
+        _sparseDataPerSpeciesPair = {};
         _coefficients = {};
         if (params.contains("sparse_data")) {
             _sparsifier = nullptr;
@@ -33,10 +25,13 @@ namespace jgap {
             size_t nPts = 0;
             for (auto &[speciesStr, perPairData]: params["sparse_data"].items()) {
                 SpeciesPair speciesPair = {split(speciesStr, ',')[0], split(speciesStr, ',')[1]};
-                _sparsePointsPerSpeciesPair[speciesPair] = {};
+                _sparseDataPerSpeciesPair[speciesPair] = {};
 
                 for (const auto &distance: perPairData["sparse_points"]) {
-                    _sparsePointsPerSpeciesPair[speciesPair].push_back(distance);
+                    _sparseDataPerSpeciesPair[speciesPair].push_back({
+                        .r = distance,
+                        .fCut = _cutoffFunction->evaluate(distance)
+                    });
                     nPts++;
                 }
 
@@ -51,7 +46,7 @@ namespace jgap {
                 CurrentLogger::get()->error("Number of coefficients doesn't match number of 2b sparse points", true);
             }
         } else {
-            _sparsifier = ParserRegistry<PerSpecies2bSparsifier>::get(params["sparsify"]);
+            _sparsifier = ParserRegistry<Sparsifier>::get(params["sparsify"]);
         }
     }
 
@@ -59,9 +54,11 @@ namespace jgap {
 
         nlohmann::json sparseData;
         size_t counter = 0;
-        for (auto &[speciesPair, sparsePoints] : _sparsePointsPerSpeciesPair) {
+        for (auto &[speciesPair, sparsePoints] : _sparseDataPerSpeciesPair) {
             sparseData[speciesPair.toString()] = {};
-            sparseData[speciesPair.toString()]["sparse_points"] = sparsePoints;
+            sparseData[speciesPair.toString()]["sparse_points"] = sparsePoints
+                | std::views::transform([](auto& data) { return data.r; })
+                | std::ranges::to<std::vector>();
             if (_coefficients.size() == nSparsePoints()) {
                 sparseData[speciesPair.toString()]["coefficients"] = vector(
                     _coefficients.begin() + counter, _coefficients.begin() + counter + sparsePoints.size()
@@ -73,15 +70,19 @@ namespace jgap {
         auto kernelData = _kernel->serialize();
         kernelData["type"] = _kernel->getType();
 
+        auto cutoffData = _cutoffFunction->serialize();
+        cutoffData["type"] = _cutoffFunction->getType();
+
         return {
             {"sparse_data", sparseData},
-            {"kernel", kernelData}
+            {"kernel", kernelData},
+            {"cutoff", cutoffData}
         };
     }
 
     size_t TwoBodyDescriptor::nSparsePoints() {
         size_t result = 0;
-        for (auto &points: _sparsePointsPerSpeciesPair | views::values) {
+        for (auto &points: _sparseDataPerSpeciesPair | views::values) {
             result += points.size();
         }
         return result;
@@ -91,9 +92,47 @@ namespace jgap {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("2b sparsifier not set", true);
         }
+        CurrentLogger::get()->info("Doing 2b sparsification from data");
 
-        _sparsePointsPerSpeciesPair = _sparsifier->sparsifyFromData(fromData);
+        map<SpeciesPair, vector<Eigen::VectorXd>> allDistances;
+        for (const auto &structure: fromData) {
+            const auto structureIndex = doIndex(structure);
+
+            for (const auto &[speciesPair, perPairIndex]: structureIndex) {
+
+                if (!allDistances.contains(speciesPair))  allDistances[speciesPair] = {};
+                for (const auto &entity: perPairIndex) {
+                    allDistances[speciesPair].push_back(Eigen::VectorXd::Constant(1, entity.r));
+                }
+            }
+        }
+
+        _sparseDataPerSpeciesPair.clear();
+        for (const auto &[speciesPair, distances]: allDistances) {
+            _sparseDataPerSpeciesPair[speciesPair] = {};
+
+            const vector<Eigen::VectorXd> sparsePoints = _sparsifier->selectSparsePoints(distances);
+            for (const Eigen::VectorXd& point: sparsePoints) {
+                _sparseDataPerSpeciesPair[speciesPair].push_back({
+                    .r=point[0],
+                    .fCut=_cutoffFunction->evaluate(point[0])
+                });
+            }
+        }
         _coefficients.clear();
+    }
+
+    void TwoBodyDescriptor::setSparsePoints(const map<SpeciesPair, vector<double>>& sparsePointsPerSpeciesPair) {
+        for (const auto &[speciesPair, sparsePoints]: sparsePointsPerSpeciesPair) {
+            _sparseDataPerSpeciesPair[speciesPair] = {};
+
+            for (const auto &distance: sparsePoints) {
+                _sparseDataPerSpeciesPair[speciesPair].push_back({
+                    .r = distance,
+                    .fCut = _cutoffFunction->evaluate(distance)
+                    });
+            }
+        }
     }
 
     vector<Covariance> TwoBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -101,8 +140,8 @@ namespace jgap {
 
         auto indexes = doIndex(atomicStructure);
 
-        for (const auto& [speciesPair, sparsePoints]: _sparsePointsPerSpeciesPair) {
-            for (const double sparsePoint : sparsePoints) {
+        for (const auto& [speciesPair, sparsePoints]: _sparseDataPerSpeciesPair) {
+            for (const TwoBodyDescriptorData& sparsePoint : sparsePoints) {
                 covariates.push_back(_kernel->covariance(atomicStructure, indexes[speciesPair], sparsePoint));
             }
         }
@@ -114,13 +153,13 @@ namespace jgap {
         vector<pair<size_t, shared_ptr<MatrixBlock>>> result;
 
         size_t counter = 0;
-        for (auto &sparsePoints: _sparsePointsPerSpeciesPair | views::values) {
+        for (auto &sparsePoints: _sparseDataPerSpeciesPair | views::values) {
 
             auto covariance = make_shared<MatrixBlock>(sparsePoints.size(), sparsePoints.size());
 
             for (size_t i = 0; i < sparsePoints.size(); i++) {
                 for (size_t j = 0; j < sparsePoints.size(); j++) {
-                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]); // TODO: cutoff??
+                    (*covariance)(i, j) = _kernel->covariance(sparsePoints[i], sparsePoints[j]);
                 }
             }
 
@@ -136,7 +175,7 @@ namespace jgap {
         TabulationData result{};
 
         size_t counter = 0;
-        for (const auto &[speciesPair, sparsePoints]: _sparsePointsPerSpeciesPair) {
+        for (const auto &[speciesPair, sparsePoints]: _sparseDataPerSpeciesPair) {
             vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + sparsePoints.size());
             counter += sparsePoints.size();
 
@@ -144,8 +183,10 @@ namespace jgap {
 
             for (size_t iGrid = 0; iGrid < params.grid2b.size(); iGrid++) {
                 for (size_t indexSparse = 0; indexSparse < sparsePoints.size(); indexSparse++) {
-                    pairEnergies[iGrid] += 2.0/*bond energy => r_ij+r_ji in quip*/ * coefficients[indexSparse]
-                                        * _kernel->covariance(params.grid2b[iGrid], sparsePoints[indexSparse]);
+                    pairEnergies[iGrid] += coefficients[indexSparse] * _kernel->covariance(
+                        {.r = params.grid2b[iGrid], .fCut = _cutoffFunction->evaluate(params.grid2b[iGrid])},
+                        sparsePoints[indexSparse]
+                        );
                 }
             }
 
@@ -166,14 +207,21 @@ namespace jgap {
                 const auto neighbour = atom.neighbours()[neighbourListIndex];
 
                 if (neighbour.index < atomIndex) continue;
-                if (neighbour.distance > _cutoff) continue;
+                if (neighbour.distance > _cutoffFunction->getCutoff()) continue;
 
                 auto speciesPair = SpeciesPair{atom.species(), atomicStructure.species[neighbour.index]};
                 if (!indexes.contains(speciesPair)) {
                     indexes[speciesPair] = TwoBodyKernelIndex();
                 }
 
-                indexes[speciesPair].push_back({atomIndex, neighbourListIndex});
+                indexes[speciesPair].push_back({
+                    .atomIndex0 = atomIndex,
+                    .atomIndex1 = neighbour.index,
+                    .r01 = atomicStructure.positions[neighbour.index] + neighbour.offset - atom.position(),
+                    .r = neighbour.distance,
+                    .fCut = _cutoffFunction->evaluate(neighbour.distance),
+                    .dCut_dr = _cutoffFunction->differentiate(neighbour.distance)
+                });
             }
         }
 

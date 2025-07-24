@@ -6,40 +6,42 @@
 
 #include "core/descriptors/Descriptor.hpp"
 #include "core/descriptors/kernels/ThreeBodySE.hpp"
+#include "data/descriptors/kernels/ThreeBodyKernelIndex.hpp"
 
 #include "io/parse/ParserRegistry.hpp"
 #include "memory/MatrixBlock.hpp"
-#include "sparsification/3b/PerSpecies3bSparsifier.hpp"
+#include "sparsification/Sparsifier.hpp"
 
 namespace jgap {
 
     class ThreeBodyDescriptor : public Descriptor {
     public:
-        ~ThreeBodyDescriptor() override = default;
-
         explicit ThreeBodyDescriptor(const nlohmann::json& params);
         nlohmann::json serialize() override;
         string getType() override { return "3b"; }
 
-        double getCutoff() override { return _cutoff; }
+        double getCutoff() override { return _cutoffFunction->getCutoff(); }
 
         size_t nSparsePoints() override;
         void setSparsePoints(const vector<AtomicStructure>& fromData) override;
-        void setSparsePoints(map<SpeciesTriplet, vector<Vector3>> sparsePointsPerSpeciesPair) {
-            _sparsePointsPerSpeciesTriplet = std::move(sparsePointsPerSpeciesPair);
-        }
+        void setSparsePoints(const map<SpeciesTriplet, vector<Vector3>>& sparsePointsPerSpeciesTriplet);
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
 
         TabulationData tabulate(const TabulationParams &params) override;
 
+        static Vector3 toInvariantTriplet(double r01, double r02, double r12);
+        static array<Vector3, 3> invariantTripletGradients(double r01, double r02);
+        double invariantTripletToCutoff(const Vector3 &t) const;
+
     private:
         double _cutoff;
-        shared_ptr<Kernel<Vector3, ThreeBodyKernelIndex>> _kernel;
-        shared_ptr<PerSpecies3bSparsifier> _sparsifier;
+        shared_ptr<CutoffFunction> _cutoffFunction;
+        shared_ptr<ThreeBodyKernel> _kernel;
+        shared_ptr<Sparsifier> _sparsifier;
 
-        map<SpeciesTriplet, vector<Vector3>> _sparsePointsPerSpeciesTriplet;
+        map<SpeciesTriplet, vector<ThreeBodyDescriptorData>> _sparsePointsPerSpeciesTriplet;
 
         [[nodiscard]]
         map<SpeciesTriplet, ThreeBodyKernelIndex> doIndex(const AtomicStructure &atomicStructure) const;

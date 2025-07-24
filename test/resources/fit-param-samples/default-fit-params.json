@@ -32,7 +32,7 @@
                     },
                     "sparsify": {
                         "type": "sample_space_uniform",
-                        "n_sparse_per_pair": 20
+                        "n_sparse": 20
                     }
                 },
                 "my_3b": {
@@ -49,7 +49,7 @@
                     },
                     "sparsify": {
                         "type": "sample_space_uniform",
-                        "n_sparse_per_triplet": 500
+                        "n_sparse": 500
                     }
                 },
                 "my_eam": {
@@ -68,7 +68,7 @@
                     ],
                     "sparsify": {
                         "type": "sample_space_uniform",
-                        "n_sparse_per_species": 20
+                        "n_sparse": 20
                     }
                 }
             }

@@ -13,19 +13,13 @@ TEST(TestTwoBodyDescriptor, covariance) {
     auto structs = readXyz("test/resources/xyz-samples/iter-3-3-test.xyz");
     NeighbourFinder::findNeighbours(structs, 5.0);
     vector<AtomicStructure> selectedStructs = structs;
-    // copy_n(structs.begin(), 20, back_inserter(selectedStructs));
 
     const auto params2b = nlohmann::json::parse(R"(
     {
         "kernel": {
             "type": "squared_exp",
             "length_scale": 1.0,
-            "energy_scale": 10.0,
-            "cutoff": {
-                "type": "coscutoff",
-                "r_min": 2.8,
-                "cutoff": 3.5
-            }
+            "energy_scale": 10.0
         },
         "sparse_data": {
             "Mn,Cr": {
@@ -34,6 +28,11 @@ TEST(TestTwoBodyDescriptor, covariance) {
             "Cr,Cr": {
                 "sparse_points": [2.0, 3.0]
             }
+        },
+        "cutoff": {
+            "type": "coscutoff",
+            "r_min": 2.8,
+            "cutoff": 3.5
         }
     }
     )");
@@ -52,8 +51,8 @@ TEST(TestTwoBodyDescriptor, covariance) {
     ASSERT_EQ(covariance.size(), 4);
 
     auto U = vector{
-        291, 378, // self interact
-        725, 677 // do not self interact
+        291, 307, // self interact
+        725, 550 // do not self interact
     }; // => double chack changes if this fails
     for (int i = 0; i < 4; i++) EXPECT_NEAR(covariance[i].total, U[i], 2);
 
@@ -65,14 +64,14 @@ TEST(TestTwoBodyDescriptor, covariance) {
         EXPECT_NEAR(covariance[j].forces[0].z, 0, 1e-9);
     }
     // sparseDist = 2 & (x++ => dist->2) => K_se++
-    ASSERT_TRUE(covariance[2].forces[0].x > 0);
+    ASSERT_TRUE(covariance[2].forces[0].x < 0);
     // opposite
-    ASSERT_TRUE(covariance[3].forces[0].x < 0);
+    ASSERT_TRUE(covariance[3].forces[0].x > 0);
 
     // Cr atom
     // pull opposite to manganese
-    ASSERT_TRUE(covariance[2].forces[1].x < 0);
-    ASSERT_TRUE(covariance[3].forces[1].x > 0);
+    ASSERT_TRUE(covariance[2].forces[1].x > 0);
+    ASSERT_TRUE(covariance[3].forces[1].x < 0);
     // symmetry
     for (int j = 0; j < 2; j++) {
         EXPECT_NEAR(covariance[j].forces[1].x, 0.0, 1e-9);
@@ -90,21 +89,16 @@ TEST(TestTwoBodyDescriptor, covariance) {
 
 AtomicStructure makeDimer(const Species &species, double x) {
     return AtomicStructure{
-        .atoms = {
-            AtomData{
-                .species = species,
-                .position = {0,0,0}
-            },
-            AtomData{
-                .species = species,
-                .position = {x,0,0}
-            }
-        },
         .lattice = {
             Vector3{30.0, 0.0, 0.0},
             Vector3{0.0, 30.0, 0.0},
             Vector3{0.0, 0.0, 30.0},
-        }
+        },
+        .positions = {
+            Vector3{0, 0, 0},
+            Vector3{x, 0, 0}
+        },
+        .species = {species, species}
     };
 }
 
@@ -121,17 +115,17 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
         "kernel": {
             "type": "squared_exp",
             "length_scale": 1.0,
-            "energy_scale": 1.0,
-            "cutoff": {
-                "type": "perriot",
-                "r_min": 4.3,
-                "cutoff": 5.0
-            }
+            "energy_scale": 1.0
         },
         "sparse_data": {
             "Fe,Fe": {
                 "sparse_points": [2.0, 3.0]
             }
+        },
+        "cutoff": {
+            "type": "perriot",
+            "r_min": 4.3,
+            "cutoff": 5.0
         }
     }
     )");
@@ -139,22 +133,22 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
     auto desc2b = TwoBodyDescriptor(params2b);
 
     auto res0 = desc2b.covariate(structures[0]);
-    ASSERT_TRUE(res0[0].forces[0].x < 0);
-    ASSERT_TRUE(res0[1].forces[0].x < 0);
-    ASSERT_TRUE(res0[0].forces[1].x > 0);
-    ASSERT_TRUE(res0[1].forces[1].x > 0);
+    ASSERT_TRUE(res0[0].forces[0].x > 0);
+    ASSERT_TRUE(res0[1].forces[0].x > 0);
+    ASSERT_TRUE(res0[0].forces[1].x < 0);
+    ASSERT_TRUE(res0[1].forces[1].x < 0);
 
     auto res1 = desc2b.covariate(structures[1]);
-    ASSERT_TRUE(res1[0].forces[0].x > 0);
-    ASSERT_TRUE(res1[1].forces[0].x < 0);
-    ASSERT_TRUE(res1[0].forces[1].x < 0);
-    ASSERT_TRUE(res1[1].forces[1].x > 0);
+    ASSERT_TRUE(res1[0].forces[0].x < 0);
+    ASSERT_TRUE(res1[1].forces[0].x > 0);
+    ASSERT_TRUE(res1[0].forces[1].x > 0);
+    ASSERT_TRUE(res1[1].forces[1].x < 0);
 
     auto res2 = desc2b.covariate(structures[2]);
-    ASSERT_TRUE(res2[0].forces[0].x > 0);
-    ASSERT_TRUE(res2[1].forces[0].x > 0);
-    ASSERT_TRUE(res2[0].forces[1].x < 0);
-    ASSERT_TRUE(res2[1].forces[1].x < 0);
+    ASSERT_TRUE(res2[0].forces[0].x < 0);
+    ASSERT_TRUE(res2[1].forces[0].x < 0);
+    ASSERT_TRUE(res2[0].forces[1].x > 0);
+    ASSERT_TRUE(res2[1].forces[1].x > 0);
 }
 
 
@@ -164,20 +158,12 @@ auto equilateralTriangle_2b = AtomicStructure{
         Vector3{0.0, 100.0, 0.0},
         Vector3{0.0, 0.0, 100.0}
     },
-    .atoms = {
-        AtomData{
-            .position = {0.0, 0.0, 0.0},
-            .species = "Fe"
-        },
-        AtomData{
-            .position = {3.0, 0.0, 0.0},
-            .species = "Fe"
-        },
-        AtomData{
-            .position = {1.5, 2.598, 0.0},
-            .species = "Fe"
-        }
-    }
+    .positions = {
+        Vector3{0.0, 0.0, 0.0},
+        Vector3{3.0, 0.0, 0.0},
+        Vector3{1.5, 2.598, 0.0}
+    },
+    .species = {"Fe", "Fe", "Fe"}
 };
 
 TwoBodyDescriptor setupDesc2bSimple_2b() {
@@ -186,17 +172,17 @@ TwoBodyDescriptor setupDesc2bSimple_2b() {
         "kernel": {
             "type": "squared_exp",
             "length_scale": 1.0,
-            "energy_scale": 1.0,
-            "cutoff": {
-                "type": "perriot",
-                "r_min": 9.3,
-                "cutoff": 10.0
-            }
+            "energy_scale": 1.0
         },
         "sparse_data": {
             "Fe,Fe": {
                 "sparse_points": [2.0, 4.0]
             }
+        },
+        "cutoff": {
+            "type": "perriot",
+            "r_min": 9.3,
+            "cutoff": 10.0
         }
     }
     )");
@@ -217,26 +203,26 @@ TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
     double dkdr_at_2 = -2.0 * exp(-0.5);
     double dkdr_at_4 = +2.0 * exp(-0.5);
 
-    auto atoms = equilateralTriangle_2b.atoms;
+    auto positions = equilateralTriangle_2b.positions;
 
     for (int i: {0, 1, 2}) {
         Vector3 derivatives_at2{0,0,0}, derivatives_at4{0,0,0};
         for (int j: {0, 1, 2}) {
             if (i == j) continue;
-            derivatives_at2 = derivatives_at2 + (atoms[i].position - atoms[j].position).normalize() * dkdr_at_2;
-            derivatives_at4 = derivatives_at4 + (atoms[i].position - atoms[j].position).normalize() * dkdr_at_4;
+            derivatives_at2 = derivatives_at2 + (positions[i] - positions[j]).normalize() * dkdr_at_2;
+            derivatives_at4 = derivatives_at4 + (positions[i] - positions[j]).normalize() * dkdr_at_4;
         }
         cout << i << " at 2: " << derivatives_at2.toString() << endl;
         cout << i << " at 4: " << derivatives_at4.toString() << endl;
-        ASSERT_NEAR((res[0].forces[i]-derivatives_at2).norm(), 0, 1e-4);
-        ASSERT_NEAR((res[1].forces[i]-derivatives_at4).norm(), 0, 1e-4);
+        ASSERT_NEAR((res[0].forces[i]+derivatives_at2).len(), 0, 1e-4);
+        ASSERT_NEAR((res[1].forces[i]+derivatives_at4).len(), 0, 1e-4);
     }
 
     cout << desc.serialize().dump() << endl;
 }
 
 TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
-    vector structs = readXyz("test/resources/xyz-samples/FeOnly.xyz");
+    vector structs = readXyz("test/resources/xyz-samples/fe-only.xyz");
     NeighbourFinder::findNeighbours(structs, 5.0);
 
     const auto params2b = nlohmann::json::parse(R"(
@@ -244,17 +230,17 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
         "kernel": {
             "type": "squared_exp",
             "length_scale": 1.0,
-            "energy_scale": 10.0,
-            "cutoff": {
-                "type": "perriot",
-                "r_min": 4.5,
-                "cutoff": 5.0
-            }
+            "energy_scale": 10.0
         },
         "sparse_data": {
             "Fe,Fe": {
                 "sparse_points": [1.0, 1.5, 2.0]
             }
+        },
+        "cutoff": {
+            "type": "perriot",
+            "r_min": 4.5,
+            "cutoff": 5.0
         }
     }
     )");
@@ -264,7 +250,7 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
 
     for (size_t i = 71; i < 440; i++) {
         auto structure = structs[i];
-        cout << structure.atoms.size() << endl;
+        cout << structure.size() << endl;
         auto rep = structure.repeat(2,2,2);
         NeighbourFinder::findNeighbours(rep, 5.0);
         auto predOrig = desc2b.predict(structure);
@@ -282,6 +268,6 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
         for (auto f: predRep.forces.value()) {
             forceSumRep = forceSumRep + f;
         }
-        ASSERT_NEAR(forceSumOrig.norm() * 8, forceSumRep.norm(), 1e-4);
+        ASSERT_NEAR(forceSumOrig.len() * 8, forceSumRep.len(), 1e-4);
     }
 }

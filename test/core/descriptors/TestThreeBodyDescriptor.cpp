@@ -4,6 +4,7 @@
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "utils/Utils.hpp"
+#include "ParserRegistryAuto.hpp"
 
 using namespace jgap;
 
@@ -17,20 +18,12 @@ void initPythagorian3b() {
             Vector3{0, 20, 0},
             Vector3{0, 0, 20},
         },
-        .atoms = {
-            AtomData{
-                .position = Vector3{0, 0, 0},
-                .species = "Fe"
-            },
-            AtomData{
-                .position = Vector3{4, 0, 0},
-                .species = "Fe"
-            },
-            AtomData{
-                .position = Vector3{0, 3, 0},
-                .species = "Fe"
-            }
-        }
+        .positions = {
+            Vector3{0, 0, 0},
+            Vector3{4, 0, 0},
+            Vector3{0, 3, 0}
+        },
+        .species = {"Fe", "Fe", "Fe"}
     };
     NeighbourFinder::findNeighbours(pythagorian3b, 10.0);
 }
@@ -41,14 +34,14 @@ void initThreeBodyParams() {
         "kernel": {
             "type": "squared_exp",
             "length_scale": 1.0,
-            "energy_scale": 1.0,
-            "cutoff": {
-                "type": "perriot",
-                "cutoff_transition_width": 0.5,
-                "cutoff": 10.0
-            }
+            "energy_scale": 1.0
         },
-        "sparse_data": {}
+        "sparse_data": {},
+        "cutoff": {
+            "type": "perriot",
+            "cutoff_transition_width": 0.5,
+            "cutoff": 10.0
+        }
     }
     )");
 }
@@ -71,8 +64,8 @@ TEST(TestThreeBodyDescriptor, CovarianceEnergy) {
 
 TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
     initPythagorian3b();
-    pythagorian3b.atoms[1].species = "Ni";
-    pythagorian3b.atoms[2].species = "Cr";
+    pythagorian3b.species[1] = "Ni";
+    pythagorian3b.species[2] = "Cr";
 
     initThreeBodyParams();
 
@@ -91,13 +84,13 @@ TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
     ASSERT_NEAR(result[0].forces[1].z, 0, 1e-6);
     ASSERT_NEAR(result[0].forces[2].z, 0, 1e-6);
 
-    ASSERT_NEAR(result[0].forces[0].x, 2.0 * -3.0 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].forces[0].y, 2.0 * 1.0 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[0].x, -2.0 * -3.0 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[0].y, -2.0 * 1.0 * exp(-3.0/2.0), 1e-6);
 
-    ASSERT_NEAR(result[0].forces[1].x, 2.0 * 2.2 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].forces[1].y, 2.0 * 0.6 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[1].x, -2.0 * 2.2 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[1].y, -2.0 * 0.6 * exp(-3.0/2.0), 1e-6);
 
-    ASSERT_NEAR(result[0].forces[2].x, 2.0 * 0.8 * exp(-3.0/2.0), 1e-6);
-    ASSERT_NEAR(result[0].forces[2].y, 2.0 * -1.6 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[2].x, -2.0 * 0.8 * exp(-3.0/2.0), 1e-6);
+    ASSERT_NEAR(result[0].forces[2].y, -2.0 * -1.6 * exp(-3.0/2.0), 1e-6);
 }
 

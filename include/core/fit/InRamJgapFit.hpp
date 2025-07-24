@@ -29,6 +29,9 @@ namespace jgap {
         [[nodiscard]]
         shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) override;
 
+    protected:
+        vector<double> leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b);
+
     private:
         map<string, shared_ptr<Descriptor>> _descriptors;
         shared_ptr<SigmaRules> _sigmaRules;
@@ -39,11 +42,11 @@ namespace jgap {
                               const vector<AtomicStructure>& atomicStructures) const;
 
         static Eigen::VectorXd makeB(const vector<shared_ptr<Descriptor>>& descriptors,
-                                     const vector<AtomicStructure>& atomicStructures) ;
+                                     const vector<AtomicStructure>& atomicStructures);
 
         void fillU_mm(size_t startingRow, size_t startingCol, Descriptor &descriptor, Eigen::MatrixXd &A) const;
 
-        static void fillInverseRootSigmaK_nm(
+        static void fillInverseSigmaK_nm(
             const vector<shared_ptr<Descriptor>> &descriptors,
             const AtomicStructure &atomicStructure,
             Eigen::MatrixXd &A,

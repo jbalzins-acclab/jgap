@@ -13,13 +13,16 @@ namespace jgap {
     public:
 
         explicit CosCutoff(nlohmann::json params);
+
         string getType() override {return "coscutoff";};
         nlohmann::json serialize() override;
+        double getCutoff() override { return _cutoff; }
 
         ~CosCutoff() override = default;
 
         double evaluate(double r) override;
         double differentiate(double r) override;
+
 
     private:
         double _cutoff;

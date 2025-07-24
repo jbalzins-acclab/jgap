@@ -4,6 +4,13 @@
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
 
 namespace jgap {
+
+    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const double rMin, const double cutoff) {
+        _rMin = rMin;
+        _cutoff = cutoff;
+        _cutoffWidthInverse = 1.0 / (_cutoff - _rMin);
+    }
+
     PerriotPolynomialCutoff::PerriotPolynomialCutoff(const nlohmann::json &params) {
         _cutoff = params["cutoff"].get<double>();
         if (params.contains("r_min")) {
@@ -19,12 +26,6 @@ namespace jgap {
             {"r_min", _rMin},
             {"cutoff", _cutoff}
         };
-    }
-
-    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const double rMin, const double cutoff) {
-        _rMin = rMin;
-        _cutoff = cutoff;
-        _cutoffWidthInverse = 1.0 / (_cutoff - _rMin);
     }
 
     double PerriotPolynomialCutoff::evaluate(double r) {

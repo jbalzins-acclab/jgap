@@ -208,15 +208,6 @@ namespace jgap {
         file.close();
     }
 
-    // TODO: separate class and play around
-    Vector3 toInvariantTriplet(const pair<double, double> &distanceToNodes, double distanceBetweenNodes) {
-        return {
-            distanceToNodes.first + distanceToNodes.second,
-            pow(distanceToNodes.first - distanceToNodes.second, 2),
-            distanceBetweenNodes
-        };
-    }
-
     vector<string> split(const string& s, char delimiter) {
         vector<string> result;
         stringstream ss(s);
@@ -254,6 +245,39 @@ namespace jgap {
                     ss << ", ";
             }
             ss << "\n";
+        }
+        return ss.str();
+    }
+
+    string vectorToString(const Eigen::VectorXd &vec) {
+        stringstream ss;
+        for (int i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i != vec.size() - 1) {
+                ss << ",";
+            }
+        }
+        return ss.str();
+    }
+
+    string vectorToString(const vector<double> &vec) {
+        stringstream ss;
+        for (int i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i != vec.size() - 1) {
+                ss << ",";
+            }
+        }
+        return ss.str();
+    }
+
+    string vectorToString(const vector<size_t> &vec) {
+        stringstream ss;
+        for (int i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i != vec.size() - 1) {
+                ss << ",";
+            }
         }
         return ss.str();
     }

@@ -40,10 +40,10 @@ namespace jgap {
 
                 // maxSigmaF = max(maxSigmaF, sqrt(sigmaX * sigmaX + sigmaY * sigmaY + sigmaZ * sigmaZ));
                 varianceE += sigmaF.square() * _EFratio * _EFratio;
-                sigmaV += sigmaF.norm() * _VFratio;
+                sigmaV += sigmaF.len() * _VFratio;
 
             } else {
-                const double sigmaF = calculateSigma((*structure.forces)[i].norm());
+                const double sigmaF = calculateSigma((*structure.forces)[i].len());
                 structure.forceSigmasInverse->push_back(Vector3{1.0 / sigmaF, 1.0 / sigmaF, 1.0 / sigmaF});
 
                 // maxSigmaF = max(maxSigmaF, sigmaF);

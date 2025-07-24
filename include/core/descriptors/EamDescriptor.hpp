@@ -3,14 +3,15 @@
 
 #include <nlohmann/json.hpp>
 
+#include "core/cutoff/CutoffFunction.hpp"
 #include "core/descriptors/Descriptor.hpp"
 #include "core/descriptors/kernels/Kernel.hpp"
-#include "data/kernels/EamKernelIndex.hpp"
+#include "data/descriptors/kernels/EamKernelIndex.hpp"
 #include "eam/pair_functions/EamPairFunction.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "kernels/EamSE.hpp"
 #include "memory/MatrixBlock.hpp"
-#include "core/descriptors/sparsification/eam/PerSpeciesEamSparsifier.hpp"
+#include "sparsification/Sparsifier.hpp"
 
 namespace jgap {
 
@@ -31,7 +32,7 @@ namespace jgap {
         size_t nSparsePoints() override;
         map<Species, vector<double>> getSparsePoints() { return _sparsePointsPerSpecies; }
 
-        double getCutoff() override { return _cutoff; }
+        double getCutoff() override { return _maxCutoff; }
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<pair<size_t, shared_ptr<MatrixBlock>>> selfCovariate() override;
@@ -39,9 +40,9 @@ namespace jgap {
         TabulationData tabulate(const TabulationParams &params) override;
 
     private:
-        double _cutoff;
+        double _maxCutoff;
         shared_ptr<EamKernel> _kernel;
-        shared_ptr<PerSpeciesEamSparsifier> _sparsifier;
+        shared_ptr<Sparsifier> _sparsifier;
 
         shared_ptr<EamPairFunction> _defaultPairFunction;
         map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> _pairFunctions;

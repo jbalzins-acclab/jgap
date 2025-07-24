@@ -1,13 +1,10 @@
-//
-// Created by Jegors Balzins on 19.6.2025.
-//
-
 #ifndef EAMKERNELINDEX_HPP
 #define EAMKERNELINDEX_HPP
 
-#include <memory>
 #include <vector>
 #include <map>
+
+#include "data/BasicDataTypes.hpp"
 
 using namespace std;
 
