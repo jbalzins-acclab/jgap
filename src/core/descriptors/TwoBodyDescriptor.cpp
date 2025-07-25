@@ -94,7 +94,7 @@ namespace jgap {
         }
         CurrentLogger::get()->info("Doing 2b sparsification from data");
 
-        map<SpeciesPair, vector<Eigen::VectorXd>> allDistances;
+        map<SpeciesPair, vector<vector<double>>> allDistances;
         for (const auto &structure: fromData) {
             const auto structureIndex = doIndex(structure);
 
@@ -102,7 +102,7 @@ namespace jgap {
 
                 if (!allDistances.contains(speciesPair))  allDistances[speciesPair] = {};
                 for (const auto &entity: perPairIndex) {
-                    allDistances[speciesPair].push_back(Eigen::VectorXd::Constant(1, entity.r));
+                    allDistances[speciesPair].push_back(vector{entity.r});
                 }
             }
         }
@@ -110,9 +110,8 @@ namespace jgap {
         _sparseDataPerSpeciesPair.clear();
         for (const auto &[speciesPair, distances]: allDistances) {
             _sparseDataPerSpeciesPair[speciesPair] = {};
-
-            const vector<Eigen::VectorXd> sparsePoints = _sparsifier->selectSparsePoints(distances);
-            for (const Eigen::VectorXd& point: sparsePoints) {
+            auto sp = _sparsifier->selectSparsePoints(distances);
+            for (const vector<double>& point: sp) {
                 _sparseDataPerSpeciesPair[speciesPair].push_back({
                     .r=point[0],
                     .fCut=_cutoffFunction->evaluate(point[0])
@@ -186,7 +185,7 @@ namespace jgap {
                     pairEnergies[iGrid] += coefficients[indexSparse] * _kernel->covariance(
                         {.r = params.grid2b[iGrid], .fCut = _cutoffFunction->evaluate(params.grid2b[iGrid])},
                         sparsePoints[indexSparse]
-                        );
+                        ) * 2.0/*K_ij+K_ji*/;
                 }
             }
 

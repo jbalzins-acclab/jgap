@@ -113,7 +113,7 @@ namespace jgap {
         }
         CurrentLogger::get()->info("Doing EAM sparsification from data");
 
-        map<Species, vector<Eigen::VectorXd>> allDensitiesPerSpecies;
+        map<Species, vector<vector<double>>> allDensitiesPerSpecies;
         vector<EamKernelIndex> indexArr;
         for (const auto& structure : fromData) {
             for (auto structureIndex = doIndex(structure);
@@ -122,7 +122,7 @@ namespace jgap {
                     allDensitiesPerSpecies[species] = {};
                 }
                 for (const auto& densityData: densities) {
-                    allDensitiesPerSpecies[species].push_back(Eigen::VectorXd::Constant(1, densityData.density));
+                    allDensitiesPerSpecies[species].push_back(vector{densityData.density});
                 }
             }
         }
@@ -130,7 +130,7 @@ namespace jgap {
         _sparsePointsPerSpecies = {};
         for (const auto& [species, densities]: allDensitiesPerSpecies) {
             _sparsePointsPerSpecies[species] = {};
-            for (const Eigen::VectorXd& density: _sparsifier->selectSparsePoints(densities)) {
+            for (const vector<double>& density: _sparsifier->selectSparsePoints(densities)) {
                 _sparsePointsPerSpecies[species].push_back(density[0]);
             }
         }

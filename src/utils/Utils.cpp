@@ -7,6 +7,7 @@
 #include <array>
 #include <sstream>
 #include <fstream>
+#include <ranges>
 #include <Eigen/Dense>
 
 #include "core/neighbours/NeighbourFinder.hpp"
@@ -88,6 +89,21 @@ namespace jgap {
                 energy = energyVal;
             }
 
+            optional<double> energySigmaInverse{};
+            if (size_t energySigmaStartIdx = line.find("energy_sigma="); energySigmaStartIdx != string::npos) {
+                energySigmaStartIdx += string("energy_sigma=").size();
+                size_t energySigmaEndIdx = line.find(' ', energySigmaStartIdx);
+                if (energySigmaEndIdx == string::npos) {
+                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
+                }
+
+                string energySigmaStr = line.substr(energySigmaStartIdx, energySigmaEndIdx - energySigmaStartIdx);
+                iss = istringstream(energySigmaStr);
+                double energySigmaVal;
+                iss >> energySigmaVal;
+                energySigmaInverse = 1.0 / energySigmaVal;
+            }
+
             optional<array<Vector3, 3>> virials{};
             size_t virialsStartIdx = line.find("virial=\"");
             if (virialsStartIdx == string::npos) {
@@ -112,11 +128,62 @@ namespace jgap {
                 virials = virialsVal;
             }
 
+            optional<array<Vector3, 3>> virialsSigmasInverse{};
+            if (size_t virialsSigmaStartIdx = line.find("virials_sigma="); virialsSigmaStartIdx != string::npos) {
+                virialsSigmaStartIdx += string("virials_sigma=").size();
+                size_t virialsSigmaEndIdx = line.find(' ', virialsSigmaStartIdx);
+                if (virialsSigmaEndIdx == string::npos) {
+                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
+                }
+
+                string virialsSigmaStr = line.substr(virialsSigmaStartIdx, virialsSigmaEndIdx - virialsSigmaStartIdx);
+                iss = istringstream(virialsSigmaStr);
+                double virialsSigmaVal;
+                iss >> virialsSigmaVal;
+                virialsSigmasInverse = array{
+                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
+                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
+                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal}
+                };
+            } else if (size_t virialsSigmasStartIdx = line.find("virial_sigmas=\"");
+                       virialsSigmasStartIdx != string::npos) {
+                virialsSigmasStartIdx += string("virials_sigmas=").size();
+                size_t virialsSigmasEndIdx = line.find('\"', virialsSigmasStartIdx);
+                if (virialsSigmasEndIdx == string::npos) {
+                    CurrentLogger::get()->error(format("Virials sigmas parsing error in: {}", line), true);
+                }
+
+                string virialsSigmasStr = line.substr(virialsSigmasStartIdx, virialsSigmasEndIdx - virialsSigmasStartIdx);
+                iss = istringstream(virialsSigmasStr);
+                array<Vector3, 3> virialsSigmasVal{};
+                iss >> virialsSigmasVal[0].x >> virialsSigmasVal[0].y >> virialsSigmasVal[0].z
+                    >> virialsSigmasVal[1].x >> virialsSigmasVal[1].y >> virialsSigmasVal[1].z
+                    >> virialsSigmasVal[2].x >> virialsSigmasVal[2].y >> virialsSigmasVal[2].z;
+                virialsSigmasInverse = array{
+                    Vector3{1.0 / virialsSigmasVal[0].x, 1.0 / virialsSigmasVal[0].y, 1.0 / virialsSigmasVal[0].z},
+                    Vector3{1.0 / virialsSigmasVal[1].x, 1.0 / virialsSigmasVal[1].y, 1.0 / virialsSigmasVal[1].z},
+                    Vector3{1.0 / virialsSigmasVal[2].x, 1.0 / virialsSigmasVal[2].y, 1.0 / virialsSigmasVal[2].z}
+                };
+            }
+
             vector<Vector3> positions(n);
             optional<vector<Vector3>> forces;
+            optional<vector<Vector3>> forceSigmas;
             vector<Species> species(n);
             // todo
-            if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
+            if (line.contains("Properties=species:S:1:pos:R:3:force:R:3:force_sigma:R:3")) {
+                forces = vector<Vector3>(n);
+                forceSigmas = vector<Vector3>(n);
+                for (size_t i = 0; i < n; i++) {
+                    getline(file, line);
+                    iss = istringstream(line);
+                    iss >> species[i];
+                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
+                    iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
+                    iss >> (*forceSigmas)[i].x >> (*forceSigmas)[i].y >> (*forceSigmas)[i].z;
+                }
+
+            } else if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
                 forces = vector<Vector3>(n);
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
@@ -143,7 +210,14 @@ namespace jgap {
                 .species = species,
                 .energy = energy,
                 .forces = forces,
-                .virials = virials
+                .virials = virials,
+                .energySigmaInverse = energySigmaInverse,
+                .forceSigmasInverse = forceSigmas.transform([](vector<Vector3> v) {
+                    return v | std::views::transform([](const Vector3& v_i) {
+                        return Vector3{1.0 / v_i.x,1.0 / v_i.x,1.0 / v_i.x};
+                    }) | std::ranges::to<std::vector>();
+                }),
+                .virialSigmasInverse = virialsSigmasInverse
             });
         }
 

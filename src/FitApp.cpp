@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
         jgap::CurrentLogger::get()->info("Reading training data");
         auto trainingData = jgap::readXyz(fitParams["training_data_xyz"]);
 
-        if (!fitParams.value("use_virials", false)) {
+        if (!fitParams.value("use_virials", true)) {
             jgap::CurrentLogger::get()->warn("Not using virials in training data");
 
             for (auto& structure: trainingData) {

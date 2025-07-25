@@ -11,16 +11,16 @@
 #include "utils/Utils.hpp"
 
 namespace jgap {
+
     class SampleSpaceUniformSparsifier : public Sparsifier {
     public:
         explicit SampleSpaceUniformSparsifier(const nlohmann::json& params);
-
-        vector<Eigen::VectorXd> selectSparsePoints(const vector<Eigen::VectorXd> &allPoints) override;
-
+        vector<vector<double>> selectSparsePoints(const vector<vector<double>> &allPoints) override;
     private:
         size_t _nSparsePoints;
         optional<vector<size_t>> _gridDimensions;
     };
+
     REGISTER_PARSER("sample_space_uniform", Sparsifier, SampleSpaceUniformSparsifier);
 
 }

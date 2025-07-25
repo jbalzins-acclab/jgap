@@ -28,7 +28,7 @@ namespace jgap {
         for (const TwoBodyKernelIndexEntity &index: indexes) {
             // ---------------------- ENERGY --------------------------------
             auto cov = covarianceNoCutoffs(rSparse.r, index.r) * rSparse.fCut * index.fCut;
-            if (index.atomIndex0 != index.atomIndex1) cov *= 2; // K(r_ij,)+K(r_ji)(?)
+            if (index.atomIndex0 != index.atomIndex1) cov *= 2.0; // K(r_ij,)+K(r_ji)(?)
             energy += cov;
 
             // ---------------------- FORCES --------------------------------

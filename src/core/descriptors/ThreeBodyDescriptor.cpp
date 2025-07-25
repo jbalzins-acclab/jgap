@@ -101,9 +101,9 @@ namespace jgap {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("3b sparsifier not set", true);
         }
-        CurrentLogger::get()->info("Doing 2b sparsification from data");
+        CurrentLogger::get()->info("Doing 3b sparsification from data");
 
-        map<SpeciesTriplet, vector<Eigen::VectorXd>> allTriplets;
+        map<SpeciesTriplet, vector<vector<double>>> allTriplets;
         for (const auto &structure: fromData) {
             for (const auto structureTriplets = doIndex(structure);
                  const auto &[speciesTriplet, points]: structureTriplets) {
@@ -112,9 +112,7 @@ namespace jgap {
                 }
 
                 for (const auto &point: points) {
-                    Eigen::VectorXd vec(3);
-                    vec << point.q.x, point.q.y, point.q.z;
-                    allTriplets[speciesTriplet].push_back(vec);
+                    allTriplets[speciesTriplet].push_back(vector{point.q.x, point.q.y, point.q.z});
                 }
             }
         }
@@ -124,7 +122,7 @@ namespace jgap {
         for (const auto &[speciesTriplet, allPoints]: allTriplets) {
             _sparsePointsPerSpeciesTriplet[speciesTriplet] = {};
 
-            for (const Eigen::VectorXd &point: _sparsifier->selectSparsePoints(allPoints)) {
+            for (const vector<double> &point: _sparsifier->selectSparsePoints(allPoints)) {
                 auto q = Vector3{point[0], point[1], point[2]};
                 _sparsePointsPerSpeciesTriplet[speciesTriplet].push_back({
                     .q = q,
@@ -134,7 +132,8 @@ namespace jgap {
         }
     }
 
-    void ThreeBodyDescriptor::setSparsePoints(const map<SpeciesTriplet, vector<Vector3>> &sparsePointsPerSpeciesTriplet) {
+    void ThreeBodyDescriptor::setSparsePoints(
+            const map<SpeciesTriplet, vector<Vector3>> &sparsePointsPerSpeciesTriplet) {
         _sparsePointsPerSpeciesTriplet.clear();
 
         for (const auto &[speciesTriplet, sparsePoints]: sparsePointsPerSpeciesTriplet) {
@@ -222,7 +221,7 @@ namespace jgap {
                     const double contribution = coefficients[indexSparse] * _kernel->covariance(
                         {.q = invariantTriplet, .fCut = invariantTripletToCutoff(invariantTriplet)},
                         sparsePoints[indexSparse]
-                        );
+                        ) * 2.0/*q_ijk + q_jik*/;
                     tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]] += contribution;
                 }
                 tripletEnergies[iGrid[1]][iGrid[0]][iGrid[2]] = tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]];

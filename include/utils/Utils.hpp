@@ -19,7 +19,27 @@ namespace jgap {
     string matrixToString(const Eigen::MatrixXd& mat);
     string vectorToString(const Eigen::VectorXd& vec);
     string vectorToString(const vector<double>& vec);
+    string vectorToString(const vector<double>& vec);
     string vectorToString(const vector<size_t>& vec);
+
+    template <typename Iterator>
+    string iteratorToString(Iterator begin, Iterator end) {
+        ostringstream oss;
+        oss << "[";
+
+        if (begin != end) {
+            oss << *begin;
+            ++begin;
+        }
+
+        while (begin != end) {
+            oss << ", " << *begin;
+            ++begin;
+        }
+
+        oss << "]";
+        return oss.str();
+    }
 }
 
 #endif

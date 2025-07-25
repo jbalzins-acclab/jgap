@@ -13,7 +13,7 @@ namespace jgap {
     class Sparsifier {
     public:
         virtual ~Sparsifier() = default;
-        virtual vector<Eigen::VectorXd> selectSparsePoints(const vector<Eigen::VectorXd> &allPoints) = 0;
+        virtual vector<vector<double>> selectSparsePoints(const vector<vector<double>> &allPoints) = 0;
     };
 }
 

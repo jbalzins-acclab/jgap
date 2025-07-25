@@ -1,6 +1,7 @@
 #include "core/descriptors/sparsification/SampleSpaceUniformSparsifier.hpp"
 
 namespace jgap {
+
     SampleSpaceUniformSparsifier::SampleSpaceUniformSparsifier(const nlohmann::json &params) {
         _nSparsePoints = params["n_sparse"].get<size_t>();
         if (params.contains("grid_dimensions")) {
@@ -11,7 +12,7 @@ namespace jgap {
         }
     }
 
-    vector<Eigen::VectorXd> SampleSpaceUniformSparsifier::selectSparsePoints(const vector<Eigen::VectorXd> &allPoints) {
+    vector<vector<double>> SampleSpaceUniformSparsifier::selectSparsePoints(const vector<vector<double>> &allPoints) {
 
         for (const auto &p : allPoints) {
             if (p.size() != allPoints[0].size()) {
@@ -26,9 +27,9 @@ namespace jgap {
                     )
         );
 
-        Eigen::VectorXd minPoint = Eigen::VectorXd::Constant(gridDimensions.size(), numeric_limits<double>::max());
-        Eigen::VectorXd maxPoint = Eigen::VectorXd::Constant(gridDimensions.size(), 0);
-        Eigen::VectorXd step = Eigen::VectorXd::Constant(gridDimensions.size(), 0);
+        vector<double> minPoint(gridDimensions.size());
+        vector<double> maxPoint(gridDimensions.size());
+        vector<double> step(gridDimensions.size());
 
         for (size_t d = 0; d < gridDimensions.size(); d++) {
             minPoint[d] = std::numeric_limits<double>::max();
@@ -41,14 +42,14 @@ namespace jgap {
         }
 
         CurrentLogger::get()->info(format(
-                "{}d histogram in range {} - {} with {} bins:",
+                "{}d histogram in range {} - {} with {} long bins:",
                 gridDimensions.size(),
-                vectorToString(minPoint),
-                vectorToString(maxPoint),
-                vectorToString(gridDimensions)
+                iteratorToString(minPoint.begin(), minPoint.end()),
+                iteratorToString(maxPoint.begin(), maxPoint.end()),
+                iteratorToString(step.begin(), step.end())
                 ));
 
-        vector<Eigen::VectorXd> sparsePoints;
+        vector<vector<double>> sparsePoints;
         set<vector<size_t>> usefulGridSlots;
         for (const auto &p : allPoints) {
             vector<size_t> gridSlot{};
@@ -58,7 +59,7 @@ namespace jgap {
 
             if (usefulGridSlots.insert(gridSlot).second) {
                 sparsePoints.push_back(p);
-                CurrentLogger::get()->debug(vectorToString(p));
+                CurrentLogger::get()->debug(iteratorToString(p.begin(), p.end()));
             }
         }
         const vector usefulGridSlotsArr(usefulGridSlots.begin(), usefulGridSlots.end());
@@ -72,14 +73,14 @@ namespace jgap {
         while (sparsePoints.size() < _nSparsePoints) {
             vector<size_t> gridSlot = usefulGridSlotsArr[indexDist(gen)];
 
-            Eigen::VectorXd point = Eigen::VectorXd::Constant(gridDimensions.size(), 0);
+            vector<double> point(gridDimensions.size());
             for (size_t d = 0; d < gridDimensions.size(); d++) {
                 uniform_real_distribution<> marginDist(0, step[d]);
                 point[d] = minPoint[d] + step[d] * static_cast<double>(gridSlot[d]) + marginDist(gen);
             }
 
             sparsePoints.push_back(point);
-            CurrentLogger::get()->debug(vectorToString(point));
+            CurrentLogger::get()->debug(iteratorToString(point.begin(), point.end()));
         }
 
         return sparsePoints;

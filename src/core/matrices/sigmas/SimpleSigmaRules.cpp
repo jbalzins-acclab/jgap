@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 23.6.2025.
-//
-
 #include "core/matrices/sigmas/SimpleSigmaRules.hpp"
 
 namespace jgap {
@@ -26,13 +22,13 @@ namespace jgap {
             multiplier = _liquidMultiplier;
         }
 
-        if (ct.contains("short") || ct.contains("traj") || ct.contains("dimer") || ct.contains("trimer")) {
+        if (ct.contains("short") || ct.contains("traj") || ct.contains("low_volume")
+            || ct.contains("dimer") || ct.contains("trimer")) {
             multiplier = _shortRangeMultiplier;
         }
 
         if (!structure.energySigmaInverse.has_value()) {
             structure.energySigmaInverse = 1.0 / (multiplier * _defaultEPerAtom * pow(structure.size(), 0.5));
-            //structure.energySigma = 3.0;
         }
 
         const double dF = 1.0 / (multiplier * _defaultF);
@@ -40,7 +36,7 @@ namespace jgap {
             structure.forceSigmasInverse = vector(structure.size(),  Vector3{dF, dF, dF});
         }
 
-        const double dV = 1.0 / (multiplier * _defaultVirials);
+        const double dV = 1.0 / (multiplier * _defaultVirials * pow(structure.size(), 0.5));
         if (!structure.virialSigmasInverse.has_value()) {
             structure.virialSigmasInverse = {
                 Vector3{dV, dV, dV},
