@@ -48,7 +48,7 @@ namespace jgap {
             if (index.fCut02 < 1.0) {
                 gradUWrtDistances.y += covarianceNoCutoffs(index.q, sparsePoint.q) * index.fCut01 * index.dfCut_dr_02;
             }
-            gradUWrtQ *= 2.0/*q_ijk + q_ikj*/ * sparsePoint.fCut;
+            gradUWrtDistances *= 2.0/*q_ijk + q_ikj*/ * sparsePoint.fCut;
 
             // chain rule x2 ( remember: gradWrtDistances = d/d{r01, r02, r12} )
 

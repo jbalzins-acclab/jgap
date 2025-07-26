@@ -64,7 +64,7 @@ namespace jgap {
         CurrentLogger::get()->info("Making matrix A");
         auto A = makeA(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making matrix A");
-        // CurrentLogger::get()->info(matrixToString(A));
+         CurrentLogger::get()->info(matrixToString(A));
 
         CurrentLogger::get()->info("Making feature vector b");
         auto b = makeB(descriptorsAsVec, _trainingData);

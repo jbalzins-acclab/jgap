@@ -278,8 +278,7 @@ namespace jgap {
                         indexes[speciesTriplet] = ThreeBodyKernelIndex();
                     }
 
-
-                    array<Vector3, 3> r_ij = {
+                    array r_ij = {
                         atom1.position() + neighbour1.offset - atom0.position(),
                         atom2.position() + neighbour2.offset - atom0.position(),
                         atom2.position() + neighbour2.offset - (atom1.position() + neighbour1.offset)

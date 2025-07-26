@@ -34,13 +34,13 @@ namespace jgap {
             // ---------------------- FORCES --------------------------------
             double dE_dr = derivativeNoCutoffs(index.r, rSparse.r) * index.fCut * rSparse.fCut;
 
-            if (index.fCut != 1.0) {
+            if (index.fCut < 1.0) {
                 dE_dr += covarianceNoCutoffs(rSparse.r, index.r) * index.dCut_dr * rSparse.fCut;
             }
 
             auto f10 = index.r01.normalize() * dE_dr;
             if (index.atomIndex0 != index.atomIndex1) {
-                f10 *= 2;
+                f10 *= 2.0;
                 forces[index.atomIndex0] += f10;
                 forces[index.atomIndex1] -= f10;
             }
