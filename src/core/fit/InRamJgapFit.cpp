@@ -64,7 +64,7 @@ namespace jgap {
         CurrentLogger::get()->info("Making matrix A");
         auto A = makeA(descriptorsAsVec, _trainingData);
         CurrentLogger::get()->info("Done making matrix A");
-        // CurrentLogger::get()->info(matrixToString(A));
+         CurrentLogger::get()->info(matrixToString(A));
 
         CurrentLogger::get()->info("Making feature vector b");
         auto b = makeB(descriptorsAsVec, _trainingData);
@@ -129,7 +129,7 @@ namespace jgap {
         }
 
         CurrentLogger::get()->info("Forming in-memory " + to_string(r+c) + "x" + to_string(c) + " A matrix");
-        Eigen::MatrixXd resultingA(r + c, c);
+        Eigen::MatrixXd resultingA = Eigen::MatrixXd::Zero(r + c, c);
 
         atomic counter(0);
         tbb::parallel_for_each(
