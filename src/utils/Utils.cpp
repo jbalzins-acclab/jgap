@@ -145,7 +145,7 @@ namespace jgap {
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal}
                 };
-            } else if (size_t virialsSigmasStartIdx = line.find("virial_sigmas=\"");
+            } else if (size_t virialsSigmasStartIdx = line.find("virials_sigmas=\"");
                        virialsSigmasStartIdx != string::npos) {
                 virialsSigmasStartIdx += string("virials_sigmas=").size();
                 size_t virialsSigmasEndIdx = line.find('\"', virialsSigmasStartIdx);
@@ -182,7 +182,6 @@ namespace jgap {
                     iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
                     iss >> (*forceSigmas)[i].x >> (*forceSigmas)[i].y >> (*forceSigmas)[i].z;
                 }
-
             } else if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
                 forces = vector<Vector3>(n);
                 for (size_t i = 0; i < n; i++) {
