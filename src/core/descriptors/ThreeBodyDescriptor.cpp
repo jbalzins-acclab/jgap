@@ -272,7 +272,7 @@ namespace jgap {
                     auto atom2 = atomicStructure[neighbour2.index];
                     if (neighbour2.distance > _cutoff) continue;
 
-                    auto speciesTriplet = SpeciesTriplet{atom0.species(),{atom1.species(), atom2.species(),}};
+                    auto speciesTriplet = SpeciesTriplet{atom0.species(),{atom1.species(), atom2.species()}};
 
                     if (!indexes.contains(speciesTriplet)) {
                         indexes[speciesTriplet] = ThreeBodyKernelIndex();
