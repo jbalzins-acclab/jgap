@@ -122,7 +122,9 @@ namespace jgap {
                     allDensitiesPerSpecies[species] = {};
                 }
                 for (const auto& densityData: densities) {
-                    allDensitiesPerSpecies[species].push_back(vector{densityData.density});
+                    if (densityData.density > 3) {
+                        allDensitiesPerSpecies[species].push_back(vector{densityData.density});
+                    }
                 }
             }
         }
