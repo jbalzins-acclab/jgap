@@ -4,6 +4,7 @@ notes/*
 cmake-build-debug/*
 vcpkg_installed/*
 *.DS_Store
+.DS_Store
 .idea*
 /include/ParserRegistryAuto.hpp
 /test-local/*

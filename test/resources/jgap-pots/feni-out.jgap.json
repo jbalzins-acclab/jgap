@@ -20,14 +20,14 @@
             "descriptors": {
                 "my_2b": {
                     "kernel": {
-                        "cutoff": {
-                            "cutoff": 5.0,
-                            "r_min": 4.5,
-                            "type": "perriot"
-                        },
                         "energy_scale": 10.0,
                         "length_scale": 1.0,
                         "type": "squared_exp"
+                    },
+                    "cutoff": {
+                        "cutoff": 5.0,
+                        "r_min": 4.5,
+                        "type": "perriot"
                     },
                     "sparse_data": {
                         "Fe,Fe": {
@@ -173,14 +173,14 @@
                 },
                 "my_3b": {
                     "kernel": {
-                        "cutoff": {
-                            "cutoff": 4.0,
-                            "r_min": 3.4,
-                            "type": "perriot"
-                        },
                         "energy_scale": 1.0,
                         "length_scale": 1.0,
                         "type": "squared_exp"
+                    },
+                    "cutoff": {
+                        "cutoff": 4.0,
+                        "r_min": 3.4,
+                        "type": "perriot"
                     },
                     "sparse_data": {
                         "Fe,Fe,Fe": {

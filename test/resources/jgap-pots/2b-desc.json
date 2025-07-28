@@ -6,14 +6,14 @@
                 "my_2b": {
                     "type": "2b",
                     "kernel": {
-                        "cutoff": {
-                            "cutoff": 10.0,
-                            "r_min": 9.0,
-                            "type": "perriot"
-                        },
                         "energy_scale": 1.0,
                         "length_scale": 1.0,
                         "type": "squared_exp"
+                    },
+                    "cutoff": {
+                        "cutoff": 10.0,
+                        "r_min": 9.0,
+                        "type": "perriot"
                     },
                     "sparse_data": {
                         "Fe,Fe": {

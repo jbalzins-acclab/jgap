@@ -1,0 +1,78 @@
+{
+    "output_file": "fe-out.jgap.json",
+    "training_data_xyz": "resources/xyz-samples/fe-only.xyz",
+    "use_virials": true,
+    "external": {
+        "type": "zbl"
+    },
+    "fits": {
+        "isolated_atom": {
+            "type": "isolated_atom"
+        },
+        "jgap_fe": {
+            "type": "in_ram_jgap",
+            "sigma_rules": {
+                "type": "simple",
+                "E_per_root_n_atoms": 0.001,
+                "F_component": 0.05,
+                "liquid": 5.0,
+                "short_range": 5.0
+            },
+            "descriptors": {
+                "my_2b": {
+                    "type": "2b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 10.0
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse": 20
+                    },
+                    "cutoff": {
+                        "type": "perriot",
+                        "cutoff_transition_width": 0.5,
+                        "cutoff": 5
+                    }
+                },
+                "my_eam": {
+                    "type": "eam",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0
+                    },
+                    "pair_functions": [
+                        {
+                            "type": "polycutoff",
+                            "cutoff": 5.0,
+                            "r_min": 0
+                        }
+                    ],
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse": 20
+                    }
+                },
+                "my_3b": {
+                    "type": "3b",
+                    "kernel": {
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0
+                    },
+                    "sparsify": {
+                        "type": "sample_space_uniform",
+                        "n_sparse": 500
+                    },
+                    "cutoff": {
+                        "type": "perriot",
+                        "cutoff_transition_width": 0.6,
+                        "cutoff": 4.0
+                    }
+                }
+            }
+        }
+    }
+}
