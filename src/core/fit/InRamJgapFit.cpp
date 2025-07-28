@@ -91,8 +91,7 @@ namespace jgap {
 
     vector<double> InRamJgapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
         CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
-        Eigen::HouseholderQR<Eigen::MatrixXd> qr;
-        qr.compute(A);
+        const Eigen::HouseholderQR<Eigen::Ref<Eigen::MatrixXd>> qr(A);
 
         CurrentLogger::get()->debug("Q^t");
         auto Qt = qr.householderQ().transpose();
