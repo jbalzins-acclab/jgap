@@ -1,3 +1,5 @@
+#include <oneapi/tbb/parallel_for_each.h>
+
 #include "core/fit/CompositeFit.hpp"
 #include "core/potentials/CompositePotential.hpp"
 
@@ -91,9 +93,9 @@ namespace jgap {
         vector dataToBeFit(originalData.begin(), originalData.end());
         NeighbourFinder::findNeighbours(dataToBeFit, potential->getCutoff());
 
-        for (auto& structure: dataToBeFit) {
+        tbb::parallel_for_each(dataToBeFit.begin(), dataToBeFit.end(), [&](AtomicStructure& structure) -> void {
             structure.adjust(potential->predict(structure), true, false);
-        }
+        });
 
         return dataToBeFit;
     }

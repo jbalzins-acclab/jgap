@@ -39,6 +39,7 @@ namespace jgap {
 
             // metadata
             getline(file, line);
+            line += " "; // simplify end of line parsing
 
             if (!line.contains("pbc=\"T T T\"")) {
                 CurrentLogger::get()->error(format("No PBC? : {}", line), true);
@@ -79,7 +80,7 @@ namespace jgap {
                 energyStartIdx += string("energy=").size();
                 size_t energyEndIdx = line.find(' ', energyStartIdx);
                 if (energyEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
+                    CurrentLogger::get()->error(format("Energy formatting error in: {}", line), true);
                 }
 
                 string energyStr = line.substr(energyStartIdx, energyEndIdx - energyStartIdx);
@@ -94,7 +95,7 @@ namespace jgap {
                 energySigmaStartIdx += string("energy_sigma=").size();
                 size_t energySigmaEndIdx = line.find(' ', energySigmaStartIdx);
                 if (energySigmaEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
+                    CurrentLogger::get()->error(format("energy_sigma formatting error in: {}", line), true);
                 }
 
                 string energySigmaStr = line.substr(energySigmaStartIdx, energySigmaEndIdx - energySigmaStartIdx);
@@ -133,7 +134,7 @@ namespace jgap {
                 virialsSigmaStartIdx += string("virials_sigma=").size();
                 size_t virialsSigmaEndIdx = line.find(' ', virialsSigmaStartIdx);
                 if (virialsSigmaEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
+                    CurrentLogger::get()->error(format("virials_sigma formatting error in: {}", line), true);
                 }
 
                 string virialsSigmaStr = line.substr(virialsSigmaStartIdx, virialsSigmaEndIdx - virialsSigmaStartIdx);
