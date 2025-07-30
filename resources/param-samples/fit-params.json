@@ -3,7 +3,8 @@
     "training_data_xyz": "resources/xyz-samples/fe-only.xyz",
     "use_virials": true,
     "external": {
-        "type": "zbl"
+        "type": "zbl",
+        "dmol_fit_coefficients_file": "/path/to/resources/dmol-screening-fit/dmol-fit.json"
     },
     "fits": {
         "isolated_atom": {

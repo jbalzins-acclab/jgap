@@ -23,7 +23,12 @@
 - c++ complier supporting c++23(c++20 might be enough, but that wasn't tested in a while)
   - do "module load gcc/14.2" on Puhti
 - VCPKG:
-  - Follow instructions: https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash)
+  - (Follow instructions: https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash))
+    - git clone https://github.com/microsoft/vcpkg.git
+    - cd vcpkg && ./bootstrap-vcpkg.sh
+    - nano ~/.bashrc or ~/.zshrc
+    - export VCPKG_ROOT=/path/to/vcpkg
+    - export PATH=$VCPKG_ROOT:$PATH
   - in root project dir: vcpkg install
   - (vcpkg integrate to see what to add to cmake params)
 ### Compile
