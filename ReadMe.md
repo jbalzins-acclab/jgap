@@ -7,7 +7,7 @@
 - Significant speedup in kernel matrix formation & RAM usage improvement compared to QUIP with basic compilation:
   - ~20 sec(on my laptop) for Iron potential | ~500Mb
   - ~20 sec(on Puhti node; ~15 min total(+QR..) on a desktop but tested a while ago) for FeNi potential | ~7Gb RAM
-  - 3 min(on Puhti node) for CrMnFeNi potential | ~110Gb with virial fit
+  - 3 min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
   - more to be tested.
   - RAM usage can be estimated from logs(look for matrix size).
   - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
