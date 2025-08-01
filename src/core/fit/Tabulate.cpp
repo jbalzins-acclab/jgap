@@ -31,7 +31,7 @@ namespace jgap {
             CurrentLogger::get()->debug(format("Saving eam.fs #{}", index));
             writeEamFs(potential, params, tabulationParams,
                        tabulationData.eamTabulationData[index], outputFileNamePrefix,
-                       tabulationData.pairEnergies, index == 0);
+                       tabulationData.pairEnergies, index);
         }
     }
 
@@ -124,11 +124,14 @@ namespace jgap {
                               const EamTabulationData& data,
                               const string &outputFileNamePrefix,
                               const map<SpeciesPair, vector<double>> &pairEnergies,
-                              const bool writePairEnergies) {
+                              const size_t index) {
 
-        ofstream eamFsFile(outputFileNamePrefix + ".eam.fs");
+        const string filename = outputFileNamePrefix + (index != 0 ? "#" + to_string(index) : "") + ".eam.fs";
+
+        CurrentLogger::get()->error("Could not open " + filename);
+        ofstream eamFsFile(filename);
         if (!eamFsFile.is_open()) {
-            CurrentLogger::get()->error("Could not open " + outputFileNamePrefix + ".eam.fs", true);
+            CurrentLogger::get()->error("Could not open " + filename, true);
         }
         eamFsFile << fixed << setprecision(17);
 
@@ -189,7 +192,7 @@ namespace jgap {
                 //cout << elements[i] << " " << elements[j] << endl;
                 const auto& energies = pairEnergies.at({elements[i], elements[j]});
                 for (size_t k = 0; k < energies.size(); k++) {
-                    eamFsFile << (writePairEnergies ? energies[k]*tabulationParams.grid2b[k] : 0) << endl;
+                    eamFsFile << (index == 0 ? energies[k]*tabulationParams.grid2b[k] : 0) << endl;
                 }
             }
         }

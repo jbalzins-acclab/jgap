@@ -1,3 +1,4 @@
+#include <fstream>
 #include <oneapi/tbb/parallel_for_each.h>
 
 #include "core/fit/CompositeFit.hpp"
@@ -8,6 +9,19 @@ namespace jgap {
         if (params.contains("external")) {
             CurrentLogger::get()->info("External potential setup");
             _externalPotential = ParserRegistry<Potential>::get(params["external"]);
+        } else if (params.contains("external_from_file")) {
+            CurrentLogger::get()->info(
+                format("External potential setup from {}", params["external_from_file"].dump())
+                );
+
+            nlohmann::json externalPotentialParams;
+            ifstream externalPotentialFile(params["external_from_file"].get<string>());
+            if (!externalPotentialFile.is_open()) {
+                CurrentLogger::get()->error("Could not open external potential file", true);
+            }
+
+            externalPotentialFile >> externalPotentialParams;
+            _externalPotential = ParserRegistry<Potential>::get(externalPotentialParams);
         } else {
             _externalPotential = {};
         }

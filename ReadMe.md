@@ -40,7 +40,6 @@
   - jgap_fit_app - GAP fitting
   - jgap_predict_app - to use the GAP potential
   - jgap_tabulate_app - tabulate GAP potential
-    - and copy /resources & /test/resources to build directory - if you run app not from the build directory and use Screened coulomb => copy /resources manually
 ### Run
 (see param samples in /resources)
 - jgap_fit_app fit_param_file.json => outputs potential.json

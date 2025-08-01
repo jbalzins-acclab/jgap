@@ -15,7 +15,6 @@
 
 #define DEFAULT_ZBL_CUTOFF 2.2
 #define DEFAULT_ZBL_RMIN 1.2
-#define DEFAULT_DMOL_FILE_PATH "resources/dmol-screening-fit/dmol-fit.json"
 
 namespace jgap {
     class ZblPotential : public Potential {
@@ -38,6 +37,8 @@ namespace jgap {
 
         const double _eps = 8.854187817e-12;
         const double _electronCharge = 1.60217657e-19;
+
+        static string getDefaultDmolFilePath();
 
         double zbl_eV(const SpeciesPair& speciesPair, double r);
         double zblWithCutoff_eV(const SpeciesPair& speciesPair, double r);

@@ -77,7 +77,10 @@ namespace jgap {
                     for (const auto& atom: *this) {
                         cpy.species.push_back(atom.species());
                         cpy.positions.push_back(
-                            atom.position() + this->lattice[0] * i + this->lattice[1] * j + this->lattice[2] * k
+                            atom.position()
+                                + this->lattice[0] * static_cast<double>(i)
+                                + this->lattice[1] * static_cast<double>(j)
+                                + this->lattice[2] * static_cast<double>(k)
                             );
                         if (forces.has_value()) {
                             cpy.forces->push_back(atom.force());

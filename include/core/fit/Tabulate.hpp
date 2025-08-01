@@ -31,7 +31,7 @@ namespace jgap {
                                const EamTabulationData& data,
                                const string &outputFileNamePrefix,
                                const map<SpeciesPair, vector<double>> &pairEnergies,
-                               bool writePairEnergies);
+                               size_t index);
     };
 }
 

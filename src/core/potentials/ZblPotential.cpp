@@ -2,6 +2,8 @@
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
 
 #include <fstream>
+#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 
@@ -12,7 +14,7 @@ namespace jgap {
         ifstream fIn(_dmolFile);
         if (!fIn.is_open()) {
             CurrentLogger::get()->error("Could not open dmol_fit_coefficients_file: " + _dmolFile, false);
-            fIn = ifstream(DEFAULT_DMOL_FILE_PATH);
+            fIn = ifstream(getDefaultDmolFilePath());
             if (!fIn.is_open()) {
                 CurrentLogger::get()->error("Could not open default dmol_fit_coefficients_file", true);
             }
@@ -43,7 +45,7 @@ namespace jgap {
 
         // TODO: not sure if default value is a good idea here
 
-        _dmolFile = zblParams.value("dmol_fit_coefficients_file", DEFAULT_DMOL_FILE_PATH);
+        _dmolFile = zblParams.value("dmol_fit_coefficients_file", getDefaultDmolFilePath());
         parseDmolFitCoefficients();
     }
 
@@ -52,7 +54,7 @@ namespace jgap {
         auto cutoffData = _cutoffFunction->serialize();
         cutoffData["type"] = _cutoffFunction->getType();
 
-        if (_dmolFile != DEFAULT_DMOL_FILE_PATH) {
+        if (_dmolFile != getDefaultDmolFilePath()) {
             return {
                 {"cutoff", cutoffData},
                 {"dmol_fit_coefficients_file", _dmolFile}
@@ -131,6 +133,12 @@ namespace jgap {
             forces,
             virials
         };
+    }
+
+    string ZblPotential::getDefaultDmolFilePath() {
+        boost::filesystem::path exePath = boost::dll::program_location();
+        boost::filesystem::path exeDir = exePath.parent_path();
+        return (exeDir / "resources" / "dmol-screening-fit" / "dmol-fit.json").string();
     }
 
     double ZblPotential::zbl_eV(const SpeciesPair& speciesPair, double r) {

@@ -18,6 +18,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem system dll)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -105,6 +106,9 @@ target_link_libraries(jgap PRIVATE
         spdlog::spdlog
         Eigen3::Eigen
         HighFive
+        Boost::filesystem
+        Boost::system
+        Boost::dll
 )
 
 target_link_libraries(jgap_fit_app PRIVATE

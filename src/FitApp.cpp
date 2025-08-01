@@ -81,8 +81,11 @@ int main(int argc, char** argv) {
         // ------------------------ SAVE -------------------------------
 
         jgap::CurrentLogger::get()->info(format("Saving resulting potential data to {}", outputFileName));
+        auto output = resultingPotential->serialize();
+        output["type"] = resultingPotential->getType();
+
         ofstream outFile(outputFileName);
-        outFile << resultingPotential->serialize().dump(4) << endl;
+        outFile << output.dump(4) << endl;
         outFile.flush();
         outFile.close();
 

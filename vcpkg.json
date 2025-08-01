@@ -1,6 +1,6 @@
 {
   "name" : "jgap",
-  "version" : "4.1.1",
+  "version" : "4.2.0",
   "dependencies" : [
     {
       "name" : "nlohmann-json",
@@ -21,6 +21,18 @@
     {
         "name": "highfive",
         "version>=": "3.0.0"
+    },
+    {
+      "name": "boost-filesystem",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-system",
+      "version>=": "1.81.0"
+    },
+    {
+      "name": "boost-dll",
+      "version>=": "1.81.0"
     }
   ]
 }
