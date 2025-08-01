@@ -6,7 +6,7 @@
 #include "core/potentials/Potential.hpp"
 #include "core/descriptors/Descriptor.hpp"
 #include "core/potentials/JgapPotential.hpp"
-#include "core/matrices/sigmas/SigmaRules.hpp"
+#include "core/matrices/sigmas/RegularizationRules.hpp"
 
 #include <Eigen/Dense>
 
@@ -34,7 +34,7 @@ namespace jgap {
 
     private:
         map<string, shared_ptr<Descriptor>> _descriptors;
-        shared_ptr<SigmaRules> _sigmaRules;
+        shared_ptr<RegularizationRules> _sigmaRules;
         double _jitter;
 
         [[nodiscard]]

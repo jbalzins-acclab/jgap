@@ -1,8 +1,8 @@
-#include "core/matrices/sigmas/SimpleSigmaRules.hpp"
+#include "core/matrices/sigmas/SimpleRegularizationRules.hpp"
 
 namespace jgap {
 
-    SimpleSigmaRules::SimpleSigmaRules(const nlohmann::json &params) {
+    SimpleRegularizationRules::SimpleRegularizationRules(const nlohmann::json &params) {
         _defaultEPerAtom = params["E_per_root_n_atoms"];
         _defaultF = params.value("F_component", _defaultEPerAtom * 50.0);
         _defaultVirials = params.value("virials", _defaultEPerAtom * 100.0);
@@ -10,7 +10,7 @@ namespace jgap {
         _shortRangeMultiplier = params["short_range"];
     }
 
-    void SimpleSigmaRules::fillSigmas(AtomicStructure &structure) {
+    void SimpleRegularizationRules::fillSigmas(AtomicStructure &structure) {
         double multiplier = 1.0;
         const auto ct = structure.configType.value_or("default");
 

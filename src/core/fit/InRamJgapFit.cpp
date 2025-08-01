@@ -1,6 +1,6 @@
 #include "core/fit/InRamJgapFit.hpp"
 
-#include "core/matrices/sigmas/SimpleSigmaRules.hpp"
+#include "core/matrices/sigmas/SimpleRegularizationRules.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/StdoutLogger.hpp"
 
@@ -17,7 +17,7 @@ namespace jgap {
             _descriptors[label] = (ParserRegistry<Descriptor>::get(descriptor));
         }
 
-        _sigmaRules = ParserRegistry<SigmaRules>::get(params["sigma_rules"]);
+        _sigmaRules = ParserRegistry<RegularizationRules>::get(params["sigma_rules"]);
         _jitter = params.value("jitter", 1e-8);
     }
 
