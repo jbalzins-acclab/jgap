@@ -1,5 +1,6 @@
-#ifndef INRAMJGAPFIT_HPP
-#define INRAMJGAPFIT_HPP
+#ifndef SSDJGAPFIT_HPP
+#define SSDJGAPFIT_HPP
+#ifndef _WIN32
 
 #include "data/BasicDataTypes.hpp"
 #include "io/log/CurrentLogger.hpp"
@@ -13,30 +14,28 @@
 #include <memory>
 #include <concepts>
 
-#include "Fit.hpp"
+#include "core/fit/Fit.hpp"
 
 using namespace std;
 
 namespace jgap {
 
-    class InRamJgapFit : public Fit {
+    class SsdJgapFit : public Fit {
     public:
-        ~InRamJgapFit() override = default;
+        ~SsdJgapFit() override = default;
 
-        explicit InRamJgapFit(const nlohmann::json& params);
-        string getType() override { return "in_ram_jgap"; }
+        explicit SsdJgapFit(const nlohmann::json& params);
+        string getType() override { return "ssd_jgap"; }
 
         shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) override;
 
-    protected:
-        vector<double> leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b);
-
     private:
+        string _ssdTmpDir;
+
         map<string, shared_ptr<Descriptor>> _descriptors;
         shared_ptr<RegularizationRules> _regularizationRules;
         double _jitter;
 
-        [[nodiscard]]
         Eigen::MatrixXd makeA(const vector<shared_ptr<Descriptor>>& descriptors,
                               const vector<AtomicStructure>& atomicStructures) const;
 
@@ -56,7 +55,8 @@ namespace jgap {
         static Eigen::MatrixXd convertToEigen(MatrixBlock& matrixBlock);
     };
 
-    REGISTER_PARSER("in_ram_jgap", Fit, InRamJgapFit)
+    REGISTER_PARSER("ssd_jgap", Fit, SsdJgapFit)
 }
 
+#endif
 #endif
