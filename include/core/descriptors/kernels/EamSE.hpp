@@ -11,7 +11,11 @@ namespace jgap {
 
     class EamSE : public EamKernel {
     public:
+        explicit EamSE(double energyScale, double lengthScale);
+
         explicit EamSE(const nlohmann::json &params);
+        string getType() override { return "squared_exp"; }
+        nlohmann::json serialize() override;
 
         Covariance covariance(const AtomicStructure &structure,
                               const EamKernelIndexPerSpecies &indexes,
@@ -19,13 +23,12 @@ namespace jgap {
 
         double covariance(const double &density1, const double &density2) override;
 
-        string getType() override { return "squared_exp"; }
-        nlohmann::json serialize() override;
 
     private:
         double _energyScaleSquared;
         double _lengthScale;
         double _inverse2ThetaSq;
+        double _inverseThetaSq;
 
         double derivative(const double &changingDensity, const double &constantDensity);
     };

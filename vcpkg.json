@@ -1,38 +1,42 @@
 {
-  "name" : "jgap",
-  "version" : "4.3.0",
-  "dependencies" : [
-    {
-      "name" : "nlohmann-json",
-      "version>=" : "3.11.2"
-    },
-    {
-        "name": "tbb",
-        "version>=": "2022.1.0#0"
-    },
-    {
-      "name" : "spdlog",
-      "version>=" : "1.15.1#1"
-    },
-    {
-      "name" : "eigen3",
-      "version>=": "3.4.0#5"
-    },
-    {
-        "name": "highfive",
-        "version>=": "3.0.0"
-    },
-    {
-      "name": "boost-filesystem",
-      "version>=": "1.81.0"
-    },
-    {
-      "name": "boost-system",
-      "version>=": "1.81.0"
-    },
-    {
-      "name": "boost-dll",
-      "version>=": "1.81.0"
-    }
-  ]
+    "name" : "jgap",
+    "version" : "4.4.0",
+    "dependencies" : [
+        {
+            "name" : "nlohmann-json",
+            "version>=" : "3.11.2"
+        },
+        {
+            "name": "tbb",
+            "version>=": "2022.1.0#0"
+        },
+        {
+            "name" : "spdlog",
+            "version>=" : "1.15.1#1"
+        },
+        {
+            "name" : "eigen3",
+            "version>=": "3.4.0#5"
+        },
+        {
+            "name": "highfive",
+            "version>=": "3.0.0"
+        },
+        {
+            "name": "boost-filesystem",
+            "version>=": "1.81.0"
+        },
+        {
+            "name": "boost-system",
+            "version>=": "1.81.0"
+        },
+        {
+            "name": "boost-dll",
+            "version>=": "1.81.0"
+        },
+        {
+            "name": "pugixml",
+            "version>=": "1.15#0"
+        }
+    ]
 }

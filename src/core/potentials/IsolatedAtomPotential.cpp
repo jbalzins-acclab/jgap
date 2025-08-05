@@ -16,6 +16,11 @@ namespace jgap {
         }
     }
 
+    IsolatedAtomPotential::IsolatedAtomPotential(const map<Species, double> &isolatedAtomEnergies, bool errorOnUnknown) {
+        _isolatedEnergies = isolatedAtomEnergies;
+        _errorOnUnknownSpecies = errorOnUnknown;
+    }
+
     nlohmann::json IsolatedAtomPotential::serialize() {
         return {
             {"error_on_unknown", _errorOnUnknownSpecies},

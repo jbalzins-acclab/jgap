@@ -18,7 +18,10 @@ namespace jgap {
         virtual double differentiate(double distance) = 0;
         virtual string getType() = 0;
         virtual nlohmann::json serialize() = 0;
+
+        [[nodiscard]] double getCutoff() const { return _cutoff;}
     protected:
+        double _cutoff = 0;
         double _prefactor = 1;
     };
 }

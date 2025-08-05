@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 18.6.2025.
-//
-
 #include "core/descriptors/EamDescriptor.hpp"
 
 #include <random>
@@ -11,6 +7,20 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
+    EamDescriptor::EamDescriptor(shared_ptr<EamKernel> kernel,
+                                 shared_ptr<EamPairFunction> defaultPairFunction,
+                                 map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions)
+        : _kernel(std::move(kernel)),
+          _sparsifier(nullptr),
+          _defaultPairFunction(defaultPairFunction), _pairFunctions(std::move(pairFunctions)),
+          _sparsePointsPerSpecies({}) {
+
+        _maxCutoff = 0;
+        for (const auto& pf: pairFunctions | views::values) {
+            _maxCutoff = max(_maxCutoff, pf->getCutoff());
+        }
+    }
+
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
         CurrentLogger::get()->debug("Parsing EAM descriptor params");
 
@@ -63,7 +73,7 @@ namespace jgap {
                 _defaultPairFunction = pf;
             }
 
-            _maxCutoff = max(_maxCutoff, pfParams["cutoff"].get<double>());
+            _maxCutoff = max(_maxCutoff, pf->getCutoff());
         }
     }
 
@@ -187,13 +197,20 @@ namespace jgap {
     TabulationData EamDescriptor::tabulate(const TabulationParams &params) {
         EamTabulationData result;
 
-        result.rhoMax = 0.0;
+        result.maxDensity = 0.0;
         for (const auto& points: _sparsePointsPerSpecies | views::values) {
-            result.rhoMax = max(result.rhoMax, ranges::max(points));
+            result.maxDensity = max(result.maxDensity, ranges::max(points));
         }
-        result.rhoMax += 3.5; // TODO: this is very SqExp specific
+        result.maxDensity += 3.5; // TODO: this is very SqExp specific
+        if (result.maxDensity - params.maxDensity.value_or(result.maxDensity) > 1) {
+            CurrentLogger::get()->warn(format(
+                "max_eam_density={} is too low - highest sparse point is {}",
+                params.maxDensity.value(), result.maxDensity
+                ));
+        }
+        result.maxDensity = params.maxDensity.value_or(result.maxDensity);
 
-        const double rhoStep = result.rhoMax / static_cast<double>(params.nDensities-1);
+        const double rhoStep = result.maxDensity / static_cast<double>(params.nDensities - 1);
 
         size_t counter = 0;
         for (const auto& [species, points]: _sparsePointsPerSpecies) {

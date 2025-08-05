@@ -16,6 +16,8 @@ namespace jgap {
 
     class ThreeBodySE : public ThreeBodyKernel {
     public:
+        explicit ThreeBodySE(double energyScale, double lengthScale);
+
         explicit ThreeBodySE(const nlohmann::json& params);
         string getType() override { return "squared_exp"; }
         nlohmann::json serialize() override;

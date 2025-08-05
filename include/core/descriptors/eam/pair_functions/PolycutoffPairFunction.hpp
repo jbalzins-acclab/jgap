@@ -31,9 +31,10 @@ namespace jgap {
             };
         }
 
-        PolycutoffPairFunction(const double cutoff, const double rmin)
-            : _cutoff(cutoff), _rmin(rmin) {
+        PolycutoffPairFunction(const double cutoff, const double rmin, const double prefactor = 1.0) : _rmin(rmin) {
+            _cutoff = cutoff;
             _intervalInverse = 1.0 / (_cutoff - _rmin);
+            _prefactor = prefactor;
         }
 
         ~PolycutoffPairFunction() override = default;
@@ -58,7 +59,6 @@ namespace jgap {
         string getType() override { return "polycutoff"; }
 
     private:
-        double _cutoff;
         double _rmin;
         double _intervalInverse;
     };

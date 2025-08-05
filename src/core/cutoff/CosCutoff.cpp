@@ -14,6 +14,12 @@ namespace jgap {
         _cutoffTransitionWidthInverse = (1.0 / _cutoffTransitionWidth);
     }
 
+    CosCutoff::CosCutoff(const double cutoff, const double rMin) {
+        _cutoff = cutoff;
+        _cutoffTransitionWidth = cutoff - rMin;
+        _cutoffTransitionWidthInverse = (1.0 / _cutoffTransitionWidth);
+    }
+
     nlohmann::json CosCutoff::serialize() {
         return {
             {"cutoff", _cutoff},

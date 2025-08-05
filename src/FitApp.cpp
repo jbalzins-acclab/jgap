@@ -89,6 +89,8 @@ int main(int argc, char** argv) {
         outFile.flush();
         outFile.close();
 
+        jgap::CurrentLogger::get()->info("Fit complete");
+
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
         print_backtrace();

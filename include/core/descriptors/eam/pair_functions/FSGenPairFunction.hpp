@@ -11,7 +11,7 @@
 namespace jgap {
     class FSGenPairFunction : public EamPairFunction {
     public:
-        FSGenPairFunction(const nlohmann::json& params) {
+        explicit FSGenPairFunction(const nlohmann::json& params) {
             _cutoff = params["cutoff"];
             _degree = params["degree"];
             _prefactor = params.value("prefactor", 1.0);
@@ -26,8 +26,10 @@ namespace jgap {
             };
         }
 
-        FSGenPairFunction(const double cutoff, const double degree) : _cutoff(cutoff), _degree(degree) {
+        FSGenPairFunction(const double cutoff, const double degree, const double prefactor = 1.0) : _degree(degree) {
+            _cutoff = cutoff;
             _cutoffInverse = 1.0 / _cutoff;
+            _prefactor = prefactor;
         }
 
         ~FSGenPairFunction() override = default;
@@ -45,7 +47,6 @@ namespace jgap {
         string getType() override { return "fsgen"; }
 
     private:
-        double _cutoff;
         double _cutoffInverse;
         double _degree;
     };

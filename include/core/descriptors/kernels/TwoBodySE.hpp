@@ -12,6 +12,8 @@ namespace jgap {
 
     class TwoBodySE : public TwoBodyKernel {
     public:
+        explicit TwoBodySE(double energyScale, double lengthScale);
+
         explicit TwoBodySE(const nlohmann::json &params);
         string getType() override { return "squared_exp"; }
         nlohmann::json serialize() override;

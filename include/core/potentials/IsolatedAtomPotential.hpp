@@ -19,6 +19,8 @@ namespace jgap {
         ~IsolatedAtomPotential() override = default;
 
         explicit IsolatedAtomPotential(const nlohmann::json& params);
+        explicit IsolatedAtomPotential(const map<Species, double>& isolatedAtomEnergies, bool errorOnUnknown);
+
         nlohmann::json serialize() override;
         string getType() override { return "isolated_atom"; }
         double getCutoff() override { return 0.0; }

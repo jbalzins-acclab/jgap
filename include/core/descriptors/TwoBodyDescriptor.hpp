@@ -18,6 +18,10 @@ namespace jgap {
 
     class TwoBodyDescriptor : public Descriptor {
     public:
+        explicit TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction, shared_ptr<TwoBodyKernel> kernel)
+            : _cutoffFunction(std::move(cutoffFunction)), _kernel(std::move(kernel)),
+              _sparsifier(nullptr), _sparseDataPerSpeciesPair({}) {};
+
         explicit TwoBodyDescriptor(const nlohmann::json& params);
         nlohmann::json serialize() override;
         string getType() override { return "2b"; };

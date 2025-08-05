@@ -30,9 +30,10 @@ namespace jgap {
             };
         }
 
-        CoscutoffPairFunction(const double cutoff, const double rmin)
-            : _cutoff(cutoff), _rmin(rmin) {
+        CoscutoffPairFunction(const double cutoff, const double rMin, const double prefactor = 1.0) : _rmin(rMin) {
+            _cutoff = cutoff;
             _intervalInverse = 1.0 / (_cutoff - _rmin);
+            _prefactor = prefactor;
         }
 
         ~CoscutoffPairFunction() override = default;
@@ -57,7 +58,6 @@ namespace jgap {
         string getType() override { return "coscutoff"; }
 
     private:
-        double _cutoff;
         double _rmin;
         double _intervalInverse;
     };

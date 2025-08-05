@@ -16,6 +16,11 @@ namespace jgap {
 
     class ThreeBodyDescriptor : public Descriptor {
     public:
+        explicit ThreeBodyDescriptor(const shared_ptr<CutoffFunction>& cutoffFunction,
+                                     const shared_ptr<ThreeBodyKernel>& kernel)
+            : _cutoff(cutoffFunction->getCutoff()), _cutoffFunction(cutoffFunction), _kernel(kernel),
+              _sparsifier(nullptr), _sparsePointsPerSpeciesTriplet({}) {}
+
         explicit ThreeBodyDescriptor(const nlohmann::json& params);
         nlohmann::json serialize() override;
         string getType() override { return "3b"; }
@@ -31,9 +36,9 @@ namespace jgap {
 
         TabulationData tabulate(const TabulationParams &params) override;
 
+        double invariantTripletToCutoff(const Vector3 &t) const;
         static Vector3 toInvariantTriplet(double r01, double r02, double r12);
         static array<Vector3, 3> invariantTripletGradients(double r01, double r02);
-        double invariantTripletToCutoff(const Vector3 &t) const;
 
     private:
         double _cutoff;

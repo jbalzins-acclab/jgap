@@ -1,6 +1,3 @@
-//
-// Created by Jegors Balzins on 9.7.2025.
-//
 #include "core/potentials/CompositePotential.hpp"
 
 namespace jgap {

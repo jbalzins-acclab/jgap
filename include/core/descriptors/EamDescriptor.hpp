@@ -2,6 +2,7 @@
 #define EAMDESCRIPTOR_HPP
 
 #include <nlohmann/json.hpp>
+#include <utility>
 
 #include "core/cutoff/CutoffFunction.hpp"
 #include "core/descriptors/Descriptor.hpp"
@@ -17,6 +18,10 @@ namespace jgap {
 
     class EamDescriptor : public Descriptor {
     public:
+        explicit EamDescriptor(shared_ptr<EamKernel> kernel,
+                               shared_ptr<EamPairFunction> defaultPairFunction,
+                               map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions);
+
         explicit EamDescriptor(const nlohmann::json &params);
         nlohmann::json serialize() override;
         string getType() override { return "eam"; };
@@ -45,7 +50,7 @@ namespace jgap {
         shared_ptr<Sparsifier> _sparsifier;
 
         shared_ptr<EamPairFunction> _defaultPairFunction;
-        map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> _pairFunctions;
+        map<OrderedSpeciesPair/*{contributor, receiver}*/, shared_ptr<EamPairFunction>> _pairFunctions;
 
         map<Species, vector<double>> _sparsePointsPerSpecies;
 
