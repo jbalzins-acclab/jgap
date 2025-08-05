@@ -173,8 +173,8 @@ namespace jgap {
 
             optional<string> mode;
             if (descriptorParamString.contains("mode=")) {
-                auto modeStartIdx = descriptorParamString.find("pair_function=")
-                                                + string("pair_function=").size();
+                auto modeStartIdx = descriptorParamString.find("mode=")
+                                                + string("mode=").size();
                 auto modeEndIdx = descriptorParamString.find(' ', modeStartIdx);
                 mode = descriptorParamString.substr(modeStartIdx, modeEndIdx - modeStartIdx);
             }
