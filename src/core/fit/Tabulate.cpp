@@ -128,7 +128,6 @@ namespace jgap {
 
         const string filename = outputFileNamePrefix + (index != 0 ? "#" + to_string(index) : "") + ".eam.fs";
 
-        CurrentLogger::get()->error("Could not open " + filename);
         ofstream eamFsFile(filename);
         if (!eamFsFile.is_open()) {
             CurrentLogger::get()->error("Could not open " + filename, true);
@@ -151,7 +150,7 @@ namespace jgap {
 
         // Line 5: Nrho, drho, Nr, dr, cutoff
         eamFsFile << tabulationParams.nDensities << " ";
-        eamFsFile << data.rhoMax / static_cast<double>(tabulationParams.nDensities) << " ";
+        eamFsFile << data.maxDensity / static_cast<double>(tabulationParams.nDensities - 1) << " ";
         eamFsFile << tabulationParams.grid2b.size() << " ";
         eamFsFile << tabulationParams.grid2b[1] << " ";
         eamFsFile << tabulationParams.grid2b.back() << endl;
@@ -206,7 +205,10 @@ namespace jgap {
         TabulationParams result{};
         result.grid2b = make2bGrid(params);
         result.grid3b = make3bGrid(params);
-        result.nDensities = params.value("nDensities", 1000);
+        result.nDensities = params.value("n_densities", 1000);
+        if (params.contains("max_eam_density")) {
+            result.maxDensity = params["max_eam_density"];
+        }
 
         result.species = {};
         for (const auto& element: params["species"]) {

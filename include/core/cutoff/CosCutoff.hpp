@@ -11,8 +11,8 @@
 namespace jgap {
     class CosCutoff : public CutoffFunction {
     public:
-
         explicit CosCutoff(nlohmann::json params);
+        explicit CosCutoff(double cutoff, double rMin);
 
         string getType() override {return "coscutoff";};
         nlohmann::json serialize() override;
@@ -22,7 +22,6 @@ namespace jgap {
 
         double evaluate(double r) override;
         double differentiate(double r) override;
-
 
     private:
         double _cutoff;

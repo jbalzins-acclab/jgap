@@ -4,10 +4,18 @@
 #include <ranges>
 
 namespace jgap {
+    EamSE::EamSE(double energyScale, double lengthScale) {
+        _lengthScale = lengthScale;
+        _energyScaleSquared = energyScale * energyScale;
+        _inverse2ThetaSq = 1.0 / (2.0 * _lengthScale * _lengthScale);
+        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
+    }
+
     EamSE::EamSE(const nlohmann::json &params) {
         _lengthScale = params["length_scale"].get<double>();
         _energyScaleSquared = pow(params["energy_scale"].get<double>(), 2);
         _inverse2ThetaSq = 1.0 / (2.0 * _lengthScale * _lengthScale);
+        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
     }
 
     nlohmann::json EamSE::serialize() {
@@ -52,7 +60,6 @@ namespace jgap {
     }
 
     double EamSE::derivative(const double &changingDensity, const double &constantDensity) {
-        return (constantDensity - changingDensity) * (2/*compensate constant*/* _inverse2ThetaSq)
-                     * covariance(changingDensity, constantDensity);
+        return (constantDensity - changingDensity) * _inverseThetaSq * covariance(changingDensity, constantDensity);
     }
 }

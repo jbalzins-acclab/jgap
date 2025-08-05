@@ -16,11 +16,12 @@ namespace jgap {
         size_t nDensities{};
         vector<double> grid2b{}; // nRho = grid2b.size() TODO ?
         vector<vector<vector<Vector3>>> grid3b{};
+        optional<double> maxDensity{};
     };
 
     struct EamTabulationData {
         // rhoMin = 0 always!!
-        double rhoMax;
+        double maxDensity;
         map<Species, vector<double>> embeddingEnergies;
         map<OrderedSpeciesPair, vector<double>> eamDensities; // per grid2b
     };

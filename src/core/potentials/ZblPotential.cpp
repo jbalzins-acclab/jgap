@@ -106,22 +106,21 @@ namespace jgap {
 
                 double dE = zblWithCutoff_eV({atom1.species(), atom2.species()}, neighbour.distance);
 
-                if (neighbour.index == i) {
-                    energy += dE / 2;
-                    continue;
-                }
-
-                energy += dE;
-
                 double dzbl_dr = zblWithCutoffDerivative_eV_per_Ang(
                     {atom1.species(), atom2.species()}, neighbour.distance
                     );
                 Vector3 r21 = atom1.position() - (atom2.position() + neighbour.offset);
                 Vector3 f21 = r21.normalize() * -dzbl_dr;
-                forces[i] = forces[i] + f21;
-                forces[neighbour.index] = forces[neighbour.index] - f21;
 
-                // x2 since r21.x * f21.x = r12.x * f12.x
+                if (neighbour.index == i) {
+                    dE /= 2.0;
+                    f21 /= 2.0;
+                } else {
+                    forces[i] = forces[i] + f21;
+                    forces[neighbour.index] = forces[neighbour.index] - f21;
+                }
+
+                energy += dE;
                 virials[0] += f21 * r21.x;
                 virials[1] += f21 * r21.y;
                 virials[2] += f21 * r21.z;

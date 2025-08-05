@@ -3,6 +3,13 @@
 #include "utils/Utils.hpp"
 
 namespace jgap {
+    ThreeBodySE::ThreeBodySE(double energyScale, double lengthScale) {
+        _lengthScale = lengthScale;
+        _energyScaleSquared = energyScale * energyScale;
+        _inverse2ThetaSq = 1.0 / (2.0 * _lengthScale * _lengthScale);
+        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
+    }
+
     ThreeBodySE::ThreeBodySE(const nlohmann::json &params) {
         _lengthScale = params["length_scale"].get<double>();
         _energyScaleSquared = pow(params["energy_scale"].get<double>(), 2);

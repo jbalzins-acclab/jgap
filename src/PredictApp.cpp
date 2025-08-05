@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
         }
 
         jgap::writeXyz(argv[3], result);
+        jgap::CurrentLogger::get()->info("Finished predicting");
 
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));

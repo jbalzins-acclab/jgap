@@ -18,6 +18,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
+find_package(pugixml CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS filesystem system dll)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -80,6 +81,7 @@ file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/FitApp\\.cpp$")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/PredictApp\\.cpp$")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/TabulateApp\\.cpp$")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/ConvertQuipXmlApp\\.cpp$")
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
 add_library(jgap STATIC ${LIBRARY_SOURCE_FILES})
 
@@ -95,14 +97,16 @@ set(PREDICT_APP_SOURCE_FILES
 set(TABULATE_APP_SOURCE_FILES
         ${PROJECT_SOURCE_DIR}/src/TabulateApp.cpp
 )
+set(CONVERT_QUIP_XML_APP_SOURCE_FILES
+        ${PROJECT_SOURCE_DIR}/src/ConvertQuipXmlApp.cpp
+)
 
 add_executable(jgap_fit_app ${FIT_APP_SOURCE_FILES})
 add_executable(jgap_predict_app ${PREDICT_APP_SOURCE_FILES})
 add_executable(jgap_tabulate_app ${TABULATE_APP_SOURCE_FILES})
+add_executable(jgap_convert_quip_xml_app ${CONVERT_QUIP_XML_APP_SOURCE_FILES})
 
 target_link_libraries(jgap PRIVATE
-        TBB::tbb TBB::tbbmalloc
-        nlohmann_json::nlohmann_json
         spdlog::spdlog
         Eigen3::Eigen
         HighFive
@@ -111,23 +115,27 @@ target_link_libraries(jgap PRIVATE
         Boost::dll
 )
 
-target_link_libraries(jgap_fit_app PRIVATE
-        jgap
+target_link_libraries(jgap PUBLIC
+        pugixml::static pugixml::pugixml
         nlohmann_json::nlohmann_json
         TBB::tbb TBB::tbbmalloc
+        HighFive
+)
+
+target_link_libraries(jgap_fit_app PRIVATE
+        jgap
 )
 
 target_link_libraries(jgap_predict_app PRIVATE
         jgap
-        nlohmann_json::nlohmann_json
-        TBB::tbb TBB::tbbmalloc
 )
 
 target_link_libraries(jgap_tabulate_app PRIVATE
         jgap
-        nlohmann_json::nlohmann_json
-        TBB::tbb TBB::tbbmalloc
-        HighFive
+)
+
+target_link_libraries(jgap_convert_quip_xml_app PRIVATE
+        jgap
 )
 
 add_custom_command(TARGET jgap POST_BUILD
