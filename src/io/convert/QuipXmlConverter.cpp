@@ -436,7 +436,7 @@ namespace jgap {
                                                                      optional<double> rMin,
                                                                      double prefactor) {
         shared_ptr<EamPairFunction> pf;
-        if (mainData.pairFunction.value() == "FSGen") {
+        if (mainData.pairFunction.value() == "FSgen") {
             pf = make_shared<FSGenPairFunction>(mainData.cutoff, mainData.order.value(), prefactor);
         } else if (mainData.pairFunction.value() == "polycutoff") {
             pf = make_shared<PolycutoffPairFunction>(mainData.cutoff, rMin.value(), prefactor);

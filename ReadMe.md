@@ -12,10 +12,12 @@
   - RAM usage can be estimated from logs(look for matrix size).
   - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
 - Output in the json format not compatible with QUIP - separate app is compiled to use it.
+  - quip.xml can be converted into it
 - Per config-type regularization not implemented yet, but $\sigma$'s can be specified per structure in ext-xyz(see Utils.cpp)
 ### Tabulate 2b+3b+EAM 
 - Very fast(around a minute on my laptop to tabulate CrMnFeNi)
 - Output in .tabgap+.eam.fs (I'm not sure if non-2b+3b+EAM works correctly)
+- Works with quip.xml
 
 ## Compilation/Run guide
 ### Prerequisites 
@@ -40,8 +42,11 @@
   - jgap_fit_app - GAP fitting
   - jgap_predict_app - to use the GAP potential
   - jgap_tabulate_app - tabulate GAP potential
+  - jgap_convert_quip_xml_app - convert from quip.xyz
 ### Run
 (see param samples in /resources)
 - jgap_fit_app fit_param_file.json => outputs potential.json
 - jgap_predict_app potential.json input.xyz output.xyz
 - jgap_tabulate_app tabulation_params.json
+- jgap_convert_quip_xml_app quip.xml
+  - warn: sensitive to format changes in quip.xml - check the code upon error
