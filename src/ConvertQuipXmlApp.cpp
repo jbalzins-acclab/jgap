@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <format>
 #include <ParserRegistryAuto.hpp>
+#include <Version.hpp>
 #include <tbb/parallel_for.h>
 
 #include "core/fit/Tabulate.hpp"
@@ -13,6 +14,8 @@
 using namespace std;
 
 int main(int argc, char** argv) {
+
+    jgap::CurrentLogger::get()->info(format("jGAP from QUIP xml v{}", JGAP_VERSION));
 
     if (argc != 2) {
         jgap::CurrentLogger::get()->error(

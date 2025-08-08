@@ -23,6 +23,17 @@ find_package(Boost CONFIG REQUIRED COMPONENTS filesystem system dll)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+file(READ "${CMAKE_SOURCE_DIR}/vcpkg.json" VCPKG_JSON_CONTENT)
+string(REGEX MATCH "\"version\"[ \t]*:[ \t]*\"([^\"]+)\"" _ ${VCPKG_JSON_CONTENT})
+set(PACKAGE_VERSION ${CMAKE_MATCH_1})
+
+configure_file(
+        ${CMAKE_SOURCE_DIR}/include/Version.hpp.in
+        ${CMAKE_BINARY_DIR}/generated/Version.hpp
+        @ONLY
+)
+include_directories(${CMAKE_BINARY_DIR}/generated)
+
 # Function to generate parser registry header
 function(generate_parser_registry_header)
     # Find all .hpp files in include directory

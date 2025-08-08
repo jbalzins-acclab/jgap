@@ -18,6 +18,7 @@ namespace jgap {
         vector<vector<double>> selectSparsePoints(const vector<vector<double>> &allPoints) override;
     private:
         size_t _nSparsePoints;
+        size_t _seed;
         optional<vector<size_t>> _gridDimensions;
     };
 

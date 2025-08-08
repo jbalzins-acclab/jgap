@@ -4,6 +4,7 @@ namespace jgap {
 
     SampleSpaceUniformSparsifier::SampleSpaceUniformSparsifier(const nlohmann::json &params) {
         _nSparsePoints = params["n_sparse"].get<size_t>();
+        _seed = params.value("seed", 799u);
         if (params.contains("grid_dimensions")) {
             _gridDimensions = vector<size_t>();
             for (const auto &dim : params["grid_dimensions"]) {
@@ -67,7 +68,7 @@ namespace jgap {
         if (sparsePoints.size() == _nSparsePoints) return sparsePoints;
         CurrentLogger::get()->debug("Not all histogram bins have values => random selection:");
 
-        mt19937 gen(799u); // NOLINT(*-msc51-cpp)
+        mt19937 gen(_seed);
         uniform_int_distribution<> indexDist(0, usefulGridSlotsArr.size() - 1);
 
         while (sparsePoints.size() < _nSparsePoints) {
