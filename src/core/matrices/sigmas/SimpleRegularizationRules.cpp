@@ -5,7 +5,7 @@ namespace jgap {
     SimpleRegularizationRules::SimpleRegularizationRules(const nlohmann::json &params) {
         _defaultEPerAtom = params["E_per_root_n_atoms"];
         _defaultF = params.value("F_component", _defaultEPerAtom * 50.0);
-        _defaultVirials = params.value("virials", _defaultEPerAtom * 100.0);
+        _defaultVirialsPerAtom = params.value("virials", _defaultEPerAtom * 100.0);
         _liquidMultiplier = params["liquid"];
         _shortRangeMultiplier = params["short_range"];
     }
@@ -36,7 +36,7 @@ namespace jgap {
             structure.forceSigmasInverse = vector(structure.size(),  Vector3{dF, dF, dF});
         }
 
-        const double dV = 1.0 / (multiplier * _defaultVirials * pow(structure.size(), 0.5));
+        const double dV = 1.0 / (multiplier * _defaultVirialsPerAtom * pow(structure.size(), 0.5));
         if (!structure.virialSigmasInverse.has_value()) {
             structure.virialSigmasInverse = {
                 Vector3{dV, dV, dV},

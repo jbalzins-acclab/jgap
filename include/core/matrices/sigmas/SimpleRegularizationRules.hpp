@@ -7,8 +7,7 @@
 namespace jgap {
     class SimpleRegularizationRules : public RegularizationRules {
     public:
-        SimpleRegularizationRules(const nlohmann::json &params);
-
+        explicit SimpleRegularizationRules(const nlohmann::json &params);
         ~SimpleRegularizationRules() override = default;
 
         void fillSigmas(AtomicStructure &structure) override;
@@ -16,7 +15,7 @@ namespace jgap {
     private:
         double _defaultEPerAtom;
         double _defaultF;
-        double _defaultVirials;
+        double _defaultVirialsPerAtom;
         double _liquidMultiplier;
         double _shortRangeMultiplier;
     };

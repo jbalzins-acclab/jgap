@@ -10,6 +10,7 @@
 #include <ParserRegistryAuto.hpp>
 #include <tbb/parallel_for_each.h>
 #include <execinfo.h>
+#include <Version.hpp>
 
 void print_backtrace() {
     void* callstack[128];
@@ -25,6 +26,8 @@ void print_backtrace() {
 using namespace std;
 
 int main(int argc, char** argv) {
+
+    jgap::CurrentLogger::get()->info(format("jGAP fit v{}", JGAP_VERSION));
 
     Eigen::setNbThreads(thread::hardware_concurrency()); // NOLINT(*-narrowing-conversions)
 

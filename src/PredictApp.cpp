@@ -5,11 +5,14 @@
 #include <nlohmann/json.hpp>
 #include <format>
 #include <ParserRegistryAuto.hpp>
+#include <Version.hpp>
 #include <tbb/parallel_for.h>
 
 using namespace std;
 
 int main(int argc, char** argv) {
+
+    jgap::CurrentLogger::get()->info(format("jGAP predict v{}", JGAP_VERSION));
 
     if (argc != 4) {
         jgap::CurrentLogger::get()->error(
