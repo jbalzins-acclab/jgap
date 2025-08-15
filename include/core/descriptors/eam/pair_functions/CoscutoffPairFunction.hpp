@@ -40,7 +40,7 @@ namespace jgap {
 
         double evaluate(const double distance) override {
             if (distance >= _cutoff) return 0.0;
-            if (distance <= _rmin) return 1.0;
+            if (distance <= _rmin) return _prefactor;
 
             const double chi = (distance - _rmin) * _intervalInverse;
             return _prefactor * 0.5 * (1 + cos(M_PI * chi));
