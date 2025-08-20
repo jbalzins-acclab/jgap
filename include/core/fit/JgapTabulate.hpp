@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "../potentials/JgapPotential.hpp"
-#include "../potentials/JtabGapPotential.hpp"
+#include "core/potentials/JgapPotential.hpp"
+#include "core/potentials/JtabGapPotential.hpp"
 
 using namespace std;
 

@@ -1,6 +1,6 @@
 {
     "name" : "jgap",
-    "version" : "4.5.1",
+    "version" : "4.6.0",
     "dependencies" : [
         {
             "name" : "nlohmann-json",
@@ -23,20 +23,12 @@
             "version>=": "3.0.0"
         },
         {
-            "name": "boost-filesystem",
-            "version>=": "1.81.0"
-        },
-        {
-            "name": "boost-system",
-            "version>=": "1.81.0"
-        },
-        {
-            "name": "boost-dll",
-            "version>=": "1.81.0"
-        },
-        {
             "name": "pugixml",
             "version>=": "1.15#0"
+        },
+        {
+            "name": "tinyspline",
+            "version>=": "0.6.0#0"
         }
     ]
 }

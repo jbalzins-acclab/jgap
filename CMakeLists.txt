@@ -19,7 +19,7 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS filesystem system dll)
+find_package(tinysplinecxx CONFIG REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -121,9 +121,7 @@ target_link_libraries(jgap PRIVATE
         spdlog::spdlog
         Eigen3::Eigen
         HighFive
-        Boost::filesystem
-        Boost::system
-        Boost::dll
+        tinysplinecxx::tinysplinecxx
 )
 
 target_link_libraries(jgap PUBLIC

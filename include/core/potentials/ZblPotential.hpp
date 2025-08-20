@@ -31,20 +31,19 @@ namespace jgap {
 
     private:
         double _cutoff;
-        string _dmolFile;
+        string _coeffFileName;
+
         map<SpeciesPair, array<double, 6>> _dmolFitCoefficients;
         shared_ptr<CutoffFunction> _cutoffFunction;
 
         const double _eps = 8.854187817e-12;
         const double _electronCharge = 1.60217657e-19;
 
-        static string getDefaultDmolFilePath();
+        static string getResourcesCoeffFilePath(const string& fileName = "dmol-fit.json");
 
         double zbl_eV(const SpeciesPair& speciesPair, double r);
         double zblWithCutoff_eV(const SpeciesPair& speciesPair, double r);
         double zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, double r);
-
-        void parseDmolFitCoefficients();
     };
 
     REGISTER_PARSER("zbl", Potential, ZblPotential)

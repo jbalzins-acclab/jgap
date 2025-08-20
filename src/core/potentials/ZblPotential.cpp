@@ -2,23 +2,42 @@
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
 
 #include <fstream>
-#include <boost/dll/runtime_symbol_info.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+#if defined(_WIN32)
+    #include <windows.h>
+#elif defined(__APPLE__)
+    #include <mach-o/dyld.h>
+#else
+    #include <unistd.h>
+#endif
 
 using namespace std;
 
 namespace jgap {
 
-    void ZblPotential::parseDmolFitCoefficients() {
+    ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
 
-        ifstream fIn(_dmolFile);
+        CurrentLogger::get()->debug("Parsing ZblPotential " + zblParams.dump());
+        if (zblParams.contains("cutoff")) {
+            _cutoff = zblParams["cutoff"]["cutoff"];
+            _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
+        } else {
+            _cutoff = DEFAULT_ZBL_CUTOFF;
+            _cutoffFunction = make_shared<PerriotPolynomialCutoff>(DEFAULT_ZBL_RMIN, DEFAULT_ZBL_CUTOFF);
+        }
+
+        _coeffFileName = zblParams.value("coefficients_file", "dmol-fit.json");
+
+        ifstream fIn(_coeffFileName);
         if (!fIn.is_open()) {
-            CurrentLogger::get()->error("Could not open dmol_fit_coefficients_file: " + _dmolFile, false);
-            fIn = ifstream(getDefaultDmolFilePath());
+            CurrentLogger::get()->warn("Could not open coefficients_file: '" + _coeffFileName +
+                                        "'. Trying to find it in resources.");
+            CurrentLogger::get()->warn(" " + _coeffFileName);
+            fIn = ifstream(getResourcesCoeffFilePath(_coeffFileName));
             if (!fIn.is_open()) {
-                CurrentLogger::get()->error("Could not open default dmol_fit_coefficients_file", true);
+                CurrentLogger::get()->error("Could not find coefficients_file in resources.", true);
             }
-            CurrentLogger::get()->warn("Using default dmol fit coefficients file");
         }
         nlohmann::json dmolFitCoefficients;
         fIn >> dmolFitCoefficients;
@@ -32,37 +51,14 @@ namespace jgap {
         }
     }
 
-    ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
-
-        CurrentLogger::get()->debug("Parsing ZblPotential " + zblParams.dump());
-        if (zblParams.contains("cutoff")) {
-            _cutoff = zblParams["cutoff"]["cutoff"];
-            _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
-        } else {
-            _cutoff = DEFAULT_ZBL_CUTOFF;
-            _cutoffFunction = make_shared<PerriotPolynomialCutoff>(DEFAULT_ZBL_RMIN, _cutoff);
-        }
-
-        // TODO: not sure if default value is a good idea here
-
-        _dmolFile = zblParams.value("dmol_fit_coefficients_file", getDefaultDmolFilePath());
-        parseDmolFitCoefficients();
-    }
-
     nlohmann::json ZblPotential::serialize() {
 
         auto cutoffData = _cutoffFunction->serialize();
         cutoffData["type"] = _cutoffFunction->getType();
 
-        if (_dmolFile != getDefaultDmolFilePath()) {
-            return {
-                {"cutoff", cutoffData},
-                {"dmol_fit_coefficients_file", _dmolFile}
-            };
-        }
-
         return {
-            {"cutoff", cutoffData}
+            {"cutoff", cutoffData},
+            {"coefficients_file", _coeffFileName}
         };
     }
 
@@ -134,45 +130,59 @@ namespace jgap {
         };
     }
 
-    string ZblPotential::getDefaultDmolFilePath() {
-        boost::filesystem::path exePath = boost::dll::program_location();
-        boost::filesystem::path exeDir = exePath.parent_path();
-        return (exeDir / "resources" / "dmol-screening-fit" / "dmol-fit.json").string();
+    string ZblPotential::getResourcesCoeffFilePath(const string& fileName) {
+        filesystem::path exePath;
+
+#if defined(_WIN32)
+        char buffer[MAX_PATH];
+        DWORD size = GetModuleFileNameA(NULL, buffer, MAX_PATH);
+        if (size == 0 || size == MAX_PATH) {
+            throw runtime_error("Failed to get executable path");
+        }
+        exePath = filesystem::path(buffer);
+
+#elif defined(__APPLE__)
+        char buffer[1024];
+        uint32_t size = sizeof(buffer);
+        if (_NSGetExecutablePath(buffer, &size) != 0) {
+            throw runtime_error("Buffer too small for executable path");
+        }
+        exePath = filesystem::path(buffer);
+
+#else // Linux and other Unix-like
+        char buffer[1024];
+        ssize_t count = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+        if (count == -1) {
+            throw std::runtime_error("Failed to read /proc/self/exe");
+        }
+        buffer[count] = '\0';
+        exePath = filesystem::path(buffer);
+#endif
+
+        filesystem::path exeDir = exePath.parent_path();
+        return (exeDir / "resources" / "dmol-screening-fit" / fileName).string();
     }
 
     double ZblPotential::zbl_eV(const SpeciesPair& speciesPair, double r) {
         auto coeffs = _dmolFitCoefficients[speciesPair];
-
-        /*
-        def screened_coulomb_ev(r, c1, c2, c3, c4, c5, c6):
-        eps = 8.854187817e-12
-        e = 1.60217657e-19
-
-        a = 0.46848 / (Z1**0.23 + Z2**0.23)
-        x = r / a
-        phi = c1 * np.exp(-c2 * x) + c3 * np.exp(-c4 * x) + c5 * np.exp(-c6 * x)
-        r = r * 1e-10  # Å --> m
-        E = Z1 * Z2 * e * phi / (4.0 * np.pi * eps * r) # not e**2 => eV
-        return E
-         */
 
         double Z1 = Z_default[speciesPair.first()], Z2 = Z_default[speciesPair.second()];
         double a = 0.46848 / (pow(Z1, 0.23) + pow(Z2, 0.23));
 
         double x = r / a;
         double phi = coeffs[0] * exp(-coeffs[1] * x)
-                    + coeffs[2] * exp(-coeffs[3] * x)
-                    + coeffs[4] * exp(-coeffs[5] * x);
+                   + coeffs[2] * exp(-coeffs[3] * x)
+                   + coeffs[4] * exp(-coeffs[5] * x);
 
         double r_meters = r * 1e-10;
-        return Z1 * Z2 * _electronCharge * phi / (4.0 * M_PI * _eps * r_meters);
+        return Z1 * Z2 * _electronCharge/*eV => no ^2*/ * phi / (4.0 * M_PI * _eps * r_meters);
     }
 
-    double ZblPotential::zblWithCutoff_eV(const SpeciesPair &speciesPair, double r) {
+    double ZblPotential::zblWithCutoff_eV(const SpeciesPair &speciesPair, const double r) {
         return _cutoffFunction->evaluate(r) * zbl_eV(speciesPair, r);
     }
 
-    double ZblPotential::zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, double r) {
+    double ZblPotential::zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, const double r) {
         auto coeffs = _dmolFitCoefficients[speciesPair];
 
         double Z1 = Z_default[speciesPair.first()], Z2 = Z_default[speciesPair.second()];
@@ -180,7 +190,7 @@ namespace jgap {
         double r_meters = r * 1e-10;
 
         double x = r / a;
-        double dx_dr = 1 / a;
+        double dx_dr = 1.0 / a;
         double phi = coeffs[0] * exp(-coeffs[1] * x)
                     + coeffs[2] * exp(-coeffs[3] * x)
                     + coeffs[4] * exp(-coeffs[5] * x);
@@ -189,8 +199,8 @@ namespace jgap {
                          - coeffs[4] * coeffs[5] * exp(-coeffs[5] * x);
         double dphi_drmeters = dx_dr * dphi_dx * 1e10;
 
-        double dzbl_dr = - Z1 * Z2 * _electronCharge * phi / (4.0 * M_PI * _eps * r_meters * r_meters)
-                         + Z1 * Z2 * _electronCharge * dphi_drmeters / (4.0 * M_PI * _eps * r_meters);
+        double dzbl_dr = - Z1 * Z2 * _electronCharge/*eV => no ^2*/ * phi / (4.0 * M_PI * _eps * r_meters * r_meters)
+                         + Z1 * Z2 * _electronCharge/*eV => no ^2*/ * dphi_drmeters / (4.0 * M_PI * _eps * r_meters);
 
         double dE_dr = _cutoffFunction->evaluate(r) * dzbl_dr * 1e-10
                        + _cutoffFunction->differentiate(r)/*already Angstrom*/ * zbl_eV(speciesPair, r);

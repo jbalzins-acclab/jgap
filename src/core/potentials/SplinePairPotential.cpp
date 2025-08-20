@@ -1,8 +1,6 @@
-#include "../../../include/core/potentials/SplinePairPotential.hpp"
+#include "core/potentials/SplinePairPotential.hpp"
 
 #include <vector>
-#include <stdexcept>
-#include <iostream>
 #include <algorithm>
 
 #include "utils/Utils.hpp"
@@ -19,17 +17,17 @@ namespace jgap {
         init(distances, energies);
     }
 
-    SplinePairPotential::NaturalCubicSpline::NaturalCubicSpline(vector<double> r, vector<double> E) {
+    SplinePairPotential::NaturalCubicSpline::NaturalCubicSpline(const vector<double>& r, const vector<double>& E) {
         init(r, E);
     }
 
     double SplinePairPotential::NaturalCubicSpline::evaluate(double r) const {
-        if (r < _r.front() || r > _r.back())
-            return 0.0;  // Optionally clamp or extrapolate
+        if (r < _r.front()) return _energies.front();
+        if (r > _r.back())  return 0.0; // cutoff behavior
 
         size_t i = findInterval(r);
         double dx = r - _r[i];
-        return _a[i] + _b[i] * dx + _c[i] * dx * dx + _d[i] * dx * dx * dx;
+        return _energies[i] + _b[i] * dx + _c[i] * dx * dx + _d[i] * dx * dx * dx;
     }
 
     double SplinePairPotential::NaturalCubicSpline::derivative(double r) const {
@@ -44,18 +42,23 @@ namespace jgap {
     nlohmann::json SplinePairPotential::NaturalCubicSpline::serialize() const {
         return nlohmann::json{
             {"r", _r},
-            {"E", _a}
+            {"E", _energies}
         };
     }
 
     void SplinePairPotential::NaturalCubicSpline::init(const vector<double> &r, const vector<double> &E) {
         if (r.size() != E.size() || r.size() < 2) {
-            throw invalid_argument("Input vectors must be the same size and have at least 2 points.");
+            CurrentLogger::get()->error(
+                "Spline reference vectors must be the same size and have at least 2 points.", true
+                );
+        }
+        if (!ranges::is_sorted(r)) {
+            CurrentLogger::get()->error("Spline reference distances must be sorted", true);
         }
 
         _r = r;
         const size_t n = r.size();
-        _a = E;
+        _energies = E;
         _b.resize(n - 1);
         _c.resize(n);
         _d.resize(n - 1);
@@ -66,7 +69,7 @@ namespace jgap {
 
         vector<double> alpha(n - 1);
         for (size_t i = 1; i < n - 1; ++i)
-            alpha[i] = (3.0 / h[i]) * (_a[i + 1] - _a[i]) - (3.0 / h[i - 1]) * (_a[i] - _a[i - 1]);
+            alpha[i] = (3.0 / h[i]) * (_energies[i + 1] - _energies[i]) - (3.0 / h[i - 1]) * (_energies[i] - _energies[i - 1]);
 
         vector<double> l(n), mu(n), z(n);
         l[0] = 1.0;
@@ -83,7 +86,7 @@ namespace jgap {
 
         for (int j = n - 2; j >= 0; --j) {
             _c[j] = z[j] - mu[j] * _c[j + 1];
-            _b[j] = (_a[j + 1] - _a[j]) / h[j] - h[j] * (_c[j + 1] + 2.0 * _c[j]) / 3.0;
+            _b[j] = (_energies[j + 1] - _energies[j]) / h[j] - h[j] * (_c[j + 1] + 2.0 * _c[j]) / 3.0;
             _d[j] = (_c[j + 1] - _c[j]) / (3.0 * h[j]);
         }
     }
@@ -102,7 +105,7 @@ namespace jgap {
         }
     }
 
-    SplinePairPotential::SplinePairPotential(map<SpeciesPair, pair<vector<double>, vector<double>>> points) {
+    SplinePairPotential::SplinePairPotential(const map<SpeciesPair, pair<vector<double>, vector<double>>>& points) {
         for (const auto &[speciesPair, pairParams]: points) {
             _perSpeciesInterpolators[speciesPair] = make_shared<NaturalCubicSpline>(
                 pairParams.first, pairParams.second
@@ -168,7 +171,7 @@ namespace jgap {
 
     double SplinePairPotential::getCutoff() {
         double cutoff = 0;
-        for (const auto interpolator: _perSpeciesInterpolators | views::values) {
+        for (const auto& interpolator: _perSpeciesInterpolators | views::values) {
             cutoff = max(cutoff, interpolator->getCutoff());
         }
         return cutoff;

@@ -201,7 +201,6 @@ namespace jgap {
         for (const auto& points: _sparsePointsPerSpecies | views::values) {
             result.maxDensity = max(result.maxDensity, ranges::max(points));
         }
-        result.maxDensity += 3.5; // TODO: this is very SqExp specific
         if (result.maxDensity - params.maxDensity.value_or(result.maxDensity) > 1) {
             CurrentLogger::get()->warn(format(
                 "max_eam_density={} is too low - highest sparse point is {}",
