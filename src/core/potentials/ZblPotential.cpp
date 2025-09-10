@@ -17,8 +17,8 @@ using namespace std;
 namespace jgap {
 
     ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
-
-        CurrentLogger::get()->debug("Parsing ZblPotential " + zblParams.dump());
+        string test = zblParams.dump();
+        CurrentLogger::get()->debug("Parsing ZblPotential {}", zblParams.dump());
         if (zblParams.contains("cutoff")) {
             _cutoff = zblParams["cutoff"]["cutoff"];
             _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
@@ -33,7 +33,6 @@ namespace jgap {
         if (!fIn.is_open()) {
             CurrentLogger::get()->warn("Could not open coefficients_file: '" + _coeffFileName +
                                         "'. Trying to find it in resources.");
-            CurrentLogger::get()->warn(" " + _coeffFileName);
             fIn = ifstream(getResourcesCoeffFilePath(_coeffFileName));
             if (!fIn.is_open()) {
                 CurrentLogger::get()->error("Could not find coefficients_file in resources.", true);

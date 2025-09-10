@@ -3,10 +3,9 @@
 #include "core/matrices/sigmas/SimpleRegularizationRules.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/StdoutLogger.hpp"
+#include "utils/Utils.hpp"
 
 #include <tbb/parallel_for_each.h>
-
-#include "utils/Utils.hpp"
 
 namespace jgap {
 
@@ -37,10 +36,10 @@ namespace jgap {
             // To avoid ugly "cutoff" in sparse json
             NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff());
             if (descriptor->nSparsePoints() == 0) {
-                CurrentLogger::get()->info(format(
+                CurrentLogger::get()->info(
                     "No sparse points found in descriptor {} -> setting from data",
                     descriptor->serialize().dump()
-                    ));
+                    );
                 descriptor->setSparsePoints(_trainingData);
             }
 
@@ -90,6 +89,17 @@ namespace jgap {
     }
 
     vector<double> InRamJgapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
+
+        long long nzeros = 0, overall = 0;
+        for (size_t i = 0; i < A.rows(); i++) {
+            for (size_t j = 0; j < A.cols(); j++) {
+                if (A(i, j) == 0.0) nzeros++;
+                overall ++;
+            }
+        }
+
+        CurrentLogger::get()->info("N_ZEROS: {} of {}", nzeros, overall);
+
         CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
         const Eigen::HouseholderQR<Eigen::Ref<Eigen::MatrixXd>> qr(A);
 
@@ -104,7 +114,6 @@ namespace jgap {
 
         CurrentLogger::get()->debug("R^-1 * Qt_b");
         Eigen::VectorXd c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.cols()));
-        CurrentLogger::get()->debug("c" + to_string(c[0]));
 
         return vector<double>{c.data(), c.data() + c.size()};
     }
@@ -138,12 +147,10 @@ namespace jgap {
 
                 size_t progress = ++counter;
                 if (progress % max(startingRowsK_nm.size() / 100, 1uz) == 0) {
-                    CurrentLogger::get()->debug(format(
+                    CurrentLogger::get()->debug(
                             "K_nm matrix formation progress: {} of {} ({}%)",
-                            progress,
-                            startingRowsK_nm.size(),
-                            progress * 100 / startingRowsK_nm.size()
-                            ));
+                            progress, startingRowsK_nm.size(), progress * 100 / startingRowsK_nm.size()
+                            );
                 }
 
                 fillInverseSigmaK_nm(descriptors, structId.second, resultingA, structId.first);
@@ -153,7 +160,7 @@ namespace jgap {
         tbb::parallel_for_each(
             startingPointsK_mm.begin(), startingPointsK_mm.end(),
             [&](const tuple<size_t/*row*/, size_t/*col*/, size_t/*desc_idx*/>& descriptorId) {
-                CurrentLogger::get()->debug(format("K_mm for descriptor {}", get<2>(descriptorId)));
+                CurrentLogger::get()->debug("K_mm for descriptor {}", get<2>(descriptorId));
                 fillU_mm(get<0>(descriptorId), get<1>(descriptorId), *descriptors[get<2>(descriptorId)], resultingA);
             }
         );

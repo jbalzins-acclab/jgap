@@ -43,7 +43,7 @@ namespace jgap {
         TabulationData result{};
 
         for (const auto& [label, descriptor]: _descriptors) {
-            CurrentLogger::get()->debug(format("Tabulating {} descriptor", label));
+            CurrentLogger::get()->debug("Tabulating {} descriptor", label);
             result = result + descriptor->tabulate(params);
         }
 

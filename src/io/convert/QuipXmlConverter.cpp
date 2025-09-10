@@ -123,11 +123,11 @@ namespace jgap {
             } else if (descriptorParamString.contains("angle_3b")) {
                 type = "angle_3b";
             } else {
-                CurrentLogger::get()->error(format("Unknown descriptor type {}", descriptorParamString), true);
+                CurrentLogger::get()->logAndThrow("Unknown descriptor type {}", descriptorParamString);
             }
 
             if (!descriptorParamString.contains("covariance_type=ard_se")) {
-                CurrentLogger::get()->error(format("covariance_type must be ard_se: {}", descriptorParamString), true);
+                CurrentLogger::get()->logAndThrow("covariance_type must be ard_se: {}", descriptorParamString);
             }
 
             // TODO: make it pretty

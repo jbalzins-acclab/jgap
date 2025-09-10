@@ -22,15 +22,10 @@ namespace jgap {
 
         if (prediction.forces.has_value() && (setEmpty || forces.has_value())) {
             if (size() != prediction.forces.value().size()) {
-                const string errMsg = format(
+                CurrentLogger::get()->logAndThrow(
                     "Found force {} predictions for a {} atom system",
-                    prediction.forces.value().size(),
-                    size()
-                );
-                if (CurrentLogger::get() != nullptr) {
-                    CurrentLogger::get()->error(errMsg);
-                }
-                throw runtime_error(errMsg);
+                    prediction.forces.value().size(), size()
+                    );
             }
 
             if (!forces.has_value()) {
@@ -51,9 +46,9 @@ namespace jgap {
         }
     }
 
-    AtomicStructure AtomicStructure::repeat(size_t a, size_t b, size_t c) {
+    AtomicStructure AtomicStructure::repeat(const size_t a, const size_t b, const size_t c) {
         auto cpy = AtomicStructure{};
-        cpy.configType = this->configType;
+        cpy.properties = this->properties;
 
         cpy.energy = this->energy.transform([&](const double val) -> double {
             return val * static_cast<double>(a) * static_cast<double>(b) * static_cast<double>(c);

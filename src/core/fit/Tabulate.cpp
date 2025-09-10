@@ -28,7 +28,7 @@ namespace jgap {
         writeH5(potential, params, tabulationParams, tabulationData, outputFileNamePrefix);
 
         for (size_t index = 0; index < tabulationData.eamTabulationData.size(); index++) {
-            CurrentLogger::get()->debug(format("Saving eam.fs #{}", index));
+            CurrentLogger::get()->debug("Saving eam.fs #{}", index);
             writeEamFs(potential, params, tabulationParams,
                        tabulationData.eamTabulationData[index], outputFileNamePrefix,
                        tabulationData.pairEnergies, index);

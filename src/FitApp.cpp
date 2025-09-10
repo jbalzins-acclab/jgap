@@ -1,33 +1,18 @@
 #include <core/fit/InRamJgapFit.hpp>
 #include <utils/Utils.hpp>
-#include <iostream>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <format>
-#include <cmath>
 #include <thread>
 #include <Eigen/Dense>
 #include <ParserRegistryAuto.hpp>
 #include <tbb/parallel_for_each.h>
-#include <execinfo.h>
-#include <Version.hpp>
 
-void print_backtrace() {
-    void* callstack[128];
-    int frames = backtrace(callstack, 128);
-    char** symbols = backtrace_symbols(callstack, frames);
-    std::cerr << "Stack trace:\n";
-    for (int i = 0; i < frames; ++i) {
-        std::cerr << symbols[i] << "\n";
-    }
-    free(symbols);
-}
+#include <Version.hpp>
 
 using namespace std;
 
 int main(int argc, char** argv) {
-
-    jgap::CurrentLogger::get()->info(format("jGAP fit v{}", JGAP_VERSION));
+    jgap::CurrentLogger::get()->info("jGAP fit v{}", JGAP_VERSION);
 
     Eigen::setNbThreads(thread::hardware_concurrency()); // NOLINT(*-narrowing-conversions)
 
@@ -42,20 +27,14 @@ int main(int argc, char** argv) {
         string paramFileName = argv[1];
         ifstream paramFile(paramFileName);
         if (!paramFile.is_open()) {
-            jgap::CurrentLogger::get()->error(format("Cannot open param file {}", paramFileName));
+            jgap::CurrentLogger::get()->error("Cannot open param file {}", paramFileName);
             return EXIT_FAILURE;
         }
         nlohmann::json fitParams;
         paramFile >> fitParams;
 
-        jgap::CurrentLogger::get()->info("Checking output file");
         string outputFileName = fitParams["output_file"];
-        ofstream outFileTest(outputFileName);
-        if (!outFileTest.is_open()) {
-            jgap::CurrentLogger::get()->error(format("Cannot open output file {}", outputFileName), true);
-            return EXIT_FAILURE;
-        }
-        outFileTest.close();
+        jgap::CurrentLogger::get()->info("Output file name: {}", outputFileName);
 
         jgap::CurrentLogger::get()->info("Picking fit logic");
         fitParams["type"] = fitParams.value("type", "composite");
@@ -74,16 +53,16 @@ int main(int argc, char** argv) {
 
         // ------------------------ FIT -------------------------------
 
-        jgap::CurrentLogger::get()->info(format(
+        jgap::CurrentLogger::get()->info(
             "Fitting {} potential with params from file {}: {}",
             fitParams["type"].dump(), paramFileName, fitParams.dump()
-            ));
+            );
         shared_ptr<jgap::Potential> resultingPotential = fit->fit(trainingData);
         jgap::CurrentLogger::get()->info("Main fit done");
 
         // ------------------------ SAVE -------------------------------
 
-        jgap::CurrentLogger::get()->info(format("Saving resulting potential data to {}", outputFileName));
+        jgap::CurrentLogger::get()->info("Saving resulting potential data to {}", outputFileName);
         auto output = resultingPotential->serialize();
         output["type"] = resultingPotential->getType();
 
@@ -96,8 +75,7 @@ int main(int argc, char** argv) {
 
     } catch (exception& e) {
         jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
-        print_backtrace();
-        throw;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

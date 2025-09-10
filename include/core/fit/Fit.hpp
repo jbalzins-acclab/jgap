@@ -8,8 +8,6 @@
 #include "core/potentials/JgapPotential.hpp"
 #include "core/matrices/sigmas/RegularizationRules.hpp"
 
-#include <Eigen/Dense>
-
 #include <memory>
 
 using namespace std;

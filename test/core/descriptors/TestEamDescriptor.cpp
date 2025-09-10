@@ -24,7 +24,7 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
         .species = {"Fe", "Fe", "Fe"}
     };
 
-    auto params = nlohmann::json::parse(R"(
+    const auto params = nlohmann::json::parse(R"(
     {
         "kernel": {
             "type": "squared_exp",

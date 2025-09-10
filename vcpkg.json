@@ -11,10 +11,6 @@
             "version>=": "2022.1.0#0"
         },
         {
-            "name" : "spdlog",
-            "version>=" : "1.15.1#1"
-        },
-        {
             "name" : "eigen3",
             "version>=": "3.4.0#5"
         },
@@ -27,8 +23,9 @@
             "version>=": "1.15#0"
         },
         {
-            "name": "tinyspline",
-            "version>=": "0.6.0#0"
+            "name": "openblas",
+            "version>=": "0.3.29#0",
+            "features": ["threads"]
         }
     ]
 }

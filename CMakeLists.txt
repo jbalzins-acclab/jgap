@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.11) # TODO: test if that's sufficient
 project(jgap)
 
 set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
@@ -15,11 +15,10 @@ set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
 
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
-find_package(tinysplinecxx CONFIG REQUIRED)
+find_package(OpenBLAS CONFIG REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -118,10 +117,8 @@ add_executable(jgap_tabulate_app ${TABULATE_APP_SOURCE_FILES})
 add_executable(jgap_convert_quip_xml_app ${CONVERT_QUIP_XML_APP_SOURCE_FILES})
 
 target_link_libraries(jgap PRIVATE
-        spdlog::spdlog
         Eigen3::Eigen
-        HighFive
-        tinysplinecxx::tinysplinecxx
+        OpenBLAS::OpenBLAS
 )
 
 target_link_libraries(jgap PUBLIC
@@ -129,6 +126,11 @@ target_link_libraries(jgap PUBLIC
         nlohmann_json::nlohmann_json
         TBB::tbb TBB::tbbmalloc
         HighFive
+)
+
+target_compile_definitions(jgap PRIVATE
+        EIGEN_FAST_MATH
+        EIGEN_USE_BLAS
 )
 
 target_link_libraries(jgap_fit_app PRIVATE
@@ -165,6 +167,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     FetchContent_Declare(
             googletest
             URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+            DOWNLOAD_EXTRACT_TIMESTAMP OLD
     )
     FetchContent_MakeAvailable(googletest)
     enable_testing()

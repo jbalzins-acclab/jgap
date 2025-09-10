@@ -1,6 +1,7 @@
 #include "core/descriptors/EamDescriptor.hpp"
 
 #include <random>
+#include <utility>
 
 #include "core/descriptors/kernels/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -12,7 +13,8 @@ namespace jgap {
                                  map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions)
         : _kernel(std::move(kernel)),
           _sparsifier(nullptr),
-          _defaultPairFunction(defaultPairFunction), _pairFunctions(std::move(pairFunctions)),
+          _defaultPairFunction(std::move(defaultPairFunction)),
+          _pairFunctions(std::move(pairFunctions)),
           _sparsePointsPerSpecies({}) {
 
         _maxCutoff = 0;
@@ -202,10 +204,10 @@ namespace jgap {
             result.maxDensity = max(result.maxDensity, ranges::max(points));
         }
         if (result.maxDensity - params.maxDensity.value_or(result.maxDensity) > 1) {
-            CurrentLogger::get()->warn(format(
+            CurrentLogger::get()->warn(
                 "max_eam_density={} is too low - highest sparse point is {}",
                 params.maxDensity.value(), result.maxDensity
-                ));
+                );
         }
         result.maxDensity = params.maxDensity.value_or(result.maxDensity);
 

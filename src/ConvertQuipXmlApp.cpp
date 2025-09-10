@@ -15,7 +15,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    jgap::CurrentLogger::get()->info(format("jGAP from QUIP xml v{}", JGAP_VERSION));
+    jgap::CurrentLogger::get()->info("jGAP from QUIP xml v{}", JGAP_VERSION);
 
     if (argc != 2) {
         jgap::CurrentLogger::get()->error(
@@ -27,11 +27,11 @@ int main(int argc, char** argv) {
     try {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
-        jgap::CurrentLogger::get()->info(format("Converting QUIP GAP to jGAP: {}", argv[1]));
+        jgap::CurrentLogger::get()->info("Converting QUIP GAP to jGAP: {}", argv[1]);
 
         pugi::xml_document quipDocument;
         if (!quipDocument.load_file(argv[1])) {
-            jgap::CurrentLogger::get()->error(format("Cannot input quip file: {}", argv[1]));
+            jgap::CurrentLogger::get()->error("Cannot input quip file: {}", argv[1]);
             return EXIT_FAILURE;
         }
 
@@ -39,11 +39,11 @@ int main(int argc, char** argv) {
         auto result = jgap::QuipXmlConverter::transform(quipDocument.document_element());
 
         string outputFilename = string(argv[1]) + ".jgap.json";
-        jgap::CurrentLogger::get()->info("Converted => saving to: " + outputFilename);
+        jgap::CurrentLogger::get()->info("Converted => saving to: {}", outputFilename);
 
         ofstream outputFile(outputFilename);
         if (!outputFile.is_open()) {
-            jgap::CurrentLogger::get()->error(format("Cannot open output file {}", outputFilename));
+            jgap::CurrentLogger::get()->error("Cannot open output file {}", outputFilename);
             return EXIT_FAILURE;
         }
         outputFile << result->serialize().dump(4);
@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
         outputFile.close();
 
     } catch (exception& e) {
-        jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
-        throw;
+        jgap::CurrentLogger::get()->error("Fail: {}", e.what());
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

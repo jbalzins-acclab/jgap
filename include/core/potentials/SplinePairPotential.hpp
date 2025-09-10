@@ -3,7 +3,6 @@
 
 #include "Potential.hpp"
 #include "io/parse/ParserRegistry.hpp"
-#include <tinysplinecxx.h>
 
 namespace jgap {
     class SplinePairPotential : public Potential {

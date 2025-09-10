@@ -12,11 +12,11 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    jgap::CurrentLogger::get()->info(format("jGAP predict v{}", JGAP_VERSION));
+    jgap::CurrentLogger::get()->info("jGAP predict v{}", JGAP_VERSION);
 
     if (argc != 4) {
         jgap::CurrentLogger::get()->error(
-            "Expected 3 arguments: \n 1. pot-file \n 2. to-be-predicted.xyz \n 3. output.xyz"
+            "Expected 3 arguments: \n 1. pot-file(.jgap.json) \n 2. to-be-predicted.xyz \n 3. output.xyz"
             );
         return EXIT_FAILURE;
     }
@@ -24,15 +24,12 @@ int main(int argc, char** argv) {
     try {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
-        jgap::CurrentLogger::get()->info(format(
-            "Using {} potential to predict on data from {}",
-            argv[1], argv[2]
-            ));
+        jgap::CurrentLogger::get()->info("Using {} potential to predict on data from {}", argv[1], argv[2]);
 
         string potentialFileName = argv[1];
         ifstream potentialParamFile(potentialFileName);
         if (!potentialParamFile.is_open()) {
-            jgap::CurrentLogger::get()->error(format("Cannot open pot-param file {}", potentialFileName));
+            jgap::CurrentLogger::get()->error("Cannot open pot-param file {}", potentialFileName);
             return EXIT_FAILURE;
         }
         nlohmann::json potParams;
@@ -48,7 +45,6 @@ int main(int argc, char** argv) {
         jgap::NeighbourFinder::findNeighbours(toBePredicted, potential->getCutoff());
         vector<jgap::PotentialPrediction> predictions(toBePredicted.size());
         tbb::parallel_for(0uz, toBePredicted.size(), [&](const size_t i) {
-            jgap::CurrentLogger::get()->debug(format("Doing box #{}", i));
             predictions[i] = potential->predict(toBePredicted[i]);
         });
 
@@ -64,8 +60,8 @@ int main(int argc, char** argv) {
         jgap::CurrentLogger::get()->info("Finished predicting");
 
     } catch (exception& e) {
-        jgap::CurrentLogger::get()->error("Fail: " + string(e.what()));
-        throw;
+        jgap::CurrentLogger::get()->error("Fail: {}", e.what());
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
