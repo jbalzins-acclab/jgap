@@ -7,6 +7,9 @@
 
 #include <tbb/parallel_for_each.h>
 
+#include <Eigen/Sparse>
+#include <Eigen/SparseQR>
+
 namespace jgap {
 
     InRamJgapFit::InRamJgapFit(const nlohmann::json &params) {
@@ -89,18 +92,7 @@ namespace jgap {
     }
 
     vector<double> InRamJgapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
-
-        long long nzeros = 0, overall = 0;
-        for (size_t i = 0; i < A.rows(); i++) {
-            for (size_t j = 0; j < A.cols(); j++) {
-                if (A(i, j) == 0.0) nzeros++;
-                overall ++;
-            }
-        }
-
-        CurrentLogger::get()->info("N_ZEROS: {} of {}", nzeros, overall);
-
-        CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
+        /*CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
         const Eigen::HouseholderQR<Eigen::Ref<Eigen::MatrixXd>> qr(A);
 
         CurrentLogger::get()->debug("Q^t");
@@ -115,7 +107,39 @@ namespace jgap {
         CurrentLogger::get()->debug("R^-1 * Qt_b");
         Eigen::VectorXd c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.cols()));
 
-        return vector<double>{c.data(), c.data() + c.size()};
+        return vector<double>{c.data(), c.data() + c.size()};*/
+        using namespace Eigen;
+
+        const int targetRank = 1000;       // target rank
+        const int oversampling = 10;        // oversampling
+
+        CurrentLogger::get()->debug("Generate random test matrix Omega");
+        MatrixXd Omega = MatrixXd::Random(A.cols(), targetRank + oversampling);
+
+        CurrentLogger::get()->debug("Compute Y = A * Omega");
+        MatrixXd Y = A * Omega;
+
+        CurrentLogger::get()->debug("Compute QR of Y for orthonormal basis");
+        HouseholderQR<MatrixXd> qr(Y);
+        MatrixXd Q = qr.householderQ() * MatrixXd::Identity(Y.rows(), targetRank + oversampling); // use k+p
+
+        CurrentLogger::get()->debug("Project A to lower dimension: B = Q^T * A");
+        MatrixXd B = Q.transpose() * A;
+
+        CurrentLogger::get()->debug("Compute SVD of small matrix B");
+        JacobiSVD<MatrixXd> svd(B, ComputeThinU | ComputeThinV);
+        const MatrixXd& U_hat = svd.matrixU();
+        VectorXd S = svd.singularValues();
+        const MatrixXd& V = svd.matrixV();
+
+        CurrentLogger::get()->debug("Recover approximate U");
+        MatrixXd U = Q * U_hat;
+
+        CurrentLogger::get()->debug("Compute least-squares solution x = V * S^-1 * U^T * b");
+        VectorXd S_inv = S.array() / S.array().square();
+        VectorXd x = V * S_inv.asDiagonal() * (U.transpose() * b);
+
+        return vector<double>{x.data(), x.data() + x.size()};
     }
 
     Eigen::MatrixXd InRamJgapFit::makeA(const vector<shared_ptr<Descriptor>> &descriptors,
@@ -214,11 +238,11 @@ namespace jgap {
                 size_t currentRow = startingRow;
 
                 if (atomicStructure.energy.has_value()) {
-                    A(currentRow++, contributionColumn) = contribution.total
-                                                                    * atomicStructure.energySigmaInverse.value();
+                    A(currentRow++, contributionColumn) =
+                        contribution.total * atomicStructure.energySigmaInverse.value();
                 }
 
-                if (atomicStructure.forces.has_value()) {
+                if (atomicStructure.forces.has_value() && !contribution.forces.empty()) {
                     for (size_t rowInc = 0; rowInc < contribution.forces.size(); rowInc++) {
 
                         const auto force = contribution.forces[rowInc]; // FORCE IS NEGATIVE
@@ -232,20 +256,20 @@ namespace jgap {
 
                 if (atomicStructure.virials.has_value()) {
                     array virials = contribution.virials;
-                    A(currentRow++, contributionColumn) = virials[0].x
-                        * atomicStructure.virialSigmasInverse.value()[0].x;
-                    A(currentRow++, contributionColumn) = virials[0].y
-                        * atomicStructure.virialSigmasInverse.value()[0].y;
-                    A(currentRow++, contributionColumn) = virials[0].z
-                        * atomicStructure.virialSigmasInverse.value()[0].z;
+                    A(currentRow++, contributionColumn) =
+                        virials[0].x * atomicStructure.virialSigmasInverse.value()[0].x;
+                    A(currentRow++, contributionColumn) =
+                        virials[0].y * atomicStructure.virialSigmasInverse.value()[0].y;
+                    A(currentRow++, contributionColumn) =
+                        virials[0].z * atomicStructure.virialSigmasInverse.value()[0].z;
 
-                    A(currentRow++, contributionColumn) = virials[1].y
-                        * atomicStructure.virialSigmasInverse.value()[1].y;
-                    A(currentRow++, contributionColumn) = virials[1].z
-                        * atomicStructure.virialSigmasInverse.value()[1].z;
+                    A(currentRow++, contributionColumn) =
+                        virials[1].y * atomicStructure.virialSigmasInverse.value()[1].y;
+                    A(currentRow++, contributionColumn) =
+                        virials[1].z * atomicStructure.virialSigmasInverse.value()[1].z;
 
-                    A(currentRow++, contributionColumn) = virials[2].z
-                        * atomicStructure.virialSigmasInverse.value()[2].z;
+                    A(currentRow++, contributionColumn) =
+                        virials[2].z * atomicStructure.virialSigmasInverse.value()[2].z;
                 }
 
                 contributionColumn++;

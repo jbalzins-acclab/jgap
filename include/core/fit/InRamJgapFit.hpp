@@ -37,6 +37,10 @@ namespace jgap {
         shared_ptr<RegularizationRules> _sigmaRules;
         double _jitter;
 
+        // TODO: 4-element matrix has only ~12% non-zero values i.e. ~12GB
+        // => try to configure sparse matrix storage + linalg
+        // * either specify manually to use it, or auto-select if #elements > 2 (?)
+
         [[nodiscard]]
         Eigen::MatrixXd makeA(const vector<shared_ptr<Descriptor>>& descriptors,
                               const vector<AtomicStructure>& atomicStructures) const;

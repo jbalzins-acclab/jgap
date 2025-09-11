@@ -38,15 +38,20 @@ int main(int argc, char** argv) {
             potParams["type"] = "composite";
         }
 
+        jgap::CurrentLogger::get()->info("Loading potential");
         auto potential = jgap::ParserRegistry<jgap::Potential>::get(potParams);
+
+        jgap::CurrentLogger::get()->info("Loading data");
         auto toBePredicted = jgap::readXyz(argv[2]);
 
         // ------------------------ PREDICT IN PARALLEL -------------------------------
+        jgap::CurrentLogger::get()->info("Evaluation started");
         jgap::NeighbourFinder::findNeighbours(toBePredicted, potential->getCutoff());
         vector<jgap::PotentialPrediction> predictions(toBePredicted.size());
         tbb::parallel_for(0uz, toBePredicted.size(), [&](const size_t i) {
             predictions[i] = potential->predict(toBePredicted[i]);
         });
+        jgap::CurrentLogger::get()->info("Evaluation finished");
 
         // ------------------------ GATHER PREDICTIONS AND SAVE -------------------------------
         vector<jgap::AtomicStructure> result;

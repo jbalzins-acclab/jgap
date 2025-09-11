@@ -251,9 +251,9 @@ namespace jgap {
             meta += "\" ";
             for (auto &[k, v]: structure.properties) {
                 if (v.contains(" ") || v.contains("\t")) {
-                   meta += k + "=\"" + v + "\"";
+                   meta += k + "=\"" + v + "\" ";
                 } else {
-                    meta += k + "=" + v;
+                    meta += k + "=" + v + " ";
                 }
             }
             if (structure.energy.has_value()) {

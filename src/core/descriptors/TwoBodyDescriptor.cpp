@@ -100,7 +100,7 @@ namespace jgap {
 
             for (const auto &[speciesPair, perPairIndex]: structureIndex) {
 
-                if (!allDistances.contains(speciesPair))  allDistances[speciesPair] = {};
+                if (!allDistances.contains(speciesPair)) allDistances[speciesPair] = {};
                 for (const auto &entity: perPairIndex) {
                     allDistances[speciesPair].push_back(vector{entity.r});
                 }
