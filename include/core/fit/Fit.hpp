@@ -1,14 +1,12 @@
-#ifndef JGAPFIT_HPP
-#define JGAPFIT_HPP
+#ifndef FIT_HPP
+#define FIT_HPP
 
 #include "data/BasicDataTypes.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include "core/potentials/Potential.hpp"
 #include "core/descriptors/Descriptor.hpp"
-#include "core/potentials/JgapPotential.hpp"
+#include "core/potentials/GapPotential.hpp"
 #include "core/matrices/sigmas/RegularizationRules.hpp"
-
-#include <Eigen/Dense>
 
 #include <memory>
 

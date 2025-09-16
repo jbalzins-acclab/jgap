@@ -12,7 +12,10 @@ namespace jgap {
 
     void SimpleRegularizationRules::fillSigmas(AtomicStructure &structure) {
         double multiplier = 1.0;
-        const auto ct = structure.configType.value_or("default");
+        string ct = "default";
+        if (structure.properties.contains("config_type")) {
+            ct = structure.properties["config_type"];
+        }
 
         if (ct == "isolated_atom") {
             multiplier = 0.001;

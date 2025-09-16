@@ -9,6 +9,7 @@
 #include <fstream>
 #include <ranges>
 #include <Eigen/Dense>
+#include <deque>
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/CurrentLogger.hpp"
@@ -16,6 +17,62 @@
 using namespace std;
 
 namespace jgap {
+    map<string, string> parseHeaderLine(const string &line) {
+        map<string, string> header;
+
+        try {
+            size_t pos = 0;
+            while (pos < line.size()) {
+                if (isspace(line[pos])) {
+                    pos++;
+                    continue;
+                }
+
+                string property = "";
+                while (line[pos] != '=') {
+                    property += line[pos];
+                    pos++;
+
+                    if (pos >= line.size() || isspace(line[pos])) {
+                        throw runtime_error("'=' not found after " + property);
+                    }
+                }
+                pos++;
+
+                string value = "";
+                if (line[pos] == '"') {
+                    pos++;
+                    while (pos < line.size() && line[pos] != '"') {
+                        value += line[pos];
+                        pos++;
+                    }
+                } else {
+                    while (pos < line.size() && !isspace(line[pos])) {
+                        value += line[pos];
+                        pos++;
+                    }
+                }
+                pos++;
+
+                header[property] = value;
+            }
+        } catch (exception& e) {
+            CurrentLogger::get()->logAndThrow("Formatting error {} in : {}", e.what(), line);
+        } catch (...) {
+            CurrentLogger::get()->logAndThrow("Formatting error in: {}", line);
+        }
+
+
+        return header;
+    }
+
+    bool getLine(ifstream &file, string &line) {
+        if (!getline(file, line)) return false;
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back(); // remove Windows carriage return
+        }
+        return true;
+    }
 
     vector<AtomicStructure> readXyz(const string& fileName) {
 
@@ -27,118 +84,71 @@ namespace jgap {
         }
 
         string line;
-        istringstream iss;
-        while (getline(file, line)) {
+        while (getLine(file, line)) {
             // n_atoms
             size_t n;
-            iss = istringstream(line);
+            istringstream iss(line);
             iss >> n;
             if (!iss.eof()) {
-                CurrentLogger::get()->error( format("Expected single integer, got {}", line), true);
+                CurrentLogger::get()->logAndThrow("Expected single integer, got {}", line);
             }
 
             // metadata
-            getline(file, line);
-            line += " "; // simplify end of line parsing
+            getLine(file, line);
 
-            if (!line.contains("pbc=\"T T T\"")) {
-                CurrentLogger::get()->error(format("No PBC? : {}", line), true);
+            map<string, string> properties = parseHeaderLine(line);
+
+            if (!properties.contains("pbc") || properties["pbc"] != "T T T") {
+                CurrentLogger::get()->logAndThrow("No PBC? : {}", line);
             }
+            properties.erase("pbc");
 
             array<Vector3, 3> lattice{};
-            if (size_t latticeStartIdx = line.find("Lattice=\""); latticeStartIdx != string::npos) {
-                latticeStartIdx += string("Lattice=\"").size();
-
-                size_t latticeEndIdx = line.find('\"', latticeStartIdx);
-                if (latticeEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Lattice unspecified in {}", line), true);
-                }
-
-                string latticeStr = line.substr(latticeStartIdx, latticeEndIdx - latticeStartIdx);
-                iss = istringstream(latticeStr);
-                iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
-                    >> lattice[1].x >> lattice[1].y >> lattice[1].z
-                    >> lattice[2].x >> lattice[2].y >> lattice[2].z;
+            if (!properties.contains("Lattice")) {
+                CurrentLogger::get()->logAndThrow("Lattice unspecified in {}", line);
             }
-            else {
-                CurrentLogger::get()->error(format("Lattice unspecified in {}", line), true);
-            }
-
-            optional<string> configType{};
-            if (size_t configTypeStartIdx = line.find("config_type="); configTypeStartIdx != string::npos) {
-                configTypeStartIdx += string("config_type=").size();
-                size_t configTypeEndIdx = line.find(' ', configTypeStartIdx);
-                if (configTypeEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Config type formatting error in: {}", line), true);
-                }
-
-                configType = line.substr(configTypeStartIdx, configTypeEndIdx - configTypeStartIdx);
-            }
+            iss = istringstream(properties["Lattice"]);
+            iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
+                >> lattice[1].x >> lattice[1].y >> lattice[1].z
+                >> lattice[2].x >> lattice[2].y >> lattice[2].z;
+            properties.erase("Lattice");
 
             optional<double> energy{};
-            if (size_t energyStartIdx = line.find("energy="); energyStartIdx != string::npos) {
-                energyStartIdx += string("energy=").size();
-                size_t energyEndIdx = line.find(' ', energyStartIdx);
-                if (energyEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Energy formatting error in: {}", line), true);
-                }
-
-                string energyStr = line.substr(energyStartIdx, energyEndIdx - energyStartIdx);
-                iss = istringstream(energyStr);
+            if (properties.contains("energy")) {
+                iss = istringstream(properties["energy"]);
                 double energyVal;
                 iss >> energyVal;
                 energy = energyVal;
+                properties.erase("energy");
             }
 
             optional<double> energySigmaInverse{};
-            if (size_t energySigmaStartIdx = line.find("energy_sigma="); energySigmaStartIdx != string::npos) {
-                energySigmaStartIdx += string("energy_sigma=").size();
-                size_t energySigmaEndIdx = line.find(' ', energySigmaStartIdx);
-                if (energySigmaEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("energy_sigma formatting error in: {}", line), true);
-                }
-
-                string energySigmaStr = line.substr(energySigmaStartIdx, energySigmaEndIdx - energySigmaStartIdx);
-                iss = istringstream(energySigmaStr);
+            if (properties.contains("energy_sigma")) {
+                iss = istringstream(properties["energy_sigma"]);
                 double energySigmaVal;
                 iss >> energySigmaVal;
                 energySigmaInverse = 1.0 / energySigmaVal;
+                properties.erase("energy_sigma");
             }
 
             optional<array<Vector3, 3>> virials{};
-            size_t virialsStartIdx = line.find("virial=\"");
-            if (virialsStartIdx == string::npos) {
-                virialsStartIdx = line.find("virials=\"");
-                virialsStartIdx += string("virials=\"").size();
-            } else {
-                virialsStartIdx += string("virial=\"").size();
+            if (properties.contains("virials")) {
+                properties["virial"] = properties["virials"];
+                properties.erase("virials");
             }
-            if (virialsStartIdx != string::npos) {
-
-                size_t virialsEndIdx = line.find('\"', virialsStartIdx);
-                if (virialsEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Virials parsing error in: {}", line), true);
-                }
-
-                string virialsStr = line.substr(virialsStartIdx, virialsEndIdx - virialsStartIdx);
-                iss = istringstream(virialsStr);
+            if (properties.contains("virial")) {
+                iss = istringstream(properties["virial"]);
                 array<Vector3, 3> virialsVal{};
                 iss >> virialsVal[0].x >> virialsVal[0].y >> virialsVal[0].z
                     >> virialsVal[1].x >> virialsVal[1].y >> virialsVal[1].z
                     >> virialsVal[2].x >> virialsVal[2].y >> virialsVal[2].z;
                 virials = virialsVal;
+                properties.erase("virial");
             }
 
             optional<array<Vector3, 3>> virialsSigmasInverse{};
-            if (size_t virialsSigmaStartIdx = line.find("virials_sigma="); virialsSigmaStartIdx != string::npos) {
-                virialsSigmaStartIdx += string("virials_sigma=").size();
-                size_t virialsSigmaEndIdx = line.find(' ', virialsSigmaStartIdx);
-                if (virialsSigmaEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("virials_sigma formatting error in: {}", line), true);
-                }
-
-                string virialsSigmaStr = line.substr(virialsSigmaStartIdx, virialsSigmaEndIdx - virialsSigmaStartIdx);
-                iss = istringstream(virialsSigmaStr);
+            if (properties.contains("virials_sigma")) {
+                iss = istringstream(properties["virials_sigma"]);
                 double virialsSigmaVal;
                 iss >> virialsSigmaVal;
                 virialsSigmasInverse = array{
@@ -146,16 +156,9 @@ namespace jgap {
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal}
                 };
-            } else if (size_t virialsSigmasStartIdx = line.find("virials_sigmas=\"");
-                       virialsSigmasStartIdx != string::npos) {
-                virialsSigmasStartIdx += string("virials_sigmas=").size();
-                size_t virialsSigmasEndIdx = line.find('\"', virialsSigmasStartIdx);
-                if (virialsSigmasEndIdx == string::npos) {
-                    CurrentLogger::get()->error(format("Virials sigmas parsing error in: {}", line), true);
-                }
-
-                string virialsSigmasStr = line.substr(virialsSigmasStartIdx, virialsSigmasEndIdx - virialsSigmasStartIdx);
-                iss = istringstream(virialsSigmasStr);
+                properties.erase("virials_sigma");
+            } else if (properties.contains("virials_sigmas")) {
+                iss = istringstream(properties["virials_sigmas"]);
                 array<Vector3, 3> virialsSigmasVal{};
                 iss >> virialsSigmasVal[0].x >> virialsSigmasVal[0].y >> virialsSigmasVal[0].z
                     >> virialsSigmasVal[1].x >> virialsSigmasVal[1].y >> virialsSigmasVal[1].z
@@ -165,6 +168,7 @@ namespace jgap {
                     Vector3{1.0 / virialsSigmasVal[1].x, 1.0 / virialsSigmasVal[1].y, 1.0 / virialsSigmasVal[1].z},
                     Vector3{1.0 / virialsSigmasVal[2].x, 1.0 / virialsSigmasVal[2].y, 1.0 / virialsSigmasVal[2].z}
                 };
+                properties.erase("virials_sigmas");
             }
 
             vector<Vector3> positions(n);
@@ -200,11 +204,11 @@ namespace jgap {
                     iss >> positions[i].x >> positions[i].y >> positions[i].z;
                 }
             } else {
-                CurrentLogger::get()->error(format("Unknown properties string: {}", line), true);
+                CurrentLogger::get()->logAndThrow("Unknown properties string: {}", line);
             }
 
             result.push_back(AtomicStructure{
-                .configType = configType,
+                .properties = properties,
                 .lattice = lattice,
                 .positions = positions,
                 .species = species,
@@ -224,7 +228,7 @@ namespace jgap {
         return result;
     }
 
-    vector<AtomicStructure> readXyz(const string &fileName, double cutoff) {
+    vector<AtomicStructure> readXyz(const string &fileName, const double cutoff) {
         auto result = readXyz(fileName);
         NeighbourFinder::findNeighbours(result, cutoff);
         return result;
@@ -245,8 +249,12 @@ namespace jgap {
                 structure.lattice[2].x, structure.lattice[2].y, structure.lattice[2].z
                 );
             meta += "\" ";
-            if (structure.configType.has_value()) {
-                meta += "config_type=" + structure.configType.value() + " ";
+            for (auto &[k, v]: structure.properties) {
+                if (v.contains(" ") || v.contains("\t")) {
+                   meta += k + "=\"" + v + "\" ";
+                } else {
+                    meta += k + "=" + v + " ";
+                }
             }
             if (structure.energy.has_value()) {
                 meta += "energy=" + to_string(structure.energy.value()) + " ";

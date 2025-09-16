@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 18.6.2025.
-//
-
 #ifndef EAMPAIRFUNCTION_HPP
 #define EAMPAIRFUNCTION_HPP
 

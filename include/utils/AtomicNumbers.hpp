@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 19.6.2025.
-//
-
 #ifndef ATOMICNUMBERS_HPP
 #define ATOMICNUMBERS_HPP
 
@@ -92,4 +88,4 @@ namespace jgap {
     };
 }
 
-#endif //ATOMICNUMBERS_HPP
+#endif

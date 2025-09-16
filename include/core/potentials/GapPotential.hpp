@@ -1,5 +1,5 @@
-#ifndef JGAPPOTENTIAL_HPP
-#define JGAPPOTENTIAL_HPP
+#ifndef GAPPOTENTIAL_HPP
+#define GAPPOTENTIAL_HPP
 
 #include <string_view>
 #include <utility>
@@ -10,18 +10,18 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class JgapPotential : public Potential {
+    class GapPotential : public Potential {
     public:
-        explicit JgapPotential(const nlohmann::json& params);
-        explicit JgapPotential(map<string, shared_ptr<Descriptor>> descriptors)
+        explicit GapPotential(const nlohmann::json& params);
+        explicit GapPotential(map<string, shared_ptr<Descriptor>> descriptors)
             : _descriptors(std::move(descriptors)) {
         }
-        ~JgapPotential() override = default;
+        ~GapPotential() override = default;
 
         PotentialPrediction predict(const AtomicStructure &structure) override;
 
         nlohmann::json serialize() override;
-        string getType() override { return "jgap"; }
+        string getType() override { return "gap"; }
         double getCutoff() override;
 
         TabulationData tabulate(const TabulationParams &params) override;
@@ -30,6 +30,6 @@ namespace jgap {
         map<string, shared_ptr<Descriptor>> _descriptors;
     };
 
-    REGISTER_PARSER("jgap", Potential, JgapPotential);
+    REGISTER_PARSER("gap", Potential, GapPotential);
 }
 #endif

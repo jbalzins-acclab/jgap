@@ -42,13 +42,13 @@ namespace jgap {
             step[d] = (maxPoint[d] - minPoint[d]) / static_cast<double>(gridDimensions[d]);
         }
 
-        CurrentLogger::get()->info(format(
+        CurrentLogger::get()->info(
                 "{}d histogram in range {} - {} with {} long bins:",
                 gridDimensions.size(),
                 iteratorToString(minPoint.begin(), minPoint.end()),
                 iteratorToString(maxPoint.begin(), maxPoint.end()),
                 iteratorToString(step.begin(), step.end())
-                ));
+                );
 
         vector<vector<double>> sparsePoints;
         set<vector<size_t>> usefulGridSlots;

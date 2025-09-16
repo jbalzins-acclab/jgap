@@ -16,13 +16,13 @@ using namespace std;
 
 namespace jgap {
 
-    class Descriptor/*(Manager)*/ {
+    class Descriptor {
     public:
 
         virtual ~Descriptor() = default;
 
         // Sparsification strategy to constructor
-        virtual void setSparsePoints(const vector<AtomicStructure> &fromData) = 0;
+        virtual void selectSparsePoints(const vector<AtomicStructure> &fromData) = 0;
         virtual size_t nSparsePoints() = 0;
 
         virtual vector<Covariance> covariate(const AtomicStructure &atomicStructure) = 0;

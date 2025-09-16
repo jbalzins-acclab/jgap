@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <format>
+#include <map>
 
 #include "io/log/CurrentLogger.hpp"
 
@@ -199,7 +200,7 @@ namespace jgap {
     using NeighboursData = vector<NeighbourData>;
 
     struct AtomicStructure {
-        optional<string> configType;
+        map<string, string> properties;
         array<Vector3, 3> lattice;
         vector<Vector3> positions;
         vector<Species> species;
@@ -302,6 +303,24 @@ namespace jgap {
         vector<Vector3> forces;
         array<Vector3, 3> virials;
     };
+
+    struct PredictionErrors {
+
+        size_t nStructures;
+        size_t nAtoms;
+
+        double energyPerAtomRmse_mev;
+        double energyPerAtomErrorStd_mev;
+        double forceRmse_evA;
+        double forceErrorStd_evA;
+        double virialsPerAtomsRmse_ev;
+        double virialsPerAtomsErrorStd_ev;
+
+        [[nodiscard]] string toString() const;
+    };
+
+    using ConfigType = string;
+    using CVPredictionErrors = map<ConfigType, PredictionErrors>;
 }
 
 #endif

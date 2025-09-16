@@ -8,10 +8,9 @@ namespace jgap {
     class SplinePairPotential : public Potential {
     public:
         class NaturalCubicSpline {
-        // NOTE: ChatGPT implementation - TODO: check
         public:
             NaturalCubicSpline(nlohmann::json params);
-            NaturalCubicSpline(vector<double> r, vector<double> E);
+            NaturalCubicSpline(const vector<double>& r, const vector<double>& E);
 
             double evaluate(double r) const;
             double derivative(double r) const;
@@ -20,14 +19,14 @@ namespace jgap {
             nlohmann::json serialize() const;
 
         private:
-            vector<double> _r, _a, _b, _c, _d;
+            vector<double> _r, _energies, _b, _c, _d;
 
             void init(const vector<double> &r, const vector<double> &E);
             size_t findInterval(double r) const;
         };
 
         explicit SplinePairPotential(nlohmann::json params);
-        explicit SplinePairPotential(map<SpeciesPair, pair<vector<double>, vector<double>> > points);
+        explicit SplinePairPotential(const map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
         ~SplinePairPotential() override = default;
 
         PotentialPrediction predict(const AtomicStructure &structure) override;

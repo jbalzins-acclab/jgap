@@ -4,6 +4,7 @@
 
 #include "core/fit/IsolatedAtomFit.hpp"
 
+#include "data/BasicDataTypes.hpp"
 #include "core/potentials/IsolatedAtomPotential.hpp"
 
 namespace jgap {
@@ -16,22 +17,21 @@ namespace jgap {
 
         map<Species, double> isolatedEnergies = {};
         for (auto &structure: trainingData) {
-            if (structure.configType.value_or("-") == "isolated_atom") {
+            if (structure.properties.contains("config_type")
+                 && structure.properties.at("config_type") == "isolated_atom") {
                 if (structure.size() != 1) {
-                    CurrentLogger::get() -> error(
-                        "Structure labeled as isolated_atom does not contain exactly one atom",
-                        true
+                    CurrentLogger::get()->logAndThrow(
+                        "Structure labeled as isolated_atom does not contain exactly one atom"
                         );
                 }
                 if (!structure.energy.has_value()) {
-                    CurrentLogger::get() -> error("isolated_atom with no energy",true);
+                    CurrentLogger::get()->logAndThrow("isolated_atom with no energy");
                 }
 
                 if (const Species species = structure.species[0]; isolatedEnergies.contains(species)) {
                     if (isolatedEnergies[species] - structure.energy.value() > 1e-9) {
-                        CurrentLogger::get() -> error(
-                            format("Found multiple {} isolated_atom structures with non-matching energies", species),
-                            true
+                        CurrentLogger::get()->logAndThrow(
+                            "Found multiple {} isolated_atom structures with non-matching energies", species
                             );
                     }
                 } else {

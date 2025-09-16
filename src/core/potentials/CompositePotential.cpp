@@ -45,10 +45,10 @@ namespace jgap {
         TabulationData result{};
 
         for (const auto &[label, potential] : _potentials) {
-            CurrentLogger::get()->debug(format("Tabulating {} potential", label));
+            CurrentLogger::get()->debug("Tabulating {} potential", label);
             TabulationData potentialTabulated = potential->tabulate(params);
 
-            CurrentLogger::get()->debug(format("Merging tabulation data"));
+            CurrentLogger::get()->debug("Merging tabulation data");
             result = result + potentialTabulated;
         }
 

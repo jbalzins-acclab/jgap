@@ -8,7 +8,7 @@
 #include "core/descriptors/ThreeBodyDescriptor.hpp"
 #include "core/descriptors/TwoBodyDescriptor.hpp"
 #include "core/potentials/IsolatedAtomPotential.hpp"
-#include "core/potentials/JgapPotential.hpp"
+#include "core/potentials/GapPotential.hpp"
 #include "core/potentials/Potential.hpp"
 
 using namespace std;
@@ -39,7 +39,7 @@ namespace jgap {
 
         static shared_ptr<IsolatedAtomPotential> transformIsolatedAtomParams(pugi::xml_node quipIsolatedAtomParams);
 
-        static shared_ptr<JgapPotential> transformSparseData(pugi::xml_node quipSparseData);
+        static shared_ptr<GapPotential> transformSparseData(pugi::xml_node quipSparseData);
         static shared_ptr<TwoBodyDescriptor> transformDistance2b(QuipDescriptorData mainData,
                                                                  vector<pugi::xml_node> distance2bNodes);
         static shared_ptr<ThreeBodyDescriptor> transformAngle3b(QuipDescriptorData mainData,

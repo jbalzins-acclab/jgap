@@ -1,11 +1,11 @@
-#ifndef INRAMJGAPFIT_HPP
-#define INRAMJGAPFIT_HPP
+#ifndef QRGAPFIT_HPP
+#define QRGAPFIT_HPP
 
 #include "data/BasicDataTypes.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include "core/potentials/Potential.hpp"
 #include "core/descriptors/Descriptor.hpp"
-#include "core/potentials/JgapPotential.hpp"
+#include "core/potentials/GapPotential.hpp"
 #include "core/matrices/sigmas/RegularizationRules.hpp"
 
 #include <Eigen/Dense>
@@ -19,12 +19,12 @@ using namespace std;
 
 namespace jgap {
 
-    class InRamJgapFit : public Fit {
+    class QRGapFit : public Fit {
     public:
-        ~InRamJgapFit() override = default;
+        ~QRGapFit() override = default;
 
-        explicit InRamJgapFit(const nlohmann::json& params);
-        string getType() override { return "in_ram_jgap"; }
+        explicit QRGapFit(const nlohmann::json& params);
+        string getType() override { return "qr_gap"; }
 
         [[nodiscard]]
         shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) override;
@@ -36,6 +36,10 @@ namespace jgap {
         map<string, shared_ptr<Descriptor>> _descriptors;
         shared_ptr<RegularizationRules> _sigmaRules;
         double _jitter;
+
+        // TODO: 4-element matrix has only ~12% non-zero values i.e. ~12GB
+        // => try to configure sparse matrix storage + linalg
+        // * either specify manually to use it, or auto-select if #elements > 2 (?)
 
         [[nodiscard]]
         Eigen::MatrixXd makeA(const vector<shared_ptr<Descriptor>>& descriptors,
@@ -57,7 +61,7 @@ namespace jgap {
         static Eigen::MatrixXd convertToEigen(MatrixBlock& matrixBlock);
     };
 
-    REGISTER_PARSER("in_ram_jgap", Fit, InRamJgapFit)
+    REGISTER_PARSER("qr_gap", Fit, QRGapFit)
 }
 
 #endif

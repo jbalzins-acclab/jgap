@@ -97,7 +97,7 @@ namespace jgap {
         return result;
     }
 
-    void ThreeBodyDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
+    void ThreeBodyDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("3b sparsifier not set", true);
         }
@@ -241,11 +241,11 @@ namespace jgap {
         return _cutoffFunction->evaluate(d1) * _cutoffFunction->evaluate(d2);
     }
 
-    Vector3 ThreeBodyDescriptor::toInvariantTriplet(double r01, double r02, double r12) {
+    Vector3 ThreeBodyDescriptor::toInvariantTriplet(const double r01, const double r02, const double r12) {
         return {r01 + r02, (r01-r02) * (r01 - r02), r12};
     }
 
-    array<Vector3, 3> ThreeBodyDescriptor::invariantTripletGradients(double r01, double r02) {
+    array<Vector3, 3> ThreeBodyDescriptor::invariantTripletGradients(const double r01, const double r02) {
         return {
             Vector3{1, 2 * (r01 - r02), 0},
             Vector3{1, 2 * (r02 - r01), 0},
@@ -262,15 +262,18 @@ namespace jgap {
             auto atom0 = atomicStructure[atomIndex];
 
             // "nl" = neighbourList
+
+            vector<size_t> usefulNLIndexes{};
+            usefulNLIndexes.reserve(atom0.neighbours().size());
+
             for (size_t nlIndex1 = 0; nlIndex1 < atom0.neighbours().size(); nlIndex1++) {
                 auto neighbour1 = atom0.neighbours()[nlIndex1];
                 auto atom1 = atomicStructure[neighbour1.index];
                 if (neighbour1.distance > _cutoff) continue;
 
-                for (size_t nlIndex2 = nlIndex1 + 1; nlIndex2 < atom0.neighbours().size(); nlIndex2++) {
+                for (const size_t& nlIndex2: usefulNLIndexes) {
                     auto neighbour2 = atom0.neighbours()[nlIndex2];
                     auto atom2 = atomicStructure[neighbour2.index];
-                    if (neighbour2.distance > _cutoff) continue;
 
                     auto speciesTriplet = SpeciesTriplet{atom0.species(),{atom1.species(), atom2.species()}};
 
@@ -295,6 +298,9 @@ namespace jgap {
                         .dq_k_dr_ij = invariantTripletGradients(r_ij[0].len(), r_ij[1].len())
                     });
                 }
+
+                // !!! ORDER SENSITIVE !!!
+                usefulNLIndexes.emplace_back(nlIndex1);
             }
         }
 

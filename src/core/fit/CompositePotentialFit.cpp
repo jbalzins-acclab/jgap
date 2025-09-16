@@ -66,30 +66,17 @@ namespace jgap {
         map<string, shared_ptr<Potential>> resultingPotentials;
         for (const auto &label: _fitOrder) {
 
-            CurrentLogger::get()->info(format("Doing \"{}\" potential fit", label));
+            CurrentLogger::get()->info("Doing \"{}\" potential fit", label);
             resultingPotentials[label] = _fits[label] -> fit(dataToBeFit);
-            CurrentLogger::get()->debug(format(
+            CurrentLogger::get()->debug(
                 "Fitting finished for {}, resulting in : {}",
                 label, resultingPotentials[label]->serialize().dump()
-                ));
+                );
 
             if (label != _fitOrder.back()) {
                 dataToBeFit = subtractExternalContribution(dataToBeFit, resultingPotentials[label]);
             }
         }
-
-        /*
-        nlohmann::json potentialsSerialized{};
-        if (_externalPotential.has_value()) {
-            potentialsSerialized["external"] = _externalPotential.value()->serialize();
-            potentialsSerialized["external"]["type"] = _externalPotential.value()->getType();
-        }
-
-        for (const auto &[label, fittedPotential]: fittedPotentials) {
-            potentialsSerialized[label] = fittedPotential->serialize();
-            potentialsSerialized[label]["type"] = fittedPotential->getType();
-        }
-        */
 
         if (_externalPotential.has_value()) {
             // WARN: !! label reserved !!

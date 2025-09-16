@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include "data/BasicDataTypes.hpp"
+
 using namespace std;
 
 namespace jgap {

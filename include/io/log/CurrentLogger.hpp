@@ -18,4 +18,4 @@ namespace jgap {
     };
 }
 
-#endif //CURRENTLOGGER_HPP
+#endif

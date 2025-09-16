@@ -1,10 +1,6 @@
 #ifndef TWOBODYDESCRIPTOR_HPP
 #define TWOBODYDESCRIPTOR_HPP
 
-#include <ranges>
-#include <utility>
-#include <nlohmann/json.hpp>
-
 #include "core/descriptors/Descriptor.hpp"
 #include "core/descriptors/kernels/Kernel.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
@@ -13,6 +9,11 @@
 #include "core/descriptors/kernels/TwoBodySE.hpp"
 #include "memory/MatrixBlock.hpp"
 #include "sparsification/Sparsifier.hpp"
+
+#include <ranges>
+#include <utility>
+#include <set>
+#include <nlohmann/json.hpp>
 
 namespace jgap {
 
@@ -29,7 +30,7 @@ namespace jgap {
         double getCutoff() override { return _cutoffFunction->getCutoff(); };
 
         size_t nSparsePoints() override;
-        void setSparsePoints(const vector<AtomicStructure> &fromData) override;
+        void selectSparsePoints(const vector<AtomicStructure> &fromData) override;
         void setSparsePoints(const map<SpeciesPair, vector<double>>& sparsePointsPerSpeciesPair);
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
@@ -43,6 +44,7 @@ namespace jgap {
         shared_ptr<Sparsifier> _sparsifier;
 
         map<SpeciesPair, vector<TwoBodyDescriptorData>> _sparseDataPerSpeciesPair;
+        optional<set<SpeciesPair>> _onlyUseSpecies;
 
         [[nodiscard]]
         map<SpeciesPair, TwoBodyKernelIndex> doIndex(const AtomicStructure &atomicStructure) const;

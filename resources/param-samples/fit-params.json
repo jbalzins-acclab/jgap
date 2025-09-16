@@ -11,7 +11,7 @@
             "type": "isolated_atom"
         },
         "jgap_fe": {
-            "type": "in_ram_jgap",
+            "type": "qr_jgap",
             "sigma_rules": {
                 "type": "simple",
                 "E_per_root_n_atoms": 0.001,

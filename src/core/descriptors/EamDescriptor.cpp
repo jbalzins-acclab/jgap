@@ -1,6 +1,7 @@
 #include "core/descriptors/EamDescriptor.hpp"
 
 #include <random>
+#include <utility>
 
 #include "core/descriptors/kernels/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
@@ -12,7 +13,8 @@ namespace jgap {
                                  map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions)
         : _kernel(std::move(kernel)),
           _sparsifier(nullptr),
-          _defaultPairFunction(defaultPairFunction), _pairFunctions(std::move(pairFunctions)),
+          _defaultPairFunction(std::move(defaultPairFunction)),
+          _pairFunctions(std::move(pairFunctions)),
           _sparsePointsPerSpecies({}) {
 
         _maxCutoff = 0;
@@ -117,7 +119,7 @@ namespace jgap {
         };
     }
 
-    void EamDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
+    void EamDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("EAM sparsifier not set", true);
         }
@@ -132,6 +134,8 @@ namespace jgap {
                     allDensitiesPerSpecies[species] = {};
                 }
                 for (const auto& densityData: densities) {
+                    // TODO: low density cap - avoid zero of isolated_atom density(?):
+                    // if (densityData.density < 0.2) continue;
                     allDensitiesPerSpecies[species].push_back(vector{densityData.density});
                 }
             }
@@ -201,12 +205,11 @@ namespace jgap {
         for (const auto& points: _sparsePointsPerSpecies | views::values) {
             result.maxDensity = max(result.maxDensity, ranges::max(points));
         }
-        result.maxDensity += 3.5; // TODO: this is very SqExp specific
         if (result.maxDensity - params.maxDensity.value_or(result.maxDensity) > 1) {
-            CurrentLogger::get()->warn(format(
+            CurrentLogger::get()->warn(
                 "max_eam_density={} is too low - highest sparse point is {}",
                 params.maxDensity.value(), result.maxDensity
-                ));
+                );
         }
         result.maxDensity = params.maxDensity.value_or(result.maxDensity);
 

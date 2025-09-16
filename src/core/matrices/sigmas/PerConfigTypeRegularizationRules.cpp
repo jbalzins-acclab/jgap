@@ -47,15 +47,15 @@ namespace jgap {
     }
 
     void PerConfigTypeRegularizationRules::fillSigmas(AtomicStructure &structure) {
-        const double mul = structure.configType.transform([&](string ct) -> double {
+        double mul = 1.0;
+        if (structure.properties.contains("config_type")) {
             for (const auto &[keyWord, multiplier] : _multipliersPerKeyWord) {
-                if (ct.contains(keyWord)) {
+                if (structure.properties["config_type"].contains(keyWord)) {
                     // structure.virials.reset();
-                    return multiplier;
+                    mul = multiplier;
                 }
             }
-            return 1.0;
-        }).value_or(1.0);
+        }
 
         const double E = _E * mul;
         const double F = _F * mul;
