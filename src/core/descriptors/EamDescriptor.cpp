@@ -119,7 +119,7 @@ namespace jgap {
         };
     }
 
-    void EamDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
+    void EamDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("EAM sparsifier not set", true);
         }
@@ -134,6 +134,8 @@ namespace jgap {
                     allDensitiesPerSpecies[species] = {};
                 }
                 for (const auto& densityData: densities) {
+                    // TODO: low density cap - avoid zero of isolated_atom density(?):
+                    // if (densityData.density < 0.2) continue;
                     allDensitiesPerSpecies[species].push_back(vector{densityData.density});
                 }
             }

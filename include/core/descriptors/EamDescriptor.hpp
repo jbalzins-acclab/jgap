@@ -28,7 +28,7 @@ namespace jgap {
 
         ~EamDescriptor() override = default;
 
-        void setSparsePoints(const vector<AtomicStructure> &fromData) override;
+        void selectSparsePoints(const vector<AtomicStructure> &fromData) override;
 
         void setSparsePoints(map<Species, vector<double>> sparsePoints) {
             _sparsePointsPerSpecies = std::move(sparsePoints);

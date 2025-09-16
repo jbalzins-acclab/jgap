@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "core/fit/InRamJgapFit.hpp"
+#include "core/fit/QRGapFit.hpp"
 #include "core/descriptors/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
@@ -62,7 +62,7 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     }
     )");
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     equilateralTriangle.energy = 1;
     equilateralTriangle.forces = {
@@ -156,7 +156,7 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility1) {
             makeSimpleSigmaRules(1, 1, 5, 5)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     twoAtoms.energy = 1;
     twoAtoms.forces = {
@@ -181,7 +181,7 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility2) {
             makeSimpleSigmaRules(10000000, 1, 5, 5)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     twoAtoms.energy = 0;
     twoAtoms.forces = {
@@ -203,7 +203,7 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility3) {
             makeSimpleSigmaRules(10000000, 1, 5, 5)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     twoAtoms.energy = 0;
     twoAtoms.forces = {
@@ -226,7 +226,7 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility4) {
             makeSimpleSigmaRules(10000000, 2, 5, 5)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     twoAtoms.energy = 0;
     twoAtoms.forces = {
@@ -249,7 +249,7 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility5) {
             makeSimpleSigmaRules(1, 2, 5, 5)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     twoAtoms.energy = 0;
     twoAtoms.forces = {
@@ -324,7 +324,7 @@ TEST(TestInRamJgap, twoAtomsEamQuipCompatibility) {
             "eam_test",
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{twoAtoms});
     auto coeffs = pot->serialize()["descriptors"]["eam_test"]["sparse_data"]["Fe"]["coefficients"];
@@ -341,7 +341,7 @@ TEST(TestInRamJgap, eamQuipCompatibilityRealBox) {
         "eam_test",
         makeSimpleSigmaRules(0.001, 0.05, 1, 1)
     );
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{box});
     auto coeffs = pot->serialize()["descriptors"]["eam_test"]["sparse_data"]["Fe"]["coefficients"];
@@ -402,7 +402,7 @@ TEST(TestInRamJgap, equilateralTriangle3bQuipCompatibility) {
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{equilateralTriangle});
     // cout << pot->serialize();
@@ -448,7 +448,7 @@ TEST(TestInRamJgap, pythagorian3bQuipCompatibility) {
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
 
-    auto fit = InRamJgapFit(params);
+    auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{pythagorian});
     // cout << pot->serialize();

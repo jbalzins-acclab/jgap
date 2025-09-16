@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 19.6.2025.
-//
-
 #ifndef FSGENPAIRFUNCTION_HPP
 #define FSGENPAIRFUNCTION_HPP
 

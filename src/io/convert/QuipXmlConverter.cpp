@@ -108,7 +108,7 @@ namespace jgap {
         return make_shared<IsolatedAtomPotential>(isolatedAtomEnergies, false);
     }
 
-    shared_ptr<JgapPotential> QuipXmlConverter::transformSparseData(pugi::xml_node quipSparseData) {
+    shared_ptr<GapPotential> QuipXmlConverter::transformSparseData(pugi::xml_node quipSparseData) {
 
         map<QuipDescriptorData, vector<pugi::xml_node>> nodesBySimilarity;
         for (pugi::xml_node sparseNode: quipSparseData.children("gpCoordinates")) {
@@ -219,7 +219,7 @@ namespace jgap {
             }
         }
 
-        return make_shared<JgapPotential>(descriptors);
+        return make_shared<GapPotential>(descriptors);
     }
 
     shared_ptr<TwoBodyDescriptor> QuipXmlConverter::transformDistance2b(QuipDescriptorData mainData,

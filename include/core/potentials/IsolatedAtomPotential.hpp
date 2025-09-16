@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 22.6.2025.
-//
-
 #ifndef ISOLATEDATOMPOTENTIAL_HPP
 #define ISOLATEDATOMPOTENTIAL_HPP
 

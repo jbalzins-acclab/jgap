@@ -1,7 +1,7 @@
 #ifndef COSCUTOFFPAIRFUNCTION_HPP
 #define COSCUTOFFPAIRFUNCTION_HPP
 
-#include <math.h>
+#include <cmath>
 
 #include "EamPairFunction.hpp"
 #include "io/parse/ParserRegistry.hpp"

@@ -1,11 +1,9 @@
-//
-// Created by Jegors Balzins on 18.6.2025.
-//
-
 #ifndef TWOBODYKERNELINDEX_HPP
 #define TWOBODYKERNELINDEX_HPP
 
 #include <vector>
+
+#include "data/BasicDataTypes.hpp"
 
 using namespace std;
 

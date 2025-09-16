@@ -78,19 +78,6 @@ namespace jgap {
             }
         }
 
-        /*
-        nlohmann::json potentialsSerialized{};
-        if (_externalPotential.has_value()) {
-            potentialsSerialized["external"] = _externalPotential.value()->serialize();
-            potentialsSerialized["external"]["type"] = _externalPotential.value()->getType();
-        }
-
-        for (const auto &[label, fittedPotential]: fittedPotentials) {
-            potentialsSerialized[label] = fittedPotential->serialize();
-            potentialsSerialized[label]["type"] = fittedPotential->getType();
-        }
-        */
-
         if (_externalPotential.has_value()) {
             // WARN: !! label reserved !!
             resultingPotentials["external"] = _externalPotential.value();

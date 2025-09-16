@@ -52,6 +52,21 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
 
     auto result = desc.covariate(equilateralTriangleEAM);
 
+    /*
+    for sanity:
+
+    sparse point 0:
+    cout << result[0].forces[0].toString() << endl;
+    cout << result[0].forces[1].toString() << endl;
+    cout << result[0].forces[2].toString() << endl;
+    OUT:
+    0.568627, 0.328292, 0.000000
+    -0.568627, 0.328292, 0.000000
+    0.000000, -0.656584, 0.000000
+
+    -> decrease separation => increase density => covariance K(\rho, 0) decreases
+    -> F should point toward direction where K would decrease => F is attractive
+    */
     ASSERT_NEAR(result[0].total, 3.0*exp(-0.5), 1e-4);
     ASSERT_NEAR(result[1].total, 3.0*exp(-0.5), 1e-4);
 
@@ -59,8 +74,8 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
         Vector3 total0{0,0,0}, total2{0,0,0};
         for (int j: {0, 1, 2}) {
             if (i == j) continue;
-            total0 = total0 + (positions[i] - positions[j]).normalize() * 0.3125 * exp(-0.5) * 2.0;
-            total2 = total2 + (positions[i] - positions[j]).normalize() * -0.3125 * exp(-0.5) * 2.0;
+            total0 = total0 + (positions[j] - positions[i]).normalize() * 0.3125 * exp(-0.5) * 2.0;
+            total2 = total2 + (positions[j] - positions[i]).normalize() * -0.3125 * exp(-0.5) * 2.0;
         }
         ASSERT_NEAR((result[0].forces[i] - total0).len(), 0, 1e-4);
         ASSERT_NEAR((result[1].forces[i] - total2).len(), 0, 1e-4);

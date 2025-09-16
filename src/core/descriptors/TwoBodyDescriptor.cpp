@@ -88,7 +88,7 @@ namespace jgap {
         return result;
     }
 
-    void TwoBodyDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
+    void TwoBodyDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("2b sparsifier not set", true);
         }

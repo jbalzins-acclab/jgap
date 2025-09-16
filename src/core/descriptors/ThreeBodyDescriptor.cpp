@@ -97,7 +97,7 @@ namespace jgap {
         return result;
     }
 
-    void ThreeBodyDescriptor::setSparsePoints(const vector<AtomicStructure> &fromData) {
+    void ThreeBodyDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("3b sparsifier not set", true);
         }

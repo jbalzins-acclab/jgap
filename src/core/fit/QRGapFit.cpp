@@ -1,4 +1,6 @@
-#include "core/fit/InRamJgapFit.hpp"
+#include "core/fit/QRGapFit.hpp"
+
+#include <random>
 
 #include "core/matrices/sigmas/SimpleRegularizationRules.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
@@ -12,7 +14,7 @@
 
 namespace jgap {
 
-    InRamJgapFit::InRamJgapFit(const nlohmann::json &params) {
+    QRGapFit::QRGapFit(const nlohmann::json &params) {
 
         _descriptors = {};
         for (const auto& [label, descriptor] : params["descriptors"].items()) {
@@ -23,7 +25,7 @@ namespace jgap {
         _jitter = params.value("jitter", 1e-8);
     }
 
-    shared_ptr<Potential> InRamJgapFit::fit(const vector<AtomicStructure>& trainingData) {
+    shared_ptr<Potential> QRGapFit::fit(const vector<AtomicStructure>& trainingData) {
         CurrentLogger::get()->info("Starting JGAP fit");
 
         vector _trainingData(trainingData);
@@ -43,7 +45,7 @@ namespace jgap {
                     "No sparse points found in descriptor {} -> setting from data",
                     descriptor->serialize().dump()
                     );
-                descriptor->setSparsePoints(_trainingData);
+                descriptor->selectSparsePoints(_trainingData);
             }
 
             maxCutoff = max(maxCutoff, descriptor->getCutoff());
@@ -82,17 +84,16 @@ namespace jgap {
         for (const auto &descriptor: _descriptors | views::values) {
             const size_t n = descriptor->nSparsePoints();
 
-            // auto bb = vector<double>{c.data() + counter, c.data() + counter + n};
-            descriptor->setCoefficients(vector<double>(c.begin() + counter, c.begin() + counter + n));
+            descriptor->setCoefficients(vector(c.begin() + counter, c.begin() + counter + n));
 
             counter += n;
         }
 
-        return make_shared<JgapPotential>(_descriptors);
+        return make_shared<GapPotential>(_descriptors);
     }
 
-    vector<double> InRamJgapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
-        /*CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
+    vector<double> QRGapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
+        CurrentLogger::get()->debug("Init Eigen::HouseholderQR");
         const Eigen::HouseholderQR<Eigen::Ref<Eigen::MatrixXd>> qr(A);
 
         CurrentLogger::get()->debug("Q^t");
@@ -107,43 +108,11 @@ namespace jgap {
         CurrentLogger::get()->debug("R^-1 * Qt_b");
         Eigen::VectorXd c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.cols()));
 
-        return vector<double>{c.data(), c.data() + c.size()};*/
-        using namespace Eigen;
-
-        const int targetRank = 1000;       // target rank
-        const int oversampling = 10;        // oversampling
-
-        CurrentLogger::get()->debug("Generate random test matrix Omega");
-        MatrixXd Omega = MatrixXd::Random(A.cols(), targetRank + oversampling);
-
-        CurrentLogger::get()->debug("Compute Y = A * Omega");
-        MatrixXd Y = A * Omega;
-
-        CurrentLogger::get()->debug("Compute QR of Y for orthonormal basis");
-        HouseholderQR<MatrixXd> qr(Y);
-        MatrixXd Q = qr.householderQ() * MatrixXd::Identity(Y.rows(), targetRank + oversampling); // use k+p
-
-        CurrentLogger::get()->debug("Project A to lower dimension: B = Q^T * A");
-        MatrixXd B = Q.transpose() * A;
-
-        CurrentLogger::get()->debug("Compute SVD of small matrix B");
-        JacobiSVD<MatrixXd> svd(B, ComputeThinU | ComputeThinV);
-        const MatrixXd& U_hat = svd.matrixU();
-        VectorXd S = svd.singularValues();
-        const MatrixXd& V = svd.matrixV();
-
-        CurrentLogger::get()->debug("Recover approximate U");
-        MatrixXd U = Q * U_hat;
-
-        CurrentLogger::get()->debug("Compute least-squares solution x = V * S^-1 * U^T * b");
-        VectorXd S_inv = S.array() / S.array().square();
-        VectorXd x = V * S_inv.asDiagonal() * (U.transpose() * b);
-
-        return vector<double>{x.data(), x.data() + x.size()};
+        return vector<double>{c.data(), c.data() + c.size()};
     }
 
-    Eigen::MatrixXd InRamJgapFit::makeA(const vector<shared_ptr<Descriptor>> &descriptors,
-                                        const vector<AtomicStructure> &atomicStructures) const {
+    Eigen::MatrixXd QRGapFit::makeA(const vector<shared_ptr<Descriptor>> &descriptors,
+                                    const vector<AtomicStructure> &atomicStructures) const {
 
         size_t r = 0;
         vector<pair<size_t, AtomicStructure>> startingRowsK_nm;
@@ -161,7 +130,8 @@ namespace jgap {
             c += descriptors[i]->nSparsePoints();
         }
 
-        CurrentLogger::get()->info("Forming in-memory " + to_string(r+c) + "x" + to_string(c) + " A matrix");
+        CurrentLogger::get()->info("Forming in-memory {}x{}(~{}GB) A matrix",
+                                    r+c, c, (r+c)*c * sizeof(double) / 1024.0 / 1024.0);
         Eigen::MatrixXd resultingA = Eigen::MatrixXd::Zero(r + c, c);
 
         atomic counter(0);
@@ -192,7 +162,7 @@ namespace jgap {
         return resultingA;
     }
 
-    Eigen::VectorXd InRamJgapFit::makeB(const vector<shared_ptr<Descriptor>> &descriptors,
+    Eigen::VectorXd QRGapFit::makeB(const vector<shared_ptr<Descriptor>> &descriptors,
                                                     const vector<AtomicStructure> &atomicStructures) {
         vector<double> b;
         for (auto& structure: atomicStructures) {
@@ -225,10 +195,10 @@ namespace jgap {
         return Eigen::Map<Eigen::VectorXd>(b.data(), b.size());
     }
 
-    void InRamJgapFit::fillInverseSigmaK_nm(const vector<shared_ptr<Descriptor>> &descriptors,
-                                                const AtomicStructure &atomicStructure,
-                                                Eigen::MatrixXd &A,
-                                                const size_t startingRow) {
+    void QRGapFit::fillInverseSigmaK_nm(const vector<shared_ptr<Descriptor>> &descriptors,
+                                            const AtomicStructure &atomicStructure,
+                                            Eigen::MatrixXd &A,
+                                            const size_t startingRow) {
         size_t contributionColumn = 0;
         for (const auto& descriptor : descriptors) {
             auto contributions = descriptor->covariate(atomicStructure);
@@ -277,7 +247,7 @@ namespace jgap {
         }
     }
 
-    void InRamJgapFit::fillU_mm(const size_t startingRow, const size_t startingCol,
+    void QRGapFit::fillU_mm(const size_t startingRow, const size_t startingCol,
                                 Descriptor &descriptor, Eigen::MatrixXd &A) const {
 
         for (auto &[sparseId, K_mmPart]: descriptor.selfCovariate()) {
@@ -296,7 +266,7 @@ namespace jgap {
         }
     }
 
-    Eigen::MatrixXd InRamJgapFit::choleskyDecomposition(Eigen::MatrixXd &matrix) {
+    Eigen::MatrixXd QRGapFit::choleskyDecomposition(Eigen::MatrixXd &matrix) {
         Eigen::LLT<Eigen::MatrixXd> llt(matrix);
         if (llt.info() != Eigen::Success)
             CurrentLogger::get()->error("Cholesky decomposition failed: matrix not positive definite", true);
@@ -304,7 +274,7 @@ namespace jgap {
         return llt.matrixU();
     }
 
-    Eigen::MatrixXd InRamJgapFit::convertToEigen(MatrixBlock &matrixBlock) {
+    Eigen::MatrixXd QRGapFit::convertToEigen(MatrixBlock &matrixBlock) {
         return Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
             matrixBlock.rawData().data(), matrixBlock.rows(), matrixBlock.columns()
             );

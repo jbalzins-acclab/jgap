@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 22.6.2025.
-//
-
 #ifndef ZBLPOTENTIAL_HPP
 #define ZBLPOTENTIAL_HPP
 

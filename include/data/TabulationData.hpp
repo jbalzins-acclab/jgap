@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 15.7.2025.
-//
-
 #ifndef TABULATIONDATA_HPP
 #define TABULATIONDATA_HPP
 

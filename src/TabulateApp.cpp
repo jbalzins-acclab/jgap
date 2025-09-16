@@ -1,4 +1,4 @@
-#include <core/fit/InRamJgapFit.hpp>
+#include <core/fit/QRGapFit.hpp>
 #include <utils/Utils.hpp>
 #include <iostream>
 #include <fstream>

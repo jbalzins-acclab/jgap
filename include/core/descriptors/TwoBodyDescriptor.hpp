@@ -30,7 +30,7 @@ namespace jgap {
         double getCutoff() override { return _cutoffFunction->getCutoff(); };
 
         size_t nSparsePoints() override;
-        void setSparsePoints(const vector<AtomicStructure> &fromData) override;
+        void selectSparsePoints(const vector<AtomicStructure> &fromData) override;
         void setSparsePoints(const map<SpeciesPair, vector<double>>& sparsePointsPerSpeciesPair);
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;

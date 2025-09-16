@@ -20,4 +20,4 @@ namespace jgap {
     using EamKernelIndex = map<Species, EamKernelIndexPerSpecies>;
 }
 
-#endif //EAMKERNELINDEX_HPP
+#endif

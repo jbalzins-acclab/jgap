@@ -6,8 +6,8 @@
 - Screened coulomb pre-fit for all element pairs(see resources/dmol-screening-fit & */core/potentials/ZblPotential.cpp)
 - Significant speedup in kernel matrix formation & RAM usage improvement compared to QUIP with basic compilation:
   - ~20 sec(on my laptop) for Iron potential | ~500Mb
-  - ~20 sec(on Puhti node; ~15 min total(+QR..) on a desktop but tested a while ago) for FeNi potential | ~7Gb RAM
-  - 3 min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
+  - ~1 min(on my laptop) for FeNi potential | ~6Gb RAM
+  - ~3 min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
   - more to be tested.
   - RAM usage can be estimated from logs(look for matrix size).
   - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
@@ -21,23 +21,40 @@
 
 ## Compilation/Run guide
 ### Prerequisites 
-- CMake 3.26+
-- c++ complier supporting c++23(c++20 might be enough, but that wasn't tested in a while)
+- CMake 3.11+
+- c++ complier supporting c++23
   - do "module load gcc/14.2" on Puhti
+  - if you don't have sudo rights but "conda" is available, do something like:
+```bash
+conda create -n myenv
+conda activate myenv
+conda install -c conda-forge gcc
+conda install -c conda-forge gxx_linux-64 # ask ChatGPT what version is suitable for you
+# if you want cmake to auto detect new compilers, add to .bashrc/.zshrc:
+export CC=$CONDA_PREFIX/bin/gcc
+export CXX=$CONDA_PREFIX/bin/g++
+```
 - VCPKG:
   - (Follow instructions: https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash))
-    - git clone https://github.com/microsoft/vcpkg.git
-    - cd vcpkg && ./bootstrap-vcpkg.sh
-    - nano ~/.bashrc or ~/.zshrc
-    - export VCPKG_ROOT=/path/to/vcpkg
-    - export PATH=$VCPKG_ROOT:$PATH
-  - in root project dir: vcpkg install
-  - (vcpkg integrate to see what to add to cmake params)
+```bash
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg && ./bootstrap-vcpkg.sh
+nano ~/.bashrc or ~/.zshrc
+export VCPKG_ROOT=/path/to/vcpkg
+export PATH=$VCPKG_ROOT:$PATH
+# in root project dir: 
+vcpkg install
+# vcpkg integrate to see what -DCMAKE_TOOLCHAIN_FILE= to add to "cmake -B build" params
+ ```
 ### Compile
 - Run something like: 
-  - cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
-  - on Puhti: cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=/users/balzinsj/vcpkg/scripts/buildsystems/vcpkg.cmake   -DCMAKE_CXX_COMPILER=g++  -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
-- cmake --build build -j ...
+```bash
+# on local device
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
+# on Puhti: 
+cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=/users/balzinsj/vcpkg/scripts/buildsystems/vcpkg.cmake   -DCMAKE_CXX_COMPILER=g++  -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
+cmake --build build -j ...
+```
 - This should produce 3 executables:
   - jgap_fit_app - GAP fitting
   - jgap_predict_app - to use the GAP potential
