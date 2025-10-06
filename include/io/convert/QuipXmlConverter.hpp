@@ -4,9 +4,9 @@
 #include <nlohmann/json.hpp>
 #include <pugixml.hpp>
 
-#include "core/descriptors/EamDescriptor.hpp"
-#include "core/descriptors/ThreeBodyDescriptor.hpp"
-#include "core/descriptors/TwoBodyDescriptor.hpp"
+#include "../../core/descriptors/eam/EamDescriptor.hpp"
+#include "../../core/descriptors/3b/ThreeBodyDescriptor.hpp"
+#include "../../core/descriptors/2b/TwoBodyDescriptor.hpp"
 #include "core/potentials/IsolatedAtomPotential.hpp"
 #include "core/potentials/GapPotential.hpp"
 #include "core/potentials/Potential.hpp"

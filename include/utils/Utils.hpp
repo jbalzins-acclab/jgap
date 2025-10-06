@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <Eigen/Dense>
+#include <nlohmann/json.hpp>
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
 
@@ -24,6 +25,8 @@ namespace jgap {
     string vectorToString(const Eigen::VectorXd& vec);
     string vectorToString(const vector<double>& vec);
     string vectorToString(const vector<size_t>& vec);
+    nlohmann::json& require(nlohmann::json& j, const std::string& key);
+    const nlohmann::json& require(const nlohmann::json& j, const std::string& key);
 
     template<typename Map, typename Key, typename Value>
     auto getOrDefault(const Map& m, const Key& k, const Value& defaultValue) -> decltype(m.at(k)) {

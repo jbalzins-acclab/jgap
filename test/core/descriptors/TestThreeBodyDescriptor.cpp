@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "core/descriptors/ThreeBodyDescriptor.hpp"
+#include "../../../include/core/descriptors/3b/ThreeBodyDescriptor.hpp"
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "utils/Utils.hpp"
@@ -94,3 +94,6 @@ TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
     ASSERT_NEAR(result[0].forces[2].y, -2.0 * -1.6 * exp(-3.0/2.0), 1e-6);
 }
 
+TEST(TestThreeBodyDescriptor, DoubleBoxDoubleEnergy) {
+
+}

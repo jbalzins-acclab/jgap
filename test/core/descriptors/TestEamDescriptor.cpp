@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "core/descriptors/EamDescriptor.hpp"
+#include "../../../include/core/descriptors/eam/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
 #include "ParserRegistryAuto.hpp"

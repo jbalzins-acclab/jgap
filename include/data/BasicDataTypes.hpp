@@ -85,7 +85,7 @@ namespace jgap {
         }
         Vector3 operator-(const Vector3& other) const {
             return Vector3{x - other.x, y - other.y, z - other.z};
-        };
+        }
         Vector3& operator-=(const Vector3& other) {
             x -= other.x;
             y -= other.y;
@@ -94,6 +94,9 @@ namespace jgap {
         }
         Vector3 operator*(const double scalar) const {
             return Vector3{x * scalar, y * scalar, z * scalar};
+        }
+        Vector3 componentMul(const Vector3 other) const {
+            return Vector3{x * other.x, y * other.y, z * other.z};
         };
         Vector3& operator*=(const double scalar) {
             x *= scalar;
@@ -134,13 +137,10 @@ namespace jgap {
         }
         Vector3 normalize() const {
             return *this * (1.0 / len());
-        };
+        }
         double min() const {
             const double t = abs(x) < abs(y) ? x : y;
             return abs(t) < abs(z) ? abs(t) : abs(z);
-        }
-        string toString() const {
-            return to_string(x) + ", " + to_string(y) + ", " + to_string(z);
         }
         double aproject(const Vector3& u, const Vector3& v) const {
             Vector3 _cross = u.cross(v);
@@ -149,6 +149,9 @@ namespace jgap {
         }
         bool operator==(const Vector3& other) const {
             return x == other.x && y == other.y && z == other.z;
+        }
+        string toString() const {
+            return to_string(x) + ", " + to_string(y) + ", " + to_string(z);
         }
     };
 

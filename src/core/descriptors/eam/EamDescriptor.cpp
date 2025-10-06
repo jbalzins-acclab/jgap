@@ -1,9 +1,9 @@
-#include "core/descriptors/EamDescriptor.hpp"
+#include "core/descriptors/eam/EamDescriptor.hpp"
 
 #include <random>
 #include <utility>
 
-#include "core/descriptors/kernels/EamSE.hpp"
+#include "core/descriptors/eam/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
@@ -27,9 +27,6 @@ namespace jgap {
         CurrentLogger::get()->debug("Parsing EAM descriptor params");
 
         _sparsePointsPerSpecies = {};
-        _coefficients = {};
-
-        _kernel = ParserRegistry<EamKernel>::get(params["kernel"]);
 
         if (params.contains("sparse_data")) {
             _sparsifier = nullptr; // TODO ?
@@ -119,7 +116,10 @@ namespace jgap {
         };
     }
 
-    void EamDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
+    vector<shared_ptr<IKernel>> EamDescriptor::getKernels() {
+    }
+
+    void EamDescriptor::setupKernels(const vector<AtomicStructure> &fromData) {
         if (_sparsifier == nullptr) {
             CurrentLogger::get()->error("EAM sparsifier not set", true);
         }
@@ -149,14 +149,6 @@ namespace jgap {
             }
         }
         _coefficients.clear();
-    }
-
-    size_t EamDescriptor::nSparsePoints() {
-        size_t result = 0;
-        for (const auto &densities: _sparsePointsPerSpecies | views::values) {
-            result += densities.size();
-        }
-        return result;
     }
 
     vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -253,7 +245,7 @@ namespace jgap {
         }
 
         TabulationData resultFull{};
-        resultFull.eamTabulationData = vector{result}; // TODO? c++20
+        resultFull.eamTabulationData = {result};
         return resultFull;
     }
 

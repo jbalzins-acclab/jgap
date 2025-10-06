@@ -21,7 +21,7 @@ namespace jgap {
             _descriptors[label] = (ParserRegistry<Descriptor>::get(descriptor));
         }
 
-        _sigmaRules = ParserRegistry<RegularizationRules>::get(params["sigma_rules"]);
+        _regularizationRules = ParserRegistry<RegularizationRules>::get(params["regularization_rules"]);
         _jitter = params.value("jitter", 1e-8);
     }
 
@@ -40,13 +40,7 @@ namespace jgap {
 
             // To avoid ugly "cutoff" in sparse json
             NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff());
-            if (descriptor->nSparsePoints() == 0) {
-                CurrentLogger::get()->info(
-                    "No sparse points found in descriptor {} -> setting from data",
-                    descriptor->serialize().dump()
-                    );
-                descriptor->selectSparsePoints(_trainingData);
-            }
+            descriptor->setupKernels(_trainingData);
 
             maxCutoff = max(maxCutoff, descriptor->getCutoff());
         }
@@ -59,7 +53,7 @@ namespace jgap {
 
         CurrentLogger::get()->info("Per-structure regularization setup");
         for (auto& structure: _trainingData) {
-            _sigmaRules->fillSigmas(structure);
+            _regularizationRules->fillSigmas(structure);
         }
         CurrentLogger::get()->info("Per-structure regularization setup finished");
 
@@ -82,7 +76,7 @@ namespace jgap {
 
         size_t counter = 0;
         for (const auto &descriptor: _descriptors | views::values) {
-            const size_t n = descriptor->nSparsePoints();
+            const size_t n = descriptor->nKernels();
 
             descriptor->setCoefficients(vector(c.begin() + counter, c.begin() + counter + n));
 
@@ -127,11 +121,11 @@ namespace jgap {
         size_t c = 0;
         for (size_t i = 0; i < descriptors.size(); i++) {
             startingPointsK_mm.emplace_back(r + c, c, i);
-            c += descriptors[i]->nSparsePoints();
+            c += descriptors[i]->nKernels();
         }
 
         CurrentLogger::get()->info("Forming in-memory {}x{}(~{}GB) A matrix",
-                                    r+c, c, (r+c)*c * sizeof(double) / 1024.0 / 1024.0);
+                                    r+c, c, (r+c)*c * sizeof(double) / 1024.0 / 1024.0 / 1024.0);
         Eigen::MatrixXd resultingA = Eigen::MatrixXd::Zero(r + c, c);
 
         atomic counter(0);
@@ -189,7 +183,7 @@ namespace jgap {
         }
 
         for (auto& descriptor: descriptors) {
-            b.resize(b.size() + descriptor->nSparsePoints());
+            b.resize(b.size() + descriptor->nKernels());
         }
 
         return Eigen::Map<Eigen::VectorXd>(b.data(), b.size());
@@ -250,19 +244,22 @@ namespace jgap {
     void QRGapFit::fillU_mm(const size_t startingRow, const size_t startingCol,
                                 Descriptor &descriptor, Eigen::MatrixXd &A) const {
 
-        for (auto &[sparseId, K_mmPart]: descriptor.selfCovariate()) {
+        size_t nPreviousKernels = 0;
+        for (auto &K_mmBlock: descriptor.selfCovariate()) {
 
-            size_t n = K_mmPart->rows();
-            for (size_t i = 0; i < n; i++) (*K_mmPart)(i, i) += _jitter;
+            const size_t n = K_mmBlock->rows();
+            for (size_t i = 0; i < n; i++) (*K_mmBlock)(i, i) += _jitter;
 
-            auto K_mmConverted = convertToEigen(*K_mmPart);
-            auto U_mmPart = choleskyDecomposition(K_mmConverted);
+            auto K_mmConverted = convertToEigen(*K_mmBlock);
+            auto U_mmBlock = choleskyDecomposition(K_mmConverted);
 
             for (size_t i = 0; i < n; i++) {
                 for (size_t j = 0; j < n; j++) {
-                    A(startingRow + sparseId + i, startingCol + sparseId + j) = U_mmPart(i, j);
+                    A(startingRow + nPreviousKernels + i, startingCol + nPreviousKernels + j) = U_mmBlock(i, j);
                 }
             }
+
+            nPreviousKernels += n;
         }
     }
 

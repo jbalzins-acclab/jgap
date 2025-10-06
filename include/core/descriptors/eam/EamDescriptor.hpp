@@ -1,0 +1,57 @@
+#ifndef EAMDESCRIPTOR_HPP
+#define EAMDESCRIPTOR_HPP
+
+#include <nlohmann/json.hpp>
+#include <utility>
+
+#include "core/cutoff/CutoffFunction.hpp"
+#include "core/descriptors/Descriptor.hpp"
+#include "../Kernel.hpp"
+#include "data/descriptors/kernels/EamKernelIndex.hpp"
+#include "pair_functions/EamPairFunction.hpp"
+#include "io/parse/ParserRegistry.hpp"
+#include "EamSE.hpp"
+#include "memory/MatrixBlock.hpp"
+#include "../sparsification/Sparsifier.hpp"
+
+namespace jgap {
+
+    class EamDescriptor : public Descriptor {
+    public:
+        EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
+                      shared_ptr<EamPairFunction> defaultPairFunction,
+                      map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions);
+
+        EamDescriptor(const nlohmann::json &params);
+        nlohmann::json serialize() override;
+        string getType() override { return "eam"; }
+
+        double getCutoff() override { return _maxCutoff; }
+
+        vector<shared_ptr<IKernel>> getKernels() override;
+        void setupKernels(const vector<AtomicStructure> &fromData) override;
+
+        vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
+        vector<shared_ptr<MatrixBlock>> selfCovariate() override;
+
+        PotentialPrediction predict(const AtomicStructure &atomicStructure) override;
+
+        TabulationData tabulate(const TabulationParams &params) override;
+
+    private:
+        double _maxCutoff;
+        vector<shared_ptr<EamKernel>> _kernels;
+        map<Species, vector<size_t>> _kernelIndicesPerSpecies;
+
+        shared_ptr<EamPairFunction> _defaultPairFunction;
+        map<OrderedSpeciesPair/*{contributor, receiver}*/, shared_ptr<EamPairFunction>> _pairFunctions;
+
+        [[nodiscard]] EamKernelIndex doIndex(const AtomicStructure &structure) const;
+    };
+
+    REGISTER_PARSER("eam", Descriptor, EamDescriptor)
+}
+
+
+
+#endif //EAMDESCRIPTOR_HPP

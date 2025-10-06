@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "core/descriptors/TwoBodyDescriptor.hpp"
+#include "../../../include/core/descriptors/2b/TwoBodyDescriptor.hpp"
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "utils/Utils.hpp"

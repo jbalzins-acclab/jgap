@@ -363,4 +363,18 @@ namespace jgap {
         }
         return ss.str();
     }
+
+    nlohmann::json & require(nlohmann::json &j, const std::string &key) {
+        if (!j.contains(key)) {
+            throw std::out_of_range("json key not found: \"" + key + "\"");
+        }
+        return j.at(key);
+    }
+
+    const nlohmann::json & require(const nlohmann::json &j, const std::string &key) {
+        if (!j.contains(key)) {
+            throw std::out_of_range("json key not found: \"" + key + "\"");
+        }
+        return j.at(key);
+    }
 }
