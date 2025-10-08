@@ -14,12 +14,7 @@ namespace jgap {
           _cutoffFunction(std::move(cutoffFunction)),
           _kernels(std::move(kernels)) {
 
-        for (size_t i = 0; i < _kernels.size(); i++) {
-            if (!_kernelIdsPerSpeciesTriplet.contains(_kernels[i]->getFilter())) {
-                _kernelIdsPerSpeciesTriplet[_kernels[i]->getFilter()] = {};
-            }
-            _kernelIdsPerSpeciesTriplet[_kernels[i]->getFilter()].push_back(i);
-        }
+        mapKernelIds();
     }
 
     ThreeBodyDescriptor::ThreeBodyDescriptor(const nlohmann::json &params) {
@@ -32,13 +27,9 @@ namespace jgap {
         if (params.contains("kernels")) {
             for (const nlohmann::json& kernelParams : params["kernels"]) {
                 _kernels.push_back(ParserRegistry<ThreeBodyKernel>::get(kernelParams));
-
-                if (!_kernelIdsPerSpeciesTriplet.contains(_kernels.back()->getFilter())) {
-                    _kernelIdsPerSpeciesTriplet[_kernels.back()->getFilter()] = {};
-                }
-                _kernelIdsPerSpeciesTriplet[_kernels.back()->getFilter()].push_back(_kernels.size() - 1);
             }
         }
+        mapKernelIds();
 
         _kernelSetups = {};
         if (params.contains("kernel_setups")) {
@@ -71,7 +62,7 @@ namespace jgap {
         CurrentLogger::get()->info("Doing 3b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            CurrentLogger::get()->warn("All 3b kenels were pre-set");
+            CurrentLogger::get()->warn("All 3b kernels were pre-set");
             return;
         }
 
@@ -93,7 +84,7 @@ namespace jgap {
             nlohmann::json setup = _kernelSetups.front();
             _kernelSetups.pop();
 
-            string sparsifierType = setup.value("sparsifier", "uniform");
+            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
             setup.erase("sparsifier");
             setup["sparse_param"] = setup.value("sparse_param", "q");
 
@@ -118,6 +109,7 @@ namespace jgap {
                 }
             }
         }
+        mapKernelIds();
     }
 
     vector<shared_ptr<IKernel>> ThreeBodyDescriptor::getKernels() {
@@ -156,12 +148,12 @@ namespace jgap {
     vector<shared_ptr<MatrixBlock>> ThreeBodyDescriptor::selfCovariate() {
         vector<shared_ptr<MatrixBlock>> result;
 
-        for (auto &kernelIndices: _kernelIdsPerSpeciesTriplet | views::values) {
+        for (auto &kernelIds: _kernelIdsPerSpeciesTriplet | views::values) {
 
-            auto covariance = make_shared<MatrixBlock>(kernelIndices.size(), kernelIndices.size());
+            auto covariance = make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
 
-            for (size_t i = 0; i < kernelIndices.size(); i++) {
-                for (size_t j = i; j < kernelIndices.size(); j++) {
+            for (size_t i = 0; i < kernelIds.size(); i++) {
+                for (size_t j = i; j < kernelIds.size(); j++) {
                     (*covariance)(i, j) = _kernels[i]->crossCovariance(_kernels[j]);
                     (*covariance)(j, i) = (*covariance)(i, j);
                 }
@@ -291,28 +283,38 @@ namespace jgap {
         return indexes;
     }
 
-    bool ThreeBodyDescriptor::checkSpecies(SpeciesTriplet tripletInData, nlohmann::json filter) {
+    bool ThreeBodyDescriptor::checkSpecies(const SpeciesTriplet& tripletInData, nlohmann::json filters) {
 
-        if (!filter.is_array()) {
-            CurrentLogger::get()->logAndThrow("2b species filter is non-array: {}", filter.dump());
+        if (!filters.is_array()) {
+            CurrentLogger::get()->logAndThrow("3b species filter is non-array: {}", filters.dump());
         }
-        if (filter.empty()) return true;
+        if (filters.empty()) return true;
 
-        if (ranges::all_of(filter, [](const nlohmann::json& j){ return j.is_string(); })) {
+        if (filters[0].is_string()) {
             // "species": ["Fe", "Ni", "Cr"] => "species": [["Fe", "Ni", "Cr"]]
-            filter = nlohmann::json::array({filter});
+            filters = nlohmann::json::array({filters});
         }
 
         bool passedAFilter = false;
-        for (const auto &speciesFilter: filter) {
-            if (!speciesFilter.is_array() || speciesFilter.size() != 3) {
-                CurrentLogger::get()->logAndThrow("Wrong 3b species specs: {}", filter.dump());
+        for (const auto &filter: filters) {
+            if (!filter.is_array() || filter.size() != 3) {
+                CurrentLogger::get()->logAndThrow("Wrong 3b species specs: {}", filters.dump());
             }
-            if (tripletInData != SpeciesTriplet(speciesFilter[0], {speciesFilter[1], speciesFilter[2]})) {
+            if (tripletInData == SpeciesTriplet(filter[0], {filter[1], filter[2]})) {
                 passedAFilter = true;
                 break;
             }
         }
         return passedAFilter;
+    }
+
+    void ThreeBodyDescriptor::mapKernelIds() {
+        _kernelIdsPerSpeciesTriplet.clear();
+        for (size_t i = 0; i < _kernels.size(); i++) {
+            if (!_kernelIdsPerSpeciesTriplet.contains(_kernels[i]->getFilter())) {
+                _kernelIdsPerSpeciesTriplet[_kernels[i]->getFilter()] = {};
+            }
+            _kernelIdsPerSpeciesTriplet[_kernels[i]->getFilter()].push_back(i);
+        }
     }
 }

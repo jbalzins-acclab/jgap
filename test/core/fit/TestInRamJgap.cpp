@@ -52,7 +52,7 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
             }
         },
         "jitter": 1e-8,
-        "sigma_rules": {
+        "regularization_rules": {
             "type": "simple",
             "E_per_root_n_atoms": 3.0,
             "F_component": 10.0,
@@ -128,7 +128,7 @@ nlohmann::json makeFitParams(nlohmann::json desc, string descName, nlohmann::jso
             }
         },
         {"jitter", 1e-8},
-        {"sigma_rules", srules}
+        {"regularization_rules", srules}
     };
 }
 

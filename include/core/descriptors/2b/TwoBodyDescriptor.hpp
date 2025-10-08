@@ -46,7 +46,9 @@ namespace jgap {
         queue<nlohmann::json> _kernelSetups;
 
         map<SpeciesPair, TwoBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
-        bool checkSpecies(SpeciesPair pairInData, nlohmann::json filter);
+        bool checkSpecies(SpeciesPair pairInData, nlohmann::json filters);
+
+        void mapKernelIds();
     };
 
     REGISTER_PARSER("2b", Descriptor, TwoBodyDescriptor)

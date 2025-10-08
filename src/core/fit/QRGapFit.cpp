@@ -30,15 +30,13 @@ namespace jgap {
 
         vector _trainingData(trainingData);
 
-        double maxCutoff = 0;
-
         CurrentLogger::get()->info("Checking sparse points");
 
+        double maxCutoff = 0;
         auto descriptorsAsVec = vector<shared_ptr<Descriptor>>();
         for (const auto& descriptor: _descriptors | views::values) {
             descriptorsAsVec.push_back(descriptor);
 
-            // To avoid ugly "cutoff" in sparse json
             NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff());
             descriptor->setupKernels(_trainingData);
 
@@ -76,11 +74,9 @@ namespace jgap {
 
         size_t counter = 0;
         for (const auto &descriptor: _descriptors | views::values) {
-            const size_t n = descriptor->nKernels();
-
-            descriptor->setCoefficients(vector(c.begin() + counter, c.begin() + counter + n));
-
-            counter += n;
+            for (const auto& kernel: descriptor->getKernels()) {
+                kernel->coefficient = c[counter++];
+            }
         }
 
         return make_shared<GapPotential>(_descriptors);
@@ -117,11 +113,13 @@ namespace jgap {
             if (structure.virials.has_value()) r += 6;
         }
 
-        vector<tuple<size_t/*row*/, size_t/*col*/, size_t/*desc_idx*/>> startingPointsK_mm;
+        vector<array<size_t, 3>> startingPointsK_mm;
         size_t c = 0;
         for (size_t i = 0; i < descriptors.size(); i++) {
-            startingPointsK_mm.emplace_back(r + c, c, i);
-            c += descriptors[i]->nKernels();
+            startingPointsK_mm.push_back({r + c, c, i});
+            auto kernels = descriptors[i]->getKernels();
+            c += descriptors[i]->getKernels().size();
+            CurrentLogger::get()->info("nkernels = {}", descriptors[i]->getKernels().size());
         }
 
         CurrentLogger::get()->info("Forming in-memory {}x{}(~{}GB) A matrix",
@@ -136,9 +134,9 @@ namespace jgap {
                 size_t progress = ++counter;
                 if (progress % max(startingRowsK_nm.size() / 100, 1uz) == 0) {
                     CurrentLogger::get()->debug(
-                            "K_nm matrix formation progress: {} of {} ({}%)",
-                            progress, startingRowsK_nm.size(), progress * 100 / startingRowsK_nm.size()
-                            );
+                        "K_nm matrix formation progress: {} of {} ({}%)",
+                        progress, startingRowsK_nm.size(), progress * 100 / startingRowsK_nm.size()
+                    );
                 }
 
                 fillInverseSigmaK_nm(descriptors, structId.second, resultingA, structId.first);
@@ -147,9 +145,9 @@ namespace jgap {
 
         tbb::parallel_for_each(
             startingPointsK_mm.begin(), startingPointsK_mm.end(),
-            [&](const tuple<size_t/*row*/, size_t/*col*/, size_t/*desc_idx*/>& descriptorId) {
-                CurrentLogger::get()->debug("K_mm for descriptor {}", get<2>(descriptorId));
-                fillU_mm(get<0>(descriptorId), get<1>(descriptorId), *descriptors[get<2>(descriptorId)], resultingA);
+            [&](const array<size_t, 3>& descriptorId) {
+                CurrentLogger::get()->debug("K_mm for descriptor {}", descriptorId[2]);
+                fillU_mm(descriptorId[0], descriptorId[1], *descriptors[descriptorId[2]], resultingA);
             }
         );
 
@@ -183,7 +181,7 @@ namespace jgap {
         }
 
         for (auto& descriptor: descriptors) {
-            b.resize(b.size() + descriptor->nKernels());
+            b.resize(b.size() + descriptor->getKernels().size());
         }
 
         return Eigen::Map<Eigen::VectorXd>(b.data(), b.size());

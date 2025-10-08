@@ -50,7 +50,9 @@ namespace jgap {
         queue<nlohmann::json> _kernelSetups;
 
         map<SpeciesTriplet, ThreeBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
-        bool checkSpecies(SpeciesTriplet tripletInData, nlohmann::json filter);
+        bool checkSpecies(const SpeciesTriplet& tripletInData, nlohmann::json filters);
+
+        void mapKernelIds();
     };
 
     REGISTER_PARSER("3b", Descriptor, ThreeBodyDescriptor)

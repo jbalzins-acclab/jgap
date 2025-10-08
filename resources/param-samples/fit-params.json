@@ -12,7 +12,7 @@
         },
         "jgap_fe": {
             "type": "qr_jgap",
-            "sigma_rules": {
+            "regularization_rules": {
                 "type": "simple",
                 "E_per_root_n_atoms": 0.001,
                 "F_component": 0.05,

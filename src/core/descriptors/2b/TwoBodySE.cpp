@@ -22,8 +22,8 @@ namespace jgap {
 
     TwoBodySE::TwoBodySE(const nlohmann::json &params)
         : _idPair(SpeciesPair{require(params, "species_pair")[0], require(params, "species_pair")[1]}),
-          _energyScale(require(params, "length_scale")),
-          _lengthScale(require(params, "energy_scale")),
+          _energyScale(require(params, "energy_scale")),
+          _lengthScale(require(params, "length_scale")),
           _r(require(params, "r")),
           _descriptorPrefactors(require(params, "descriptor_prefactors")) {
 

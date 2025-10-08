@@ -13,12 +13,7 @@ namespace jgap {
     TwoBodyDescriptor::TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction,
                                          vector<shared_ptr<TwoBodyKernel>> kernels)
         : _cutoffFunction(std::move(cutoffFunction)), _kernels(std::move(kernels)) {
-        for (size_t i = 0; i < _kernels.size(); i++) {
-            if (!_kernelIdsPerSpeciesPair.contains(_kernels[i]->getFilter())) {
-                _kernelIdsPerSpeciesPair[_kernels[i]->getFilter()] = {};
-            }
-            _kernelIdsPerSpeciesPair[_kernels[i]->getFilter()].push_back(i);
-        }
+        mapKernelIds();
     }
 
     TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
@@ -30,13 +25,9 @@ namespace jgap {
         if (params.contains("kernels")) {
             for (const nlohmann::json& kernelParams : params["kernels"]) {
                 _kernels.push_back(ParserRegistry<TwoBodyKernel>::get(kernelParams));
-
-                if (!_kernelIdsPerSpeciesPair.contains(_kernels.back()->getFilter())) {
-                    _kernelIdsPerSpeciesPair[_kernels.back()->getFilter()] = {};
-                }
-                _kernelIdsPerSpeciesPair[_kernels.back()->getFilter()].push_back(_kernels.size() - 1);
             }
         }
+        mapKernelIds();
 
         _kernelSetups = {};
         if (params.contains("kernel_setups")) {
@@ -104,7 +95,7 @@ namespace jgap {
             nlohmann::json setup = _kernelSetups.front();
             _kernelSetups.pop();
 
-            string sparsifierType = setup.value("sparsifier", "uniform");
+            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
             setup.erase("sparsifier");
             setup["sparse_param"] = setup.value("sparse_param", "r");
 
@@ -120,11 +111,12 @@ namespace jgap {
 
                 for (nlohmann::json& kernelParams : sparsifier->selectSparsePoints(distancesPerPair)) {
                     kernelParams["species_pair"] = vector{pairInData.first(), pairInData.second()};
-                    kernelParams["descriptor_prefactors"] = _cutoffFunction->evaluate(kernelParams["q"][0]);
+                    kernelParams["descriptor_prefactors"] = _cutoffFunction->evaluate(kernelParams["r"]);
                     _kernels.push_back(ParserRegistry<TwoBodyKernel>::get(kernelParams));
                 }
             }
         }
+        mapKernelIds();
     }
 
     vector<Covariance> TwoBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -224,27 +216,40 @@ namespace jgap {
         return indexes;
     }
 
-    bool TwoBodyDescriptor::checkSpecies(SpeciesPair pairInData, nlohmann::json filter) {
-        if (!filter.is_array()) {
-            CurrentLogger::get()->logAndThrow("2b species filter is non-array: {}", filter.dump());
+    bool TwoBodyDescriptor::checkSpecies(SpeciesPair pairInData, nlohmann::json filters) {
+        if (!filters.is_array()) {
+            CurrentLogger::get()->logAndThrow("2b species filter is non-array: {}", filters.dump());
         }
-        if (filter.empty()) return true;
+        CurrentLogger::get()->debug("{}:{}", pairInData.toString(), filters.dump());
+        if (filters.empty()) return true;
+        CurrentLogger::get()->debug("xx{}:{}", pairInData.toString(), filters.dump());
 
-        if (ranges::all_of(filter, [](const nlohmann::json& j){ return j.is_string(); })) {
+        if (filters[0].is_string()) {
             // "species": ["Fe", "Ni"] => "species": [["Fe", "Ni"]]
-            filter = nlohmann::json::array({filter});
+            filters = nlohmann::json::array({filters});
         }
 
         bool passedAFilter = false;
-        for (const auto &speciesFilter: filter) {
-            if (!speciesFilter.is_array() || speciesFilter.size() != 2) {
-                CurrentLogger::get()->logAndThrow("Wrong 2b species specs: {}", filter.dump());
+        for (const auto &filter: filters) {
+            if (!filter.is_array() || filter.size() != 2) {
+                CurrentLogger::get()->logAndThrow("Wrong 2b species specs: {}", filters.dump());
             }
-            if (pairInData.contains(speciesFilter[0]) && pairInData.contains(speciesFilter[1])) {
+            if (pairInData == SpeciesPair{filter[0], filter[1]}) {
                 passedAFilter = true;
+                CurrentLogger::get()->debug("xxxx{}:{}", pairInData.toString(), filters.dump());
                 break;
             }
         }
         return passedAFilter;
+    }
+
+    void TwoBodyDescriptor::mapKernelIds() {
+        _kernelIdsPerSpeciesPair.clear();
+        for (size_t i = 0; i < _kernels.size(); i++) {
+            if (!_kernelIdsPerSpeciesPair.contains(_kernels[i]->getFilter())) {
+                _kernelIdsPerSpeciesPair[_kernels[i]->getFilter()] = {};
+            }
+            _kernelIdsPerSpeciesPair[_kernels[i]->getFilter()].push_back(i);
+        }
     }
 }

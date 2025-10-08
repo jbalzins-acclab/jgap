@@ -3,6 +3,7 @@
 
 #include <nlohmann/json.hpp>
 #include <utility>
+#include <queue>
 
 #include "core/cutoff/CutoffFunction.hpp"
 #include "core/descriptors/Descriptor.hpp"
@@ -43,10 +44,15 @@ namespace jgap {
         vector<shared_ptr<EamKernel>> _kernels;
         map<Species, vector<size_t>> _kernelIndicesPerSpecies;
 
+        // A queue to emphasize the one-time use
+        queue<nlohmann::json> _kernelSetups;
+
         shared_ptr<EamPairFunction> _defaultPairFunction;
         map<OrderedSpeciesPair/*{contributor, receiver}*/, shared_ptr<EamPairFunction>> _pairFunctions;
 
-        [[nodiscard]] EamKernelIndex doIndex(const AtomicStructure &structure) const;
+        EamKernelIndex doIndex(const AtomicStructure &structure) const;
+
+        void mapKernelIds();
     };
 
     REGISTER_PARSER("eam", Descriptor, EamDescriptor)

@@ -10,7 +10,7 @@
         },
         "jgap_feni": {
             "type": "in_ram_jgap",
-            "sigma_rules": {
+            "regularization_rules": {
                 "type": "simple",
                 "E_per_root_n_atoms": 0.002,
                 "F_component": 0.1,
