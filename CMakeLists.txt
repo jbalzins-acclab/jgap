@@ -174,7 +174,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
     set(TEST_SOURCES
             ${PROJECT_SOURCE_DIR}/test/core/fit/TestIsolatedAtomFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestInRamJgap.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
             ${PROJECT_SOURCE_DIR}/test/core/neighbours/TestNeighbourList.cpp
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestTwoBodyDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp

@@ -10,11 +10,13 @@ using namespace std;
 
 namespace jgap {
 
+    using KernelParams = nlohmann::json;
+
     class Sparsifier {
     public:
         virtual ~Sparsifier() = default;
-        virtual vector<vector<double>> selectSparsePoints(const vector<vector<double>> &allPoints) = 0;
+        virtual vector<KernelParams> selectSparsePoints(const vector<vector<double>> &allPoints) = 0;
     };
 }
 
-#endif //SPARSIFIER_HPP
+#endif

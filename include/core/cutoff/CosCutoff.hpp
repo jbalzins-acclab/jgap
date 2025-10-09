@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 9.7.2025.
-//
-
 #ifndef DEFAULTCUTOFFFUNCTION_HPP
 #define DEFAULTCUTOFFFUNCTION_HPP
 
@@ -31,4 +27,4 @@ namespace jgap {
 
     REGISTER_PARSER("coscutoff", CutoffFunction, CosCutoff)
 }
-#endif //DEFAULTCUTOFFFUNCTION_HPP
+#endif

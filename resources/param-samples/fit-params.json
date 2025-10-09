@@ -1,76 +1,118 @@
 {
-    "output_file": "fe-out.jgap.json",
-    "training_data_xyz": "resources/xyz-samples/fe-only.xyz",
-    "use_virials": true,
+    "output_file": "feh-out.jgap.json",
+    "training_data_xyz": "train_Fe-H.xyz",
+    "use_virials": false,
     "external": {
-        "type": "zbl",
-        "dmol_fit_coefficients_file": "/path/to/resources/dmol-screening-fit/dmol-fit.json"
+        "type": "zbl"
     },
+    "fit_order": ["isolated_atom", "jgap_feni_2b_3b_eam"],
+    "test_files": ["test_Fe-H.xyz"],
     "fits": {
         "isolated_atom": {
             "type": "isolated_atom"
         },
-        "jgap_fe": {
-            "type": "qr_jgap",
-            "sigma_rules": {
-                "type": "simple",
-                "E_per_root_n_atoms": 0.001,
-                "F_component": 0.05,
-                "liquid": 5.0,
-                "short_range": 5.0
+        "jgap_feni_2b_3b_eam": {
+            "type": "qr_gap",
+            "regularization_rules": {
+                "type": "per_ct",
+                "E": 0.001,
+                "F": 0.04,
+                "V": 0.1,
+                "per_keyword": [
+                    { "contains": "isolated_atom", "multiplier": 0.1 },
+                    { "contains": "Fe_dimer", "multiplier": 10 },
+                    { "contains": "Fe-H_dimer", "multiplier": 10 },
+                    { "contains": "H_trimer", "multiplier": 10 },
+                    { "contains": "short_range", "multiplier": 1 },
+                    { "contains": "short_range_2H", "multiplier": 2 },
+                    { "contains": "short_range_3H", "multiplier": 2 },
+                    { "contains": "tet_H", "multiplier": 0.5 },
+                    { "contains": "oct_H", "multiplier": 0.5 },
+                    { "contains": "TT_saddle_H", "multiplier": 0.5 },
+                    { "contains": "vac_1H", "multiplier": 0.5 },
+                    { "contains": "vac_6H", "multiplier": 2 },
+                    { "contains": "vac_14H", "multiplier": 2 },
+                    { "contains": "vac_H_clusters", "multiplier": 2 },
+                    { "contains": "surf100", "multiplier": 2 },
+                    { "contains": "surf110", "multiplier": 2 },
+                    { "contains": "surf111", "multiplier": 2 },
+                    { "contains": "gamma_surface", "multiplier": 2 },
+                    { "contains": "liquid", "multiplier": 10 },
+                    { "contains": "liquid_high", "multiplier": 10 }
+                ]
             },
             "descriptors": {
-                "my_2b": {
+                "2b": {
                     "type": "2b",
-                    "kernel": {
-                        "type": "squared_exp",
-                        "length_scale": 1.0,
-                        "energy_scale": 10.0
-                    },
-                    "sparsify": {
-                        "type": "sample_space_uniform",
-                        "n_sparse": 20
-                    },
+                    "kernel_setups": [
+                        {
+                            "type": "squared_exp",
+                            "length_scale": 1.0,
+                            "energy_scale": 10.0,
+                            "n_sparse": 20,
+                            "species": [["Fe", "Fe"], ["Fe", "H"]]
+                        },
+                        {
+                            "type": "squared_exp",
+                            "length_scale": 1.0,
+                            "energy_scale": 5.0,
+                            "n_sparse": 20,
+                            "species": [["H", "H"]]
+                        }
+                    ],
                     "cutoff": {
-                        "type": "perriot",
-                        "cutoff_transition_width": 0.5,
-                        "cutoff": 5
+                        "type": "coscutoff",
+                        "cutoff_transition_width": 1.0,
+                        "cutoff": 4.5
                     }
                 },
-                "my_eam": {
+                "eam": {
                     "type": "eam",
-                    "kernel": {
+                    "kernel_setup": {
                         "type": "squared_exp",
                         "length_scale": 1.0,
-                        "energy_scale": 1.0
+                        "energy_scale": 1.0,
+                        "n_sparse": 30
                     },
                     "pair_functions": [
                         {
-                            "type": "polycutoff",
-                            "cutoff": 5.0,
+                            "type": "fsgen",
+                            "degree": 3,
+                            "cutoff": 4.5,
                             "r_min": 0
                         }
-                    ],
-                    "sparsify": {
-                        "type": "sample_space_uniform",
-                        "n_sparse": 20
-                    }
+                    ]
                 },
-                "my_3b": {
+                "3b": {
                     "type": "3b",
-                    "kernel": {
-                        "type": "squared_exp",
-                        "length_scale": 1.0,
-                        "energy_scale": 1.0
-                    },
-                    "sparsify": {
-                        "type": "sample_space_uniform",
-                        "n_sparse": 500
-                    },
+                    "kernel_setups": [
+                        {
+                            "type": "squared_exp",
+                            "length_scale": 1.0,
+                            "energy_scale": 1.0,
+                            "n_sparse": 800,
+                            "species": [
+                                ["Fe","Fe","Fe"]
+                            ]
+                        },
+                        {
+                            "type": "squared_exp",
+                            "length_scale": 1.0,
+                            "energy_scale": 0.1,
+                            "n_sparse": 800,
+                            "species": [
+                                ["Fe","Fe","H"],
+                                ["H","Fe","Fe"],
+                                ["Fe","H","H"],
+                                ["H","Fe","H"],
+                                ["H","H","H"]
+                            ]
+                        }
+                    ],
                     "cutoff": {
-                        "type": "perriot",
+                        "type": "coscutoff",
                         "cutoff_transition_width": 0.6,
-                        "cutoff": 4.0
+                        "cutoff": 3.7
                     }
                 }
             }

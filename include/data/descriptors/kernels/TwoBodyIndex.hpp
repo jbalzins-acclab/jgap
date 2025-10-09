@@ -1,6 +1,7 @@
-#ifndef TWOBODYKERNELINDEX_HPP
-#define TWOBODYKERNELINDEX_HPP
+#ifndef TWOBODYINDEX_HPP
+#define TWOBODYINDEX_HPP
 
+#include <utility>
 #include <vector>
 
 #include "data/BasicDataTypes.hpp"
@@ -8,7 +9,7 @@
 using namespace std;
 
 namespace jgap {
-    struct TwoBodyKernelIndexEntity {
+    struct TwoBodyIndexEntity {
         size_t atomIndex0;
         size_t atomIndex1;
 
@@ -19,7 +20,7 @@ namespace jgap {
         double dCut_dr;
     };
 
-    using TwoBodyKernelIndex = vector<TwoBodyKernelIndexEntity>;
+    using TwoBodyIndex = vector<TwoBodyIndexEntity>;
 
     struct TwoBodyDescriptorData {
         double r;
@@ -27,4 +28,4 @@ namespace jgap {
     };
 }
 
-#endif //TWOBODYKERNELINDEX_HPP
+#endif

@@ -229,11 +229,8 @@ namespace jgap {
         if (mainData.rMin.has_value()) rMin = mainData.rMin.value();
 
         shared_ptr<CutoffFunction> cutoffFunction = make_shared<CosCutoff>(mainData.cutoff, rMin);
-        shared_ptr<TwoBodyKernel> kernel = make_shared<TwoBodySE>(mainData.delta, mainData.theta);
+        vector<shared_ptr<TwoBodyKernel>> kernels;
 
-        auto result = make_shared<TwoBodyDescriptor>(cutoffFunction, kernel);
-
-        map<SpeciesPair, pair<vector<double>, vector<double>>> pointsAndCoefficients;
         for (pugi::xml_node distanceNode: distance2bNodes) {
             string descriptorParamString = distanceNode.child("descriptor").first_child().value();
 
@@ -248,34 +245,17 @@ namespace jgap {
             SpeciesPair sp{species1, species2};
 
             // coeffs
-            vector<double> coefficients;
-            for (pugi::xml_node pt: distanceNode.children("sparseX")) {
-                coefficients.push_back(pt.attribute("alpha").as_double());
-            }
-
-            // points
-            vector<double> points(coefficients.size());
-
+            double r, coeff;
             ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
-            for (size_t i = 0; i < coefficients.size(); i++) {
-                fin >> points[i];
+            for (pugi::xml_node pt: distanceNode.children("sparseX")) {
+                fin >> r;
+                coeff = pt.attribute("alpha").as_double();
+                kernels.push_back(make_shared<TwoBodySE>(sp, mainData.delta, mainData.theta, r, coeff));
             }
-
-            pointsAndCoefficients[sp] = {points, coefficients};
+            fin.close();
         }
 
-        // Ensure map iteration order matches coefficient order
-        map<SpeciesPair, vector<double>> points;
-        vector<double> coefficients;
-        for (const auto &[sp, pointsAndCoeffs]: pointsAndCoefficients) {
-            points[sp] = pointsAndCoeffs.first;
-            coefficients.insert(coefficients.end(), pointsAndCoeffs.second.begin(), pointsAndCoeffs.second.end());
-        }
-
-        result->setSparsePoints(points);
-        result->setCoefficients(coefficients);
-
-        return result;
+        return make_shared<TwoBodyDescriptor>(cutoffFunction, kernels);
     }
 
     shared_ptr<ThreeBodyDescriptor> QuipXmlConverter::transformAngle3b(QuipDescriptorData mainData,
@@ -285,9 +265,7 @@ namespace jgap {
         if (mainData.rMin.has_value()) rMin = mainData.rMin.value();
 
         shared_ptr<CutoffFunction> cutoffFunction = make_shared<CosCutoff>(mainData.cutoff, rMin);
-        shared_ptr<ThreeBodyKernel> kernel = make_shared<ThreeBodySE>(mainData.delta, mainData.theta);
-
-        auto result = make_shared<ThreeBodyDescriptor>(cutoffFunction, kernel);
+        vector<shared_ptr<ThreeBodyKernel>> kernels;
 
         map<SpeciesTriplet, pair<vector<Vector3>, vector<double>>> pointsAndCoefficients;
         for (pugi::xml_node distanceNode: angle3bNodes) {
@@ -308,42 +286,26 @@ namespace jgap {
             SpeciesTriplet st{rootSpecies, {species1, species2}};
 
             // coeffs
-            vector<double> coefficients;
-            for (pugi::xml_node pt: distanceNode.children("sparseX")) {
-                coefficients.push_back(pt.attribute("alpha").as_double());
-            }
-
-            // points
-            vector<Vector3> points(coefficients.size());
-
+            double coeff;
+            Vector3 q{};
             ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
-            for (size_t i = 0; i < coefficients.size(); i++) {
-                fin >> points[i].x;
-                fin >> points[i].y;
-                fin >> points[i].z;
+            for (pugi::xml_node pt: distanceNode.children("sparseX")) {
+                coeff = pt.attribute("alpha").as_double();
+                fin >> q.x >> q.y >> q.z;
+                // TODO: 3d-theta
+                kernels.push_back(make_shared<ThreeBodySE>(
+                    st, mainData.delta, Vector3{mainData.theta, mainData.theta, mainData.theta}, q, coeff
+                    ));
             }
-
-            pointsAndCoefficients[st] = {points, coefficients};
         }
 
-        // Ensure map iteration order matches coefficient order
-        map<SpeciesTriplet, vector<Vector3>> points;
-        vector<double> coefficients;
-        for (const auto &[st, pointsAndCoeffs]: pointsAndCoefficients) {
-            points[st] = pointsAndCoeffs.first;
-            coefficients.insert(coefficients.end(), pointsAndCoeffs.second.begin(), pointsAndCoeffs.second.end());
-        }
-
-        result->setSparsePoints(points);
-        result->setCoefficients(coefficients);
-
-        return result;
+        return make_shared<ThreeBodyDescriptor>(cutoffFunction, kernels);
     }
 
     shared_ptr<EamDescriptor> QuipXmlConverter::transformEam(QuipDescriptorData mainData,
                                                              const vector<pugi::xml_node> &eamNodes) {
 
-        shared_ptr<EamKernel> kernel = make_shared<EamSE>(mainData.delta, mainData.theta);
+        vector<shared_ptr<EamKernel>> kernels;
 
         optional<double> rMin = mainData.cutoffTransitionWidth.transform([&](double val) -> double {
             return mainData.cutoff - val;
@@ -365,8 +327,6 @@ namespace jgap {
 
         vector<Species> species;
         vector<size_t> Z;
-        map<Species, vector<double>> sparsePoints;
-        map<Species, vector<double>> sparseCoefficients;
         for (auto node: eamNodes) {
             string descriptorParamString = node.child("descriptor").first_child().value();
 
@@ -375,20 +335,21 @@ namespace jgap {
             Z.push_back(stoi(descriptorParamString.substr(zStartIdx, zEndIdx - zStartIdx)));
             species.push_back(Z_inverse[Z.back()]);
 
-            sparseCoefficients[species.back()] = {};
-            for (auto pointNode: node.children("sparseX")) {
-                sparseCoefficients[species.back()].push_back(pointNode.attribute("alpha").as_double());
-            }
 
             string pointsFilename = node.attribute("sparseX_filename").as_string();
             ifstream fin(pointsFilename);
             if (!fin.is_open()) {
                 CurrentLogger::get()->error("Could not open file \"" + pointsFilename, true);
             }
-            sparsePoints[species.back()] = vector(sparseCoefficients[species.back()].size(), 0.0);
-            for (int i = 0; i < sparseCoefficients[species.back()].size(); i++) {
-                fin >> sparsePoints[species.back()][i];
+
+            double density, coeff;
+            for (auto pointNode: node.children("sparseX")) {
+                fin >> density;
+                coeff = pointNode.attribute("alpha").as_double();
+                kernels.push_back(make_shared<EamSE>(species.back(), mainData.delta, mainData.theta, density, coeff));
             }
+
+            fin.close();
         }
 
         auto pf = selectPairFunction(mainData, rMin, 1.0);
@@ -419,17 +380,7 @@ namespace jgap {
             }
         }
 
-        auto descriptor = make_shared<EamDescriptor>(kernel, pf, pfPerPairs);
-
-        descriptor->setSparsePoints(sparsePoints);
-
-        vector<double> allCoefficients;
-        for (const vector<double> &coefficients : sparseCoefficients | views::values) {
-            allCoefficients.insert(allCoefficients.end(), coefficients.begin(), coefficients.end());
-        }
-        descriptor->setCoefficients(allCoefficients);
-
-        return descriptor;
+        return make_shared<EamDescriptor>(kernels, pf, pfPerPairs);
     }
 
     shared_ptr<EamPairFunction> QuipXmlConverter::selectPairFunction(QuipDescriptorData mainData,

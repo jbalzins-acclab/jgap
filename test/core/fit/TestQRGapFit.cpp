@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "core/fit/QRGapFit.hpp"
-#include "core/descriptors/EamDescriptor.hpp"
+#include "core/descriptors/eam/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
 #include "utils/Utils.hpp"
@@ -26,7 +26,7 @@ void setupEquilateralTriangle() {
     };
 }
 
-TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
+TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     setupEquilateralTriangle();
 
     const auto params = nlohmann::json::parse(R"(
@@ -34,16 +34,16 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
         "descriptors": {
             "2b_test": {
                 "type": "2b",
-                "kernel": {
-                    "type": "squared_exp",
-                    "length_scale": 1.0,
-                    "energy_scale": 1.0
-                },
-                "sparse_data": {
-                    "Fe,Fe": {
-                        "sparse_points": [3.0]
+                "kernels": [
+                    {
+                        "species_pair": ["Fe", "Fe"],
+                        "type": "squared_exp",
+                        "length_scale": 1.0,
+                        "energy_scale": 1.0,
+                        "r": 3.0,
+                        "descriptor_prefactors": 1.0
                     }
-                },
+                ],
                 "cutoff": {
                     "type": "coscutoff",
                     "r_min": 9.3,
@@ -52,7 +52,7 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
             }
         },
         "jitter": 1e-8,
-        "sigma_rules": {
+        "regularization_rules": {
             "type": "simple",
             "E_per_root_n_atoms": 3.0,
             "F_component": 10.0,
@@ -75,9 +75,7 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     auto pot = fit.fit(vector{equilateralTriangle});
 
     auto res = pot->serialize();
-    auto coeffs = res["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    auto c = coeffs[0].get<double>();
+    double c = res["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     /*
      * if a - total covariance
      * => a = 2(idk why - ?counted from both ends?) * 3 * (K(3, 3) = 1) = 6
@@ -93,15 +91,21 @@ TEST(TestInRamJgap, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
 
 nlohmann::json makeParams2bDesc(double theta, double delta, double rMin, double cutoff, vector<double> sparsePts) {
 
-    return nlohmann::json{
-        {"type", "2b"},
-        {"kernel", {
+    nlohmann::json kernels = nlohmann::json::array();
+    for (auto r: sparsePts) {
+        kernels.push_back({
+            {"species_pair", {"Fe", "Fe"}},
             {"type", "squared_exp"},
             {"length_scale", theta},
-            {"energy_scale", delta}
-            }
-        },
-        {"sparse_data", {{"Fe,Fe", {{"sparse_points", sparsePts}}}}},
+            {"energy_scale", delta},
+            {"r", r},
+            {"descriptor_prefactors", CosCutoff(cutoff, rMin).evaluate(r)}
+        });
+    }
+
+    return nlohmann::json{
+        {"type", "2b"},
+        {"kernels", kernels},
         {"cutoff", {
                 {"type", "coscutoff"},
                 {"r_min", rMin},
@@ -128,7 +132,7 @@ nlohmann::json makeFitParams(nlohmann::json desc, string descName, nlohmann::jso
             }
         },
         {"jitter", 1e-8},
-        {"sigma_rules", srules}
+        {"regularization_rules", srules}
     };
 }
 
@@ -148,7 +152,7 @@ void setupTwoAtoms() {
     };
 }
 
-TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility1) {
+TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
     setupTwoAtoms();
     const auto params = makeFitParams(
             makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0, 4.0}),
@@ -165,14 +169,13 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility1) {
     };
     auto pot = fit.fit(vector{twoAtoms});
 
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    auto a0 = coeffs[0].get<double>(), a1 = coeffs[1].get<double>();
-    ASSERT_NEAR(a0, 0.23266775926220731, 1e-6);
-    ASSERT_NEAR(a1, 0.23266775926220731, 1e-6);
+    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
+    double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
+    ASSERT_NEAR(c0, 0.23266775926220731, 1e-6);
+    ASSERT_NEAR(c1, 0.23266775926220731, 1e-6);
 }
 
-TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility2) {
+TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
 
     setupTwoAtoms();
     const auto params = makeFitParams(
@@ -190,12 +193,11 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility2) {
     };
     auto pot = fit.fit(vector{twoAtoms});
 
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>() , -0.30764655994411466, 1e-6);
+    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0, -0.30764655994411466, 1e-6);
 }
 
-TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility3) {
+TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
     setupTwoAtoms();
     const auto params = makeFitParams(
             makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0}),
@@ -215,10 +217,12 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility3) {
 
     auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
     cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>() , -.15382666452610533, 1e-6);
+
+    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0 , -.15382666452610533, 1e-6);
 }
 
-TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility4) {
+TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
     setupTwoAtoms();
     const auto params = makeFitParams(
             makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0}),
@@ -236,12 +240,11 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility4) {
     twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
     auto pot = fit.fit(vector{twoAtoms});
 
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>() , -.47733536744854282, 1e-6);
+    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0, -.47733536744854282, 1e-6);
 }
 
-TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility5) {
+TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
     setupTwoAtoms();
     const auto params = makeFitParams(
             makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0, 2.5, 4.0}),
@@ -259,16 +262,18 @@ TEST(TestInRamJgap, twoAtomsWithForceQuipCompatibility5) {
     twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
     auto pot = fit.fit(vector{twoAtoms});
 
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>() , -.24567921601436607, 1e-6);
-    ASSERT_NEAR(coeffs[1].get<double>() , -.10998748761736651, 1e-6);
-    ASSERT_NEAR(coeffs[2].get<double>() , .38697171383300527, 1e-6);
+    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
+    double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
+    double c2 = pot->serialize()["descriptors"]["2b_test"]["kernels"][2]["coefficient"];
+
+    ASSERT_NEAR(c0 , -.24567921601436607, 1e-6);
+    ASSERT_NEAR(c1 , -.10998748761736651, 1e-6);
+    ASSERT_NEAR(c2 , .38697171383300527, 1e-6);
 }
 
 /*
  * TODO: cutoff logic changed -> need to recalculate
-TEST(TestInRamJgap, twoBodyQuipCompatibilityRealBox) {
+TEST(TestQRGapFit, twoBodyQuipCompatibilityRealBox) {
     auto box = readXyz("test/resources/xyz-samples/fe-only.xyz")[0];
     const auto params = makeFitParams(
             makeParams2bDesc(1.0, 10.0, 4.0, 5.0, vector{2.0, 2.5, 4.0}),
@@ -290,15 +295,20 @@ TEST(TestInRamJgap, twoBodyQuipCompatibilityRealBox) {
 
 nlohmann::json makeParamsEamDesc(double theta, double delta, double rMin, double cutoff, vector<double> sparsePts) {
 
-    return nlohmann::json{
-        {"type", "eam"},
-        {"kernel", {
+    nlohmann::json kernels = nlohmann::json::array();
+    for (auto rho: sparsePts) {
+        kernels.push_back({
+            {"species", "Fe"},
             {"type", "squared_exp"},
             {"length_scale", theta},
-            {"energy_scale", delta}
-            }
-        },
-        {"sparse_data", {{"Fe", {{"sparse_points", sparsePts}}}}},
+            {"energy_scale", delta},
+            {"density", rho}
+        });
+    }
+
+    return nlohmann::json{
+        {"type", "eam"},
+        {"kernels", kernels},
         {"pair_functions", {
                 {
                     {"type", "polycutoff"},
@@ -310,7 +320,7 @@ nlohmann::json makeParamsEamDesc(double theta, double delta, double rMin, double
     };
 }
 
-TEST(TestInRamJgap, twoAtomsEamQuipCompatibility) {
+TEST(TestQRGapFit, twoAtomsEamQuipCompatibility) {
     setupTwoAtoms();
 
     twoAtoms.energy = 1;
@@ -327,12 +337,12 @@ TEST(TestInRamJgap, twoAtomsEamQuipCompatibility) {
     auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{twoAtoms});
-    auto coeffs = pot->serialize()["descriptors"]["eam_test"]["sparse_data"]["Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>(), .17637586136984833E-001, 1e-6);
+
+    double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0, .17637586136984833E-001, 1e-6);
 }
 
-TEST(TestInRamJgap, eamQuipCompatibilityRealBox) {
+TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
     auto box = readXyz("test/resources/xyz-samples/fe-only.xyz")[15];
     box.virials.reset();
 
@@ -344,49 +354,54 @@ TEST(TestInRamJgap, eamQuipCompatibilityRealBox) {
     auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{box});
-    auto coeffs = pot->serialize()["descriptors"]["eam_test"]["sparse_data"]["Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
+
+    double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
+    double c1 = pot->serialize()["descriptors"]["eam_test"]["kernels"][1]["coefficient"];
+    double c2 = pot->serialize()["descriptors"]["eam_test"]["kernels"][2]["coefficient"];
 /*
     <sparseX i="1" alpha="-5.0619173053329485" sparseCutoff="1.0000000000000000"/>
     <sparseX i="2" alpha="-4.4169841885357615" sparseCutoff="1.0000000000000000"/>
     <sparseX i="3" alpha="-.16117464517539212" sparseCutoff="1.0000000000000000"/>
     </gpCoordinates>
 */
-    ASSERT_NEAR(coeffs[0].get<double>(), -5.0619173053329485, 1e-6);
-    ASSERT_NEAR(coeffs[1].get<double>(), -4.4169841885357615, 1e-6);
-    ASSERT_NEAR(coeffs[2].get<double>(), -.16117464517539212, 1e-6);
+    ASSERT_NEAR(c0, -5.0619173053329485, 1e-6);
+    ASSERT_NEAR(c1, -4.4169841885357615, 1e-6);
+    ASSERT_NEAR(c2, -.16117464517539212, 1e-6);
 }
 
 nlohmann::json makeParams3bDesc(double theta, double delta, double rMin, double cutoff, vector<Vector3> sparsePts) {
 
-    auto spConv = nlohmann::json::array();
-    for (const auto &sp: sparsePts) {
-        spConv.push_back({
-            {"x", sp.x},
-            {"y", sp.y},
-            {"z", sp.z}
+    auto kernels = nlohmann::json::array();
+    for (const auto &q: sparsePts) {
+
+        double rij = (sqrt(q.y) - q.x) / 2.0;
+        double rik = (q.x - sqrt(q.y)) / 2.0;
+
+        kernels.push_back({
+            {"type", "squared_exp"},
+            {"length_scale", theta},
+            {"energy_scale", delta},
+            {"species_triplet", {"Fe", "Fe", "Fe"}},
+            {"q", {q.x, q.y, q.z}},
+            {"descriptor_prefactors",
+                    CosCutoff(cutoff, rMin).evaluate(rij) * CosCutoff(cutoff, rMin).evaluate(rik)
+            }
         });
     }
 
     return nlohmann::json{
-            {"type", "3b"},
-            {"kernel", {
-                    {"type", "squared_exp"},
-                    {"length_scale", theta},
-                    {"energy_scale", delta}
-                }
-            },
-        {"sparse_data", {{"Fe,Fe,Fe", {{"sparse_points", spConv}}}}},
+        {"type", "3b"},
+        {"kernels", kernels},
         {"cutoff", {
                     {"type", "coscutoff"},
                     {"r_min", rMin},
                     {"cutoff", cutoff}
             }
-}
+        }
     };
 }
 
-TEST(TestInRamJgap, equilateralTriangle3bQuipCompatibility) {
+TEST(TestQRGapFit, equilateralTriangle3bQuipCompatibility) {
     setupEquilateralTriangle();
 
     equilateralTriangle.energy = 1.0;
@@ -405,10 +420,9 @@ TEST(TestInRamJgap, equilateralTriangle3bQuipCompatibility) {
     auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{equilateralTriangle});
-    // cout << pot->serialize();
-    auto coeffs = pot->serialize()["descriptors"]["3b_test"]["sparse_data"]["Fe,Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>(), .15381640115291151, 1e-8);
+
+    double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0, .15381640115291151, 1e-8);
 }
 
 AtomicStructure pythagorian;
@@ -432,7 +446,7 @@ void initPythagorian() {
     NeighbourFinder::findNeighbours(pythagorian, 10.0);
 }
 
-TEST(TestInRamJgap, pythagorian3bQuipCompatibility) {
+TEST(TestQRGapFit, pythagorian3bQuipCompatibility) {
     initPythagorian();
 
     pythagorian.energy = 1.0;
@@ -451,15 +465,14 @@ TEST(TestInRamJgap, pythagorian3bQuipCompatibility) {
     auto fit = QRGapFit(params);
 
     auto pot = fit.fit(vector{pythagorian});
-    // cout << pot->serialize();
-    auto coeffs = pot->serialize()["descriptors"]["3b_test"]["sparse_data"]["Fe,Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
-    ASSERT_NEAR(coeffs[0].get<double>(), -.13044210897182607, 1e-8);
+
+    double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
+    ASSERT_NEAR(c0, -.13044210897182607, 1e-8);
 }
 
 /*
  * TODO: cutoff logic changed -> need to recalculate
-TEST(TestInRamJgap, hard3bQuipCompatibility) {
+TEST(TestQRGapFit, hard3bQuipCompatibility) {
     auto box = readXyz("test/resources/xyz-samples/FeOnly.xyz")[15];
 
     const auto params = makeFitParams(

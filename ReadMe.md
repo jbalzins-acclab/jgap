@@ -52,7 +52,7 @@ vcpkg install
 # on local device
 cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
 # on Puhti: 
-cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=/users/balzinsj/vcpkg/scripts/buildsystems/vcpkg.cmake   -DCMAKE_CXX_COMPILER=g++  -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
+cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
 cmake --build build -j ...
 ```
 - This should produce 3 executables:

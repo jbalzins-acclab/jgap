@@ -8,7 +8,7 @@
 using namespace std;
 
 namespace jgap {
-    struct ThreeBodyKernelIndexEntity {
+    struct ThreeBodyIndexEntity {
         array<size_t, 3> atomIndex;
 
         array<Vector3, 3> r_ij;
@@ -23,7 +23,7 @@ namespace jgap {
         array<Vector3, 3> dq_k_dr_ij;
     };
 
-    using ThreeBodyKernelIndex = vector<ThreeBodyKernelIndexEntity>;
+    using ThreeBodyIndex = vector<ThreeBodyIndexEntity>;
 
     struct ThreeBodyDescriptorData {
         Vector3 q;

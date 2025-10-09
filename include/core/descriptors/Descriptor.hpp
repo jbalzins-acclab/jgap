@@ -2,14 +2,13 @@
 #define DESCRIPTOR_HPP
 
 #include "data/BasicDataTypes.hpp"
-#include "io/log/CurrentLogger.hpp"
 #include "memory/MatrixBlock.hpp"
 
 #include <memory>
-#include <utility>
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
 
+#include "Kernel.hpp"
 #include "data/TabulationData.hpp"
 
 using namespace std;
@@ -18,28 +17,23 @@ namespace jgap {
 
     class Descriptor {
     public:
-
         virtual ~Descriptor() = default;
-
-        // Sparsification strategy to constructor
-        virtual void selectSparsePoints(const vector<AtomicStructure> &fromData) = 0;
-        virtual size_t nSparsePoints() = 0;
-
-        virtual vector<Covariance> covariate(const AtomicStructure &atomicStructure) = 0;
-        virtual vector<pair<size_t/*sparse point id*/, shared_ptr<MatrixBlock>>> selfCovariate() = 0;
 
         virtual nlohmann::json serialize() = 0;
         virtual string getType() = 0;
         virtual double getCutoff() = 0;
+        // Must be in same order as @covariate and @selfCovariate
+        virtual vector<shared_ptr<IKernel>> getKernels() = 0;
+
+        // Sparsification strategy to constructor
+        virtual void setupKernels(const vector<AtomicStructure> &fromData) = 0;
+
+        virtual vector<Covariance> covariate(const AtomicStructure &atomicStructure) = 0;
+        virtual vector<shared_ptr<MatrixBlock>> selfCovariate() = 0;
+
+        virtual PotentialPrediction predict(const AtomicStructure &atomicStructure) = 0;
 
         virtual TabulationData tabulate(const TabulationParams &params) = 0;
-
-        void setCoefficients(const vector<double>& c);
-
-        PotentialPrediction predict(const AtomicStructure &atomicStructure);
-
-    protected:
-        vector<double> _coefficients = {};
     };
 }
 

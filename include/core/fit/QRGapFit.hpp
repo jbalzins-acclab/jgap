@@ -34,7 +34,7 @@ namespace jgap {
 
     private:
         map<string, shared_ptr<Descriptor>> _descriptors;
-        shared_ptr<RegularizationRules> _sigmaRules;
+        shared_ptr<RegularizationRules> _regularizationRules;
         double _jitter;
 
         // TODO: 4-element matrix has only ~12% non-zero values i.e. ~12GB

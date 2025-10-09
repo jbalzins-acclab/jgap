@@ -1,59 +1,46 @@
-#include "core/descriptors/EamDescriptor.hpp"
+#include "core/descriptors/eam/EamDescriptor.hpp"
 
 #include <random>
 #include <utility>
 
-#include "core/descriptors/kernels/EamSE.hpp"
+#include "core/descriptors/eam/EamSE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    EamDescriptor::EamDescriptor(shared_ptr<EamKernel> kernel,
+    EamDescriptor::EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
                                  shared_ptr<EamPairFunction> defaultPairFunction,
                                  map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions)
-        : _kernel(std::move(kernel)),
-          _sparsifier(nullptr),
+        : _kernels(std::move(kernels)),
           _defaultPairFunction(std::move(defaultPairFunction)),
-          _pairFunctions(std::move(pairFunctions)),
-          _sparsePointsPerSpecies({}) {
+          _pairFunctions(std::move(pairFunctions)) {
 
         _maxCutoff = 0;
         for (const auto& pf: pairFunctions | views::values) {
             _maxCutoff = max(_maxCutoff, pf->getCutoff());
         }
+        mapKernelIds();
     }
 
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
         CurrentLogger::get()->debug("Parsing EAM descriptor params");
 
-        _sparsePointsPerSpecies = {};
-        _coefficients = {};
-
-        _kernel = ParserRegistry<EamKernel>::get(params["kernel"]);
-
-        if (params.contains("sparse_data")) {
-            _sparsifier = nullptr; // TODO ?
-
-            size_t nPts = 0;
-            for (const auto &[species, sparseData] : params["sparse_data"].items()) {
-                _sparsePointsPerSpecies[species] = {};
-                for (const auto& density: sparseData["sparse_points"]) {
-                    _sparsePointsPerSpecies[species].push_back(density);
-                    nPts++;
-                }
-
-                if (sparseData.contains("coefficients")) {
-                    for (const auto& coeff: sparseData["coefficients"]) {
-                        _coefficients.push_back(coeff);
-                    }
-                }
+        _kernels = {};
+        if (params.contains("kernels")) {
+            for (const nlohmann::json& kernelParams : params["kernels"]) {
+                _kernels.push_back(ParserRegistry<EamKernel>::get(kernelParams));
             }
+        }
+        mapKernelIds();
 
-            if (!_coefficients.empty() && nPts != _coefficients.size()) {
-                CurrentLogger::get()->error("Coefficients can't be provided partially for EAM descriptor", true);
+        _kernelSetups = {};
+        if (params.contains("kernel_setups")) {
+            for (const nlohmann::json& kernelSetup : params["kernel_setups"]) {
+                _kernelSetups.push(kernelSetup);
             }
-        } else {
-            _sparsifier = ParserRegistry<Sparsifier>::get(params["sparsify"]);
+        }
+        if (params.contains("kernel_setup")) {
+            _kernelSetups.push(params["kernel_setup"]);
         }
 
         _maxCutoff = 0;
@@ -61,7 +48,6 @@ namespace jgap {
 
             auto pf = ParserRegistry<EamPairFunction>::get(pfParams);
 
-            // TODO: error on specified double
             if (pfParams.contains("species")) {
                 auto s1 = pfParams["species"][0];
                 auto s2 = pfParams["species"][1];
@@ -71,7 +57,7 @@ namespace jgap {
                 auto s1 = pfParams["species_ordered"][0];
                 auto s2 = pfParams["species_ordered"][1];
                 _pairFunctions[{s1, s2}] = pf;
-            } else { // default
+            } else {
                 _defaultPairFunction = pf;
             }
 
@@ -81,23 +67,11 @@ namespace jgap {
 
     nlohmann::json EamDescriptor::serialize() {
 
-        nlohmann::json sparseData{};
-        size_t counter = 0;
-
-        for (const auto &[species, sparseDensities] : _sparsePointsPerSpecies) {
-            sparseData[species] = {
-                {"sparse_points", sparseDensities},
-                {"coefficients", vector(
-                    _coefficients.begin() + counter,
-                    _coefficients.begin() + counter + sparseDensities.size()
-                    )
-                }
-            };
-            counter += sparseDensities.size();
+        auto kernelsData = nlohmann::json::array();
+        for (const auto &kernel : _kernels) {
+            kernelsData.push_back(kernel->serialize());
+            kernelsData.back()["type"] = kernel->getType();
         }
-
-        auto kernelData = _kernel->serialize();
-        kernelData["type"] = _kernel->getType();
 
         nlohmann::json pfData = nlohmann::json::array();
 
@@ -113,17 +87,28 @@ namespace jgap {
         }
 
         return {
-            {"sparse_data", sparseData},
-            {"kernel", kernelData},
+            {"kernels", kernelsData},
             {"pair_functions", pfData}
         };
     }
 
-    void EamDescriptor::selectSparsePoints(const vector<AtomicStructure> &fromData) {
-        if (_sparsifier == nullptr) {
-            CurrentLogger::get()->error("EAM sparsifier not set", true);
+    vector<shared_ptr<IKernel>> EamDescriptor::getKernels() {
+        vector<shared_ptr<IKernel>> res;
+        for (const auto& kernelIds : _kernelIndicesPerSpecies | views::values) {
+            for (const auto& id: kernelIds) {
+                res.push_back(_kernels[id]);
+            }
         }
+        return res;
+    }
+
+    void EamDescriptor::setupKernels(const vector<AtomicStructure> &fromData) {
         CurrentLogger::get()->info("Doing EAM sparsification from data");
+
+        if (_kernelSetups.empty()) {
+            CurrentLogger::get()->warn("All 3b kernels were pre-set");
+            return;
+        }
 
         map<Species, vector<vector<double>>> allDensitiesPerSpecies;
         vector<EamKernelIndex> indexArr;
@@ -141,22 +126,35 @@ namespace jgap {
             }
         }
 
-        _sparsePointsPerSpecies = {};
-        for (const auto& [species, densities]: allDensitiesPerSpecies) {
-            _sparsePointsPerSpecies[species] = {};
-            for (const vector<double>& density: _sparsifier->selectSparsePoints(densities)) {
-                _sparsePointsPerSpecies[species].push_back(density[0]);
+        while (!_kernelSetups.empty()) {
+            nlohmann::json setup = _kernelSetups.front();
+            _kernelSetups.pop();
+
+            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
+            setup.erase("sparsifier");
+            setup["sparse_param"] = setup.value("sparse_param", "density");
+
+            for (const auto& [species, densities]: allDensitiesPerSpecies) {
+                nlohmann::json setupPerSpecies = setup;
+
+                if (setupPerSpecies.contains("species")) {
+                    if (setupPerSpecies["species"].is_string()) {
+                        setupPerSpecies["species"] = {setupPerSpecies["species"]};
+                    }
+                    if (!setupPerSpecies["species"].contains(species)) continue;
+                    setupPerSpecies.erase("species");
+                }
+
+                auto sparsifier = ParserRegistry<Sparsifier>::getRegistry()[sparsifierType](setupPerSpecies);
+
+                for (nlohmann::json& kernelParams : sparsifier->selectSparsePoints(densities)) {
+                    kernelParams["species"] = species;
+                    _kernels.push_back(ParserRegistry<EamKernel>::get(kernelParams));
+                }
             }
         }
-        _coefficients.clear();
-    }
 
-    size_t EamDescriptor::nSparsePoints() {
-        size_t result = 0;
-        for (const auto &densities: _sparsePointsPerSpecies | views::values) {
-            result += densities.size();
-        }
-        return result;
+        mapKernelIds();
     }
 
     vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
@@ -164,37 +162,44 @@ namespace jgap {
 
         EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
-        for (auto &[species, sparseDensities]: _sparsePointsPerSpecies) {
+        for (auto &[species, kernelIds]: _kernelIndicesPerSpecies) {
             if (!kernelIndex.contains(species)) kernelIndex[species] = {};
 
-            for (double sparseDensity: sparseDensities) {
-                result.push_back(
-                    _kernel->covariance(atomicStructure, kernelIndex.at(species), sparseDensity)
-                    );
+            for (auto& id: kernelIds) {
+                result.push_back(_kernels[id]->covariance(atomicStructure, kernelIndex[species]));
             }
         }
 
         return result;
     }
 
-    vector<pair<size_t, shared_ptr<MatrixBlock>>> EamDescriptor::selfCovariate() {
+    vector<shared_ptr<MatrixBlock>> EamDescriptor::selfCovariate() {
 
-        vector<pair<size_t, shared_ptr<MatrixBlock>>> result;
-        size_t startingRC = 0;
+        vector<shared_ptr<MatrixBlock>> result;
 
-        for (const auto &densities: _sparsePointsPerSpecies | views::values) {
+        for (const auto &kernelIds: _kernelIndicesPerSpecies | views::values) {
 
-            auto elementBlock = make_shared<MatrixBlock>(densities.size(), densities.size());
-            for (size_t i = 0; i < densities.size(); i++) {
-                for (size_t j = 0; j < densities.size(); j++) {
-                    (*elementBlock)(i, j) = _kernel->covariance(densities[i], densities[j]);
+            auto covariance = make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
+
+            for (size_t i = 0; i < kernelIds.size(); i++) {
+                for (size_t j = i; j < kernelIds.size(); j++) {
+                    (*covariance)(i, j) = _kernels[i]->crossCovariance(_kernels[j]);
+                    (*covariance)(j, i) = (*covariance)(i, j);
                 }
             }
 
-            result.emplace_back(startingRC, elementBlock);
-            startingRC += densities.size();
+            result.push_back(covariance);
         }
 
+        return result;
+    }
+
+    PotentialPrediction EamDescriptor::predict(const AtomicStructure &atomicStructure) {
+        auto indexes = doIndex(atomicStructure);
+        PotentialPrediction result{};
+        for (const auto& kernel: _kernels) {
+            result = result + kernel->predict(atomicStructure, indexes[kernel->getFilter()]);
+        }
         return result;
     }
 
@@ -202,39 +207,32 @@ namespace jgap {
         EamTabulationData result;
 
         result.maxDensity = 0.0;
-        for (const auto& points: _sparsePointsPerSpecies | views::values) {
-            result.maxDensity = max(result.maxDensity, ranges::max(points));
-        }
-        if (result.maxDensity - params.maxDensity.value_or(result.maxDensity) > 1) {
-            CurrentLogger::get()->warn(
-                "max_eam_density={} is too low - highest sparse point is {}",
-                params.maxDensity.value(), result.maxDensity
-                );
+        for (const auto& kernel: _kernels) {
+            result.maxDensity = max(result.maxDensity, kernel->serialize().value("density", 0.0));
         }
         result.maxDensity = params.maxDensity.value_or(result.maxDensity);
+        if (result.maxDensity <= 0.0) {
+            CurrentLogger::get()->logAndThrow("Maximum density value must be positive");
+        }
 
         const double rhoStep = result.maxDensity / static_cast<double>(params.nDensities - 1);
 
-        size_t counter = 0;
-        for (const auto& [species, points]: _sparsePointsPerSpecies) {
+        for (const auto& [species, kernelIds]: _kernelIndicesPerSpecies) {
             vector energiesPerSpecies(params.nDensities, 0.0);
-            vector coefficients(_coefficients.begin()+counter, _coefficients.begin()+counter + points.size());
-            counter += points.size();
 
             for (size_t iGrid = 0; iGrid < params.nDensities; iGrid++) {
                 double density = rhoStep * static_cast<double>(iGrid);
 
-                for (size_t indexSparse = 0; indexSparse < points.size(); indexSparse++) {
-                    energiesPerSpecies[iGrid] += coefficients[indexSparse]
-                                                  * _kernel->covariance(points[indexSparse], density);
+                for (auto& id: kernelIds) {
+                    energiesPerSpecies[iGrid] += _kernels[id]->value(density) * _kernels[id]->coefficient.value();
                 }
             }
 
             result.embeddingEnergies[species] = energiesPerSpecies;
         }
 
-        for (const auto& species1: _sparsePointsPerSpecies | views::keys) {
-            for (const auto& species2: _sparsePointsPerSpecies | views::keys) {
+        for (const auto& species1: _kernelIndicesPerSpecies | views::keys) {
+            for (const auto& species2: _kernelIndicesPerSpecies | views::keys) {
 
                 auto speciesPair = OrderedSpeciesPair{species1, species2};
 
@@ -253,7 +251,7 @@ namespace jgap {
         }
 
         TabulationData resultFull{};
-        resultFull.eamTabulationData = vector{result}; // TODO? c++20
+        resultFull.eamTabulationData = {result};
         return resultFull;
     }
 
@@ -298,5 +296,15 @@ namespace jgap {
         }
 
         return result;
+    }
+
+    void EamDescriptor::mapKernelIds() {
+        _kernelIndicesPerSpecies.clear();
+        for (size_t i = 0; i < _kernels.size(); i++) {
+            if (!_kernelIndicesPerSpecies.contains(_kernels[i]->getFilter())) {
+                _kernelIndicesPerSpecies[_kernels[i]->getFilter()] = {};
+            }
+            _kernelIndicesPerSpecies[_kernels[i]->getFilter()].push_back(i);
+        }
     }
 }
