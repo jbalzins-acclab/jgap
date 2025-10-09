@@ -184,7 +184,7 @@ namespace jgap {
                     }
                 }
             }
-            CurrentLogger::get()->debug("TTT{} k0={} v={}", speciesTriplet.toString(), kernelIds[0], _kernels[kernelIds[0]]->coefficient.value());
+
             tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](const array<size_t, 3> &iGrid) {
                 const Vector3 gridPoint = params.grid3b[iGrid[0]][iGrid[1]][iGrid[2]];
 
@@ -205,7 +205,6 @@ namespace jgap {
             });
 
             result.tripletEnergies[speciesTriplet] = tripletEnergies;
-            CurrentLogger::get()->debug("asf{}",result.tripletEnergies[speciesTriplet][0][0][0]);
         }
 
         return result;

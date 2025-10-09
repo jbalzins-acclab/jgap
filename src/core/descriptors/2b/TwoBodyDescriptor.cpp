@@ -75,7 +75,7 @@ namespace jgap {
         CurrentLogger::get()->info("Doing 2b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            CurrentLogger::get()->warn("All 2b kenels were pre-set");
+            CurrentLogger::get()->warn("All 2b kernels were pre-set");
             return;
         }
 
@@ -220,9 +220,8 @@ namespace jgap {
         if (!filters.is_array()) {
             CurrentLogger::get()->logAndThrow("2b species filter is non-array: {}", filters.dump());
         }
-        CurrentLogger::get()->debug("{}:{}", pairInData.toString(), filters.dump());
+
         if (filters.empty()) return true;
-        CurrentLogger::get()->debug("xx{}:{}", pairInData.toString(), filters.dump());
 
         if (filters[0].is_string()) {
             // "species": ["Fe", "Ni"] => "species": [["Fe", "Ni"]]
@@ -236,7 +235,6 @@ namespace jgap {
             }
             if (pairInData == SpeciesPair{filter[0], filter[1]}) {
                 passedAFilter = true;
-                CurrentLogger::get()->debug("xxxx{}:{}", pairInData.toString(), filters.dump());
                 break;
             }
         }

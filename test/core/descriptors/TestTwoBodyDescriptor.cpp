@@ -16,19 +16,40 @@ TEST(TestTwoBodyDescriptor, covariance) {
 
     const auto params2b = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 10.0
-        },
-        "sparse_data": {
-            "Mn,Cr": {
-                "sparse_points": [2.0, 3.0]
+        "kernels": [
+            {
+                "species_pair": ["Cr", "Cr"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 2.0,
+                "descriptor_prefactors": 1.0
             },
-            "Cr,Cr": {
-                "sparse_points": [2.0, 3.0]
+            {
+                "species_pair": ["Cr", "Cr"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 3.0,
+                "descriptor_prefactors": 0.812
+            },
+            {
+                "species_pair": ["Mn", "Cr"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 2.0,
+                "descriptor_prefactors": 1.0
+            },
+            {
+                "species_pair": ["Mn", "Cr"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 3.0,
+                "descriptor_prefactors": 0.812
             }
-        },
+        ],
         "cutoff": {
             "type": "coscutoff",
             "r_min": 2.8,
@@ -38,13 +59,7 @@ TEST(TestTwoBodyDescriptor, covariance) {
     )");
 
     auto desc2b = TwoBodyDescriptor(params2b);
-    // desc2b.setSparsePoints(selectedStructs);
-
-    const auto resSparse = desc2b.serialize()["sparse_data"];
-    ASSERT_EQ(resSparse.size(), 2);
-    ASSERT_EQ(resSparse["Cr,Cr"]["sparse_points"].dump(), "[2.0,3.0]");
-    ASSERT_EQ(resSparse["Cr,Mn"]["sparse_points"].dump(), "[2.0,3.0]");
-
+    auto k = desc2b.getKernels();
     auto covariance = desc2b.covariate(
         structs[128] // 4 atoms: crmnfeni elongated in x(>4) / ~2.7 in z and y
     );
@@ -112,16 +127,24 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
 
     const auto params2b = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 1.0
-        },
-        "sparse_data": {
-            "Fe,Fe": {
-                "sparse_points": [2.0, 3.0]
+        "kernels": [
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "r": 2.0,
+                "descriptor_prefactors": 1.0
+            },
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "r": 3.0,
+                "descriptor_prefactors": 1.0
             }
-        },
+        ],
         "cutoff": {
             "type": "perriot",
             "r_min": 4.3,
@@ -151,7 +174,6 @@ TEST(TestTwoBodyDescriptor, dimerRepSign) {
     ASSERT_TRUE(res2[1].forces[1].x > 0);
 }
 
-
 auto equilateralTriangle_2b = AtomicStructure{
     .lattice = {
         Vector3{100.0, 0.0, 0.0},
@@ -169,16 +191,24 @@ auto equilateralTriangle_2b = AtomicStructure{
 TwoBodyDescriptor setupDesc2bSimple_2b() {
     const auto params2b = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 1.0
-        },
-        "sparse_data": {
-            "Fe,Fe": {
-                "sparse_points": [2.0, 4.0]
+        "kernels": [
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "r": 2.0,
+                "descriptor_prefactors": 1.0
+            },
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "r": 4.0,
+                "descriptor_prefactors": 1.0
             }
-        },
+        ],
         "cutoff": {
             "type": "perriot",
             "r_min": 9.3,
@@ -187,7 +217,7 @@ TwoBodyDescriptor setupDesc2bSimple_2b() {
     }
     )");
 
-    return TwoBodyDescriptor(params2b);
+    return {params2b};
 }
 
 TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
@@ -227,16 +257,35 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
 
     const auto params2b = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 10.0
-        },
-        "sparse_data": {
-            "Fe,Fe": {
-                "sparse_points": [1.0, 1.5, 2.0]
+        "kernels": [
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 1.0,
+                "coefficient": 1.0,
+                "descriptor_prefactors": 1.0
+            },
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 1.5,
+                "coefficient": 1.0,
+                "descriptor_prefactors": 1.0
+            },
+            {
+                "species_pair": ["Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 10.0,
+                "r": 2.0,
+                "coefficient": 1.0,
+                "descriptor_prefactors": 1.0
             }
-        },
+        ],
         "cutoff": {
             "type": "perriot",
             "r_min": 4.5,
@@ -246,7 +295,6 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
     )");
 
     auto desc2b = TwoBodyDescriptor(params2b);
-    desc2b.setCoefficients({1, 1, 1});
 
     for (size_t i = 71; i < 440; i++) {
         auto structure = structs[i];

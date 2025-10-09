@@ -1,7 +1,3 @@
-//
-// Created by Jegors Balzins on 15.7.2025.
-//
-
 #include "core/fit/Tabulate.hpp"
 
 #include <highfive/H5File.hpp>
@@ -9,6 +5,7 @@
 #include <string>
 
 #include "utils/AtomicNumbers.hpp"
+#include <functional>
 
 using namespace std;
 
@@ -43,9 +40,10 @@ namespace jgap {
 
         HighFive::File tabGapFile(outputFileNamePrefix + ".tabgap.h5", HighFive::File::Overwrite);
 
-        const string comment1 = format("Tabulated jGAP: {}", potential->serialize().dump());
+        const string comment1 = "UNITS: metal";
         tabGapFile.createDataSet<string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
-        const string comment2 = format("Tabulation params: {}", params.dump());
+        const string comment2 = "pair_style tabgap | tabulated GAP with signature: "
+                    + to_string(hash<string>{}(potential->serialize().dump()));
         tabGapFile.createDataSet<string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
 
         auto e0Group = tabGapFile.createGroup("e0");

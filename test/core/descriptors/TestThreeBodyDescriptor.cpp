@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../include/core/descriptors/3b/ThreeBodyDescriptor.hpp"
+#include "core/descriptors/3b/ThreeBodyDescriptor.hpp"
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "utils/Utils.hpp"
@@ -31,12 +31,16 @@ void initPythagorian3b() {
 void initThreeBodyParams() {
     params3b = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 1.0
-        },
-        "sparse_data": {},
+        "kernels": [
+            {
+                "species_triplet": ["Fe", "Fe", "Fe"],
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "descriptor_prefactors": 1.0,
+                "q": [8, 2, 4]
+            }
+        ],
         "cutoff": {
             "type": "perriot",
             "cutoff_transition_width": 0.5,
@@ -51,11 +55,6 @@ TEST(TestThreeBodyDescriptor, CovarianceEnergy) {
     initThreeBodyParams();
 
     auto desc3b = ThreeBodyDescriptor(params3b);
-    desc3b.setSparsePoints(map<SpeciesTriplet, vector<Vector3>>{
-        {
-            SpeciesTriplet{.root = "Fe", .nodes = SpeciesPair{"Fe", "Fe"}}, {Vector3{8, 2, 4}}
-        }
-    });
 
     auto result = desc3b.covariate({pythagorian3b});
     ASSERT_EQ(result.size(), 1);
@@ -68,14 +67,9 @@ TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
     pythagorian3b.species[2] = "Cr";
 
     initThreeBodyParams();
+    params3b["kernels"][0]["species_triplet"] = {"Fe", "Ni", "Cr"};
 
     auto desc3b = ThreeBodyDescriptor(params3b);
-    desc3b.setSparsePoints(map<SpeciesTriplet, vector<Vector3>>{
-        {
-            SpeciesTriplet{.root = "Fe", .nodes = SpeciesPair{"Ni", "Cr"}},
-            {Vector3{8, 2, 4}}
-        }
-    });
 
     auto result = desc3b.covariate({pythagorian3b});
     ASSERT_EQ(result.size(), 1);
@@ -92,8 +86,4 @@ TEST(TestThreeBodyDescriptor, CovarianceDerivatives) {
 
     ASSERT_NEAR(result[0].forces[2].x, -2.0 * 0.8 * exp(-3.0/2.0), 1e-6);
     ASSERT_NEAR(result[0].forces[2].y, -2.0 * -1.6 * exp(-3.0/2.0), 1e-6);
-}
-
-TEST(TestThreeBodyDescriptor, DoubleBoxDoubleEnergy) {
-
 }

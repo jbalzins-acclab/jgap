@@ -20,7 +20,7 @@ namespace jgap {
 
         Covariance covariance(const AtomicStructure &structure, const TwoBodyIndex &index) override;
         double value(const TwoBodyDescriptorData &r) override;
-        SpeciesPair getFilter() override { return _idPair;};
+        SpeciesPair getFilter() override { return _idPair; }
 
         double crossCovariance(const shared_ptr<IKernel>& other) override;
 

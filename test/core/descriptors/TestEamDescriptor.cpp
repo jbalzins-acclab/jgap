@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../include/core/descriptors/eam/EamDescriptor.hpp"
+#include "core/descriptors/eam/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "data/BasicDataTypes.hpp"
 #include "ParserRegistryAuto.hpp"
@@ -26,23 +26,29 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
 
     const auto params = nlohmann::json::parse(R"(
     {
-        "kernel": {
-            "type": "squared_exp",
-            "length_scale": 1.0,
-            "energy_scale": 1.0
-        },
+        "kernels": [
+            {
+                "species": "Fe",
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "density": 0
+            },
+            {
+                "species": "Fe",
+                "type": "squared_exp",
+                "length_scale": 1.0,
+                "energy_scale": 1.0,
+                "density": 2
+            }
+        ],
         "pair_functions": [
             {
                 "type": "polycutoff",
                 "r_min": 0,
                 "cutoff": 6.0
             }
-        ],
-        "sparse_data": {
-            "Fe": {
-                "sparse_points": [0, 2]
-            }
-        }
+        ]
     }
     )");
     auto desc = EamDescriptor(params);
