@@ -34,12 +34,16 @@ namespace jgap {
     }
 
     nlohmann::json EamSE::serialize() {
-        return {
+        nlohmann::json res = {
             {"species", _idSpecies},
             {"length_scale", _lengthScale},
             {"energy_scale", _energyScale},
             {"density", _density}
         };
+        if (coefficient.has_value()) {
+            res["coefficient"] = coefficient.value();
+        }
+        return res;
     }
 
     Covariance EamSE::covariance(const AtomicStructure &structure,

@@ -102,7 +102,7 @@ namespace jgap {
     }
 
     double TwoBodySE::valueInternal(const double &r) const {
-        return _totalPrefactor * exp(-pow(r - _r, 2.0) * (0.5 * _inverseThetaSq));
+        return _totalPrefactor * exp(-pow(r - _r, 2.0) * 0.5 * _inverseThetaSq);
     }
 
     double TwoBodySE::derivativeInternal(const double &changingR) const {

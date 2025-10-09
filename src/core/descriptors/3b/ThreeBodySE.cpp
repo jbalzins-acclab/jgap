@@ -52,7 +52,7 @@ namespace jgap {
 
     nlohmann::json ThreeBodySE::serialize() {
         nlohmann::json res = {
-            {"species_pair", vector{_idTriplet.root, _idTriplet.nodes.first(), _idTriplet.nodes.second()}},
+            {"species_triplet", vector{_idTriplet.root, _idTriplet.nodes.first(), _idTriplet.nodes.second()}},
             {"length_scale", vector{_lengthScale.x, _lengthScale.y, _lengthScale.z}},
             {"energy_scale", _energyScale},
             {"q", vector{_q.x, _q.y, _q.z}},

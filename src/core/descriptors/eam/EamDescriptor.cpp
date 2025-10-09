@@ -224,7 +224,7 @@ namespace jgap {
                 double density = rhoStep * static_cast<double>(iGrid);
 
                 for (auto& id: kernelIds) {
-                    energiesPerSpecies[iGrid] += _kernels[id]->value(density);
+                    energiesPerSpecies[iGrid] += _kernels[id]->value(density) * _kernels[id]->coefficient.value();
                 }
             }
 
