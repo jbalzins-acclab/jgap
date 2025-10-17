@@ -14,7 +14,7 @@
         "jgap_feni_2b_3b_eam": {
             "type": "qr_gap",
             "regularization_rules": {
-                "type": "per_ct",
+                "type": "per_config_type",
                 "E": 0.001,
                 "F": 0.04,
                 "V": 0.1,

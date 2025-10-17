@@ -1,15 +1,10 @@
-cmake_minimum_required(VERSION 3.11) # TODO: test if that's sufficient
+cmake_minimum_required(VERSION 3.11)
 project(jgap)
 
 set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-# cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto -DNDEBUG")
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-#set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 
 set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
 
@@ -67,9 +62,6 @@ function(generate_parser_registry_header)
     set(GENERATED_HEADER "${PROJECT_SOURCE_DIR}/include/ParserRegistryAuto.hpp")
     file(WRITE "${GENERATED_HEADER}" "${HEADER_CONTENT}")
 
-    # Add to library target
-    #target_include_directories(jgap PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-
     # Make sure the header is regenerated when source files change
     add_custom_command(
             OUTPUT "${GENERATED_HEADER}"
@@ -80,7 +72,7 @@ function(generate_parser_registry_header)
 
     # Add the generated header as a dependency
     add_custom_target(generate_parser_header DEPENDS "${GENERATED_HEADER}")
-    add_dependencies(jgap generate_parser_header)
+    add_dependencies(jgap_lib generate_parser_header)
 
     # Report how many parsers were found
     list(LENGTH PARSER_FILES PARSER_COUNT)
@@ -88,74 +80,51 @@ function(generate_parser_registry_header)
 endfunction()
 
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/FitApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/PredictApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/TabulateApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/ConvertQuipXmlApp\\.cpp$")
+
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/main\\.cpp")
+
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
-add_library(jgap STATIC ${LIBRARY_SOURCE_FILES})
+add_library(jgap_lib STATIC ${LIBRARY_SOURCE_FILES})
 
 # Generate parser registry header
 generate_parser_registry_header()
 
-set(FIT_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/FitApp.cpp
-)
-set(PREDICT_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/PredictApp.cpp
-)
-set(TABULATE_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/TabulateApp.cpp
-)
-set(CONVERT_QUIP_XML_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/ConvertQuipXmlApp.cpp
+file(GLOB APP_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/app/*.cpp")
+
+add_executable(jgap
+        ${PROJECT_SOURCE_DIR}/src/Main.cpp
+        ${APP_SOURCE_FILES}
 )
 
-add_executable(jgap_fit_app ${FIT_APP_SOURCE_FILES})
-add_executable(jgap_predict_app ${PREDICT_APP_SOURCE_FILES})
-add_executable(jgap_tabulate_app ${TABULATE_APP_SOURCE_FILES})
-add_executable(jgap_convert_quip_xml_app ${CONVERT_QUIP_XML_APP_SOURCE_FILES})
-
-target_link_libraries(jgap PRIVATE
+target_link_libraries(jgap_lib PRIVATE
         Eigen3::Eigen
         OpenBLAS::OpenBLAS
 )
 
-target_link_libraries(jgap PUBLIC
+target_link_libraries(jgap_lib PUBLIC
         pugixml::static pugixml::pugixml
         nlohmann_json::nlohmann_json
         TBB::tbb TBB::tbbmalloc
         HighFive
 )
 
-target_compile_definitions(jgap PRIVATE
+target_compile_definitions(jgap_lib PRIVATE
         EIGEN_FAST_MATH
         EIGEN_USE_BLAS
 )
 
-target_link_libraries(jgap_fit_app PRIVATE
-        jgap
+target_link_libraries(jgap PRIVATE
+        jgap_lib
 )
 
-target_link_libraries(jgap_predict_app PRIVATE
-        jgap
-)
-
-target_link_libraries(jgap_tabulate_app PRIVATE
-        jgap
-)
-
-target_link_libraries(jgap_convert_quip_xml_app PRIVATE
-        jgap
-)
-
-add_custom_command(TARGET jgap POST_BUILD
+add_custom_command(TARGET jgap_lib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         ${CMAKE_CURRENT_BINARY_DIR}/resources
 )
 
-add_custom_command(TARGET jgap POST_BUILD
+add_custom_command(TARGET jgap_lib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/test/resources
         ${CMAKE_CURRENT_BINARY_DIR}/test/resources
@@ -186,7 +155,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_executable(jgap_tests ${TEST_SOURCES})
     target_link_libraries(jgap_tests
             gtest_main
-            jgap  # link your library into tests
+            jgap_lib  # link your library into tests
             nlohmann_json::nlohmann_json
     )
 

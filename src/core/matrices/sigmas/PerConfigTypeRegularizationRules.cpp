@@ -20,7 +20,7 @@ namespace jgap {
         }
         /*
          {
-            "type": "per_ct",
+            "type": "per_config_type",
             "E": 0.001,
             "F": 0.05,
             "V": 0.1,

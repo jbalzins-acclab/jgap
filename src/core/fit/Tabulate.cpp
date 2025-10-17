@@ -12,29 +12,24 @@ using namespace std;
 namespace jgap {
 
     void Tabulate::tabulate(const shared_ptr<Potential> &potential,
-                            const nlohmann::json& params,
+                            const TabulationParams& tabulationParams,
                             const string &outputFileNamePrefix) {
-
-        const TabulationParams tabulationParams = parse(params);
 
         CurrentLogger::get()->debug("Starting tabulation");
         const TabulationData tabulationData = potential->tabulate(tabulationParams);
         CurrentLogger::get()->debug("Finished tabulation");
 
         CurrentLogger::get()->debug("Saving H5");
-        writeH5(potential, params, tabulationParams, tabulationData, outputFileNamePrefix);
+        writeH5(tabulationParams, tabulationData, outputFileNamePrefix);
 
         for (size_t index = 0; index < tabulationData.eamTabulationData.size(); index++) {
             CurrentLogger::get()->debug("Saving eam.fs #{}", index);
-            writeEamFs(potential, params, tabulationParams,
-                       tabulationData.eamTabulationData[index], outputFileNamePrefix,
-                       tabulationData.pairEnergies, index);
+            writeEamFs(tabulationParams, tabulationData.eamTabulationData[index],
+                       tabulationData.pairEnergies, index, outputFileNamePrefix);
         }
     }
 
-    void Tabulate::writeH5(const shared_ptr<Potential> &potential,
-                           const nlohmann::json& params,
-                           const TabulationParams &tabulationParams,
+    void Tabulate::writeH5(const TabulationParams &tabulationParams,
                            const TabulationData &tabulationData,
                            const string &outputFileNamePrefix) {
 
@@ -42,8 +37,7 @@ namespace jgap {
 
         const string comment1 = "UNITS: metal";
         tabGapFile.createDataSet<string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
-        const string comment2 = "pair_style tabgap | tabulated GAP with signature: "
-                    + to_string(hash<string>{}(potential->serialize().dump()));
+        const string comment2 = "pair_style tabgap";
         tabGapFile.createDataSet<string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
 
         auto e0Group = tabGapFile.createGroup("e0");
@@ -91,19 +85,18 @@ namespace jgap {
                         .write(speciesTriplet.nodes.second());
 
             tripletGroup.createDataSet("grid_limits", vector{
-                // WARN: convention sensitive - lowest in all first : highest in all last
                 tabulationParams.grid3b[0][0][0].x,
                 tabulationParams.grid3b[0][0][0].y,
                 tabulationParams.grid3b[0][0][0].z,
-                tabulationParams.grid3b.back().back().back().x, // :)
+                tabulationParams.grid3b.back().back().back().x,
                 tabulationParams.grid3b.back().back().back().y,
                 tabulationParams.grid3b.back().back().back().z,
             });
 
             tripletGroup.createDataSet("N", vector{
-                params.value("n3b_r", 80),
-                params.value("n3b_r", 80),
-                params.value("n3b_angle", 80)
+                tabulationParams.grid3b.size(),
+                tabulationParams.grid3b[0].size(),
+                tabulationParams.grid3b[0][0].size()
             });
 
             auto splineCoefficients = toSplineCoefficients(
@@ -116,13 +109,11 @@ namespace jgap {
     }
 
     // TODO: looks monstrous
-    void Tabulate::writeEamFs(const shared_ptr<Potential> &potential,
-                              const nlohmann::json& params,
-                              const TabulationParams &tabulationParams,
+    void Tabulate::writeEamFs(const TabulationParams &tabulationParams,
                               const EamTabulationData& data,
-                              const string &outputFileNamePrefix,
                               const map<SpeciesPair, vector<double>> &pairEnergies,
-                              const size_t index) {
+                              const size_t index,
+                              const string &outputFileNamePrefix) {
 
         const string filename = outputFileNamePrefix + (index != 0 ? "#" + to_string(index) : "") + ".eam.fs";
 
@@ -183,10 +174,9 @@ namespace jgap {
         for (size_t i = 0; i < elements.size(); i++) {
             for (size_t j = 0; j < elements.size(); j++) {
                 if (i < j) {
-                    continue; // AAAAAAAA why not i <= j????????
+                    continue;
                 }
-                //cout << i << " " << j << endl;
-                //cout << elements[i] << " " << elements[j] << endl;
+
                 const auto& energies = pairEnergies.at({elements[i], elements[j]});
                 for (size_t k = 0; k < energies.size(); k++) {
                     eamFsFile << (index == 0 ? energies[k]*tabulationParams.grid2b[k] : 0) << endl;
@@ -237,10 +227,10 @@ namespace jgap {
 
         const double rMin3b = params.value("r_min_3b", 0.1);
         const double rMax3b = params["r_max_3b"];
-        const size_t n3b_r = params.value("n3b_r", 80);
+        const size_t n3b_r = params.value("n3b_r", 120);
         const double dr_3b = (rMax3b - rMin3b) / static_cast<double>(n3b_r - 1);
 
-        const size_t n3b_angle = params.value("n3b_angle", 80);
+        const size_t n3b_angle = params.value("n3b_angle", 120);
         const double angleStep = 2.0/*cos: from -1 to 1*/ / static_cast<double>(n3b_angle - 1);
 
         vector result(n3b_r, vector(n3b_r, vector(n3b_angle, Vector3(0, 0, 0))));

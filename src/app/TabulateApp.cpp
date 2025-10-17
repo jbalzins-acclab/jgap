@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
         nlohmann::json tabulationParams;
         paramFile >> tabulationParams;
 
-        const string outputFilePrefix = tabulationParams["output_file_prefix"].get<string>();
-        const string potentialFileName = tabulationParams["potential_file"].get<string>();
+        const string outputFilePrefix = tabulationParams["output_file_prefix"];
+        const string potentialFileName = tabulationParams["potential_file"];
 
         shared_ptr<jgap::Potential> potential;
         if (potentialFileName.ends_with(".xml")) {
@@ -62,9 +62,6 @@ int main(int argc, char** argv) {
             }
             nlohmann::json potParams;
             potentialParamFile >> potParams;
-            if (!potParams.contains("type")) {
-                potParams["type"] = "composite";
-            }
             potential = jgap::ParserRegistry<jgap::Potential>::get(potParams);
         }
 

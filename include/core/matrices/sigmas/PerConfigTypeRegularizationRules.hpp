@@ -21,7 +21,7 @@ namespace jgap {
             vector<pair<string, double>> _multipliersPerKeyWord;
     };
 
-    REGISTER_PARSER("per_ct", RegularizationRules, PerConfigTypeRegularizationRules);
+    REGISTER_PARSER("per_config_type", RegularizationRules, PerConfigTypeRegularizationRules);
 }
 
 #endif
