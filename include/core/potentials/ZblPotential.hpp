@@ -2,6 +2,7 @@
 #define ZBLPOTENTIAL_HPP
 
 #include <nlohmann/json.hpp>
+#include <set>
 
 #include "Potential.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
@@ -10,24 +11,28 @@
 #include "utils/Utils.hpp"
 
 #define DEFAULT_ZBL_CUTOFF 2.2
-#define DEFAULT_ZBL_RMIN 1.2
+#define DEFAULT_ZBL_R_MIN 1.2
 
 namespace jgap {
     class ZblPotential : public Potential {
     public:
-        explicit ZblPotential(const nlohmann::json& zblParams);
+        static constexpr string TYPE = "zbl";
+
+        ZblPotential(const nlohmann::json& zblParams);
         ~ZblPotential() override = default;
 
-        PotentialPrediction predict(const AtomicStructure& structure) override;
+        Predictions predict(const AtomicStructure& structure) override;
         nlohmann::json serialize() override;
-        string getType() override { return "zbl"; }
-        double getCutoff() override { return _cutoff; }
+        string getType() override { return TYPE; }
+        CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = _cutoff}; }
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData& table) override;
 
     private:
         double _cutoff;
         string _coeffFileName;
+
+        set<Species> _encounteredSpecies{};
 
         map<SpeciesPair, array<double, 6>> _dmolFitCoefficients;
         shared_ptr<CutoffFunction> _cutoffFunction;
@@ -42,7 +47,7 @@ namespace jgap {
         double zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, double r);
     };
 
-    REGISTER_PARSER("zbl", Potential, ZblPotential)
+    REGISTER_PARSER(Potential, ZblPotential)
 }
 
 #endif //ZBLPOTENTIAL_HPP

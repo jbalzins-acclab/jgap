@@ -7,10 +7,9 @@
 namespace jgap {
     class CompositePotentialFit : public Fit {
     public:
-        ~CompositePotentialFit() override = default;
+        static constexpr string TYPE = "composite";
 
-        explicit CompositePotentialFit(const nlohmann::json& params);
-        string getType() override { return "composite"; }
+        CompositePotentialFit(const nlohmann::json& params);
 
         shared_ptr<Potential> fit(const vector<AtomicStructure> &trainingData) override;
 
@@ -21,9 +20,12 @@ namespace jgap {
 
         static vector<AtomicStructure> subtractExternalContribution(const vector<AtomicStructure> &originalData,
                                                                     const shared_ptr<Potential> &potential);
+
+    protected:
+        shared_ptr<Potential> fitWithoutTabulation(const vector<AtomicStructure> &trainingData) override;
     };
 
-    REGISTER_PARSER("composite", Fit, CompositePotentialFit)
+    REGISTER_PARSER(Fit, CompositePotentialFit)
 }
 
 #endif //COMPOSITEFIT_HPP

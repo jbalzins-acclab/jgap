@@ -4,7 +4,7 @@
 #include <vector>
 #include <Eigen/Dense>
 
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 
 using namespace std;
 

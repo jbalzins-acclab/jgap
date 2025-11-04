@@ -9,6 +9,7 @@
 namespace jgap {
     class CoscutoffPairFunction : public EamPairFunction {
     public:
+        static constexpr string TYPE = "coscutoff";
         CoscutoffPairFunction(const nlohmann::json& params) {
             _cutoff = params["cutoff"];
             if (params.contains("r_min")) {
@@ -55,14 +56,14 @@ namespace jgap {
             return -_prefactor * dchi_dr * 0.5 * M_PI * sin(M_PI * chi);
         }
 
-        string getType() override { return "coscutoff"; }
+        string getType() override { return TYPE; }
 
     private:
         double _rmin;
         double _intervalInverse;
     };
 
-    REGISTER_PARSER("coscutoff", EamPairFunction, CoscutoffPairFunction)
+    REGISTER_PARSER(EamPairFunction, CoscutoffPairFunction)
 }
 
 #endif //COSCUTOFFPAIRFUNCTION_HPP

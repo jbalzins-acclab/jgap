@@ -353,7 +353,7 @@ namespace jgap {
         }
 
         auto pf = selectPairFunction(mainData, rMin, 1.0);
-        map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pfPerPairs{};
+        map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pfPerPairs{};
         if (mainData.mode.value_or("blind") == "FSsym") {
             for (int a = 0; a < species.size(); a++) {
                 for (int b = 0; b < species.size(); b++) {

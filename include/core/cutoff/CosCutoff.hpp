@@ -1,5 +1,5 @@
-#ifndef DEFAULTCUTOFFFUNCTION_HPP
-#define DEFAULTCUTOFFFUNCTION_HPP
+#ifndef JGAP_DEFAULTCUTOFFFUNCTION_HPP
+#define JGAP_DEFAULTCUTOFFFUNCTION_HPP
 
 #include "CutoffFunction.hpp"
 #include "io/parse/ParserRegistry.hpp"
@@ -7,10 +7,12 @@
 namespace jgap {
     class CosCutoff : public CutoffFunction {
     public:
-        explicit CosCutoff(nlohmann::json params);
-        explicit CosCutoff(double cutoff, double rMin);
+        static constexpr string TYPE = "coscutoff";
 
-        string getType() override {return "coscutoff";};
+        CosCutoff(nlohmann::json params);
+        CosCutoff(double cutoff, double rMin);
+
+        string getType() override {return TYPE;};
         nlohmann::json serialize() override;
         double getCutoff() override { return _cutoff; }
 
@@ -25,6 +27,6 @@ namespace jgap {
         double _cutoffTransitionWidthInverse;
     };
 
-    REGISTER_PARSER("coscutoff", CutoffFunction, CosCutoff)
+    REGISTER_PARSER(CutoffFunction, CosCutoff)
 }
 #endif

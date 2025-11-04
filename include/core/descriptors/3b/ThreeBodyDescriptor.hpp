@@ -17,22 +17,25 @@ namespace jgap {
 
     class ThreeBodyDescriptor : public Descriptor {
     public:
+        static constexpr string TYPE = "3b";
+
         ThreeBodyDescriptor(shared_ptr<CutoffFunction>& cutoffFunction, vector<shared_ptr<ThreeBodyKernel>>& kernels);
         ThreeBodyDescriptor(const nlohmann::json& params);
-        nlohmann::json serialize() override;
-        string getType() override { return "3b"; }
 
-        double getCutoff() override { return _cutoffFunction->getCutoff(); }
+        nlohmann::json serialize() override;
+        string getType() override { return TYPE; }
+
+        CutoffRanges getCutoff() override { return CutoffRanges{.threeBody = _cutoffFunction->getCutoff()}; };
 
         void setupKernels(const vector<AtomicStructure>& fromData) override;
         vector<shared_ptr<IKernel>> getKernels() override;
 
-        PotentialPrediction predict(const AtomicStructure &atomicStructure) override;
+        Predictions predict(const AtomicStructure &atomicStructure) override;
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<shared_ptr<MatrixBlock>> selfCovariate() override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData &table) override;
 
         double invariantTripletToCutoff(const Vector3 &t) const;
         static Vector3 toInvariantTriplet(double r01, double r02, double r12);
@@ -55,7 +58,7 @@ namespace jgap {
         void mapKernelIds();
     };
 
-    REGISTER_PARSER("3b", Descriptor, ThreeBodyDescriptor)
+    REGISTER_PARSER(Descriptor, ThreeBodyDescriptor)
 }
 
 #endif

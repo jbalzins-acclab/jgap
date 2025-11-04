@@ -1,16 +1,15 @@
-#include "data/BasicDataTypes.hpp"
-
-#include <format>
+#include "data/Vector3.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    void AtomicStructure::setEnergyData(const PotentialPrediction &prediction) {
+    void AtomicStructure::setEnergyData(const Predictions &prediction) {
         energy = {};
         forces = {};
         virials = {};
         adjust(prediction, false, true);
     }
 
-    void AtomicStructure::adjust(const PotentialPrediction &prediction,
+    void AtomicStructure::adjust(const Predictions &prediction,
                                  const bool subtract,
                                  const bool setEmpty) {
 

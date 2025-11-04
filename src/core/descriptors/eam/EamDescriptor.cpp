@@ -10,7 +10,7 @@
 namespace jgap {
     EamDescriptor::EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
                                  shared_ptr<EamPairFunction> defaultPairFunction,
-                                 map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions)
+                                 map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions)
         : _kernels(std::move(kernels)),
           _defaultPairFunction(std::move(defaultPairFunction)),
           _pairFunctions(std::move(pairFunctions)) {
@@ -53,9 +53,9 @@ namespace jgap {
                 auto s2 = pfParams["species"][1];
                 _pairFunctions[{s1, s2}] = pf;
                 _pairFunctions[{s2, s1}] = pf;
-            } else if (pfParams.contains("species_ordered")) {
-                auto s1 = pfParams["species_ordered"][0];
-                auto s2 = pfParams["species_ordered"][1];
+            } else if (pfParams.contains("contributor_receiver_species")) {
+                auto s1 = pfParams["contributor_receiver_species"][0];
+                auto s2 = pfParams["contributor_receiver_species"][1];
                 _pairFunctions[{s1, s2}] = pf;
             } else {
                 _defaultPairFunction = pf;
@@ -79,10 +79,10 @@ namespace jgap {
         defaultPairFunctionData["type"] = _defaultPairFunction->getType();
         pfData.push_back(defaultPairFunctionData);
 
-        for (const auto& [orderedSpeciesPair, pf]: _pairFunctions) {
+        for (const auto& [speciesPair, pf]: _pairFunctions) {
             auto newPfData = pf->serialize();
             newPfData["type"] = pf->getType();
-            newPfData["species_ordered"] = vector{orderedSpeciesPair.first, orderedSpeciesPair.second};
+            newPfData["contributor_receiver_species"] = vector{speciesPair.contributor, speciesPair.receiver};
             pfData.push_back(newPfData);
         }
 
@@ -90,6 +90,20 @@ namespace jgap {
             {"kernels", kernelsData},
             {"pair_functions", pfData}
         };
+    }
+
+    CutoffRanges EamDescriptor::getCutoff() {
+        auto res = CutoffRanges{.twoBody = _maxCutoff};
+
+        double minDensity = 0.0, maxDensity = numeric_limits<double>::min();
+        for (const auto& kernel: _kernels) {
+            minDensity = min(minDensity, kernel->getDensity());
+            maxDensity = max(maxDensity, kernel->getDensity());
+        }
+        res.minEam = minDensity;
+        res.maxEam = maxDensity;
+
+        return res;
     }
 
     vector<shared_ptr<IKernel>> EamDescriptor::getKernels() {
@@ -194,65 +208,43 @@ namespace jgap {
         return result;
     }
 
-    PotentialPrediction EamDescriptor::predict(const AtomicStructure &atomicStructure) {
+    Predictions EamDescriptor::predict(const AtomicStructure &atomicStructure) {
         auto indexes = doIndex(atomicStructure);
-        PotentialPrediction result{};
+        Predictions result{};
         for (const auto& kernel: _kernels) {
             result = result + kernel->predict(atomicStructure, indexes[kernel->getFilter()]);
         }
         return result;
     }
 
-    TabulationData EamDescriptor::tabulate(const TabulationParams &params) {
-        EamTabulationData result;
-
-        result.maxDensity = 0.0;
-        for (const auto& kernel: _kernels) {
-            result.maxDensity = max(result.maxDensity, kernel->serialize().value("density", 0.0));
-        }
-        result.maxDensity = params.maxDensity.value_or(result.maxDensity);
-        if (result.maxDensity <= 0.0) {
-            CurrentLogger::get()->logAndThrow("Maximum density value must be positive");
-        }
-
-        const double rhoStep = result.maxDensity / static_cast<double>(params.nDensities - 1);
+    void EamDescriptor::tabulate(TabulationData &table) {
+        auto& eamTable = table.newEamGrids();
 
         for (const auto& [species, kernelIds]: _kernelIndicesPerSpecies) {
-            vector energiesPerSpecies(params.nDensities, 0.0);
-
-            for (size_t iGrid = 0; iGrid < params.nDensities; iGrid++) {
-                double density = rhoStep * static_cast<double>(iGrid);
-
+            for (const auto& it: eamTable.getEnergyGrid(species)) {
                 for (auto& id: kernelIds) {
-                    energiesPerSpecies[iGrid] += _kernels[id]->value(density) * _kernels[id]->coefficient.value();
+                    it.value += _kernels[id]->value(it.pos) * _kernels[id]->coefficient.value();
                 }
             }
-
-            result.embeddingEnergies[species] = energiesPerSpecies;
         }
 
-        for (const auto& species1: _kernelIndicesPerSpecies | views::keys) {
-            for (const auto& species2: _kernelIndicesPerSpecies | views::keys) {
+        for (const auto& contributorSpecies: _kernelIndicesPerSpecies | views::keys) {
+            for (const auto& receiverSpecies: _kernelIndicesPerSpecies | views::keys) {
 
-                auto speciesPair = OrderedSpeciesPair{species1, species2};
+                auto speciesPair = ContributorReceiverSpecies{
+                    .contributor = contributorSpecies, .receiver = receiverSpecies
+                };
 
                 auto pairFunction = _defaultPairFunction;
                 if (_pairFunctions.contains(speciesPair)) {
                     pairFunction = _pairFunctions[speciesPair];
                 }
 
-                vector<double> pairDensities{};
-                for (const double& gridDensity: params.grid2b) {
-                    pairDensities.push_back(pairFunction->evaluate(gridDensity));
+                for (const auto& it: eamTable.getPairFunctionGrid(speciesPair)) {
+                    it.value = pairFunction->evaluate(it.pos);
                 }
-
-                result.eamDensities[speciesPair] = pairDensities;
             }
         }
-
-        TabulationData resultFull{};
-        resultFull.eamTabulationData = {result};
-        return resultFull;
     }
 
     EamKernelIndex EamDescriptor::doIndex(const AtomicStructure &structure) const {
@@ -268,7 +260,7 @@ namespace jgap {
             for (NeighbourData neighbour: structure.neighbours.value()[atomIdx]) {
                 if (neighbour.distance > _maxCutoff) continue;
 
-                pair orderedSpeciesPair = {
+                ContributorReceiverSpecies orderedSpeciesPair = {
                     structure.species[neighbour.index],  species
                 };
 

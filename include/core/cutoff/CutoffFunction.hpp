@@ -1,5 +1,5 @@
-#ifndef CUTOFFFUNCTION_HPP
-#define CUTOFFFUNCTION_HPP
+#ifndef JGAP_CUTOFFFUNCTION_HPP
+#define JGAP_CUTOFFFUNCTION_HPP
 
 #include <string>
 #include <nlohmann/json.hpp>
@@ -21,4 +21,4 @@ namespace jgap {
     };
 }
 
-#endif //CUTOFFFUNCTION_HPP
+#endif

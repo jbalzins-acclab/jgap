@@ -7,6 +7,7 @@
 namespace jgap {
     class PolycutoffPairFunction : public EamPairFunction {
     public:
+        static constexpr string TYPE = "polycutoff";
         explicit PolycutoffPairFunction(nlohmann::json params) {
             _cutoff = params["cutoff"];
             if (params.contains("r_min")) {
@@ -52,14 +53,14 @@ namespace jgap {
             return _prefactor * (dchi_dr * chi * chi * ( -30 * chi * chi + 60 * chi - 30));
         }
 
-        string getType() override { return "polycutoff"; }
+        string getType() override { return TYPE; }
 
     private:
         double _rmin;
         double _intervalInverse;
     };
 
-    REGISTER_PARSER("polycutoff", EamPairFunction, PolycutoffPairFunction)
+    REGISTER_PARSER(EamPairFunction, PolycutoffPairFunction)
 }
 
 

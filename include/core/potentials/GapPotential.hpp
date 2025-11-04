@@ -12,24 +12,26 @@
 namespace jgap {
     class GapPotential : public Potential {
     public:
+        static constexpr string TYPE = "gap";
+
         explicit GapPotential(const nlohmann::json& params);
         explicit GapPotential(map<string, shared_ptr<Descriptor>> descriptors)
             : _descriptors(std::move(descriptors)) {
         }
         ~GapPotential() override = default;
 
-        PotentialPrediction predict(const AtomicStructure &structure) override;
+        Predictions predict(const AtomicStructure &structure) override;
 
         nlohmann::json serialize() override;
-        string getType() override { return "gap"; }
-        double getCutoff() override;
+        string getType() override { return TYPE; }
+        CutoffRanges getCutoff() override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData& table) override;
 
     private:
         map<string, shared_ptr<Descriptor>> _descriptors;
     };
 
-    REGISTER_PARSER("gap", Potential, GapPotential);
+    REGISTER_PARSER(Potential, GapPotential);
 }
 #endif

@@ -12,6 +12,8 @@
     #include <unistd.h>
 #endif
 
+#define MINIMAL_TABULATED_R 1e-4
+
 using namespace std;
 
 namespace jgap {
@@ -24,7 +26,7 @@ namespace jgap {
             _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
         } else {
             _cutoff = DEFAULT_ZBL_CUTOFF;
-            _cutoffFunction = make_shared<PerriotPolynomialCutoff>(DEFAULT_ZBL_RMIN, DEFAULT_ZBL_CUTOFF);
+            _cutoffFunction = make_shared<PerriotPolynomialCutoff>(DEFAULT_ZBL_R_MIN, DEFAULT_ZBL_CUTOFF);
         }
 
         _coeffFileName = zblParams.value("coefficients_file", "dmol-fit.json");
@@ -44,9 +46,16 @@ namespace jgap {
         _dmolFitCoefficients = {};
         for (auto& [key, val]: dmolFitCoefficients.items()) {
             auto Zs = split(key, ',');
-            _dmolFitCoefficients[SpeciesPair{Z_inverse[stoi(Zs[0])], Z_inverse[stoi(Zs[1])]}] = {
+            _dmolFitCoefficients[SpeciesPair{CHEM_SYMBOLS[stoi(Zs[0])], CHEM_SYMBOLS[stoi(Zs[1])]}] = {
                 val[0], val[1], val[2], val[3], val[4], val[5]
             };
+        }
+
+        _encounteredSpecies = {};
+        if (zblParams.contains("species_encountered_in_fitting")) {
+            for (string species: zblParams["species_encountered_in_fitting"]) {
+                _encounteredSpecies.insert(species);
+            }
         }
     }
 
@@ -57,34 +66,29 @@ namespace jgap {
 
         return {
             {"cutoff", cutoffData},
-            {"coefficients_file", _coeffFileName}
+            {"coefficients_file", _coeffFileName},
+            {"species_encountered_in_fitting", _encounteredSpecies}
         };
     }
 
-    TabulationData ZblPotential::tabulate(const TabulationParams &params) {
-        TabulationData result{};
+    void ZblPotential::tabulate(TabulationData &table) {
 
-        for (size_t i = 0; i < params.species.size(); i++) {
-            for (size_t j = i; j < params.species.size(); j++) {
-                auto speciesPair = SpeciesPair{params.species[i], params.species[j]};
-                result.pairEnergies[speciesPair] = {};
+        const auto encounteredSpecies = vector(_encounteredSpecies.begin(), _encounteredSpecies.end());
 
-                for (const double& r: params.grid2b) {
-                    if (abs(r) < 1e-4) {
-                        result.pairEnergies[speciesPair].push_back(0); // I don't like .eam.fs format :(
-                    } else {
-                        result.pairEnergies[speciesPair].push_back(
-                            zblWithCutoff_eV(speciesPair, r)
-                        );
+        for (size_t i = 0; i < encounteredSpecies.size(); i++) {
+            for (size_t j = i; j < encounteredSpecies.size(); j++) {
+                auto speciesPair = SpeciesPair{encounteredSpecies[i], encounteredSpecies[j]};
+
+                for (const auto& it: table.get2bGrid(speciesPair)) {
+                    if (abs(it.pos) > MINIMAL_TABULATED_R) {
+                        it.value += zblWithCutoff_eV(speciesPair, it.pos);
                     }
                 }
             }
         }
-
-        return result;
     }
 
-    PotentialPrediction ZblPotential::predict(const AtomicStructure &structure) {
+    Predictions ZblPotential::predict(const AtomicStructure &structure) {
 
         double energy = 0;
         vector forces(structure.size(), Vector3{0, 0, 0});
@@ -93,6 +97,7 @@ namespace jgap {
         for (size_t i = 0; i < structure.size(); i++) {
 
             auto atom1 = structure[i];
+            _encounteredSpecies.insert(atom1.species());
 
             for (const NeighbourData& neighbour: atom1.neighbours()) {
                 if (neighbour.index < i || neighbour.distance > _cutoff) continue;
@@ -122,7 +127,7 @@ namespace jgap {
             }
         }
 
-        return PotentialPrediction{
+        return Predictions{
             energy,
             forces,
             virials
@@ -165,7 +170,7 @@ namespace jgap {
     double ZblPotential::zbl_eV(const SpeciesPair& speciesPair, double r) {
         auto coeffs = _dmolFitCoefficients[speciesPair];
 
-        double Z1 = Z_default[speciesPair.first()], Z2 = Z_default[speciesPair.second()];
+        double Z1 = ATOMIC_NUMBERS[speciesPair.first()], Z2 = ATOMIC_NUMBERS[speciesPair.second()];
         double a = 0.46848 / (pow(Z1, 0.23) + pow(Z2, 0.23));
 
         double x = r / a;
@@ -184,7 +189,7 @@ namespace jgap {
     double ZblPotential::zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, const double r) {
         auto coeffs = _dmolFitCoefficients[speciesPair];
 
-        double Z1 = Z_default[speciesPair.first()], Z2 = Z_default[speciesPair.second()];
+        double Z1 = ATOMIC_NUMBERS[speciesPair.first()], Z2 = ATOMIC_NUMBERS[speciesPair.second()];
         double a = 0.46848 / (pow(Z1, 0.23) + pow(Z2, 0.23));
         double r_meters = r * 1e-10;
 

@@ -1,5 +1,5 @@
-#ifndef THREEBODYSE_HPP
-#define THREEBODYSE_HPP
+#ifndef JGAP_THREEBODYSE_HPP
+#define JGAP_THREEBODYSE_HPP
 
 #include "core/cutoff/CutoffFunction.hpp"
 #include "core/descriptors/Kernel.hpp"
@@ -8,23 +8,20 @@
 
 #include <nlohmann/json.hpp>
 
+#include "ThreeBodyKernel.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-
-    using ThreeBodyKernel = Kernel<SpeciesTriplet, ThreeBodyIndex, ThreeBodyDescriptorData>;
-
     class ThreeBodySE : public ThreeBodyKernel {
     public:
+        static constexpr string TYPE = "squared_exp";
         ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales, Vector3 q, double fCut);
 
         ThreeBodySE(const nlohmann::json& params);
-        string getType() override { return "squared_exp"; }
+        string getType() override { return TYPE; }
         nlohmann::json serialize() override;
 
         double crossCovariance(const shared_ptr<IKernel> &other) override;
-        Covariance covariance(const AtomicStructure &structure, const ThreeBodyIndex &index) override;
-        double value(const ThreeBodyDescriptorData &t) override;
 
         SpeciesTriplet getFilter() override { return _idTriplet; }
 
@@ -40,11 +37,11 @@ namespace jgap {
         double _totalPrefactor;
         Vector3 _inverseThetaSq;
 
-        [[nodiscard]] double valueInternal(const Vector3 &q) const;
-        [[nodiscard]] Vector3 gradientInternal(const Vector3 &q) const;
+        double valueInternal(const Vector3 &q) const;
+        Vector3 gradientInternal(const Vector3 &q) const;
     };
 
-    REGISTER_PARSER("squared_exp", ThreeBodyKernel, ThreeBodySE);
+    REGISTER_PARSER(ThreeBodyKernel, ThreeBodySE);
 }
 
-#endif //THREEBODYSE_HPP
+#endif

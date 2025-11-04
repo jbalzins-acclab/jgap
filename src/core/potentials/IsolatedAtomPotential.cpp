@@ -28,7 +28,7 @@ namespace jgap {
         };
     }
 
-    PotentialPrediction IsolatedAtomPotential::predict(const AtomicStructure& structure) {
+    Predictions IsolatedAtomPotential::predict(const AtomicStructure& structure) {
 
         double result = 0;
 
@@ -42,12 +42,17 @@ namespace jgap {
             }
         }
 
-        return PotentialPrediction{.energy = result};
+        return Predictions{.energy = result};
     }
 
-    TabulationData IsolatedAtomPotential::tabulate(const TabulationParams &params) {
-        TabulationData result;
-        result.isolatedEnergies = _isolatedEnergies;
-        return result;
+    void IsolatedAtomPotential::tabulate(TabulationData &table) {
+        for (const auto &[species, energy]: _isolatedEnergies) {
+            if (table.isolatedEnergies.contains(species)) {
+                CurrentLogger::get()->warn("Conflicting isolated atom energies for {}", species);
+            } else {
+                table.isolatedEnergies[species] = 0;
+            }
+            table.isolatedEnergies[species] += energy;
+        }
     }
 }

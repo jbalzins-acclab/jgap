@@ -10,8 +10,8 @@ namespace jgap {
         }
     }
 
-    PotentialPrediction GapPotential::predict(const AtomicStructure &structure) {
-        PotentialPrediction prediction{};
+    Predictions GapPotential::predict(const AtomicStructure &structure) {
+        Predictions prediction{};
         for (const auto &descriptor: _descriptors | views::values) {
             prediction = prediction + descriptor->predict(structure);
         }
@@ -31,22 +31,18 @@ namespace jgap {
         };
     }
 
-    double GapPotential::getCutoff() {
-        double cutoff = 0.0;
+    CutoffRanges GapPotential::getCutoff() {
+        CutoffRanges cutoff{};
         for (const auto& descriptor : _descriptors | views::values) {
-            cutoff = max(cutoff, descriptor->getCutoff());
+            cutoff += descriptor->getCutoff();
         }
         return cutoff;
     }
 
-    TabulationData GapPotential::tabulate(const TabulationParams &params) {
-        TabulationData result{};
-
+    void GapPotential::tabulate(TabulationData &table) {
         for (const auto& [label, descriptor]: _descriptors) {
             CurrentLogger::get()->debug("Tabulating {} descriptor", label);
-            result = result + descriptor->tabulate(params);
+            descriptor->tabulate(table);
         }
-
-        return result;
     }
 }

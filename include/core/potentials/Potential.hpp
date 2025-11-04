@@ -1,22 +1,24 @@
-#ifndef EXTERNALPOTENTIAL_HPP
-#define EXTERNALPOTENTIAL_HPP
+#ifndef JGAP_POTENTIAL_HPP
+#define JGAP_POTENTIAL_HPP
 
-#include "data/BasicDataTypes.hpp"
 #include "data/TabulationData.hpp"
 
-#include <memory>
 #include <nlohmann/json.hpp>
+
+#include "data/AtomicStructure.hpp"
+#include "data/CutoffRanges.hpp"
+#include "data/PredictionData.hpp"
 
 namespace jgap {
     class Potential {
     public:
         virtual ~Potential() = default;
-        virtual PotentialPrediction predict(const AtomicStructure& structure) = 0;
+        virtual Predictions predict(const AtomicStructure& structure) = 0;
         virtual nlohmann::json serialize() = 0;
         virtual string getType() = 0;
-        virtual double getCutoff() = 0;
+        virtual CutoffRanges getCutoff() = 0;
 
-        virtual TabulationData tabulate(const TabulationParams& params) = 0;
+        virtual void tabulate(TabulationData& table) = 0;
     };
 }
 

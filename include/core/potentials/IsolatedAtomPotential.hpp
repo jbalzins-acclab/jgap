@@ -12,25 +12,25 @@ using namespace std;
 namespace jgap {
     class IsolatedAtomPotential : public Potential {
     public:
-        ~IsolatedAtomPotential() override = default;
+        static constexpr string TYPE = "isolated_atom";
 
         explicit IsolatedAtomPotential(const nlohmann::json& params);
         explicit IsolatedAtomPotential(const map<Species, double>& isolatedAtomEnergies, bool errorOnUnknown);
 
         nlohmann::json serialize() override;
-        string getType() override { return "isolated_atom"; }
-        double getCutoff() override { return 0.0; }
+        string getType() override { return TYPE; }
+        CutoffRanges getCutoff() override { return {}; }
 
-        PotentialPrediction predict(const AtomicStructure& structure) override;
+        Predictions predict(const AtomicStructure& structure) override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData& table) override;
 
     private:
         bool _errorOnUnknownSpecies;
         map<Species, double> _isolatedEnergies;
     };
 
-    REGISTER_PARSER("isolated_atom", Potential, IsolatedAtomPotential);
+    REGISTER_PARSER(Potential, IsolatedAtomPotential);
 }
 
 #endif //ISOLATEDATOMPOTENTIAL_HPP

@@ -1,15 +1,14 @@
-#ifndef ISOLATEDATOMFIT_HPP
-#define ISOLATEDATOMFIT_HPP
+#ifndef JGAP_ISOLATEDATOMFIT_HPP
+#define JGAP_ISOLATEDATOMFIT_HPP
 
 #include "Fit.hpp"
 
 namespace jgap {
     class IsolatedAtomFit : public Fit {
     public:
-        ~IsolatedAtomFit() override = default;
+        static constexpr string TYPE = "isolated_atom";
 
         explicit IsolatedAtomFit(const nlohmann::json& params);
-        string getType() override { return "isolated_atom"; }
 
         shared_ptr<Potential> fit(const vector<AtomicStructure> &trainingData) override;
 
@@ -17,7 +16,7 @@ namespace jgap {
         bool _errorOnUnknownSpecies;
     };
 
-    REGISTER_PARSER("isolated_atom", Fit, IsolatedAtomFit)
+    REGISTER_PARSER(Fit, IsolatedAtomFit)
 }
 
-#endif //ISOLATEDATOMFIT_HPP
+#endif

@@ -7,6 +7,7 @@
 namespace jgap {
     class FSGenPairFunction : public EamPairFunction {
     public:
+        static constexpr string TYPE = "fsgen";
         explicit FSGenPairFunction(const nlohmann::json& params) {
             _cutoff = params["cutoff"];
             _degree = params["degree"];
@@ -40,14 +41,14 @@ namespace jgap {
             return - _prefactor * pow(1 - distance * _cutoffInverse, _degree - 1) * _degree * _cutoffInverse;
         }
 
-        string getType() override { return "fsgen"; }
+        string getType() override { return TYPE; }
 
     private:
         double _cutoffInverse;
         double _degree;
     };
 
-    REGISTER_PARSER("fsgen", EamPairFunction, FSGenPairFunction)
+    REGISTER_PARSER(EamPairFunction, FSGenPairFunction)
 }
 
 #endif //FSGENPAIRFUNCTION_HPP

@@ -153,35 +153,26 @@ namespace jgap {
         return result;
     }
 
-    PotentialPrediction TwoBodyDescriptor::predict(const AtomicStructure &atomicStructure) {
+    Predictions TwoBodyDescriptor::predict(const AtomicStructure &atomicStructure) {
         auto indexes = doIndex(atomicStructure);
-        PotentialPrediction result{};
+        Predictions result{};
         for (const auto& kernel: _kernels) {
             result = result + kernel->predict(atomicStructure, indexes[kernel->getFilter()]);
         }
         return result;
     }
 
-    TabulationData TwoBodyDescriptor::tabulate(const TabulationParams &params) {
-
-        TabulationData result{};
+    void TwoBodyDescriptor::tabulate(TabulationData &table) {
 
         for (const auto &[speciesPair, kernelIds]: _kernelIdsPerSpeciesPair) {
-
-            auto pairEnergies = vector(params.grid2b.size(), 0.0);
-
-            for (size_t iGrid = 0; iGrid < params.grid2b.size(); iGrid++) {
-                for (size_t kernelId: kernelIds) {
-                    pairEnergies[iGrid] += _kernels[kernelId]->value( {
-                        .r=params.grid2b[iGrid], .fCut = _cutoffFunction->evaluate(params.grid2b[iGrid])
-                    }) * _kernels[kernelId]->coefficient.value() * 2.0/*K_ij+K_ji*/;
+            for (const auto& it: table.get2bGrid(speciesPair)) {
+                for (const size_t kernelId: kernelIds) {
+                    it.value += _kernels[kernelId]->value( {
+                        .r=it.pos, .fCut = _cutoffFunction->evaluate(it.pos)
+                        }) * _kernels[kernelId]->coefficient.value() * 2.0/*K_ij+K_ji*/;
                 }
             }
-
-            result.pairEnergies[speciesPair] = pairEnergies;
         }
-
-        return result;
     }
 
     map<SpeciesPair, TwoBodyIndex> TwoBodyDescriptor::doIndex(const AtomicStructure &atomicStructure) const {

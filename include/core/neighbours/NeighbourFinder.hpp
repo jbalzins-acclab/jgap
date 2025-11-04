@@ -1,7 +1,7 @@
 #ifndef NEIGHBOURFINDER_HPP
 #define NEIGHBOURFINDER_HPP
 
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 
 #include <vector>
 #include <memory>

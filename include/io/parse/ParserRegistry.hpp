@@ -10,10 +10,10 @@
 using namespace std;
 
 #ifndef REGISTER_PARSER
-#define REGISTER_PARSER(name, baseType, regType) \
+#define REGISTER_PARSER(baseType, regType) \
 struct regType##Register { \
     regType##Register() { \
-        ParserRegistry<baseType>::getRegistry()[name] = [](const nlohmann::json& j){return make_shared<regType>(j);}; \
+        ParserRegistry<baseType>::getRegistry()[regType::TYPE] = [](const nlohmann::json& j){return make_shared<regType>(j);}; \
     } \
 }; \
 static regType##Register regType##RegisterInstance;

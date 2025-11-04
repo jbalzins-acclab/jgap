@@ -8,7 +8,7 @@
 #include <Version.hpp>
 #include <tbb/parallel_for.h>
 
-#include "core/fit/Tabulate.hpp"
+#include "../../include/core/tabulation/TabGapFit.hpp"
 #include "io/convert/QuipXmlConverter.hpp"
 
 using namespace std;

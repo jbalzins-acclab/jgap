@@ -1,8 +1,12 @@
 #ifndef KERNEL_HPP
 #define KERNEL_HPP
 
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 #include <nlohmann/json.hpp>
+
+#include "data/AtomicStructure.hpp"
+#include "data/PredictionData.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
@@ -27,19 +31,19 @@ namespace jgap {
         virtual double value(const TDescriptorData&) = 0;
         virtual TFilter getFilter() = 0;
 
-        PotentialPrediction predict(const AtomicStructure& structure, const TIndex &indexes);
+        Predictions predict(const AtomicStructure& structure, const TIndex &indexes);
     };
 
     template<class TFilter, class TIndex, class TDescriptorData>
-    PotentialPrediction Kernel<TFilter, TIndex, TDescriptorData>::predict(const AtomicStructure &structure,
-                                                                          const TIndex &indexes) {
+    Predictions Kernel<TFilter, TIndex, TDescriptorData>::predict(const AtomicStructure &structure,
+                                                                  const TIndex &indexes) {
         if (!coefficient.has_value()) {
             CurrentLogger::get()->logAndThrow("Coefficient not set in: {}", serialize().dump());
         }
 
         const Covariance structureCovariance = covariance(structure, indexes);
 
-        PotentialPrediction result{};
+        Predictions result{};
         result.energy = *coefficient * structureCovariance.total;
         result.virials = array{
             structureCovariance.virials[0] * (*coefficient),

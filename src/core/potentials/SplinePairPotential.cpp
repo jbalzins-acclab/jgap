@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "io/log/CurrentLogger.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {
@@ -97,7 +98,7 @@ namespace jgap {
         return min(idx, _r.size() - 2);
     }
 
-    SplinePairPotential::SplinePairPotential(nlohmann::json params) {
+    SplinePairPotential::SplinePairPotential(const nlohmann::json& params) {
         for (const auto &[speciesPairStr, pairParams]: params["pair_data"].items()) {
             Species species1 = split(speciesPairStr, ',')[0];
             Species species2 = split(speciesPairStr, ',')[1];
@@ -113,7 +114,7 @@ namespace jgap {
         }
     }
 
-    PotentialPrediction SplinePairPotential::predict(const AtomicStructure &structure) {
+    Predictions SplinePairPotential::predict(const AtomicStructure &structure) {
 
         double energy = 0;
         vector forces(structure.size(), Vector3{0, 0, 0});
@@ -150,11 +151,7 @@ namespace jgap {
             }
         }
 
-        return PotentialPrediction{
-            energy,
-            forces,
-            virials
-        };
+        return Predictions{ energy, forces, virials };
     }
 
     nlohmann::json SplinePairPotential::serialize() {
@@ -169,26 +166,19 @@ namespace jgap {
         };
     }
 
-    double SplinePairPotential::getCutoff() {
+    CutoffRanges SplinePairPotential::getCutoff() {
         double cutoff = 0;
         for (const auto& interpolator: _perSpeciesInterpolators | views::values) {
             cutoff = max(cutoff, interpolator->getCutoff());
         }
-        return cutoff;
+        return {.twoBody = cutoff};
     }
 
-    TabulationData SplinePairPotential::tabulate(const TabulationParams &params) {
-
-        map<SpeciesPair, vector<double>> pairEnergies{};
-
+    void SplinePairPotential::tabulate(TabulationData &table) {
         for (const auto &[speciesPair, interpolator]: _perSpeciesInterpolators) {
-            vector<double> energies{};
-            for (const double r: params.grid2b) {
-                energies.push_back(interpolator->evaluate(r));
+            for (const auto& it: table.get2bGrid(speciesPair)) {
+                it.value += interpolator->evaluate(it.pos);
             }
-            pairEnergies[speciesPair] = energies;
         }
-
-        return TabulationData{.pairEnergies = pairEnergies};
     }
 }

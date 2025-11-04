@@ -1,8 +1,10 @@
 #include "core/potentials/CompositePotential.hpp"
 
+#include "io/log/CurrentLogger.hpp"
+
 namespace jgap {
-    CompositePotential::CompositePotential(map<string, shared_ptr<Potential>> &potentials) {
-        _potentials = std::move(potentials);
+    CompositePotential::CompositePotential(const map<string, shared_ptr<Potential>>& potentials) {
+        _potentials = potentials;
     }
 
     CompositePotential::CompositePotential(const nlohmann::json &params) {
@@ -31,8 +33,8 @@ namespace jgap {
         return cutoff;
     }
 
-    PotentialPrediction CompositePotential::predict(const AtomicStructure &structure) {
-        PotentialPrediction result{};
+    Predictions CompositePotential::predict(const AtomicStructure &structure) {
+        Predictions result{};
         for (const auto &potential : _potentials | views::values) {
             // auto pp =  potential->predict(structure);
             result = result + potential->predict(structure);
@@ -40,18 +42,10 @@ namespace jgap {
         return result;
     }
 
-    TabulationData CompositePotential::tabulate(const TabulationParams& params) {
-
-        TabulationData result{};
-
+    void CompositePotential::tabulate(TabulationData &table) {
         for (const auto &[label, potential] : _potentials) {
             CurrentLogger::get()->debug("Tabulating {} potential", label);
-            TabulationData potentialTabulated = potential->tabulate(params);
-
-            CurrentLogger::get()->debug("Merging tabulation data");
-            result = result + potentialTabulated;
+            potential->tabulate(table);
         }
-
-        return result;
     }
 }

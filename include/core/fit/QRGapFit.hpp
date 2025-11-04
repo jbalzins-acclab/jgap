@@ -1,7 +1,7 @@
 #ifndef QRGAPFIT_HPP
 #define QRGAPFIT_HPP
 
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include "core/potentials/Potential.hpp"
 #include "core/descriptors/Descriptor.hpp"
@@ -21,12 +21,10 @@ namespace jgap {
 
     class QRGapFit : public Fit {
     public:
-        ~QRGapFit() override = default;
+        static constexpr string TYPE = "qr_gap";
 
-        explicit QRGapFit(const nlohmann::json& params);
-        string getType() override { return "qr_gap"; }
+        QRGapFit(const nlohmann::json& params);
 
-        [[nodiscard]]
         shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) override;
 
     protected:
@@ -61,7 +59,7 @@ namespace jgap {
         static Eigen::MatrixXd convertToEigen(MatrixBlock& matrixBlock);
     };
 
-    REGISTER_PARSER("qr_gap", Fit, QRGapFit)
+    REGISTER_PARSER(Fit, QRGapFit)
 }
 
 #endif

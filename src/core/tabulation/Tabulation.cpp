@@ -1,19 +1,21 @@
-#include "core/fit/Tabulate.hpp"
+#include "core/tabulation/Tabulation.hpp"
 
 #include <highfive/H5File.hpp>
 #include <fstream>
 #include <string>
 
+#include "io/log/CurrentLogger.hpp"
 #include "utils/AtomicNumbers.hpp"
-#include <functional>
 
 using namespace std;
 
 namespace jgap {
+    Tabulation::Tabulation(const nlohmann::json &params) {
 
-    void Tabulate::tabulate(const shared_ptr<Potential> &potential,
-                            const TabulationParams& tabulationParams,
-                            const string &outputFileNamePrefix) {
+    }
+
+    void Tabulation::tabulate(const shared_ptr<Potential> &potential,
+                              const optional<string> &outputFileNamePrefix) {
 
         CurrentLogger::get()->debug("Starting tabulation");
         const TabulationData tabulationData = potential->tabulate(tabulationParams);
@@ -29,7 +31,7 @@ namespace jgap {
         }
     }
 
-    void Tabulate::writeH5(const TabulationParams &tabulationParams,
+    void TabGapPo::writeH5(const TabulationParams &tabulationParams,
                            const TabulationData &tabulationData,
                            const string &outputFileNamePrefix) {
 
@@ -125,7 +127,7 @@ namespace jgap {
 
         // Lines 1–3: Comments/metadata.
         eamFsFile << "# UNITS: metal" << endl;
-        eamFsFile << "# Tabulated jGAP"  << endl;
+        eamFsFile << "# EAM part of a potential tabulated with jGAP"  << endl;
         eamFsFile << "# pair_style eam/fs" << endl;
 
         // Line 4: Number of elements (N) followed by each element’s symbol
@@ -151,15 +153,15 @@ namespace jgap {
             * Density functions \rho_{\alpha\beta}(r): For each element α (total N curves, each with Nr points)
          */
         for (const Species& species1 : elements) {
-            eamFsFile << static_cast<size_t>(Z_default[species1]) << " ";
-            eamFsFile << mass_default[species1] << " 1.0 ZZZ" << endl;
+            eamFsFile << static_cast<size_t>(ATOMIC_NUMBERS[species1]) << " ";
+            eamFsFile << ATOMIC_MASSES[species1] << " 1.0 ZZZ" << endl;
 
             for (const double& energy : data.embeddingEnergies.at(species1)) {
                 eamFsFile << energy << endl;
             }
 
             for (const Species& species2 : elements) {
-                for (const double& density : data.eamDensities.at(OrderedSpeciesPair{species1, species2})) {
+                for (const double& density : data.eamDensities.at(ContributorReceiverSpecies{species1, species2})) {
                     eamFsFile << density << endl;
                 }
             }
@@ -248,116 +250,5 @@ namespace jgap {
         }
 
         return result;
-    }
-
-    vector<double> Tabulate::toSplineCoefficients(const vector<double>& energies, const double spacing) {
-        static constexpr array basis = {1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0};
-
-        const size_t nCoefficients = energies.size() + 2;
-
-        const double inverseSpacing = 1.0 / spacing;
-        const double inverseSpacingSq = inverseSpacing * inverseSpacing;
-        vector<array<double, 4>> bands(nCoefficients);
-        bands[0] = {inverseSpacingSq, -2.0 * inverseSpacingSq, inverseSpacingSq, 0.0};
-        //bands[0] = {1.0, -2.0, 1.0, 0.0};
-        bands[nCoefficients-1] = {inverseSpacingSq, -2.0 * inverseSpacingSq, inverseSpacingSq, 0.0};
-
-        for (size_t i = 1; i < nCoefficients-1; i++) {
-            bands[i][0] = basis[0];
-            bands[i][1] = basis[1];
-            bands[i][2] = basis[2];
-            bands[i][3] = energies[i - 1];
-        }
-
-        bands[0][1] /= bands[0][0];
-        bands[0][2] /= bands[0][0];
-        bands[0][3] /= bands[0][0];
-        bands[0][0] = 1.0;
-        bands[1][1] -= bands[1][0] * bands[0][1];
-        bands[1][2] -= bands[1][0] * bands[0][2];
-        bands[1][3] -= bands[1][0] * bands[0][3];
-        bands[0][0] = 0;
-        bands[1][2] /= bands[1][1];
-        bands[1][3] /= bands[1][1];
-        bands[1][1] = 1.0;
-
-        for (size_t i = 2; i < nCoefficients-1; i++) {
-            bands[i][1] -= bands[i][0] * bands[i-1][2];
-            bands[i][3] -= bands[i][0] * bands[i-1][3];
-            bands[i][2] /= bands[i][1];
-            bands[i][3] /= bands[i][1];
-            bands[i][0] = 0.0;
-            bands[i][1] = 1.0;
-        }
-
-        bands[nCoefficients-1][1] -= bands[nCoefficients-1][0] * bands[nCoefficients-3][2];
-        bands[nCoefficients-1][3] -= bands[nCoefficients-1][0] * bands[nCoefficients-3][3];
-        bands[nCoefficients-1][2] -= bands[nCoefficients-1][1] * bands[nCoefficients-2][2];
-        bands[nCoefficients-1][3] -= bands[nCoefficients-1][1] * bands[nCoefficients-2][3];
-        bands[nCoefficients-1][3] /= bands[nCoefficients-1][2];
-        bands[nCoefficients-1][2] = 1.0;
-
-        vector coefficients(nCoefficients, 0.0);
-        coefficients[nCoefficients-1] = bands[nCoefficients-1][3];
-        for (size_t i = nCoefficients-2; i > 0; i--) {
-            coefficients[i] = bands[i][3] - bands[i][2] * coefficients[i+1];
-        }
-        coefficients[0] = bands[0][3] - bands[0][1] * coefficients[1] - bands[0][2] * coefficients[2];
-
-        return coefficients;
-    }
-
-    vector<double> Tabulate::toSplineCoefficients(const vector<vector<vector<double>>>& energies,
-                                                   const Vector3 &spacing) {
-
-        const array nCoefficients{energies.size()+2, energies[0].size()+2, energies[0][0].size()+2};
-        vector coefficients(nCoefficients[0], vector(nCoefficients[1], vector(nCoefficients[2], 0.0)));
-
-        // For convenience starting with angle
-        for (size_t i = 0; i < energies.size(); i++) {
-            for (size_t j = 0; j < energies[i].size(); j++) {
-                for (size_t k = 0; k < energies[i][j].size(); k++) {
-                    coefficients[i+1][j+1] = toSplineCoefficients(energies[i][j], spacing.z);
-                }
-            }
-        }
-
-        for (size_t i = 0; i < energies.size(); i++) {
-            for (size_t k = 0; k < nCoefficients[2]; k++) {
-                vector coeffs_i_k(energies[i].size(), 0.0);
-                for (size_t j = 0; j < energies[i].size(); j++) {
-                    coeffs_i_k[j] = coefficients[i+1][j+1][k];
-                }
-                vector coeffs_i_k_full = toSplineCoefficients(coeffs_i_k, spacing.y);
-                for (size_t j = 0; j < nCoefficients[1]; j++) {
-                    coefficients[i+1][j][k] = coeffs_i_k_full[j];
-                }
-            }
-        }
-
-        for (size_t j = 0; j < nCoefficients[1]; j++) {
-            for (size_t k = 0; k < nCoefficients[2]; k++) {
-                vector coeffs_j_k(energies.size(), 0.0);
-                for (size_t i = 0; i < energies.size(); i++) {
-                    coeffs_j_k[i] = coefficients[i+1][j][k];
-                }
-                vector coeffs_j_k_full = toSplineCoefficients(coeffs_j_k, spacing.x);
-                for (size_t i = 0; i < nCoefficients[0]; i++) {
-                    coefficients[i][j][k] = coeffs_j_k_full[i];
-                }
-            }
-        }
-
-        vector<double> coefficientsFlat;
-        coefficientsFlat.reserve(nCoefficients[0] * nCoefficients[1] * nCoefficients[2]);
-        for (size_t i = 0; i < nCoefficients[0]; i++) {
-            for (size_t j = 0; j < nCoefficients[1]; j++) {
-                for (size_t k = 0; k < nCoefficients[2]; k++) {
-                    coefficientsFlat.push_back(coefficients[i][j][k]);
-                }
-            }
-        }
-
-        return coefficientsFlat;
     }
 }

@@ -2,11 +2,15 @@
 #define SPLINEPAIRPOTENTIAL_HPP
 
 #include "Potential.hpp"
+#include "data/AtomicStructure.hpp"
+#include "data/PredictionData.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
     class SplinePairPotential : public Potential {
     public:
+        static constexpr string TYPE = "spline_pairpot";
+
         class NaturalCubicSpline {
         public:
             NaturalCubicSpline(nlohmann::json params);
@@ -25,22 +29,23 @@ namespace jgap {
             size_t findInterval(double r) const;
         };
 
-        explicit SplinePairPotential(nlohmann::json params);
-        explicit SplinePairPotential(const map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
+        SplinePairPotential(const nlohmann::json& params);
+        SplinePairPotential(const map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
         ~SplinePairPotential() override = default;
 
-        PotentialPrediction predict(const AtomicStructure &structure) override;
+        Predictions predict(const AtomicStructure &structure) override;
 
         nlohmann::json serialize() override;
-        string getType() override { return "spline_pairpot"; }
-        double getCutoff() override;
+        string getType() override { return TYPE; }
+        CutoffRanges getCutoff() override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData& table) override;
 
     private:
         map<SpeciesPair, shared_ptr<NaturalCubicSpline>> _perSpeciesInterpolators;
     };
-    REGISTER_PARSER("spline_pairpot", Potential, SplinePairPotential)
+
+    REGISTER_PARSER(Potential, SplinePairPotential)
 }
 
 #endif

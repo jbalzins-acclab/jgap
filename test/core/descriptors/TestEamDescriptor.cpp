@@ -2,7 +2,7 @@
 
 #include "core/descriptors/eam/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 #include "ParserRegistryAuto.hpp"
 
 using namespace jgap;

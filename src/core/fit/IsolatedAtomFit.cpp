@@ -1,24 +1,22 @@
-//
-// Created by Jegors Balzins on 9.7.2025.
-//
-
 #include "core/fit/IsolatedAtomFit.hpp"
 
-#include "data/BasicDataTypes.hpp"
+#include <utils/Utils.hpp>
+
+#include "data/Vector3.hpp"
 #include "core/potentials/IsolatedAtomPotential.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
     IsolatedAtomFit::IsolatedAtomFit(const nlohmann::json& params) {
-        _errorOnUnknownSpecies = params.value("error_on_unknown", true);
+        _errorOnUnknownSpecies = params.value("error_on_unknown", false);
     }
 
     shared_ptr<Potential> IsolatedAtomFit::fit(const vector<AtomicStructure> &trainingData) {
 
         map<Species, double> isolatedEnergies = {};
         for (auto &structure: trainingData) {
-            if (structure.properties.contains("config_type")
-                 && structure.properties.at("config_type") == "isolated_atom") {
+            if (getOrDefault(structure.properties, "config_type", "-") == "isolated_atom") {
                 if (structure.size() != 1) {
                     CurrentLogger::get()->logAndThrow(
                         "Structure labeled as isolated_atom does not contain exactly one atom"
@@ -40,9 +38,6 @@ namespace jgap {
             }
         }
 
-        return make_shared<IsolatedAtomPotential>(nlohmann::json{
-            {"error_on_unknown", _errorOnUnknownSpecies},
-            {"energies", isolatedEnergies}
-        });
+        return make_shared<IsolatedAtomPotential>(isolatedEnergies, _errorOnUnknownSpecies);
     }
 }

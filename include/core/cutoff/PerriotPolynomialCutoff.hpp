@@ -1,5 +1,5 @@
-#ifndef PERRIOTPOLYNOMIALCUTOFF_HPP
-#define PERRIOTPOLYNOMIALCUTOFF_HPP
+#ifndef JGAP_PERRIOTPOLYNOMIALCUTOFF_HPP
+#define JGAP_PERRIOTPOLYNOMIALCUTOFF_HPP
 
 #include "CutoffFunction.hpp"
 #include "io/parse/ParserRegistry.hpp"
@@ -7,10 +7,12 @@
 namespace jgap {
     class PerriotPolynomialCutoff : public CutoffFunction {
     public:
-        explicit PerriotPolynomialCutoff(const nlohmann::json& params);
-        explicit PerriotPolynomialCutoff(double rMin, double cutoff);
+        static constexpr string TYPE = "perriot";
 
-        string getType() override { return "perriot"; }
+        PerriotPolynomialCutoff(const nlohmann::json& params);
+        PerriotPolynomialCutoff(double rMin, double cutoff);
+
+        string getType() override { return TYPE; }
         nlohmann::json serialize() override;
         double getCutoff() override { return _cutoff; }
 
@@ -23,7 +25,7 @@ namespace jgap {
         double _cutoffWidthInverse;
     };
 
-    REGISTER_PARSER("perriot", CutoffFunction, PerriotPolynomialCutoff)
+    REGISTER_PARSER(CutoffFunction, PerriotPolynomialCutoff)
 }
 
-#endif //PERRIOTPOLYNOMIALCUTOFF_HPP
+#endif

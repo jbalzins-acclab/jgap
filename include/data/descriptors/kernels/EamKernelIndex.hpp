@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 
 using namespace std;
 

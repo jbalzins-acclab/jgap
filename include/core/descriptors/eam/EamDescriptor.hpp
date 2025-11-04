@@ -19,15 +19,16 @@ namespace jgap {
 
     class EamDescriptor : public Descriptor {
     public:
+        static constexpr string TYPE = "eam";
         EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
                       shared_ptr<EamPairFunction> defaultPairFunction,
-                      map<OrderedSpeciesPair, shared_ptr<EamPairFunction>> pairFunctions);
+                      map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions);
 
         EamDescriptor(const nlohmann::json &params);
         nlohmann::json serialize() override;
-        string getType() override { return "eam"; }
+        string getType() override { return TYPE; }
 
-        double getCutoff() override { return _maxCutoff; }
+        CutoffRanges getCutoff() override;;
 
         vector<shared_ptr<IKernel>> getKernels() override;
         void setupKernels(const vector<AtomicStructure> &fromData) override;
@@ -35,9 +36,9 @@ namespace jgap {
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<shared_ptr<MatrixBlock>> selfCovariate() override;
 
-        PotentialPrediction predict(const AtomicStructure &atomicStructure) override;
+        Predictions predict(const AtomicStructure &atomicStructure) override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData &table) override;
 
     private:
         double _maxCutoff;
@@ -48,16 +49,16 @@ namespace jgap {
         queue<nlohmann::json> _kernelSetups;
 
         shared_ptr<EamPairFunction> _defaultPairFunction;
-        map<OrderedSpeciesPair/*{contributor, receiver}*/, shared_ptr<EamPairFunction>> _pairFunctions;
+        map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> _pairFunctions;
 
         EamKernelIndex doIndex(const AtomicStructure &structure) const;
 
         void mapKernelIds();
     };
 
-    REGISTER_PARSER("eam", Descriptor, EamDescriptor)
+    REGISTER_PARSER(Descriptor, EamDescriptor)
 }
 
 
 
-#endif //EAMDESCRIPTOR_HPP
+#endif

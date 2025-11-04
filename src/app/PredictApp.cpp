@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
         // ------------------------ PREDICT IN PARALLEL -------------------------------
         jgap::CurrentLogger::get()->info("Evaluation started");
         jgap::NeighbourFinder::findNeighbours(toBePredicted, potential->getCutoff());
-        vector<jgap::PotentialPrediction> predictions(toBePredicted.size());
+        vector<jgap::Predictions> predictions(toBePredicted.size());
         tbb::parallel_for(0uz, toBePredicted.size(), [&](const size_t i) {
             predictions[i] = potential->predict(toBePredicted[i]);
         });

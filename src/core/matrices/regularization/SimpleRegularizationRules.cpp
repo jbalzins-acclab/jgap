@@ -1,4 +1,4 @@
-#include "core/matrices/sigmas/SimpleRegularizationRules.hpp"
+#include "core/matrices/regularization/SimpleRegularizationRules.hpp"
 
 namespace jgap {
 

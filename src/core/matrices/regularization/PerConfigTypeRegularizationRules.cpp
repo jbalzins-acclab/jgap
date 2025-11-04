@@ -1,8 +1,4 @@
-//
-// Created by Jegors Balzins on 8.8.2025.
-//
-
-#include "../../../../include/core/matrices/sigmas/PerConfigTypeRegularizationRules.hpp"
+#include "core/matrices/regularization/PerConfigTypeRegularizationRules.hpp"
 
 namespace jgap {
     PerConfigTypeRegularizationRules::PerConfigTypeRegularizationRules(const nlohmann::json &params) {

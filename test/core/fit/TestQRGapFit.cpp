@@ -3,7 +3,7 @@
 #include "core/fit/QRGapFit.hpp"
 #include "core/descriptors/eam/EamDescriptor.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
-#include "data/BasicDataTypes.hpp"
+#include "data/Vector3.hpp"
 #include "utils/Utils.hpp"
 #include "ParserRegistryAuto.hpp"
 

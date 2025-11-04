@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "io/log/CurrentLogger.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {
@@ -46,35 +47,6 @@ namespace jgap {
         return res;
     }
 
-    Covariance EamSE::covariance(const AtomicStructure &structure,
-                                 const EamKernelIndexPerSpecies &indexes) {
-
-        double energy = 0;
-        vector forces(structure.size(), Vector3{0.0, 0.0, 0.0});
-        array<Vector3, 3> virials{};
-
-        for (const auto &index : indexes) {
-            energy += value(index.density);
-
-            const double dU_drho_i = derivative(index.density);
-            auto atomPosition = structure.positions[index.atAtomIndex];
-
-            for (auto &[neighbourData, d_rho_i_dr_ij]: index.densityDerivatives) {
-                const Vector3 r01 = structure.positions[neighbourData.index] + neighbourData.offset - atomPosition;
-                const Vector3 f10 = r01.normalize() * d_rho_i_dr_ij * dU_drho_i;
-                forces[index.atAtomIndex] += f10;
-                forces[neighbourData.index] -= f10;
-
-                // x2 since r10.x * f10.x = r01.x * f01.x
-                virials[0] += f10 * r01.x;
-                virials[1] += f10 * r01.y;
-                virials[2] += f10 * r01.z;
-            }
-        }
-
-        return {energy, forces, virials};
-    }
-
 
     double EamSE::crossCovariance(const shared_ptr<IKernel> &other) {
 
@@ -89,11 +61,11 @@ namespace jgap {
                * exp(-pow(_density - otherSE->_density, 2.0) / (2.0 * _lengthScale * otherSE->_lengthScale));
     }
 
-    double EamSE::value(const double &density) {
+    double EamSE::valueInternal(const double &density) const {
         return _totalPrefactor * exp(-pow(density - _density, 2) * 0.5 * _inverseThetaSq);
     }
 
-    double EamSE::derivative(const double &density) {
-        return (_density - density) * _inverseThetaSq * value(density);
+    double EamSE::derivativeInternal(const double &density) const {
+        return (_density - density) * _inverseThetaSq * valueInternal(density);
     }
 }

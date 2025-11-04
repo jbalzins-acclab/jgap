@@ -1,28 +1,26 @@
 #ifndef EAMKERNEL_HPP
 #define EAMKERNEL_HPP
 
+#include "EamKernel.hpp"
 #include "../Kernel.hpp"
 #include "data/descriptors/kernels/EamKernelIndex.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
 
-    using EamKernel = Kernel<Species, EamKernelIndexPerSpecies, double>;
-
     class EamSE : public EamKernel {
     public:
+        static constexpr string TYPE = "squared_exp";
         EamSE(Species species, double energyScale, double lengthScale, double density, optional<double> coeff = {});
 
         EamSE(const nlohmann::json &params);
-        string getType() override { return "squared_exp"; }
+        string getType() override { return TYPE; }
         nlohmann::json serialize() override;
 
-        Covariance covariance(const AtomicStructure &structure, const EamKernelIndexPerSpecies &indexes) override;
         double crossCovariance(const shared_ptr<IKernel>& other) override;
 
-        double value(const double &density) override;
-
-        Species getFilter() override { return _idSpecies;};
+        Species getFilter() override { return _idSpecies; }
+        double getDensity() override { return _density; }
 
     private:
         // raw params
@@ -35,10 +33,11 @@ namespace jgap {
         double _totalPrefactor;
         double _inverseThetaSq;
 
-        double derivative(const double &density);
+        double valueInternal(const double &density) const override;
+        double derivativeInternal(const double &density) const override;
     };
 
-    REGISTER_PARSER("squared_exp", EamKernel, EamSE)
+    REGISTER_PARSER(EamKernel, EamSE)
 }
 
 #endif

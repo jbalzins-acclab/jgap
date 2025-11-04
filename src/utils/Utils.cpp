@@ -302,22 +302,6 @@ namespace jgap {
         return result;
     }
 
-    void saveArray(const vector<double> &data, const string &filename) {
-        ofstream out(filename, ios::binary);
-        out.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
-    }
-
-    vector<double> loadArray(const string &filename) {
-        ifstream in(filename, ios::binary);
-        in.seekg(0, ios::end);
-        streamsize size = in.tellg();
-        in.seekg(0, ios::beg);
-
-        vector<double> data(size / sizeof(double));
-        in.read(reinterpret_cast<char*>(data.data()), size);
-        return data;
-    }
-
     string matrixToString(const Eigen::MatrixXd& mat) {
         stringstream ss;
         for (int i = 0; i < mat.rows(); ++i) {
@@ -364,17 +348,31 @@ namespace jgap {
         return ss.str();
     }
 
-    nlohmann::json & require(nlohmann::json &j, const std::string &key) {
+    nlohmann::json & require(nlohmann::json &j, const string &key) {
         if (!j.contains(key)) {
-            throw std::out_of_range("json key not found: \"" + key + "\"");
+            throw out_of_range("json key not found: \"" + key + "\"");
         }
         return j.at(key);
     }
 
-    const nlohmann::json & require(const nlohmann::json &j, const std::string &key) {
+    const nlohmann::json & require(const nlohmann::json &j, const string &key) {
         if (!j.contains(key)) {
-            throw std::out_of_range("json key not found: \"" + key + "\"");
+            throw out_of_range("json key not found: \"" + key + "\"");
         }
         return j.at(key);
+    }
+
+    nlohmann::json requireArray(nlohmann::json &j) {
+        if (!j.is_array()) {
+            throw std::domain_error("Not an array: " + j.dump());
+        }
+        return j;
+    }
+
+    const nlohmann::json& requireArray(const nlohmann::json &j) {
+        if (!j.is_array()) {
+            throw std::domain_error("Not an array: " + j.dump());
+        }
+        return j;
     }
 }

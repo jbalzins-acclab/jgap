@@ -122,9 +122,9 @@ namespace jgap {
         return res;
     }
 
-    PotentialPrediction ThreeBodyDescriptor::predict(const AtomicStructure &atomicStructure) {
+    Predictions ThreeBodyDescriptor::predict(const AtomicStructure &atomicStructure) {
         auto indexes = doIndex(atomicStructure);
-        PotentialPrediction result{};
+        Predictions result{};
         for (const auto& kernel: _kernels) {
             result = result + kernel->predict(atomicStructure, indexes[kernel->getFilter()]);
         }
@@ -165,49 +165,37 @@ namespace jgap {
         return result;
     }
 
-    TabulationData ThreeBodyDescriptor::tabulate(const TabulationParams &params) {
-
-        TabulationData result{};
+    void ThreeBodyDescriptor::tabulate(TabulationData &table) {
 
         for (const auto &[speciesTriplet, kernelIds]: _kernelIdsPerSpeciesTriplet) {
 
-            auto tripletEnergies = vector(
-                params.grid3b.size(),
-                vector(params.grid3b[0].size(), vector(params.grid3b[0][0].size(), 0.0))
-                );
+            auto& grid = table.get3bGrid(speciesTriplet);
 
-            vector<array<size_t, 3>> grid3bIndexes{};
-            for (size_t i = 0; i < params.grid3b.size(); i++) {
-                for (size_t j = i; j < params.grid3b[i].size(); j++) {
-                    for (size_t k = 0; k < params.grid3b[i][j].size(); k++) {
-                        grid3bIndexes.push_back({i, j, k});
-                    }
-                }
-            }
+            tbb::parallel_for_each(grid.begin(), grid.end(), [&](Grid3d::CellRef&& iter) {
 
-            tbb::parallel_for_each(grid3bIndexes.begin(), grid3bIndexes.end(), [&](const array<size_t, 3> &iGrid) {
-                const Vector3 gridPoint = params.grid3b[iGrid[0]][iGrid[1]][iGrid[2]];
+                if (iter.index[0] > iter.index[1]) return;
 
                 const Vector3 invariantTriplet = toInvariantTriplet(
-                    gridPoint.x,
-                    gridPoint.y,
+                    iter.pos.x,
+                    iter.pos.y,
                     sqrt(max/*numeric safety*/(
-                        pow(gridPoint.x, 2) + pow(gridPoint.y, 2) - 2.0 * gridPoint.x * gridPoint.y * gridPoint.z, 0.0
+                        pow(iter.pos.x, 2) + pow(iter.pos.y, 2) - 2.0 * iter.pos.x * iter.pos.y * iter.pos.z, 0.0
                         ))
                 );
 
+                double contribution = 0.0;
                 for (const size_t kernelId: kernelIds) {
-                    tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]] += _kernels[kernelId]->value(
+                    contribution += _kernels[kernelId]->value(
                         {.q = invariantTriplet, .fCut = invariantTripletToCutoff(invariantTriplet)}
                         ) * 2.0/*q_ijk + q_jik*/ * _kernels[kernelId]->coefficient.value();
                 }
-                tripletEnergies[iGrid[1]][iGrid[0]][iGrid[2]] = tripletEnergies[iGrid[0]][iGrid[1]][iGrid[2]];
+                iter.value += contribution;
+                if (iter.index[0] != iter.index[1]) {
+                    grid(iter.index[1], iter.index[0], iter.index[2]) += contribution;
+                }
             });
-
-            result.tripletEnergies[speciesTriplet] = tripletEnergies;
         }
 
-        return result;
     }
 
     double ThreeBodyDescriptor::invariantTripletToCutoff(const Vector3 &t) const {
@@ -237,8 +225,6 @@ namespace jgap {
 
         for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
             auto atom0 = atomicStructure[atomIndex];
-
-            // "nl" = neighbourList
 
             vector<size_t> usefulNLIndexes{};
             usefulNLIndexes.reserve(atom0.neighbours().size());

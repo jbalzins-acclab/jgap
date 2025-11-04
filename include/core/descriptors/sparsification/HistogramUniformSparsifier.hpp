@@ -14,6 +14,7 @@ namespace jgap {
 
     class HistogramUniformSparsifier : public Sparsifier {
     public:
+        static constexpr string TYPE = "histogram_uniform";
         HistogramUniformSparsifier(nlohmann::json params);
         vector<nlohmann::json> selectSparsePoints(const vector<vector<double>> &allPoints) override;
     private:
@@ -26,7 +27,7 @@ namespace jgap {
         optional<vector<double>> _maxPoint;
     };
 
-    REGISTER_PARSER("histogram_uniform", Sparsifier, HistogramUniformSparsifier);
+    REGISTER_PARSER(Sparsifier, HistogramUniformSparsifier);
 }
 
 #endif

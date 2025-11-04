@@ -20,12 +20,13 @@ namespace jgap {
 
     class TwoBodyDescriptor : public Descriptor {
     public:
+        static constexpr string TYPE = "2b";
         TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction, vector<shared_ptr<TwoBodyKernel>> kernels);
         TwoBodyDescriptor(const nlohmann::json& params);
         nlohmann::json serialize() override;
-        string getType() override { return "2b"; };
+        string getType() override { return TYPE; };
 
-        double getCutoff() override { return _cutoffFunction->getCutoff(); };
+        CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = _cutoffFunction->getCutoff()}; }
 
         vector<shared_ptr<IKernel>> getKernels() override;
         void setupKernels(const vector<AtomicStructure> &fromData) override;
@@ -33,9 +34,9 @@ namespace jgap {
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<shared_ptr<MatrixBlock>> selfCovariate() override;
 
-        PotentialPrediction predict(const AtomicStructure &atomicStructure) override;
+        Predictions predict(const AtomicStructure &atomicStructure) override;
 
-        TabulationData tabulate(const TabulationParams &params) override;
+        void tabulate(TabulationData &table) override;
 
     protected:
         shared_ptr<CutoffFunction> _cutoffFunction;
@@ -51,7 +52,7 @@ namespace jgap {
         void mapKernelIds();
     };
 
-    REGISTER_PARSER("2b", Descriptor, TwoBodyDescriptor)
+    REGISTER_PARSER(Descriptor, TwoBodyDescriptor)
 }
 
 #endif //TWOBODYDESCRIPTOR_HPP

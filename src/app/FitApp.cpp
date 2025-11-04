@@ -13,31 +13,29 @@ using namespace std;
 
 namespace jgap {
 
-        void fit() {
+        void fit(string paramFileName) {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
 
-            string paramFileName = argv[1];
             ifstream paramFile(paramFileName);
             if (!paramFile.is_open()) {
-                jgap::CurrentLogger::get()->error("Cannot open param file {}", paramFileName);
-                return EXIT_FAILURE;
+                CurrentLogger::get()->logAndThrow("Cannot open param file {}", paramFileName);
             }
             nlohmann::json fitParams;
             paramFile >> fitParams;
 
             string outputFileName = fitParams["output_file"];
-            jgap::CurrentLogger::get()->info("Output file name: {}", outputFileName);
+            CurrentLogger::get()->info("Output file name: {}", outputFileName);
 
-            jgap::CurrentLogger::get()->info("Picking fit logic");
+            CurrentLogger::get()->info("Picking fit logic");
             fitParams["type"] = fitParams.value("type", "composite");
-            auto fit = jgap::ParserRegistry<jgap::Fit>::get(fitParams);
+            auto fit = ParserRegistry<Fit>::get(fitParams);
 
-            jgap::CurrentLogger::get()->info("Reading training data");
-            auto trainingData = jgap::readXyz(fitParams["training_data_xyz"]);
+            CurrentLogger::get()->info("Reading training data");
+            auto trainingData = readXyz(fitParams["training_data_xyz"]);
 
             if (!fitParams.value("use_virials", true)) {
-                jgap::CurrentLogger::get()->warn("Not using virials in training data");
+                CurrentLogger::get()->warn("Not using virials in training data");
 
                 for (auto& structure: trainingData) {
                     structure.virials.reset();
@@ -46,16 +44,16 @@ namespace jgap {
 
             // ------------------------ FIT -------------------------------
 
-            jgap::CurrentLogger::get()->info(
+            CurrentLogger::get()->info(
                 "Fitting {} potential with params from file {}: {}",
                 fitParams["type"].dump(), paramFileName, fitParams.dump()
                 );
-            shared_ptr<jgap::Potential> resultingPotential = fit->fit(trainingData);
-            jgap::CurrentLogger::get()->info("Main fit done");
+            shared_ptr<Potential> resultingPotential = fit->fit(trainingData);
+            CurrentLogger::get()->info("Main fit done");
 
             // ------------------------ SAVE -------------------------------
 
-            jgap::CurrentLogger::get()->info("Saving resulting potential data to {}", outputFileName);
+            CurrentLogger::get()->info("Saving resulting potential data to {}", outputFileName);
             auto output = resultingPotential->serialize();
             output["type"] = resultingPotential->getType();
 
@@ -64,10 +62,10 @@ namespace jgap {
             outFile.flush();
             outFile.close();
 
-            jgap::CurrentLogger::get()->info("Fit complete");
+            CurrentLogger::get()->info("Fit complete");
 
             if (fitParams.value("do_test", true)) {
-                jgap::CurrentLogger::get()->info("Running RMSE tests");
+                CurrentLogger::get()->info("Running RMSE tests");
 
                 set<string> groupTestDataBy = fitParams.value(
                     "group_test_data_by",
@@ -78,10 +76,10 @@ namespace jgap {
                 testFiles.insert(fitParams["training_data_xyz"]);
 
                 for (const string& testFile: testFiles) {
-                    jgap::CurrentLogger::get()->info("Testing {}", testFile);
-                    auto testingData = jgap::readXyz(testFile, resultingPotential->getCutoff());
+                    CurrentLogger::get()->info("Testing {}", testFile);
+                    auto testingData = readXyz(testFile, resultingPotential->getCutoff());
 
-                    vector<jgap::PotentialPrediction> predictions(testingData.size());
+                    vector<Predictions> predictions(testingData.size());
                     tbb::parallel_for(0uz, testingData.size(), [&](const size_t i) {
                         predictions[i] = resultingPotential->predict(testingData[i]);
                     });
@@ -89,7 +87,7 @@ namespace jgap {
                     for (const string& propertyName: groupTestDataBy) {
                         map<string, vector<double> > energyDifferences;
                         map<string, vector<double> > forceDifferences;
-                        map<string, vector<array<jgap::Vector3, 3> > > virialDifferences;
+                        map<string, vector<array<Vector3, 3> > > virialDifferences;
 
                         for (size_t i = 0; i < testingData.size(); i++) {
 
@@ -135,16 +133,16 @@ namespace jgap {
 void printErrors(const string& potFileName, const string &testFile, const string &groupedBy,
                  map<string, vector<double> > &energyDifferences,
                  map<string, vector<double> > &forceDifferences,
-                 map<string, vector<array<jgap::Vector3, 3> > > &virialDifferences) {
+                 map<string, vector<array<Vector3, 3> > > &virialDifferences) {
 
-    jgap::CurrentLogger::get()->info("Testing {}", format("{}-{}-errors.{}.csv",
+    CurrentLogger::get()->info("Testing {}", format("{}-{}-errors.{}.csv",
         potFileName,
-        jgap::split(testFile, '/').back(),
+        split(testFile, '/').back(),
         groupedBy
         ));
     ofstream reportFile(format("{}-{}-errors.{}.csv",
         potFileName,
-        jgap::split(testFile, '/').back(),
+        split(testFile, '/').back(),
         groupedBy
         ));
     reportFile << "groupedBy,"
