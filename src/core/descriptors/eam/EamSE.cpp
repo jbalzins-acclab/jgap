@@ -53,7 +53,7 @@ namespace jgap {
         const auto otherSE = std::dynamic_pointer_cast<EamSE>(other);
 
         if (!otherSE) {
-            CurrentLogger::get()->warn("Comparing EAM SE with non EAM SE");
+            JGAP_LOG_WARN("Comparing EAM SE with non EAM SE");
             return 0.0;
         }
 

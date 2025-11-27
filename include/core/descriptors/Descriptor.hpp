@@ -12,7 +12,6 @@
 #include "data/CutoffRanges.hpp"
 #include "data/TabulationData.hpp"
 
-using namespace std;
 
 namespace jgap {
 
@@ -27,7 +26,7 @@ namespace jgap {
         virtual vector<shared_ptr<IKernel>> getKernels() = 0;
 
         // Sparsification strategy to constructor
-        virtual void setupKernels(const vector<AtomicStructure> &fromData) = 0;
+        virtual void setupSparseKernels(const vector<AtomicStructure> &fromData) = 0;
 
         virtual vector<Covariance> covariate(const AtomicStructure &atomicStructure) = 0;
         virtual vector<shared_ptr<MatrixBlock>> selfCovariate() = 0;

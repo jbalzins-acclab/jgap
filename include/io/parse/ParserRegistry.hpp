@@ -7,32 +7,36 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 
-using namespace std;
 
-#ifndef REGISTER_PARSER
 #define REGISTER_PARSER(baseType, regType) \
 struct regType##Register { \
     regType##Register() { \
-        ParserRegistry<baseType>::getRegistry()[regType::TYPE] = [](const nlohmann::json& j){return make_shared<regType>(j);}; \
+        jgap::ParserRegistry<baseType>::getRegistry()[regType::TYPE] = [](const nlohmann::json& j){ \
+            return regType::fromJson(j); \
+        }; \
     } \
 }; \
 static regType##Register regType##RegisterInstance;
-#endif
 
 namespace jgap {
-
     template<class TBase>
     class ParserRegistry {
     public:
-        //inline static map<string, function<shared_ptr<TBase>(nlohmann::json)>> registry = {};
         static auto& getRegistry() {
-            static auto registry = make_shared<map<string, function<shared_ptr<TBase>(nlohmann::json)>>>();
+            static auto registry = std::make_shared<
+                std::map<std::string, std::function<std::shared_ptr<TBase>(nlohmann::json)>>
+            >();
             return *registry;
-        }
-        static shared_ptr<TBase> get(const nlohmann::json& params) {
-            return getRegistry()[params["type"]](params);
         }
     };
 }
+
+#define REGISTRY_GET(baseType, params) \
+    jgap::ParserRegistry<baseType>::getRegistry().contains(require(params, "type")) ? \
+    jgap::ParserRegistry<baseType>::getRegistry()[require(params, "type")](params) : \
+    ([&]() -> std::shared_ptr<baseType> { \
+    JGAP_LOG_AND_THROW("type={} is not a known(registered) implementation of {}", \
+    require(params, "type").get<std::string>(), #baseType); \
+    })()
 
 #endif

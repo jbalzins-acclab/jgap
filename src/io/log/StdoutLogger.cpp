@@ -4,11 +4,11 @@
 #include <chrono>
 #include <format>
 
-using namespace std;
 
 namespace jgap {
 
-    StdoutLogger::StdoutLogger(const bool logDebug) : _logDebug(logDebug) {
+    StdoutLogger::StdoutLogger(const bool logDebug, MetadataVisibility meta)
+        : _logDebug(logDebug), _metaVis(meta) {
         ios_base::sync_with_stdio(false);
         cin.tie(nullptr);
     }
@@ -28,5 +28,14 @@ namespace jgap {
 
         auto timestamp = chrono::system_clock::now();
         out << format("{:%Y-%m-%d %H:%M:%S} {} {}", timestamp, levelStr, msg) << endl;
+    }
+
+    void StdoutLogger::logWithSrc(LogLevel level, string_view msg, const char* file, int line, const char* func) {
+        if (_metaVis == MetadataVisibility::Both) {
+            const string withSrc = format("{} ({}:{}:{})", msg, file ? file : "?", line, func ? func : "?");
+            log(level, withSrc);
+        } else {
+            log(level, msg);
+        }
     }
 }

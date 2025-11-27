@@ -15,7 +15,7 @@ namespace jgap {
         static constexpr string TYPE = "gap";
 
         explicit GapPotential(const nlohmann::json& params);
-        explicit GapPotential(map<string, shared_ptr<Descriptor>> descriptors)
+        explicit GapPotential(std::std::map<string, shared_ptr<Descriptor>> descriptors)
             : _descriptors(std::move(descriptors)) {
         }
         ~GapPotential() override = default;
@@ -29,7 +29,7 @@ namespace jgap {
         void tabulate(TabulationData& table) override;
 
     private:
-        map<string, shared_ptr<Descriptor>> _descriptors;
+        std::map<string, shared_ptr<Descriptor>> _descriptors;
     };
 
     REGISTER_PARSER(Potential, GapPotential);

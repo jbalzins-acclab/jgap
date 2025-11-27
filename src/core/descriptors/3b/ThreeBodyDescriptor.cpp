@@ -8,7 +8,7 @@
 #include "utils/Utils.hpp"
 
 namespace jgap {
-    ThreeBodyDescriptor::ThreeBodyDescriptor(shared_ptr<CutoffFunction> &cutoffFunction,
+    ThreeBodyDescriptor::ThreeBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction,
                                              vector<shared_ptr<ThreeBodyKernel>> &kernels)
         : _cutoff(cutoffFunction->getCutoff()),
           _cutoffFunction(std::move(cutoffFunction)),
@@ -18,7 +18,7 @@ namespace jgap {
     }
 
     ThreeBodyDescriptor::ThreeBodyDescriptor(const nlohmann::json &params) {
-        CurrentLogger::get()->debug("Parsing 3b descriptor params");
+        JGAP_LOG_DEBUG("Parsing 3b descriptor params");
 
         _cutoffFunction = ParserRegistry<CutoffFunction>::get(require(params, "cutoff"));
         _cutoff = _cutoffFunction->getCutoff();
@@ -58,11 +58,11 @@ namespace jgap {
         };
     }
 
-    void ThreeBodyDescriptor::setupKernels(const vector<AtomicStructure> &fromData) {
-        CurrentLogger::get()->info("Doing 3b sparsification from data");
+    void ThreeBodyDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+        JGAP_LOG_INFO("Doing 3b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            CurrentLogger::get()->warn("All 3b kernels were pre-set");
+            JGAP_LOG_WARN("All 3b kernels were pre-set");
             return;
         }
 
@@ -169,7 +169,7 @@ namespace jgap {
 
         for (const auto &[speciesTriplet, kernelIds]: _kernelIdsPerSpeciesTriplet) {
 
-            auto& grid = table.get3bGrid(speciesTriplet);
+            auto& grid = table.getOrMake3bGrid(speciesTriplet);
 
             tbb::parallel_for_each(grid.begin(), grid.end(), [&](Grid3d::CellRef&& iter) {
 
@@ -273,7 +273,7 @@ namespace jgap {
     bool ThreeBodyDescriptor::checkSpecies(const SpeciesTriplet& tripletInData, nlohmann::json filters) {
 
         if (!filters.is_array()) {
-            CurrentLogger::get()->logAndThrow("3b species filter is non-array: {}", filters.dump());
+            JGAP_LOG_AND_THROW("3b species filter is non-array: {}", filters.dump());
         }
         if (filters.empty()) return true;
 
@@ -285,7 +285,7 @@ namespace jgap {
         bool passedAFilter = false;
         for (const auto &filter: filters) {
             if (!filter.is_array() || filter.size() != 3) {
-                CurrentLogger::get()->logAndThrow("Wrong 3b species specs: {}", filters.dump());
+                JGAP_LOG_AND_THROW("Wrong 3b species specs: {}", filters.dump());
             }
             if (tripletInData == SpeciesTriplet(filter[0], {filter[1], filter[2]})) {
                 passedAFilter = true;

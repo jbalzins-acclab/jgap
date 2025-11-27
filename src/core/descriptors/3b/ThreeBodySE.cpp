@@ -68,7 +68,7 @@ namespace jgap {
         const auto otherSE = std::dynamic_pointer_cast<ThreeBodySE>(other);
 
         if (!otherSE) {
-            CurrentLogger::get()->warn("Comparing 3b SE with non 3b-SE");
+            JGAP_LOG_WARN("Comparing 3b SE with non 3b-SE");
             return 0.0;
         }
 

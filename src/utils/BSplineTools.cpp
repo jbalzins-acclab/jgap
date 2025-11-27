@@ -105,12 +105,112 @@ namespace jgap {
         return coeffGrid;
     }
 
-    BSplineTools::InterpolationResults<double> BSplineTools::interpolate(const Grid1d &table, double pos) {
+    BSplineTools::InterpolationResults<double> BSplineTools::interpolate(const Grid1d &table, const double pos) {
+        const auto &coeffs = table.data;
+        const double h = table.spacing;
+        const double origin = table.origin;
 
-        return Grid1d(coefficients, original.spacing, original.origin - original.spacing);
+        // Find normalized coordinate
+        const double x = (pos - origin) / h;
+        const int i = static_cast<int>(floor(x));
+        const double t = x - i;
+
+        // Precompute basis weights
+        double w[4];
+        const double t2 = t * t;
+        const double t3 = t2 * t;
+        w[0] = (1 - 3*t + 3*t2 - t3) / 6.0;
+        w[1] = (4 - 6*t2 + 3*t3) / 6.0;
+        w[2] = (1 + 3*t + 3*t2 - 3*t3) / 6.0;
+        w[3] = t3 / 6.0;
+
+        // Interpolate value
+        double value = 0.0;
+        for (int k = 0; k < 4; ++k)
+            value += coeffs[i + k - 1] * w[k];
+
+        // Optional derivative (for gradient info)
+        double dw[4];
+        dw[0] = (-3 + 6*t - 3*t2) / 6.0;
+        dw[1] = (-12*t + 9*t2) / 6.0;
+        dw[2] = (3 + 6*t - 9*t2) / 6.0;
+        dw[3] = (3*t2) / 6.0;
+
+        double derivative = 0.0;
+        for (int k = 0; k < 4; ++k)
+            derivative += coeffs[i + k - 1] * dw[k];
+        derivative /= h;
+
+        return { value, derivative };
     }
 
-    BSplineTools::InterpolationResults<Vector3> BSplineTools::interpolate(const Grid3d &table, Vector3 pos) {
+    BSplineTools::InterpolationResults<Vector3> BSplineTools::interpolate(const Grid3d &table, const Vector3 &pos) {
+        const double hx = table.spacingR();
+        const double hy = table.spacingR();       // or spacingTheta if different
+        const double hz = table.spacingAngular();
 
+        // Normalized coordinates
+        const double x = (pos.x - table.originR()) / hx;
+        const double y = (pos.y - table.originAngular()) / hy;
+        const double z = (pos.z - table.originAngular()) / hz;
+
+        const int ix = static_cast<int>(floor(x));
+        const int iy = static_cast<int>(floor(y));
+        const int iz = static_cast<int>(floor(z));
+
+        const double tx = x - ix;
+        const double ty = y - iy;
+        const double tz = z - iz;
+
+        // Compute cubic B-spline basis and derivatives
+        auto computeWeights = [](double t, double w[4], double dw[4]) {
+            const double t2 = t * t;
+            const double t3 = t2 * t;
+
+            // Basis (B3)
+            w[0] = (1.0 - 3.0*t + 3.0*t2 - t3) / 6.0;
+            w[1] = (4.0 - 6.0*t2 + 3.0*t3) / 6.0;
+            w[2] = (1.0 + 3.0*t + 3.0*t2 - 3.0*t3) / 6.0;
+            w[3] = t3 / 6.0;
+
+            // Derivative of basis (dB3/dt)
+            dw[0] = (-3.0 + 6.0*t - 3.0*t2) / 6.0;
+            dw[1] = (-12.0*t + 9.0*t2) / 6.0;
+            dw[2] = (3.0 + 6.0*t - 9.0*t2) / 6.0;
+            dw[3] = (3.0*t2) / 6.0;
+        };
+
+        double wx[4], wy[4], wz[4];
+        double dwx[4], dwy[4], dwz[4];
+        computeWeights(tx, wx, dwx);
+        computeWeights(ty, wy, dwy);
+        computeWeights(tz, wz, dwz);
+
+        // Accumulators
+        double value = 0.0;
+        Vector3 grad(0.0, 0.0, 0.0);
+
+        // Tensor-product evaluation
+        for (int a = 0; a < 4; ++a) {
+            for (int b = 0; b < 4; ++b) {
+                for (int c = 0; c < 4; ++c) {
+                    const double coeff = table(ix + a - 1, iy + b - 1, iz + c - 1);
+
+                    const double wabc = wx[a] * wy[b] * wz[c];
+                    value += coeff * wabc;
+
+                    grad.x += coeff * dwx[a] * wy[b] * wz[c];
+                    grad.y += coeff * wx[a] * dwy[b] * wz[c];
+                    grad.z += coeff * wx[a] * wy[b] * dwz[c];
+                }
+            }
+        }
+
+        // Scale derivatives by grid spacing
+        grad.x /= hx;
+        grad.y /= hy;
+        grad.z /= hz;
+
+        return { value, grad };
     }
 }

@@ -8,11 +8,10 @@ namespace jgap {
 
         for (const auto &[atomIndex0, atomIndex1, r01, r, fCut, dCut_dr]: index) {
             // ---------------------- ENERGY --------------------------------
-            auto cov = valueInternal(r) * fCut;
-            if (atomIndex0 != atomIndex1)
-                cov *= 2.0; // K(r_ij,)+K(r_ji)(?)
+            auto dE = valueInternal(r) * fCut;
+            if (atomIndex0 != atomIndex1) dE *= 2.0; // K(r_ij,)+K(r_ji)(?)
             // else *= 1.0 --- since both r_ii(+offset) and r_ii(-offset) are in index
-            energy += cov;
+            energy += dE;
 
             // ---------------------- FORCES --------------------------------
             double dE_dr = derivativeInternal(r) * fCut;

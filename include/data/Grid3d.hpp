@@ -37,6 +37,8 @@ namespace jgap {
         double originR() const { return origin.x; }
         double originAngular() const { return origin.z; }
 
+        double cutoff() const { return originR() + spacingR() * static_cast<double>(nR); }
+
         // --- Element access ---
         double& operator()(size_t i, size_t j, size_t k) {
             return dataFlat[i*nR*nR + j*nR + k];

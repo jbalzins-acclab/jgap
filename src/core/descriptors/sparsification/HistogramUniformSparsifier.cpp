@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "io/log/CurrentLogger.hpp"
+
 namespace jgap {
 
     HistogramUniformSparsifier::HistogramUniformSparsifier(nlohmann::json params)
@@ -42,7 +44,7 @@ namespace jgap {
 
         for (const auto &p : allPoints) {
             if (p.size() != allPoints[0].size()) {
-                CurrentLogger::get()->error("Sparse points of differing dimensions", true);
+                JGAP_LOG_AND_THROW("Sparse points of differing dimensions");
             }
         }
 
@@ -54,11 +56,11 @@ namespace jgap {
         );
 
         if (_minPoint.has_value() && _minPoint->size() != gridDimensions.size()) {
-            CurrentLogger::get()->logAndThrow("Sparsifier's min_point dimensions {} don't match grid dimensions {}",
+            JGAP_LOG_AND_THROW("Sparsifier's min_point dimensions {} don't match grid dimensions {}",
                                               _minPoint->size(), gridDimensions.size());
         }
         if (_maxPoint.has_value() && _maxPoint->size() != gridDimensions.size()) {
-            CurrentLogger::get()->logAndThrow("Sparsifier's max_point dimensions {} don't match grid dimensions {}",
+            JGAP_LOG_AND_THROW("Sparsifier's max_point dimensions {} don't match grid dimensions {}",
                                               _maxPoint->size(), gridDimensions.size());
         }
 
@@ -66,7 +68,6 @@ namespace jgap {
         vector<double> maxPoint(gridDimensions.size());
         vector<double> step(gridDimensions.size());
 
-        // TODO: looks ugly
         for (size_t d = 0; d < gridDimensions.size(); d++) {
             if (_minPoint.has_value()) {
                 minPoint[d] = _minPoint.value()[d];
@@ -87,7 +88,7 @@ namespace jgap {
             step[d] = (maxPoint[d] - minPoint[d]) / static_cast<double>(gridDimensions[d]);
         }
 
-        CurrentLogger::get()->info(
+        JGAP_LOG_INFO(
                 "{}d histogram in range {} - {} with {} long bins:",
                 gridDimensions.size(),
                 iteratorToString(minPoint.begin(), minPoint.end()),
@@ -111,7 +112,7 @@ namespace jgap {
         }
         const size_t reps = _nSparsePoints / usefulGridSlots.size();
         const size_t leftover = _nSparsePoints - usefulGridSlots.size() * reps;
-        CurrentLogger::get()->debug(
+        JGAP_LOG_DEBUG(
             "Found {} grid slots containing some points -> attempting to sample each {} times / {} assigned randomly",
             usefulGridSlots.size(), reps, leftover
             );
@@ -139,7 +140,7 @@ namespace jgap {
             }
 
             sparsePoints.push_back(point);
-            CurrentLogger::get()->debug(iteratorToString(point.begin(), point.end()));
+            JGAP_LOG_DEBUG(iteratorToString(point.begin(), point.end()));
         }
 
         vector<KernelParams> sparseKernelsParams;

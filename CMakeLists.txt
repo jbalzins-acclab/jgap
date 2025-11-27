@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(jgap)
 
-set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+#set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,7 +81,7 @@ endfunction()
 
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
 
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
+#list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/main\\.cpp")
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
@@ -149,14 +149,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/utils/TestVirials.cpp
     )
 
     add_executable(jgap_tests ${TEST_SOURCES})
     target_link_libraries(jgap_tests
             gtest_main
-            jgap_lib  # link your library into tests
-            nlohmann_json::nlohmann_json
+            jgap_lib
     )
 
     include(GoogleTest)

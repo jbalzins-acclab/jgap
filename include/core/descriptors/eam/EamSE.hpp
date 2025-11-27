@@ -20,7 +20,7 @@ namespace jgap {
         double crossCovariance(const shared_ptr<IKernel>& other) override;
 
         Species getFilter() override { return _idSpecies; }
-        double getDensity() override { return _density; }
+        pair<double, double> getDensityRange() override { return {_density, _density}; }
 
     private:
         // raw params

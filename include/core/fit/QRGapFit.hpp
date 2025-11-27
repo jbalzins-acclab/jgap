@@ -6,33 +6,35 @@
 #include "core/potentials/Potential.hpp"
 #include "core/descriptors/Descriptor.hpp"
 #include "core/potentials/GapPotential.hpp"
-#include "core/matrices/sigmas/RegularizationRules.hpp"
 
 #include <Eigen/Dense>
 
 #include <memory>
-#include <concepts>
 
 #include "Fit.hpp"
-
-using namespace std;
+#include "core/matrices/regularization/RegularizationRules.hpp"
 
 namespace jgap {
 
     class QRGapFit : public Fit {
     public:
-        static constexpr string TYPE = "qr_gap";
+        static constexpr std::string TYPE = "qr_gap";
+        static std::shared_ptr<QRGapFit> fromJson(const nlohmann::json& params);
 
-        QRGapFit(const nlohmann::json& params);
+        QRGapFit(
+            const std::map<std::string, std::shared_ptr<Descriptor>> &descriptors,
+            const std::shared_ptr<RegularizationRules> &regularizationRules,
+            double jitter = 1e-8
+            );
 
-        shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) override;
+        std::shared_ptr<Potential> fit(const std::vector<AtomicStructure>& trainingData) override;
 
     protected:
-        vector<double> leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b);
+        std::vector<double> leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b);
 
     private:
-        map<string, shared_ptr<Descriptor>> _descriptors;
-        shared_ptr<RegularizationRules> _regularizationRules;
+        std::map<std::string, std::shared_ptr<Descriptor>> _descriptors;
+        std::shared_ptr<RegularizationRules> _regularizationRules;
         double _jitter;
 
         // TODO: 4-element matrix has only ~12% non-zero values i.e. ~12GB
@@ -40,16 +42,16 @@ namespace jgap {
         // * either specify manually to use it, or auto-select if #elements > 2 (?)
 
         [[nodiscard]]
-        Eigen::MatrixXd makeA(const vector<shared_ptr<Descriptor>>& descriptors,
-                              const vector<AtomicStructure>& atomicStructures) const;
+        Eigen::MatrixXd makeA(const std::vector<std::shared_ptr<Descriptor>>& descriptors,
+                              const std::vector<AtomicStructure>& atomicStructures) const;
 
-        static Eigen::VectorXd makeB(const vector<shared_ptr<Descriptor>>& descriptors,
-                                     const vector<AtomicStructure>& atomicStructures);
+        static Eigen::VectorXd makeB(const std::vector<std::shared_ptr<Descriptor>>& descriptors,
+                                     const std::vector<AtomicStructure>& atomicStructures);
 
         void fillU_mm(size_t startingRow, size_t startingCol, Descriptor &descriptor, Eigen::MatrixXd &A) const;
 
         static void fillInverseSigmaK_nm(
-            const vector<shared_ptr<Descriptor>> &descriptors,
+            const std::vector<std::shared_ptr<Descriptor>> &descriptors,
             const AtomicStructure &atomicStructure,
             Eigen::MatrixXd &A,
             size_t startingRow

@@ -8,17 +8,15 @@
 #include <Version.hpp>
 #include <tbb/parallel_for.h>
 
-#include "../../include/core/tabulation/TabGapFit.hpp"
 #include "io/convert/QuipXmlConverter.hpp"
 
-using namespace std;
 
 int main(int argc, char** argv) {
 
-    jgap::CurrentLogger::get()->info("jGAP tabulate v{}", JGAP_VERSION);
+    jgap::JGAP_LOG_INFO("jGAP tabulate v{}", JGAP_VERSION);
 
     if (argc != 2) {
-        jgap::CurrentLogger::get()->error(
+        jgap::JGAP_LOG_ERROR(
             "Expected 1 arguments: \n 1. <<tabulation-params>>.json"
             );
         return EXIT_FAILURE;
@@ -27,12 +25,12 @@ int main(int argc, char** argv) {
     try {
 
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
-        jgap::CurrentLogger::get()->info("Tabulation as specified in: {}", argv[1]);
+        jgap::JGAP_LOG_INFO("Tabulation as specified in: {}", argv[1]);
 
         string paramFileName = argv[1];
         ifstream paramFile(paramFileName);
         if (!paramFile.is_open()) {
-            jgap::CurrentLogger::get()->error("Cannot open tabulation-param file {}", paramFileName);
+            jgap::JGAP_LOG_ERROR("Cannot open tabulation-param file {}", paramFileName);
             return EXIT_FAILURE;
         }
 
@@ -47,17 +45,17 @@ int main(int argc, char** argv) {
 
             pugi::xml_document quipDocument;
             if (!quipDocument.load_file(potentialFileName.c_str())) {
-                jgap::CurrentLogger::get()->error("Cannot input quip file: {}",  potentialFileName);
+                jgap::JGAP_LOG_ERROR("Cannot input quip file: {}",  potentialFileName);
                 return EXIT_FAILURE;
             }
 
-            jgap::CurrentLogger::get()->info("Converting from QUIP xml");
+            jgap::JGAP_LOG_INFO("Converting from QUIP xml");
             potential = jgap::QuipXmlConverter::transform(quipDocument.document_element());
 
         } else {
             ifstream potentialParamFile(potentialFileName);
             if (!potentialParamFile.is_open()) {
-                jgap::CurrentLogger::get()->error("Cannot open pot-param file {}", potentialFileName);
+                jgap::JGAP_LOG_ERROR("Cannot open pot-param file {}", potentialFileName);
                 return EXIT_FAILURE;
             }
             nlohmann::json potParams;
@@ -65,14 +63,14 @@ int main(int argc, char** argv) {
             potential = jgap::ParserRegistry<jgap::Potential>::get(potParams);
         }
 
-        jgap::CurrentLogger::get()->info("Tabulating potential: {}", potential->serialize().dump());
-        jgap::CurrentLogger::get()->info("Tabulation params: {}", tabulationParams.dump());
+        jgap::JGAP_LOG_INFO("Tabulating potential: {}", potential->serialize().dump());
+        jgap::JGAP_LOG_INFO("Tabulation params: {}", tabulationParams.dump());
 
         jgap::Tabulate::tabulate(potential, tabulationParams, outputFilePrefix);
-        jgap::CurrentLogger::get()->info("Tabulation complete");
+        jgap::JGAP_LOG_INFO("Tabulation complete");
 
     } catch (exception& e) {
-        jgap::CurrentLogger::get()->error("Fail: {}", e.what());
+        jgap::JGAP_LOG_ERROR("Fail: {}", e.what());
         return EXIT_FAILURE;
     }
 

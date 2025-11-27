@@ -11,7 +11,6 @@
 #include "core/potentials/GapPotential.hpp"
 #include "core/potentials/Potential.hpp"
 
-using namespace std;
 
 namespace jgap {
     class QuipXmlConverter {

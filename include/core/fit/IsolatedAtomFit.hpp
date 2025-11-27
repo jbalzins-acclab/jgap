@@ -8,8 +8,7 @@ namespace jgap {
     public:
         static constexpr string TYPE = "isolated_atom";
 
-        explicit IsolatedAtomFit(const nlohmann::json& params);
-
+        IsolatedAtomFit(const nlohmann::json& params);
         shared_ptr<Potential> fit(const vector<AtomicStructure> &trainingData) override;
 
     private:

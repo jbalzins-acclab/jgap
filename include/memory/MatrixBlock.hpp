@@ -5,7 +5,6 @@
 
 #include "io/log/CurrentLogger.hpp"
 
-using namespace std;
 
 namespace jgap {
 
@@ -16,7 +15,7 @@ namespace jgap {
             try {
                 _data = vector<double>(rows * columns);
             } catch (const std::bad_alloc&) {
-                CurrentLogger::get()->logAndThrow("Block memory allocation failed");
+                JGAP_LOG_AND_THROW("Block memory allocation failed");
             }
         }
         ~MatrixBlock() = default;

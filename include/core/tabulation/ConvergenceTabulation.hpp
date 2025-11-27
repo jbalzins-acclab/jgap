@@ -1,0 +1,8 @@
+#ifndef JGAP_CONVERGENCETABULATION_HPP
+#define JGAP_CONVERGENCETABULATION_HPP
+
+namespace jgap {
+
+}
+
+#endif

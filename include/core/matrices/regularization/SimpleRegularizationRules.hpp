@@ -7,7 +7,9 @@
 namespace jgap {
     class SimpleRegularizationRules : public RegularizationRules {
     public:
-        explicit SimpleRegularizationRules(const nlohmann::json &params);
+        static constexpr string TYPE = "simple";
+
+        SimpleRegularizationRules(const nlohmann::json &params);
         ~SimpleRegularizationRules() override = default;
 
         void fillSigmas(AtomicStructure &structure) override;
@@ -20,6 +22,6 @@ namespace jgap {
         double _shortRangeMultiplier;
     };
 
-    REGISTER_PARSER("simple", RegularizationRules, SimpleRegularizationRules);
+    REGISTER_PARSER(RegularizationRules, SimpleRegularizationRules);
 }
 #endif

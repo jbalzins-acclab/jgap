@@ -17,7 +17,7 @@ namespace jgap {
         static Grid3d toSplineCoefficients(const Grid3d& original);
 
         static InterpolationResults<double> interpolate(const Grid1d& table, double pos);
-        static InterpolationResults<Vector3> interpolate(const Grid3d& table, Vector3 pos);
+        static InterpolationResults<Vector3> interpolate(const Grid3d& table, const Vector3 &pos);
     };
 }
 

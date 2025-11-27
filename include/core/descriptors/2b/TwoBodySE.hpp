@@ -41,7 +41,6 @@ namespace jgap {
         double derivativeInternal(const double &changingR) const;
     };
 
-
     REGISTER_PARSER(TwoBodyKernel, TwoBodySE)
 }
 

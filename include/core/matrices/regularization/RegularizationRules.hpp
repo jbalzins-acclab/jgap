@@ -1,7 +1,7 @@
 #ifndef REGULARIZATIONRULES_HPP
 #define REGULARIZATIONRULES_HPP
 
-#include "data/Vector3.hpp"
+#include "data/AtomicStructure.hpp"
 
 namespace jgap {
     class RegularizationRules {

@@ -12,15 +12,12 @@
     #include <unistd.h>
 #endif
 
-#define MINIMAL_TABULATED_R 1e-4
-
-using namespace std;
 
 namespace jgap {
 
     ZblPotential::ZblPotential(const nlohmann::json& zblParams) {
         string test = zblParams.dump();
-        CurrentLogger::get()->debug("Parsing ZblPotential {}", zblParams.dump());
+        JGAP_LOG_DEBUG("Parsing ZblPotential {}", zblParams.dump());
         if (zblParams.contains("cutoff")) {
             _cutoff = zblParams["cutoff"]["cutoff"];
             _cutoffFunction = ParserRegistry<CutoffFunction>::get(zblParams["cutoff"]);
@@ -33,11 +30,11 @@ namespace jgap {
 
         ifstream fIn(_coeffFileName);
         if (!fIn.is_open()) {
-            CurrentLogger::get()->warn("Could not open coefficients_file: '" + _coeffFileName +
+            JGAP_LOG_WARN("Could not open coefficients_file: '" + _coeffFileName +
                                         "'. Trying to find it in resources.");
             fIn = ifstream(getResourcesCoeffFilePath(_coeffFileName));
             if (!fIn.is_open()) {
-                CurrentLogger::get()->error("Could not find coefficients_file in resources.", true);
+                JGAP_LOG_ERROR("Could not find coefficients_file in resources.", true);
             }
         }
         nlohmann::json dmolFitCoefficients;
@@ -51,10 +48,10 @@ namespace jgap {
             };
         }
 
-        _encounteredSpecies = {};
-        if (zblParams.contains("species_encountered_in_fitting")) {
-            for (string species: zblParams["species_encountered_in_fitting"]) {
-                _encounteredSpecies.insert(species);
+        _relevantSpecies = {};
+        if (zblParams.contains("relevant_species")) {
+            for (string species: zblParams["relevant_species"]) {
+                _relevantSpecies.insert(species);
             }
         }
     }
@@ -67,20 +64,26 @@ namespace jgap {
         return {
             {"cutoff", cutoffData},
             {"coefficients_file", _coeffFileName},
-            {"species_encountered_in_fitting", _encounteredSpecies}
+            {"relevant_species", _relevantSpecies}
         };
     }
 
     void ZblPotential::tabulate(TabulationData &table) {
 
-        const auto encounteredSpecies = vector(_encounteredSpecies.begin(), _encounteredSpecies.end());
+        for (Species species: table.allSpecies()) _relevantSpecies.insert(species);
 
-        for (size_t i = 0; i < encounteredSpecies.size(); i++) {
-            for (size_t j = i; j < encounteredSpecies.size(); j++) {
-                auto speciesPair = SpeciesPair{encounteredSpecies[i], encounteredSpecies[j]};
+        auto relevantSpeciesVector = vector(_relevantSpecies.begin(), _relevantSpecies.end());
+        if (_relevantSpecies.empty()) {
+            // TODO: tabulate all?
+            JGAP_LOG_AND_THROW("Could not detect any relevant species to tabulate ZBL potential");
+        }
 
-                for (const auto& it: table.get2bGrid(speciesPair)) {
-                    if (abs(it.pos) > MINIMAL_TABULATED_R) {
+        for (size_t i = 0; i < relevantSpeciesVector.size(); i++) {
+            for (size_t j = i; j < relevantSpeciesVector.size(); j++) {
+                auto speciesPair = SpeciesPair{relevantSpeciesVector[i], relevantSpeciesVector[j]};
+
+                for (const auto& it: table.getOrMake2bGrid(speciesPair)) {
+                    if (abs(it.pos) > _MINIMAL_TABULATED_R) {
                         it.value += zblWithCutoff_eV(speciesPair, it.pos);
                     }
                 }
@@ -97,7 +100,7 @@ namespace jgap {
         for (size_t i = 0; i < structure.size(); i++) {
 
             auto atom1 = structure[i];
-            _encounteredSpecies.insert(atom1.species());
+            _relevantSpecies.insert(atom1.species());
 
             for (const NeighbourData& neighbour: atom1.neighbours()) {
                 if (neighbour.index < i || neighbour.distance > _cutoff) continue;
@@ -179,7 +182,7 @@ namespace jgap {
                    + coeffs[4] * exp(-coeffs[5] * x);
 
         double r_meters = r * 1e-10;
-        return Z1 * Z2 * _electronCharge/*eV => no ^2*/ * phi / (4.0 * M_PI * _eps * r_meters);
+        return Z1 * Z2 * _ELECTRON_CHARGE/*eV => no ^2*/ * phi / (4.0 * M_PI * _EPSILON * r_meters);
     }
 
     double ZblPotential::zblWithCutoff_eV(const SpeciesPair &speciesPair, const double r) {
@@ -201,10 +204,10 @@ namespace jgap {
         double dphi_dx = - coeffs[0] * coeffs[1] * exp(-coeffs[1] * x)
                          - coeffs[2] * coeffs[3] * exp(-coeffs[3] * x)
                          - coeffs[4] * coeffs[5] * exp(-coeffs[5] * x);
-        double dphi_drmeters = dx_dr * dphi_dx * 1e10;
+        double dphi_dr_meters = dx_dr * dphi_dx * 1e10;
 
-        double dzbl_dr = - Z1 * Z2 * _electronCharge/*eV => no ^2*/ * phi / (4.0 * M_PI * _eps * r_meters * r_meters)
-                         + Z1 * Z2 * _electronCharge/*eV => no ^2*/ * dphi_drmeters / (4.0 * M_PI * _eps * r_meters);
+        double dzbl_dr = - Z1 * Z2 * _ELECTRON_CHARGE/*eV => no ^2*/ * phi / (4.0 * M_PI * _EPSILON * r_meters * r_meters)
+                         + Z1 * Z2 * _ELECTRON_CHARGE/*eV => no ^2*/ * dphi_dr_meters / (4.0 * M_PI * _EPSILON * r_meters);
 
         double dE_dr = _cutoffFunction->evaluate(r) * dzbl_dr * 1e-10
                        + _cutoffFunction->differentiate(r)/*already Angstrom*/ * zbl_eV(speciesPair, r);

@@ -19,7 +19,7 @@ namespace jgap {
     public:
         static constexpr string TYPE = "3b";
 
-        ThreeBodyDescriptor(shared_ptr<CutoffFunction>& cutoffFunction, vector<shared_ptr<ThreeBodyKernel>>& kernels);
+        ThreeBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction, vector<shared_ptr<ThreeBodyKernel>>& kernels);
         ThreeBodyDescriptor(const nlohmann::json& params);
 
         nlohmann::json serialize() override;
@@ -27,7 +27,7 @@ namespace jgap {
 
         CutoffRanges getCutoff() override { return CutoffRanges{.threeBody = _cutoffFunction->getCutoff()}; };
 
-        void setupKernels(const vector<AtomicStructure>& fromData) override;
+        void setupSparseKernels(const vector<AtomicStructure>& fromData) override;
         vector<shared_ptr<IKernel>> getKernels() override;
 
         Predictions predict(const AtomicStructure &atomicStructure) override;

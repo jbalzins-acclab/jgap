@@ -8,7 +8,6 @@
 #include <cmath>
 #include <map>
 
-using namespace std;
 
 namespace jgap {
 

@@ -18,17 +18,17 @@ namespace jgap {
         for (auto &structure: trainingData) {
             if (getOrDefault(structure.properties, "config_type", "-") == "isolated_atom") {
                 if (structure.size() != 1) {
-                    CurrentLogger::get()->logAndThrow(
+                    JGAP_LOG_AND_THROW(
                         "Structure labeled as isolated_atom does not contain exactly one atom"
                         );
                 }
                 if (!structure.energy.has_value()) {
-                    CurrentLogger::get()->logAndThrow("isolated_atom with no energy");
+                    JGAP_LOG_AND_THROW("isolated_atom with no energy");
                 }
 
                 if (const Species species = structure.species[0]; isolatedEnergies.contains(species)) {
                     if (isolatedEnergies[species] - structure.energy.value() > 1e-9) {
-                        CurrentLogger::get()->logAndThrow(
+                        JGAP_LOG_AND_THROW(
                             "Found multiple {} isolated_atom structures with non-matching energies", species
                             );
                     }

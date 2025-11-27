@@ -4,16 +4,22 @@
 #include <utility>
 
 #include "core/descriptors/eam/EamSE.hpp"
+#include "core/descriptors/eam/pair_functions/FailOnUsePairFunction.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
     EamDescriptor::EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
-                                 shared_ptr<EamPairFunction> defaultPairFunction,
+                                 shared_ptr<EamPairFunction> &defaultPairFunction,
                                  map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions)
         : _kernels(std::move(kernels)),
-          _defaultPairFunction(std::move(defaultPairFunction)),
           _pairFunctions(std::move(pairFunctions)) {
+
+        if (defaultPairFunction == nullptr) {
+            defaultPairFunction = make_shared<FailOnUsePairFunction>();
+        } else {
+            defaultPairFunction = _defaultPairFunction;
+        }
 
         _maxCutoff = 0;
         for (const auto& pf: pairFunctions | views::values) {
@@ -23,7 +29,7 @@ namespace jgap {
     }
 
     EamDescriptor::EamDescriptor(const nlohmann::json &params) {
-        CurrentLogger::get()->debug("Parsing EAM descriptor params");
+        JGAP_LOG_DEBUG("Parsing EAM descriptor params");
 
         _kernels = {};
         if (params.contains("kernels")) {
@@ -97,8 +103,8 @@ namespace jgap {
 
         double minDensity = 0.0, maxDensity = numeric_limits<double>::min();
         for (const auto& kernel: _kernels) {
-            minDensity = min(minDensity, kernel->getDensity());
-            maxDensity = max(maxDensity, kernel->getDensity());
+            minDensity = min(minDensity, kernel->getDensityRange().first);
+            maxDensity = max(maxDensity, kernel->getDensityRange().second);
         }
         res.minEam = minDensity;
         res.maxEam = maxDensity;
@@ -116,11 +122,11 @@ namespace jgap {
         return res;
     }
 
-    void EamDescriptor::setupKernels(const vector<AtomicStructure> &fromData) {
-        CurrentLogger::get()->info("Doing EAM sparsification from data");
+    void EamDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+        JGAP_LOG_INFO("Doing EAM sparsification from data");
 
         if (_kernelSetups.empty()) {
-            CurrentLogger::get()->warn("All 3b kernels were pre-set");
+            JGAP_LOG_WARN("All 3b kernels were pre-set");
             return;
         }
 
@@ -221,7 +227,7 @@ namespace jgap {
         auto& eamTable = table.newEamGrids();
 
         for (const auto& [species, kernelIds]: _kernelIndicesPerSpecies) {
-            for (const auto& it: eamTable.getEnergyGrid(species)) {
+            for (const auto& it: eamTable.getOrMakeEnergyGrid(species)) {
                 for (auto& id: kernelIds) {
                     it.value += _kernels[id]->value(it.pos) * _kernels[id]->coefficient.value();
                 }
@@ -240,7 +246,7 @@ namespace jgap {
                     pairFunction = _pairFunctions[speciesPair];
                 }
 
-                for (const auto& it: eamTable.getPairFunctionGrid(speciesPair)) {
+                for (const auto& it: eamTable.getOrMakePairFunctionGrid(speciesPair)) {
                     it.value = pairFunction->evaluate(it.pos);
                 }
             }
@@ -264,13 +270,9 @@ namespace jgap {
                     structure.species[neighbour.index],  species
                 };
 
-                shared_ptr<EamPairFunction> pf;
+                shared_ptr<EamPairFunction> pf = _defaultPairFunction;
                 if (_pairFunctions.contains(orderedSpeciesPair)) {
                     pf = _pairFunctions.at(orderedSpeciesPair);
-                } else if (_defaultPairFunction != nullptr) {
-                    pf = _defaultPairFunction;
-                } else {
-                    continue;
                 }
 
                 totalDensity += pf->evaluate(neighbour.distance);

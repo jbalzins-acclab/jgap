@@ -29,16 +29,17 @@ namespace jgap {
         void tabulate(TabulationData& table) override;
 
     private:
+        static constexpr double _MINIMAL_TABULATED_R = 1e-4;
+        static constexpr double _EPSILON = 8.854187817e-12;
+        static constexpr double _ELECTRON_CHARGE = 1.60217657e-19;
+
         double _cutoff;
         string _coeffFileName;
 
-        set<Species> _encounteredSpecies{};
+        set<Species> _relevantSpecies{};
 
-        map<SpeciesPair, array<double, 6>> _dmolFitCoefficients;
+        std::map<SpeciesPair, array<double, 6>> _dmolFitCoefficients;
         shared_ptr<CutoffFunction> _cutoffFunction;
-
-        const double _eps = 8.854187817e-12;
-        const double _electronCharge = 1.60217657e-19;
 
         static string getResourcesCoeffFilePath(const string& fileName = "dmol-fit.json");
 

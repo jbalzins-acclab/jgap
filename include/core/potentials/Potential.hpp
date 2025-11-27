@@ -19,6 +19,11 @@ namespace jgap {
         virtual CutoffRanges getCutoff() = 0;
 
         virtual void tabulate(TabulationData& table) = 0;
+
+        string hashString() {
+            string considerType = getType() + serialize().dump();
+            return to_string(hash<string>{}(considerType));
+        }
     };
 }
 

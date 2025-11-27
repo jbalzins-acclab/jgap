@@ -38,7 +38,7 @@ namespace jgap {
     Predictions Kernel<TFilter, TIndex, TDescriptorData>::predict(const AtomicStructure &structure,
                                                                   const TIndex &indexes) {
         if (!coefficient.has_value()) {
-            CurrentLogger::get()->logAndThrow("Coefficient not set in: {}", serialize().dump());
+            JGAP_LOG_AND_THROW("Coefficient not set in: {}", serialize().dump());
         }
 
         const Covariance structureCovariance = covariance(structure, indexes);

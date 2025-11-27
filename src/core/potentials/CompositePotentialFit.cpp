@@ -8,9 +8,9 @@ namespace jgap {
     }
 
     CompositePotential::CompositePotential(const nlohmann::json &params) {
-        CurrentLogger::get()->debug("Parsing composite potential");
+        JGAP_LOG_DEBUG("Parsing composite potential");
         _potentials = {};
-        for (const auto &[label, potentialParams] : params["potentials"].items()) {
+        for (const auto &[label, potentialParams] : require(params, "potentials").items()) {
             _potentials[label] = ParserRegistry<Potential>::get(potentialParams);
         }
     }
@@ -25,18 +25,17 @@ namespace jgap {
         return result;
     }
 
-    double CompositePotential::getCutoff() {
-        double cutoff = 0.0;
+    CutoffRanges CompositePotential::getCutoff() {
+        CutoffRanges res{};
         for (const auto &potential: _potentials | views::values) {
-            cutoff = max(cutoff, potential->getCutoff());
+            res += potential->getCutoff();
         }
-        return cutoff;
+        return res;
     }
 
     Predictions CompositePotential::predict(const AtomicStructure &structure) {
         Predictions result{};
         for (const auto &potential : _potentials | views::values) {
-            // auto pp =  potential->predict(structure);
             result = result + potential->predict(structure);
         }
         return result;
@@ -44,7 +43,7 @@ namespace jgap {
 
     void CompositePotential::tabulate(TabulationData &table) {
         for (const auto &[label, potential] : _potentials) {
-            CurrentLogger::get()->debug("Tabulating {} potential", label);
+            JGAP_LOG_DEBUG("Tabulating {} potential", label);
             potential->tabulate(table);
         }
     }

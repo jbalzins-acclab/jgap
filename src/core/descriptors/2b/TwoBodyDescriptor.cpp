@@ -7,7 +7,6 @@
 #include "io/parse/ParserRegistry.hpp"
 #include "utils/Utils.hpp"
 
-using namespace std;
 
 namespace jgap {
     TwoBodyDescriptor::TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction,
@@ -17,7 +16,7 @@ namespace jgap {
     }
 
     TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
-        CurrentLogger::get()->debug("Parsing 2b descriptor params");
+        JGAP_LOG_DEBUG("Parsing 2b descriptor params");
 
         _cutoffFunction = ParserRegistry<CutoffFunction>::get(params["cutoff"]);
 
@@ -40,7 +39,7 @@ namespace jgap {
         }
 
         if (_kernelSetups.empty() && _kernels.empty()) {
-            CurrentLogger::get()->logAndThrow("Descriptor with no kernels");
+            JGAP_LOG_AND_THROW("Descriptor with no kernels");
         }
     }
 
@@ -71,11 +70,11 @@ namespace jgap {
         return res;
     }
 
-    void TwoBodyDescriptor::setupKernels(const vector<AtomicStructure> &fromData) {
-        CurrentLogger::get()->info("Doing 2b sparsification from data");
+    void TwoBodyDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+        JGAP_LOG_INFO("Doing 2b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            CurrentLogger::get()->warn("All 2b kernels were pre-set");
+            JGAP_LOG_WARN("All 2b kernels were pre-set");
             return;
         }
 
@@ -165,7 +164,7 @@ namespace jgap {
     void TwoBodyDescriptor::tabulate(TabulationData &table) {
 
         for (const auto &[speciesPair, kernelIds]: _kernelIdsPerSpeciesPair) {
-            for (const auto& it: table.get2bGrid(speciesPair)) {
+            for (const auto& it: table.getOrMake2bGrid(speciesPair)) {
                 for (const size_t kernelId: kernelIds) {
                     it.value += _kernels[kernelId]->value( {
                         .r=it.pos, .fCut = _cutoffFunction->evaluate(it.pos)
@@ -207,9 +206,9 @@ namespace jgap {
         return indexes;
     }
 
-    bool TwoBodyDescriptor::checkSpecies(SpeciesPair pairInData, nlohmann::json filters) {
+    bool TwoBodyDescriptor::checkSpecies(const SpeciesPair& pairInData, nlohmann::json filters) {
         if (!filters.is_array()) {
-            CurrentLogger::get()->logAndThrow("2b species filter is non-array: {}", filters.dump());
+            JGAP_LOG_AND_THROW("2b species filter is non-array: {}", filters.dump());
         }
 
         if (filters.empty()) return true;
@@ -222,7 +221,7 @@ namespace jgap {
         bool passedAFilter = false;
         for (const auto &filter: filters) {
             if (!filter.is_array() || filter.size() != 2) {
-                CurrentLogger::get()->logAndThrow("Wrong 2b species specs: {}", filters.dump());
+                JGAP_LOG_AND_THROW("Wrong 2b species specs: {}", filters.dump());
             }
             if (pairInData == SpeciesPair{filter[0], filter[1]}) {
                 passedAFilter = true;

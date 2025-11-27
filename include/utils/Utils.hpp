@@ -1,39 +1,48 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "data/Vector3.hpp"
+#include "data/AtomicStructure.hpp"
 
 #include <string>
 #include <vector>
 #include <Eigen/Dense>
 #include <nlohmann/json.hpp>
 
-#include "data/AtomicStructure.hpp"
-
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
-
-using namespace std;
+#define IO_NOT_INTENDED(func) throw std::logic_error("IO not intended for " + std::string(#func))
 
 namespace jgap {
-    map<string, string> parseHeaderLine(const string &line);
-    bool getLine(ifstream &file, string &line);
+    std::map<std::string, std::string> parseHeaderLine(const std::string &line);
+    bool getLine(std::ifstream &file, std::string &line);
 
-    vector<AtomicStructure> readXyz(const string& fileName);
-    vector<AtomicStructure> readXyz(const string& fileName, double cutoff); // mainly for testing
-    void writeXyz(const string& fileName, const vector<AtomicStructure> &structures);
+    static std::string uniqueStamp();
 
-    vector<string> split(const string& s, char delimiter);
+    std::vector<AtomicStructure> readXyz(const std::string& fileName);
+    std::vector<AtomicStructure> readXyz(const std::string& fileName, double cutoff);
+    void writeXyz(const std::string& fileName, const std::vector<AtomicStructure> &structures);
+    void writeXyz(std::ofstream& outputStream, const std::vector<AtomicStructure> &structures);
 
-    string matrixToString(const Eigen::MatrixXd& mat);
-    string vectorToString(const Eigen::VectorXd& vec);
-    string vectorToString(const vector<double>& vec);
-    string vectorToString(const vector<size_t>& vec);
+    double rms(const std::vector<double>&);
+    double deviation(const std::vector<double>&);
 
-    nlohmann::json& require(nlohmann::json& j, const string& key);
-    const nlohmann::json& require(const nlohmann::json& j, const string& key);
+    std::vector<std::string> split(const std::string& s, char delimiter);
 
-    nlohmann::json requireArray(nlohmann::json &j);
-    const nlohmann::json& requireArray(const nlohmann::json& j);
+    std::string matrixToString(const Eigen::MatrixXd& mat);
+    std::string vectorToString(const Eigen::VectorXd& vec);
+    std::string vectorToString(const std::vector<double>& vec);
+    std::string vectorToString(const std::vector<size_t>& vec);
+    std::string vectorToString(const std::vector<std::string>& vec);
+
+    nlohmann::json& requireFull(nlohmann::json& j, const std::string& key, const char* file, int line, const char* function);
+    const nlohmann::json& requireFull(const nlohmann::json& j, const std::string& key, const char* file, int line,
+                                      const char* function);
+
+    nlohmann::json requireArrayFull(nlohmann::json &j, const char* file, int line, const char* function);
+    const nlohmann::json& requireArrayFull(const nlohmann::json& j, const char* file, int line, const char* function);
+
+    #define require(j, key) requireFull((j), (key), __FILE__, __LINE__, __func__)
+    #define requireArray(j) requireArrayFull((j), __FILE__, __LINE__, __func__)
+    #define optionallySet(val, j, key) if (j.contains(key)) { val = j[key]; }
 
     template<typename Map, typename Key, typename Value>
     auto getOrDefault(const Map& m, const Key& k, const Value& defaultValue) -> decltype(m.at(k)) {
@@ -42,8 +51,8 @@ namespace jgap {
     }
 
     template <typename Iterator>
-    string iteratorToString(Iterator begin, Iterator end) {
-        ostringstream oss;
+    std::string iteratorToString(Iterator begin, Iterator end) {
+        std::ostringstream oss;
         oss << "[";
 
         if (begin != end) {

@@ -5,7 +5,6 @@
 
 #include "utils/Utils.hpp"
 
-using namespace std;
 
 namespace jgap {
     struct CutoffRanges {

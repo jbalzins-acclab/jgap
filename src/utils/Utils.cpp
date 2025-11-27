@@ -10,11 +10,11 @@
 #include <ranges>
 #include <Eigen/Dense>
 #include <deque>
+#include <unistd.h>
 
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/CurrentLogger.hpp"
 
-using namespace std;
 
 namespace jgap {
     map<string, string> parseHeaderLine(const string &line) {
@@ -57,9 +57,9 @@ namespace jgap {
                 header[property] = value;
             }
         } catch (exception& e) {
-            CurrentLogger::get()->logAndThrow("Formatting error {} in : {}", e.what(), line);
+            JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
         } catch (...) {
-            CurrentLogger::get()->logAndThrow("Formatting error in: {}", line);
+            JGAP_LOG_AND_THROW("Formatting error in: {}", line);
         }
 
 
@@ -74,13 +74,43 @@ namespace jgap {
         return true;
     }
 
+    string uniqueStamp() {
+        using namespace std::chrono;
+
+        auto now = system_clock::now();
+        auto tt = system_clock::to_time_t(now);
+
+        std::tm local_tm{};
+#if defined(_WIN32)
+        localtime_s(&local_tm, &tt);
+#else
+        localtime_r(&tt, &local_tm);
+#endif
+
+        auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
+
+        std::ostringstream oss;
+        // Human-readable and filename-friendly: YYYY-MM-DD_HH-MM-SS_mmm-pPID
+        oss << std::put_time(&local_tm, "%Y-%m-%d_%H-%M-%S")
+            << '_' << std::setw(3) << std::setfill('0') << ms.count();
+
+#if defined(_WIN32)
+        DWORD pid = GetCurrentProcessId();
+        oss << "-p" << pid;
+#else
+        oss << "-p" << getpid();
+#endif
+
+        return oss.str();
+    }
+
     vector<AtomicStructure> readXyz(const string& fileName) {
 
         vector<AtomicStructure> result;
         ifstream file(fileName);
 
         if (!file) {
-            CurrentLogger::get()->error( format("Error opening file {}", fileName), true);
+            JGAP_LOG_ERROR( format("Error opening file {}", fileName), true);
         }
 
         string line;
@@ -90,7 +120,7 @@ namespace jgap {
             istringstream iss(line);
             iss >> n;
             if (!iss.eof()) {
-                CurrentLogger::get()->logAndThrow("Expected single integer, got {}", line);
+                JGAP_LOG_AND_THROW("Expected single integer, got {}", line);
             }
 
             // metadata
@@ -99,13 +129,13 @@ namespace jgap {
             map<string, string> properties = parseHeaderLine(line);
 
             if (!properties.contains("pbc") || properties["pbc"] != "T T T") {
-                CurrentLogger::get()->logAndThrow("No PBC? : {}", line);
+                JGAP_LOG_AND_THROW("No PBC? : {}", line);
             }
             properties.erase("pbc");
 
             array<Vector3, 3> lattice{};
             if (!properties.contains("Lattice")) {
-                CurrentLogger::get()->logAndThrow("Lattice unspecified in {}", line);
+                JGAP_LOG_AND_THROW("Lattice unspecified in {}", line);
             }
             iss = istringstream(properties["Lattice"]);
             iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
@@ -204,7 +234,7 @@ namespace jgap {
                     iss >> positions[i].x >> positions[i].y >> positions[i].z;
                 }
             } else {
-                CurrentLogger::get()->logAndThrow("Unknown properties string: {}", line);
+                JGAP_LOG_AND_THROW("Unknown properties string: {}", line);
             }
 
             result.push_back(AtomicStructure{
@@ -235,9 +265,13 @@ namespace jgap {
     }
 
     void writeXyz(const string &fileName, const vector<AtomicStructure> &structures) {
-        ofstream file(fileName);
+        ofstream outputStream(fileName);
+        writeXyz(outputStream, structures);
+    }
+
+    void writeXyz(ofstream &outputStream, const vector<AtomicStructure> &structures) {
         for (auto& structure: structures) {
-            file << structure.size() << endl;
+            outputStream << structure.size() << endl;
 
             string meta = "";
             meta += "pbc=\"T T T\" ";
@@ -275,19 +309,44 @@ namespace jgap {
                 meta += "Properties=species:S:1:pos:R:3";
             }
 
-            file << meta << endl;
+            outputStream << meta << endl;
 
             for (const auto& atom: structure) {
-                file << atom.species() << " ";
-                file << atom.position().x << " " << atom.position().y << " " << atom.position().z << " ";
+                outputStream << atom.species() << " ";
+                outputStream << atom.position().x << " " << atom.position().y << " " << atom.position().z << " ";
                 if (structure.forces.has_value()) {
-                    file << atom.force().x << " " << atom.force().y << " " << atom.force().z;
+                    outputStream << atom.force().x << " " << atom.force().y << " " << atom.force().z;
                 }
-                file << endl;
+                outputStream << endl;
             }
         }
-        file.flush();
-        file.close();
+        outputStream.flush();
+        outputStream.close();
+    }
+
+    double rms(const vector<double> &x) {
+        if (x.empty()) return 0.0;
+        double res = 0.0;
+        for (double i : x) {
+            res += i*i;
+        }
+        res = sqrt(res / static_cast<double>(x.size()));
+        return res;
+    }
+
+    double deviation(const vector<double> &x) {
+        if (x.empty()) return 0.0;
+        double mean = 0.0;
+        for (double i : x) {
+            mean += i;
+        }
+        mean /= static_cast<double>(x.size());
+        double variance = 0.0;
+        for (double i : x) {
+            variance += (i - mean) * (i - mean);
+        }
+        variance = variance / static_cast<double>(x.size());
+        return sqrt(variance);
     }
 
     vector<string> split(const string& s, char delimiter) {
@@ -348,30 +407,71 @@ namespace jgap {
         return ss.str();
     }
 
-    nlohmann::json & require(nlohmann::json &j, const string &key) {
+    string vectorToString(const vector<string> &vec) {
+        stringstream ss;
+        for (int i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i != vec.size() - 1) {
+                ss << ",";
+            }
+        }
+        return ss.str();
+    }
+
+    nlohmann::json &requireFull(nlohmann::json &j,
+                                const std::string &key,
+                                const char *file,
+                                int line,
+                                const char *function) {
         if (!j.contains(key)) {
-            throw out_of_range("json key not found: \"" + key + "\"");
+            std::ostringstream oss;
+            oss << "JSON key not found: \"" << key << "\"\n"
+                    << "  at " << file << ":" << line << "\n"
+                    << "  in " << function;
+            throw std::out_of_range(oss.str());
         }
         return j.at(key);
     }
 
-    const nlohmann::json & require(const nlohmann::json &j, const string &key) {
+    const nlohmann::json &requireFull(const nlohmann::json &j,
+                                      const std::string &key,
+                                      const char *file,
+                                      int line,
+                                      const char *function) {
         if (!j.contains(key)) {
-            throw out_of_range("json key not found: \"" + key + "\"");
+            std::ostringstream oss;
+            oss << "JSON key not found: \"" << key << "\"\n"
+                    << "  at " << file << ":" << line << "\n"
+                    << "  in " << function;
+            throw std::out_of_range(oss.str());
         }
         return j.at(key);
     }
 
-    nlohmann::json requireArray(nlohmann::json &j) {
+    nlohmann::json requireArrayFull(nlohmann::json &j,
+                                    const char *file,
+                                    int line,
+                                    const char *function) {
         if (!j.is_array()) {
-            throw std::domain_error("Not an array: " + j.dump());
+            std::ostringstream oss;
+            oss << "JSON element is not an array: " << j.dump()
+                    << "\n  at " << file << ":" << line
+                    << "\n  in " << function;
+            throw std::domain_error(oss.str());
         }
         return j;
     }
 
-    const nlohmann::json& requireArray(const nlohmann::json &j) {
+    const nlohmann::json &requireArrayFull(const nlohmann::json &j,
+                                           const char *file,
+                                           int line,
+                                           const char *function) {
         if (!j.is_array()) {
-            throw std::domain_error("Not an array: " + j.dump());
+            std::ostringstream oss;
+            oss << "JSON element is not an array: " << j.dump()
+                    << "\n  at " << file << ":" << line
+                    << "\n  in " << function;
+            throw std::domain_error(oss.str());
         }
         return j;
     }

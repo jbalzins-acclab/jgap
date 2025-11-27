@@ -29,7 +29,7 @@ namespace jgap {
         CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = _cutoffFunction->getCutoff()}; }
 
         vector<shared_ptr<IKernel>> getKernels() override;
-        void setupKernels(const vector<AtomicStructure> &fromData) override;
+        void setupSparseKernels(const vector<AtomicStructure> &fromData) override;
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<shared_ptr<MatrixBlock>> selfCovariate() override;
@@ -47,7 +47,7 @@ namespace jgap {
         queue<nlohmann::json> _kernelSetups;
 
         map<SpeciesPair, TwoBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
-        bool checkSpecies(SpeciesPair pairInData, nlohmann::json filters);
+        bool checkSpecies(const SpeciesPair& pairInData, nlohmann::json filters);
 
         void mapKernelIds();
     };

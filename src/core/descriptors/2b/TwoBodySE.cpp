@@ -54,7 +54,7 @@ namespace jgap {
         const auto otherSE = std::dynamic_pointer_cast<TwoBodySE>(other);
 
         if (!otherSE) {
-            CurrentLogger::get()->warn("Comparing 2b-SE with non 2b-SE");
+            JGAP_LOG_WARN("Comparing 2b-SE with non 2b-SE");
             return 0.0;
         }
 

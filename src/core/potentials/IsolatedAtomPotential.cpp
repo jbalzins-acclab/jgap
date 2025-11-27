@@ -8,7 +8,7 @@
 
 namespace jgap {
     IsolatedAtomPotential::IsolatedAtomPotential(const nlohmann::json& params) {
-        CurrentLogger::get()->debug("Parsing isolated atom potentials params");
+        JGAP_LOG_DEBUG("Parsing isolated atom potentials params");
         _errorOnUnknownSpecies = params.value("error_on_unknown", true);
         _isolatedEnergies = {};
         for (const auto& [element, energy]: params["energies"].items()) {
@@ -37,7 +37,7 @@ namespace jgap {
                 result += _isolatedEnergies[atom.species()];
             } else {
                 if (_errorOnUnknownSpecies) {
-                    CurrentLogger::get() -> error("Unknown isolated_atom energy for " + atom.species(),true);
+                    JGAP_LOG -> error("Unknown isolated_atom energy for " + atom.species(),true);
                 }
             }
         }
@@ -48,7 +48,7 @@ namespace jgap {
     void IsolatedAtomPotential::tabulate(TabulationData &table) {
         for (const auto &[species, energy]: _isolatedEnergies) {
             if (table.isolatedEnergies.contains(species)) {
-                CurrentLogger::get()->warn("Conflicting isolated atom energies for {}", species);
+                JGAP_LOG_WARN("Conflicting isolated atom energies for {}", species);
             } else {
                 table.isolatedEnergies[species] = 0;
             }

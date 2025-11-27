@@ -2,7 +2,6 @@
 
 #include <tbb/parallel_for_each.h>
 #include <iostream>
-using namespace std;
 
 namespace jgap {
     void NeighbourFinder::findNeighbours(vector<AtomicStructure> &structures, double cutoff) {

@@ -21,7 +21,7 @@ namespace jgap {
     public:
         static constexpr string TYPE = "eam";
         EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
-                      shared_ptr<EamPairFunction> defaultPairFunction,
+                      shared_ptr<EamPairFunction> &defaultPairFunction,
                       map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions);
 
         EamDescriptor(const nlohmann::json &params);
@@ -31,7 +31,7 @@ namespace jgap {
         CutoffRanges getCutoff() override;;
 
         vector<shared_ptr<IKernel>> getKernels() override;
-        void setupKernels(const vector<AtomicStructure> &fromData) override;
+        void setupSparseKernels(const vector<AtomicStructure> &fromData) override;
 
         vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
         vector<shared_ptr<MatrixBlock>> selfCovariate() override;

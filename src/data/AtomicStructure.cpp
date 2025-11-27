@@ -21,7 +21,7 @@ namespace jgap {
 
         if (prediction.forces.has_value() && (setEmpty || forces.has_value())) {
             if (size() != prediction.forces.value().size()) {
-                CurrentLogger::get()->logAndThrow(
+                JGAP_LOG_AND_THROW(
                     "Found force {} predictions for a {} atom system",
                     prediction.forces.value().size(), size()
                     );

@@ -49,12 +49,12 @@ namespace jgap {
 
     void SplinePairPotential::NaturalCubicSpline::init(const vector<double> &r, const vector<double> &E) {
         if (r.size() != E.size() || r.size() < 2) {
-            CurrentLogger::get()->error(
+            JGAP_LOG_ERROR(
                 "Spline reference vectors must be the same size and have at least 2 points.", true
                 );
         }
         if (!ranges::is_sorted(r)) {
-            CurrentLogger::get()->error("Spline reference distances must be sorted", true);
+            JGAP_LOG_ERROR("Spline reference distances must be sorted", true);
         }
 
         _r = r;
@@ -176,7 +176,7 @@ namespace jgap {
 
     void SplinePairPotential::tabulate(TabulationData &table) {
         for (const auto &[speciesPair, interpolator]: _perSpeciesInterpolators) {
-            for (const auto& it: table.get2bGrid(speciesPair)) {
+            for (const auto& it: table.getOrMake2bGrid(speciesPair)) {
                 it.value += interpolator->evaluate(it.pos);
             }
         }

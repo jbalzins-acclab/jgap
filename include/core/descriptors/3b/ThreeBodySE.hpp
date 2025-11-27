@@ -14,14 +14,14 @@
 namespace jgap {
     class ThreeBodySE : public ThreeBodyKernel {
     public:
-        static constexpr string TYPE = "squared_exp";
+        static constexpr std::string TYPE = "squared_exp";
         ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales, Vector3 q, double fCut);
 
         ThreeBodySE(const nlohmann::json& params);
-        string getType() override { return TYPE; }
+        std::string getType() override { return TYPE; }
         nlohmann::json serialize() override;
 
-        double crossCovariance(const shared_ptr<IKernel> &other) override;
+        double crossCovariance(const std::shared_ptr<IKernel> &other) override;
 
         SpeciesTriplet getFilter() override { return _idTriplet; }
 

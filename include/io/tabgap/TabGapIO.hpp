@@ -4,17 +4,26 @@
 #include "core/potentials/TabGapPotential.hpp"
 
 namespace jgap {
+
+    using FileNames = vector<string>;
+
     class TabGapIO {
     public:
-        static void read(shared_ptr<TabGapPotential> potential);
-        static void write(shared_ptr<TabGapPotential> potential);
+        static TabulationData read(const FileNames& fileNames);
+        static FileNames write(const TabulationData& valuesTables,
+                               const TabulationData& splineTables,
+                               optional<string> outputFileNamePrefix);
 
     private:
-        static void writeH5(shared_ptr<TabGapPotential> potential);
-        static void writeEamFs(shared_ptr<TabGapPotential> potential, size_t index);
+        static string generateFileNamePrefix(const TabulationData& coeffs);
 
-        static void readH5(shared_ptr<TabGapPotential> potential);
-        static void readEamFs(shared_ptr<TabGapPotential> potential);
+        static string writeH5(const TabulationData &valuesTables,
+                              const TabulationData &splineTables,
+                              const string &outputFileNamePrefix);
+        static string writeEamFs(const TabulationData& valueTables, size_t index, const string &outputFileNamePrefix);
+
+        static void readH5(const string& fileName, TabulationData& splineCoefficients);
+        static void readEamFs(const string& fileName, TabulationData& splineCoefficients);
     };
 }
 

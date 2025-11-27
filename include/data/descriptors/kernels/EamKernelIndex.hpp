@@ -6,7 +6,6 @@
 
 #include "data/Vector3.hpp"
 
-using namespace std;
 
 namespace jgap {
     struct EamDensityData {

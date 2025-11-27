@@ -1,5 +1,5 @@
-#ifndef COMPOSITEFIT_HPP
-#define COMPOSITEFIT_HPP
+#ifndef COMPOSITEPOTENTIALFIT_HPP
+#define COMPOSITEPOTENTIALFIT_HPP
 
 #include "Fit.hpp"
 #include "core/neighbours/NeighbourFinder.hpp"
@@ -10,22 +10,18 @@ namespace jgap {
         static constexpr string TYPE = "composite";
 
         CompositePotentialFit(const nlohmann::json& params);
-
         shared_ptr<Potential> fit(const vector<AtomicStructure> &trainingData) override;
 
     private:
         optional<shared_ptr<Potential>> _externalPotential;
-        map<string, shared_ptr<Fit>> _fits;
+        std::std::map<string, shared_ptr<Fit>> _fits;
         vector<string> _fitOrder;
 
         static vector<AtomicStructure> subtractExternalContribution(const vector<AtomicStructure> &originalData,
                                                                     const shared_ptr<Potential> &potential);
-
-    protected:
-        shared_ptr<Potential> fitWithoutTabulation(const vector<AtomicStructure> &trainingData) override;
     };
 
     REGISTER_PARSER(Fit, CompositePotentialFit)
 }
 
-#endif //COMPOSITEFIT_HPP
+#endif

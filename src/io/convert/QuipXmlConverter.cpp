@@ -14,11 +14,11 @@
 #include "core/descriptors/eam/pair_functions/PolycutoffPairFunction.hpp"
 
 namespace jgap {
-    shared_ptr<Potential> QuipXmlConverter::transform(const pugi::xml_node quipPotential) {
+    std::shared_ptr<Potential> QuipXmlConverter::transform(const pugi::xml_node quipPotential) {
 
         if (quipPotential.child("pairpot").empty()) {
             if (quipPotential.child("GAP_params").empty()) {
-                CurrentLogger::get()->error(
+                JGAP_LOG_ERROR(
                     "Neither 'pairpot' nor 'GAP_params' were found in the xml node",
                     true
                     );
@@ -31,34 +31,34 @@ namespace jgap {
 
         auto pairpot = transformPairpot(quipPotential.child("pairpot"));
         auto quipGap = transformGapParams(quipPotential.child("GAP_params"));
-        map<string, shared_ptr<Potential>> potentials = {
+        std::map<std::string, std::shared_ptr<Potential>> potentials = {
             {"quip_pairpot", pairpot},
             {"quip_gap", quipGap},
         };
 
-        return make_shared<CompositePotential>(potentials);
+        return std::make_shared<CompositePotential>(potentials);
     }
 
-    shared_ptr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node quipPairpot) {
-        if (quipPairpot.child("Potential").attribute("init_args").as_string() != string("IP Glue")) {
-            CurrentLogger::get()->warn("Strange 'init_args'");
+    std::shared_ptr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node quipPairpot) {
+        if (quipPairpot.child("Potential").attribute("init_args").as_std::string() != std::string("IP Glue")) {
+            JGAP_LOG_WARN("Strange 'init_args'");
         }
         if (!quipPairpot.child("Glue_params")) {
-            CurrentLogger::get()->error("Non 'Glue' pairpot", true);
+            JGAP_LOG_ERROR("Non 'Glue' pairpot", true);
         }
 
-        map<string, Species> typeToSpecies = {};
+        std::map<std::string, Species> typeToSpecies = {};
         for (pugi::xml_node perTypeNode: quipPairpot.child("Glue_params").children("per_type_data")) {
             const size_t atomicNumber = perTypeNode.attribute("atomic_num").as_uint();
-            typeToSpecies[perTypeNode.attribute("type").as_string()] = Z_inverse[atomicNumber];
+            typeToSpecies[perTypeNode.attribute("type").as_std::string()] = Z_inverse[atomicNumber];
         }
 
-        map<SpeciesPair, pair<vector<double>, vector<double>>> points;
+        std::map<SpeciesPair, pair<std::vector<double>, std::vector<double>>> points;
         for (pugi::xml_node perPairNode: quipPairpot.child("Glue_params").children("per_pair_data")) {
-            Species species1 = typeToSpecies[perPairNode.attribute("type1").as_string()];
-            Species species2 = typeToSpecies[perPairNode.attribute("type2").as_string()];
+            Species species1 = typeToSpecies[perPairNode.attribute("type1").as_std::string()];
+            Species species2 = typeToSpecies[perPairNode.attribute("type2").as_std::string()];
 
-            vector<double> r, E;
+            std::vector<double> r, E;
             for (pugi::xml_node pointNode: perPairNode.child("potential_pair").children("point")) {
                 r.push_back(pointNode.attribute("r").as_double());
                 E.push_back(pointNode.attribute("E").as_double());
@@ -67,12 +67,12 @@ namespace jgap {
             points[SpeciesPair(species1, species2)] = pair{r, E};
         }
 
-        return make_shared<SplinePairPotential>(map(points));
+        return std::make_shared<SplinePairPotential>(std::map(points));
     }
 
-    shared_ptr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node quipGapParams) {
+    std::shared_ptr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node quipGapParams) {
 
-        map<string, shared_ptr<Potential>> potentials;
+        std::map<std::string, std::shared_ptr<Potential>> potentials;
         if (!quipGapParams.child("GAP_data").empty()) {
             potentials["isolated_atom"] = transformIsolatedAtomParams(quipGapParams.child("GAP_data"));
         }
@@ -95,9 +95,9 @@ namespace jgap {
                           other.rMin, other.cutoffTransitionWidth, other.pairFunction, other.order, other.mode);
     }
 
-    shared_ptr<IsolatedAtomPotential> QuipXmlConverter::transformIsolatedAtomParams(
+    std::shared_ptr<IsolatedAtomPotential> QuipXmlConverter::transformIsolatedAtomParams(
                                                         const pugi::xml_node quipIsolatedAtomParams) {
-        map<Species, double> isolatedAtomEnergies;
+        std::map<Species, double> isolatedAtomEnergies;
         for (pugi::xml_node isolatedAtomNode: quipIsolatedAtomParams.children("e0")) {
             if (isolatedAtomNode.attribute("value").as_double() != 0.0) {
                 const size_t atomicNumber = isolatedAtomNode.attribute("Z").as_uint();
@@ -105,17 +105,17 @@ namespace jgap {
             }
         }
 
-        return make_shared<IsolatedAtomPotential>(isolatedAtomEnergies, false);
+        return std::make_shared<IsolatedAtomPotential>(isolatedAtomEnergies, false);
     }
 
-    shared_ptr<GapPotential> QuipXmlConverter::transformSparseData(pugi::xml_node quipSparseData) {
+    std::shared_ptr<GapPotential> QuipXmlConverter::transformSparseData(pugi::xml_node quipSparseData) {
 
-        map<QuipDescriptorData, vector<pugi::xml_node>> nodesBySimilarity;
+        std::map<QuipDescriptorData, std::vector<pugi::xml_node>> nodesBySimilarity;
         for (pugi::xml_node sparseNode: quipSparseData.children("gpCoordinates")) {
 
-            string descriptorParamString = sparseNode.child("descriptor").first_child().value();
+            std::string descriptorParamString = sparseNode.child("descriptor").first_child().value();
 
-            string type;
+            std::string type;
             if (descriptorParamString.contains("eam_density")) {
                 type = "eam_density";
             } else if (descriptorParamString.contains("distance_2b")) {
@@ -123,66 +123,66 @@ namespace jgap {
             } else if (descriptorParamString.contains("angle_3b")) {
                 type = "angle_3b";
             } else {
-                CurrentLogger::get()->logAndThrow("Unknown descriptor type {}", descriptorParamString);
+                JGAP_LOG_AND_THROW("Unknown descriptor type {}", descriptorParamString);
             }
 
             if (!descriptorParamString.contains("covariance_type=ard_se")) {
-                CurrentLogger::get()->logAndThrow("covariance_type must be ard_se: {}", descriptorParamString);
+                JGAP_LOG_AND_THROW("covariance_type must be ard_se: {}", descriptorParamString);
             }
 
             // TODO: make it pretty
-            auto deltaStartIdx = descriptorParamString.find("delta=") + string("delta=").size();
+            auto deltaStartIdx = descriptorParamString.find("delta=") + std::string("delta=").size();
             auto deltaEndIdx = descriptorParamString.find(' ', deltaStartIdx);
-            string deltaStr = descriptorParamString.substr(deltaStartIdx, deltaEndIdx - deltaStartIdx);
+            std::string deltaStr = descriptorParamString.substr(deltaStartIdx, deltaEndIdx - deltaStartIdx);
             double delta = stod(deltaStr);
 
-            auto thetaStartIdx = descriptorParamString.find("theta_uniform=") + string("theta_uniform=").size();
+            auto thetaStartIdx = descriptorParamString.find("theta_uniform=") + std::string("theta_uniform=").size();
             auto thetaEndIdx = descriptorParamString.find(' ', thetaStartIdx);
-            string thetaStr = descriptorParamString.substr(thetaStartIdx, thetaEndIdx - thetaStartIdx);
+            std::string thetaStr = descriptorParamString.substr(thetaStartIdx, thetaEndIdx - thetaStartIdx);
             double theta = stod(thetaStr);
 
-            auto cutoffStartIdx = descriptorParamString.find("cutoff=") + string("cutoff=").size();
+            auto cutoffStartIdx = descriptorParamString.find("cutoff=") + std::string("cutoff=").size();
             auto cutoffEndIdx = descriptorParamString.find(' ', cutoffStartIdx);
-            string cutoffStr = descriptorParamString.substr(cutoffStartIdx, cutoffEndIdx - cutoffStartIdx);
+            std::string cutoffStr = descriptorParamString.substr(cutoffStartIdx, cutoffEndIdx - cutoffStartIdx);
             double cutoff = stod(cutoffStr);
 
-            optional<double> rMin;
+            std::optional<double> rMin;
             if (descriptorParamString.contains("rmin=")) {
-                auto rMinStartIdx = descriptorParamString.find("rmin=") + string("rmin=").size();
+                auto rMinStartIdx = descriptorParamString.find("rmin=") + std::string("rmin=").size();
                 auto rMinEndIdx = descriptorParamString.find(' ', rMinStartIdx);
-                string rMinStr = descriptorParamString.substr(rMinStartIdx, rMinEndIdx - rMinStartIdx);
+                std::string rMinStr = descriptorParamString.substr(rMinStartIdx, rMinEndIdx - rMinStartIdx);
                 rMin = stod(rMinStr);
             }
 
-            optional<double> cutoffTransitionWidth;
+            std::optional<double> cutoffTransitionWidth;
             if (descriptorParamString.contains("cutoff_transition_width=")) {
                 auto cutoffTWStartIdx = descriptorParamString.find("cutoff_transition_width=")
-                                                        + string("cutoff_transition_width=").size();
+                                                        + std::string("cutoff_transition_width=").size();
                 auto cutoffTWEndIdx = descriptorParamString.find(' ', cutoffTWStartIdx);
-                string cutoffTwStr = descriptorParamString.substr(cutoffTWStartIdx, cutoffTWEndIdx - cutoffTWStartIdx);
+                std::string cutoffTwStr = descriptorParamString.substr(cutoffTWStartIdx, cutoffTWEndIdx - cutoffTWStartIdx);
                 cutoffTransitionWidth = stod(cutoffTwStr);
             }
 
-            optional<string> pairFunction;
+            std::optional<std::string> pairFunction;
             if (descriptorParamString.contains("pair_function=")) {
                 auto pfStartIdx = descriptorParamString.find("pair_function=")
-                                                + string("pair_function=").size();
+                                                + std::string("pair_function=").size();
                 auto pfEndIdx = descriptorParamString.find(' ', pfStartIdx);
                 pairFunction = descriptorParamString.substr(pfStartIdx, pfEndIdx - pfStartIdx);
             }
 
-            optional<string> mode;
+            std::optional<std::string> mode;
             if (descriptorParamString.contains("mode=")) {
                 auto modeStartIdx = descriptorParamString.find("mode=")
-                                                + string("mode=").size();
+                                                + std::string("mode=").size();
                 auto modeEndIdx = descriptorParamString.find(' ', modeStartIdx);
                 mode = descriptorParamString.substr(modeStartIdx, modeEndIdx - modeStartIdx);
             }
 
-            optional<double> order;
+            std::optional<double> order;
             if (descriptorParamString.contains("order=")) {
                 auto orderStartIdx = descriptorParamString.find("order=")
-                                                + string("order=").size();
+                                                + std::string("order=").size();
                 auto orderEndIdx = descriptorParamString.find(' ', orderStartIdx);
                 order = stod(descriptorParamString.substr(orderStartIdx, orderEndIdx - orderStartIdx));
             }
@@ -205,40 +205,41 @@ namespace jgap {
             nodesBySimilarity[mainData].push_back(sparseNode);
         }
 
-        map<string, shared_ptr<Descriptor>> descriptors;
+        std::map<std::string, std::shared_ptr<Descriptor>> descriptors;
         size_t cnt = 0;
         for (const auto &[mainData, nodes]: nodesBySimilarity) {
             if (mainData.type == "distance_2b") {
-                descriptors[to_string(cnt++)] = transformDistance2b(mainData, nodes);
+                descriptors[std::to_string(cnt++)] = transformDistance2b(mainData, nodes);
             } else if (mainData.type == "angle_3b") {
-                descriptors[to_string(cnt++)] = transformAngle3b(mainData, nodes);
+                descriptors[std::to_string(cnt++)] = transformAngle3b(mainData, nodes);
             } else if (mainData.type == "eam_density") {
-                descriptors[to_string(cnt++)] = transformEam(mainData, nodes);
+                descriptors[std::to_string(cnt++)] = transformEam(mainData, nodes);
             } else {
-                CurrentLogger::get()->error("Unknown descriptor type: " + mainData.type, true);
+                JGAP_LOG_ERROR("Unknown descriptor type: " + mainData.type, true);
             }
         }
 
         return make_shared<GapPotential>(descriptors);
     }
 
-    shared_ptr<TwoBodyDescriptor> QuipXmlConverter::transformDistance2b(QuipDescriptorData mainData,
-                                                                        vector<pugi::xml_node> distance2bNodes) {
+    std::shared_ptr<TwoBodyDescriptor> QuipXmlConverter::transformDistance2b(
+        QuipDescriptorData mainData, std::vector<pugi::xml_node> distance2bNodes) {
 
-        double rMin = mainData.cutoff - mainData.cutoffTransitionWidth.value_or(0.5);
-        if (mainData.rMin.has_value()) rMin = mainData.rMin.value();
+        double cutoffTransitionWidth = mainData.cutoffTransitionWidth.value_or(0.5);
+        if (mainData.rMin.has_value()) cutoffTransitionWidth = mainData.cutoff - mainData.rMin.value();
 
-        shared_ptr<CutoffFunction> cutoffFunction = make_shared<CosCutoff>(mainData.cutoff, rMin);
-        vector<shared_ptr<TwoBodyKernel>> kernels;
+        std::shared_ptr<CutoffFunction> cutoffFunction
+            = std::make_shared<CosCutoff>(mainData.cutoff, cutoffTransitionWidth);
+        std::vector<std::shared_ptr<TwoBodyKernel>> kernels;
 
         for (pugi::xml_node distanceNode: distance2bNodes) {
-            string descriptorParamString = distanceNode.child("descriptor").first_child().value();
+            std::string descriptorParamString = distanceNode.child("descriptor").first_child().value();
 
-            auto z1StartIdx = descriptorParamString.find("Z1=") + string("Z1=").size();
+            auto z1StartIdx = descriptorParamString.find("Z1=") + std::string("Z1=").size();
             auto z1EndIdx = descriptorParamString.find(' ', z1StartIdx);
             Species species1 = Z_inverse[stoi(descriptorParamString.substr(z1StartIdx, z1EndIdx - z1StartIdx))];
 
-            auto z2StartIdx = descriptorParamString.find("Z2=") + string("Z2=").size();
+            auto z2StartIdx = descriptorParamString.find("Z2=") + std::string("Z2=").size();
             auto z2EndIdx = descriptorParamString.find(' ', z2StartIdx);
             Species species2 = Z_inverse[stoi(descriptorParamString.substr(z2StartIdx, z2EndIdx - z2StartIdx))];
 
@@ -246,114 +247,114 @@ namespace jgap {
 
             // coeffs
             double r, coeff;
-            ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
+            std::ifstream fin(distanceNode.attribute("sparseX_filename").as_std::string());
             for (pugi::xml_node pt: distanceNode.children("sparseX")) {
                 fin >> r;
                 coeff = pt.attribute("alpha").as_double();
-                kernels.push_back(make_shared<TwoBodySE>(sp, mainData.delta, mainData.theta, r, coeff));
+                kernels.push_back(std::make_shared<TwoBodySE>(sp, mainData.delta, mainData.theta, r, coeff));
             }
             fin.close();
         }
 
-        return make_shared<TwoBodyDescriptor>(cutoffFunction, kernels);
+        return std::make_shared<TwoBodyDescriptor>(cutoffFunction, kernels);
     }
 
-    shared_ptr<ThreeBodyDescriptor> QuipXmlConverter::transformAngle3b(QuipDescriptorData mainData,
-                                                                       vector<pugi::xml_node> angle3bNodes) {
+    std::shared_ptr<ThreeBodyDescriptor> QuipXmlConverter::transformAngle3b(QuipDescriptorData mainData,
+                                                                       std::vector<pugi::xml_node> angle3bNodes) {
 
         double rMin = mainData.cutoff - mainData.cutoffTransitionWidth.value_or(0.5);
         if (mainData.rMin.has_value()) rMin = mainData.rMin.value();
 
-        shared_ptr<CutoffFunction> cutoffFunction = make_shared<CosCutoff>(mainData.cutoff, rMin);
-        vector<shared_ptr<ThreeBodyKernel>> kernels;
+        std::shared_ptr<CutoffFunction> cutoffFunction = std::make_shared<CosCutoff>(mainData.cutoff, rMin);
+        std::vector<std::shared_ptr<ThreeBodyKernel>> kernels;
 
-        map<SpeciesTriplet, pair<vector<Vector3>, vector<double>>> pointsAndCoefficients;
+        std::map<SpeciesTriplet, std::pair<std::vector<Vector3>, std::vector<double>>> pointsAndCoefficients;
         for (pugi::xml_node distanceNode: angle3bNodes) {
-            string descriptorParamString = distanceNode.child("descriptor").first_child().value();
+            std::string descriptorParamString = distanceNode.child("descriptor").first_child().value();
 
-            auto zStartIdx = descriptorParamString.find("Z=") + string("Z=").size();
+            auto zStartIdx = descriptorParamString.find("Z=") + std::string("Z=").size();
             auto zEndIdx = descriptorParamString.find(' ', zStartIdx);
-            Species rootSpecies = Z_inverse[stoi(descriptorParamString.substr(zStartIdx, zEndIdx - zStartIdx))];
+            Species rootSpecies = CHEM_SYMBOLS[stoi(descriptorParamString.substr(zStartIdx, zEndIdx - zStartIdx))];
 
-            auto z1StartIdx = descriptorParamString.find("Z1=") + string("Z1=").size();
+            auto z1StartIdx = descriptorParamString.find("Z1=") + std::string("Z1=").size();
             auto z1EndIdx = descriptorParamString.find(' ', z1StartIdx);
-            Species species1 = Z_inverse[stoi(descriptorParamString.substr(z1StartIdx, z1EndIdx - z1StartIdx))];
+            Species species1 = CHEM_SYMBOLS[stoi(descriptorParamString.substr(z1StartIdx, z1EndIdx - z1StartIdx))];
 
-            auto z2StartIdx = descriptorParamString.find("Z2=") + string("Z2=").size();
+            auto z2StartIdx = descriptorParamString.find("Z2=") + std::string("Z2=").size();
             auto z2EndIdx = descriptorParamString.find(' ', z2StartIdx);
-            Species species2 = Z_inverse[stoi(descriptorParamString.substr(z2StartIdx, z2EndIdx - z2StartIdx))];
+            Species species2 = CHEM_SYMBOLS[stoi(descriptorParamString.substr(z2StartIdx, z2EndIdx - z2StartIdx))];
 
             SpeciesTriplet st{rootSpecies, {species1, species2}};
 
             // coeffs
             double coeff;
             Vector3 q{};
-            ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
+            std::ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
             for (pugi::xml_node pt: distanceNode.children("sparseX")) {
                 coeff = pt.attribute("alpha").as_double();
                 fin >> q.x >> q.y >> q.z;
                 // TODO: 3d-theta
-                kernels.push_back(make_shared<ThreeBodySE>(
+                kernels.push_back(std::make_shared<ThreeBodySE>(
                     st, mainData.delta, Vector3{mainData.theta, mainData.theta, mainData.theta}, q, coeff
                     ));
             }
         }
 
-        return make_shared<ThreeBodyDescriptor>(cutoffFunction, kernels);
+        return std::make_shared<ThreeBodyDescriptor>(cutoffFunction, kernels);
     }
 
-    shared_ptr<EamDescriptor> QuipXmlConverter::transformEam(QuipDescriptorData mainData,
-                                                             const vector<pugi::xml_node> &eamNodes) {
+    std::shared_ptr<EamDescriptor> QuipXmlConverter::transformEam(QuipDescriptorData mainData,
+                                                             const std::vector<pugi::xml_node> &eamNodes) {
 
-        vector<shared_ptr<EamKernel>> kernels;
+        std::vector<std::shared_ptr<EamKernel>> kernels;
 
-        optional<double> rMin = mainData.cutoffTransitionWidth.transform([&](double val) -> double {
+        std::optional<double> rMin = mainData.cutoffTransitionWidth.transform([&](double val) -> double {
             return mainData.cutoff - val;
         });
         if (mainData.rMin.has_value()) rMin = mainData.rMin.value();
 
         if (!mainData.pairFunction.has_value()) {
-            CurrentLogger::get()->error("pair_function not specified in eam_density", true);
+            JGAP_LOG_ERROR("pair_function not specified in eam_density", true);
         }
 
         if ((mainData.pairFunction.value() == "coscutoff" || mainData.pairFunction.value() == "polycutoff")
             && !rMin.has_value()) {
-            CurrentLogger::get()->error("rmin is required for coscutoff/polycutoff eam pair_function", true);
+            JGAP_LOG_ERROR("rmin is required for coscutoff/polycutoff eam pair_function", true);
         }
 
         if (mainData.pairFunction.value() == "FSGen" && !mainData.order.has_value()) {
-            CurrentLogger::get()->error("order is required for FSGen eam pair_function", true);
+            JGAP_LOG_ERROR("order is required for FSGen eam pair_function", true);
         }
 
-        vector<Species> species;
-        vector<size_t> Z;
+        std::vector<Species> species;
+        std::vector<size_t> Z;
         for (auto node: eamNodes) {
-            string descriptorParamString = node.child("descriptor").first_child().value();
+            std::string descriptorParamString = node.child("descriptor").first_child().value();
 
-            auto zStartIdx = descriptorParamString.find("Z=") + string("Z=").size();
+            auto zStartIdx = descriptorParamString.find("Z=") + std::string("Z=").size();
             auto zEndIdx = descriptorParamString.find(' ', zStartIdx);
             Z.push_back(stoi(descriptorParamString.substr(zStartIdx, zEndIdx - zStartIdx)));
-            species.push_back(Z_inverse[Z.back()]);
+            species.push_back(CHEM_SYMBOLS[Z.back()]);
 
 
-            string pointsFilename = node.attribute("sparseX_filename").as_string();
-            ifstream fin(pointsFilename);
+            std::string pointsFilename = node.attribute("sparseX_filename").as_string();
+            std::ifstream fin(pointsFilename);
             if (!fin.is_open()) {
-                CurrentLogger::get()->error("Could not open file \"" + pointsFilename, true);
+                JGAP_LOG_ERROR("Could not open file \"" + pointsFilename, true);
             }
 
             double density, coeff;
             for (auto pointNode: node.children("sparseX")) {
                 fin >> density;
                 coeff = pointNode.attribute("alpha").as_double();
-                kernels.push_back(make_shared<EamSE>(species.back(), mainData.delta, mainData.theta, density, coeff));
+                kernels.push_back(std::make_shared<EamSE>(species.back(), mainData.delta, mainData.theta, density, coeff));
             }
 
             fin.close();
         }
 
         auto pf = selectPairFunction(mainData, rMin, 1.0);
-        map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pfPerPairs{};
+        std::map<ContributorReceiverSpecies, std::shared_ptr<EamPairFunction>> pfPerPairs{};
         if (mainData.mode.value_or("blind") == "FSsym") {
             for (int a = 0; a < species.size(); a++) {
                 for (int b = 0; b < species.size(); b++) {
@@ -380,21 +381,21 @@ namespace jgap {
             }
         }
 
-        return make_shared<EamDescriptor>(kernels, pf, pfPerPairs);
+        return std::make_shared<EamDescriptor>(kernels, pf, pfPerPairs);
     }
 
-    shared_ptr<EamPairFunction> QuipXmlConverter::selectPairFunction(QuipDescriptorData mainData,
-                                                                     optional<double> rMin,
+    std::shared_ptr<EamPairFunction> QuipXmlConverter::selectPairFunction(QuipDescriptorData mainData,
+                                                                     std::optional<double> rMin,
                                                                      double prefactor) {
-        shared_ptr<EamPairFunction> pf;
+        std::shared_ptr<EamPairFunction> pf;
         if (mainData.pairFunction.value() == "FSgen") {
-            pf = make_shared<FSGenPairFunction>(mainData.cutoff, mainData.order.value(), prefactor);
+            pf = std::make_shared<FSGenPairFunction>(mainData.cutoff, mainData.order.value(), prefactor);
         } else if (mainData.pairFunction.value() == "polycutoff") {
-            pf = make_shared<PolycutoffPairFunction>(mainData.cutoff, rMin.value(), prefactor);
+            pf = std::make_shared<PolycutoffPairFunction>(mainData.cutoff, rMin.value(), prefactor);
         } else if (mainData.pairFunction.value() == "coscutoff") {
-            pf = make_shared<CoscutoffPairFunction>(mainData.cutoff, rMin.value(), prefactor);
+            pf = std::make_shared<CoscutoffPairFunction>(mainData.cutoff, rMin.value(), prefactor);
         } else {
-            CurrentLogger::get()->error("Unknown pair_function: " + mainData.pairFunction.value(), true);
+            JGAP_LOG_ERROR("Unknown pair_function: " + mainData.pairFunction.value(), true);
         }
         return pf;
     }

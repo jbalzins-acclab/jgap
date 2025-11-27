@@ -30,7 +30,7 @@ namespace jgap {
         };
 
         SplinePairPotential(const nlohmann::json& params);
-        SplinePairPotential(const map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
+        SplinePairPotential(const std::map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
         ~SplinePairPotential() override = default;
 
         Predictions predict(const AtomicStructure &structure) override;
@@ -42,7 +42,7 @@ namespace jgap {
         void tabulate(TabulationData& table) override;
 
     private:
-        map<SpeciesPair, shared_ptr<NaturalCubicSpline>> _perSpeciesInterpolators;
+        std::map<SpeciesPair, shared_ptr<NaturalCubicSpline>> _perSpeciesInterpolators;
     };
 
     REGISTER_PARSER(Potential, SplinePairPotential)

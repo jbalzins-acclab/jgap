@@ -5,14 +5,12 @@
 
 #include "data/Vector3.hpp"
 
-using namespace std;
-
 namespace jgap {
     struct ThreeBodyIndexEntity {
-        array<size_t, 3> atomIndex;
+        std::array<size_t, 3> atomIndex;
 
-        array<Vector3, 3> r_ij;
-        array<Vector3, 3> grad_rij_wrt_rj;
+        std::array<Vector3, 3> r_ij;
+        std::array<Vector3, 3> grad_rij_wrt_rj;
         // TODO: add 3rd if needed
         double fCut01;
         double fCut02;
@@ -20,10 +18,10 @@ namespace jgap {
         double dfCut_dr_02;
 
         Vector3 q;
-        array<Vector3, 3> dq_k_dr_ij;
+        std::array<Vector3, 3> dq_k_dr_ij;
     };
 
-    using ThreeBodyIndex = vector<ThreeBodyIndexEntity>;
+    using ThreeBodyIndex = std::vector<ThreeBodyIndexEntity>;
 
     struct ThreeBodyDescriptorData {
         Vector3 q;

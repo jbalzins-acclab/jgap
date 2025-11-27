@@ -6,8 +6,6 @@
 
 #include "data/Vector3.hpp"
 
-using namespace std;
-
 namespace jgap {
 
     using KernelParams = nlohmann::json;
@@ -15,7 +13,7 @@ namespace jgap {
     class Sparsifier {
     public:
         virtual ~Sparsifier() = default;
-        virtual vector<KernelParams> selectSparsePoints(const vector<vector<double>> &allPoints) = 0;
+        virtual std::vector<KernelParams> selectSparsePoints(const std::vector<std::vector<double>> &allPoints) = 0;
     };
 }
 

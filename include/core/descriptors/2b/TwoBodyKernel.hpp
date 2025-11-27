@@ -12,7 +12,6 @@ namespace jgap {
     public:
         Covariance covariance(const AtomicStructure &structure, const TwoBodyIndex &index) override;
         double value(const TwoBodyDescriptorData &r) override;
-
     protected:
         virtual double valueInternal(const double &r) const = 0;
         virtual double derivativeInternal(const double &changingR) const = 0;

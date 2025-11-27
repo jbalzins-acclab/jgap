@@ -1,0 +1,25 @@
+#ifndef JGAP_FAKECUTOFF_HPP
+#define JGAP_FAKECUTOFF_HPP
+
+#include "CutoffFunction.hpp"
+#include "utils/Utils.hpp"
+
+namespace jgap {
+
+    class FakeCutoff : public CutoffFunction {
+    public:
+        FakeCutoff(const double r) : _r(r) {}
+
+        double evaluate(double r) override { return 1.0; }
+        double differentiate(double r) override { return 0.0; }
+
+        string getType() override { IO_NOT_INTENDED(FakeCutoff.getType); }
+        nlohmann::json serialize() override { IO_NOT_INTENDED(FakeCutoff.serialize); }
+        double getCutoff() override { return _r; }
+
+    private:
+        double _r;
+    };
+}
+
+#endif

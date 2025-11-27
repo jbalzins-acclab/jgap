@@ -7,7 +7,6 @@
 #include "Potential.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
-using namespace std;
 
 namespace jgap {
     class IsolatedAtomPotential : public Potential {
@@ -15,7 +14,7 @@ namespace jgap {
         static constexpr string TYPE = "isolated_atom";
 
         explicit IsolatedAtomPotential(const nlohmann::json& params);
-        explicit IsolatedAtomPotential(const map<Species, double>& isolatedAtomEnergies, bool errorOnUnknown);
+        explicit IsolatedAtomPotential(const std::map<Species, double>& isolatedAtomEnergies, bool errorOnUnknown);
 
         nlohmann::json serialize() override;
         string getType() override { return TYPE; }
@@ -27,7 +26,7 @@ namespace jgap {
 
     private:
         bool _errorOnUnknownSpecies;
-        map<Species, double> _isolatedEnergies;
+        std::map<Species, double> _isolatedEnergies;
     };
 
     REGISTER_PARSER(Potential, IsolatedAtomPotential);

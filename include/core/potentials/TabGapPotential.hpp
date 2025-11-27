@@ -4,6 +4,9 @@
 #include <io/parse/ParserRegistry.hpp>
 
 #include "Potential.hpp"
+#include "core/descriptors/2b/TwoBodyDescriptor.hpp"
+#include "core/descriptors/3b/ThreeBodyDescriptor.hpp"
+#include "core/descriptors/eam/EamDescriptor.hpp"
 #include "data/AtomicStructure.hpp"
 #include "data/PredictionData.hpp"
 
@@ -15,7 +18,7 @@ namespace jgap {
 
         ~TabGapPotential() override = default;
         TabGapPotential(const nlohmann::json& params);
-        TabGapPotential(TabulationData tabulationData, optional<string> );
+        TabGapPotential(TabulationData splineCoefficients, const vector<string>& files);
 
         Predictions predict(const AtomicStructure &structure) override;
 
@@ -26,22 +29,15 @@ namespace jgap {
 
         void tabulate(TabulationData& table) override;
 
-        void saveFiles(string fileNamePrefix);
-
     private:
-        friend class TabGapIO;
+        nlohmann::json _params;
 
         map<Species, double> _isolatedEnergies;
+        shared_ptr<TwoBodyDescriptor> _2b;
+        shared_ptr<ThreeBodyDescriptor> _3b;
+        vector<shared_ptr<EamDescriptor>> _eams;
 
-        map<SpeciesPair, Grid1d> _splineCoeffs2b;
-        map<SpeciesTriplet, Grid3d> _splineCoeffs3b;
-
-        map<Species, Grid1d> _splineCoeffsEam;
-        map<ContributorReceiverSpecies, Grid1d> _splineCoeffsEamPf;
-
-        double eval2b(double r);
-        double eval3b(double r_ij, double r_ik, double cos_theta);
-        double evalEam(double density);
+        void init(TabulationData& splineCoefficients);
     };
 
     REGISTER_PARSER(Potential, TabGapPotential)

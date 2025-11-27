@@ -7,10 +7,11 @@
 namespace jgap {
     class CosCutoff : public CutoffFunction {
     public:
+        CosCutoff(double cutoff, double cutoffTransitionWidth);
+
         static constexpr string TYPE = "coscutoff";
 
-        CosCutoff(nlohmann::json params);
-        CosCutoff(double cutoff, double rMin);
+        static shared_ptr<CosCutoff> fromJson(nlohmann::json params);
 
         string getType() override {return TYPE;};
         nlohmann::json serialize() override;

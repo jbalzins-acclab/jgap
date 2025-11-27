@@ -6,7 +6,6 @@
 #include <vector>
 #include <memory>
 
-using namespace std;
 
 namespace jgap {
     class NeighbourFinder {

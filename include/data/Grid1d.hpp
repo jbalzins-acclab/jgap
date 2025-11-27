@@ -10,7 +10,6 @@
 #include "Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 
-using namespace std;
 
 namespace jgap {
     class Grid1d {
@@ -75,6 +74,8 @@ namespace jgap {
         }
 
         size_t size() const { return data.size(); }
+
+        double cutoff() const { return origin + spacing * static_cast<double>(data.size()); }
 
         double spacing{};
         double origin{};
