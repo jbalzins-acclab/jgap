@@ -13,7 +13,7 @@ namespace jgap {
         MatrixBlock(const size_t rows, const size_t columns)
             : _rows(rows), _columns(columns) {
             try {
-                _data = vector<double>(rows * columns);
+                _data = std::vector<double>(rows * columns);
             } catch (const std::bad_alloc&) {
                 JGAP_LOG_AND_THROW("Block memory allocation failed");
             }
@@ -24,16 +24,16 @@ namespace jgap {
             return _data[i * _columns + j];
         }
 
-        vector<double>& rawData() {return _data;}
+        std::vector<double>& rawData() {return _data;}
 
         [[nodiscard]] size_t rows() const {return _rows;}
         [[nodiscard]] size_t columns() const {return _columns;}
-        [[nodiscard]] pair<size_t, size_t> blockSize() const {return{_rows, _columns};}
+        [[nodiscard]] std::pair<size_t, size_t> blockSize() const {return{_rows, _columns};}
 
     private:
         size_t _rows;
         size_t _columns;
-        vector<double> _data;
+        std::vector<double> _data;
     };
 }
 

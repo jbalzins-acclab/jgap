@@ -1,7 +1,6 @@
 #ifndef THREEBODYDESCRIPTOR_HPP
 #define THREEBODYDESCRIPTOR_HPP
 
-#include <nlohmann/json.hpp>
 #include <queue>
 #include <utility>
 
@@ -17,48 +16,49 @@ namespace jgap {
 
     class ThreeBodyDescriptor : public Descriptor {
     public:
-        static constexpr string TYPE = "3b";
+        static constexpr std::string TYPE = "3b";
+        static std::shared_ptr<ThreeBodyDescriptor> fromDataNode(const DataNode& params);
 
-        ThreeBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction, vector<shared_ptr<ThreeBodyKernel>>& kernels);
-        ThreeBodyDescriptor(const nlohmann::json& params);
+        ThreeBodyDescriptor(std::shared_ptr<CutoffFunction> cutoffFunction,
+                            std::vector<std::shared_ptr<ThreeBodyKernel>>& kernels);
 
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; }
+        DataNode serialize() override;
+        std::string getType() override { return TYPE; }
 
         CutoffRanges getCutoff() override { return CutoffRanges{.threeBody = _cutoffFunction->getCutoff()}; };
 
-        void setupSparseKernels(const vector<AtomicStructure>& fromData) override;
-        vector<shared_ptr<IKernel>> getKernels() override;
+        void setupSparseKernels(const std::vector<AtomicStructure>& fromData) override;
+        std::vector<std::shared_ptr<IKernel>> getKernels() override;
 
         Predictions predict(const AtomicStructure &atomicStructure) override;
 
-        vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
-        vector<shared_ptr<MatrixBlock>> selfCovariate() override;
+        std::vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
+        std::vector<std::shared_ptr<MatrixBlock>> selfCovariate() override;
 
         void tabulate(TabulationData &table) override;
 
         double invariantTripletToCutoff(const Vector3 &t) const;
         static Vector3 toInvariantTriplet(double r01, double r02, double r12);
-        static array<Vector3, 3> invariantTripletGradients(double r01, double r02);
+        static std::array<Vector3, 3> invariantTripletGradients(double r01, double r02);
 
     protected:
         double _cutoff;
-        shared_ptr<CutoffFunction> _cutoffFunction;
-        vector<shared_ptr<ThreeBodyKernel>> _kernels;
-        map<SpeciesTriplet, vector<size_t>> _kernelIdsPerSpeciesTriplet;
+        std::shared_ptr<CutoffFunction> _cutoffFunction;
+        std::vector<std::shared_ptr<ThreeBodyKernel>> _kernels;
+        std::map<SpeciesTriplet, std::vector<size_t>> _kernelIdsPerSpeciesTriplet;
 
-        shared_ptr<Sparsifier> _sparsifier;
+        std::shared_ptr<Sparsifier> _sparsifier;
 
         // A queue to emphasize the one-time use
-        queue<nlohmann::json> _kernelSetups;
+        std::queue<DataNode> _kernelSetups;
 
-        map<SpeciesTriplet, ThreeBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
-        bool checkSpecies(const SpeciesTriplet& tripletInData, nlohmann::json filters);
+        std::map<SpeciesTriplet, ThreeBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
+        bool checkSpecies(const SpeciesTriplet& tripletInData, DataNode filters);
 
         void mapKernelIds();
     };
 
-    REGISTER_PARSER(Descriptor, ThreeBodyDescriptor)
+    SETUP_PARSER(Descriptor, ThreeBodyDescriptor)
 }
 
 #endif

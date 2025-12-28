@@ -2,22 +2,18 @@
 #define ISOLATEDATOMPOTENTIAL_HPP
 
 #include <map>
-#include <nlohmann/json.hpp>
-
 #include "Potential.hpp"
+#include "io/Serializable.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
-
 namespace jgap {
-    class IsolatedAtomPotential : public Potential {
+    class IsolatedAtomPotential : public Potential, Serializable {
     public:
-        static constexpr string TYPE = "isolated_atom";
+        SETUP_PARSER_AND_SERIALIZATION(Potential, IsolatedAtomPotential, isolated_atom);
 
-        explicit IsolatedAtomPotential(const nlohmann::json& params);
-        explicit IsolatedAtomPotential(const std::map<Species, double>& isolatedAtomEnergies, bool errorOnUnknown);
+        ~IsolatedAtomPotential() override = default;
+        IsolatedAtomPotential(const std::map<Species, double>& isolated_atom_energies, bool error_on_unknown);
 
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; }
         CutoffRanges getCutoff() override { return {}; }
 
         Predictions predict(const AtomicStructure& structure) override;
@@ -25,11 +21,9 @@ namespace jgap {
         void tabulate(TabulationData& table) override;
 
     private:
-        bool _errorOnUnknownSpecies;
-        std::map<Species, double> _isolatedEnergies;
+        bool error_on_unknown_species_;
+        std::map<Species, double> isolated_energies_;
     };
-
-    REGISTER_PARSER(Potential, IsolatedAtomPotential);
 }
 
-#endif //ISOLATEDATOMPOTENTIAL_HPP
+#endif

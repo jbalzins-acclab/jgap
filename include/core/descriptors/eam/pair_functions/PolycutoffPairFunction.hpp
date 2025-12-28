@@ -5,62 +5,59 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class PolycutoffPairFunction : public EamPairFunction {
+    class PolycutoffPairFunction : public EamPairFunction, Serializable {
     public:
-        static constexpr string TYPE = "polycutoff";
-        explicit PolycutoffPairFunction(nlohmann::json params) {
-            _cutoff = params["cutoff"];
-            if (params.contains("r_min")) {
-                _rmin = params["r_min"];
-            } else if (params.contains("cutoff_transition_width")) {
-                _rmin = _cutoff - params["cutoff_transition_width"].get<double>();
-            } else {
-                _rmin = 0;
-            }
-            _prefactor = params.value("prefactor", 1.0);
-            _intervalInverse = 1.0 / (_cutoff - _rmin);
-        }
-        nlohmann::json serialize() override {
-            return {
-                {"prefactor", _prefactor},
-                {"cutoff", _cutoff},
-                {"r_min", _rmin}
-            };
-        }
 
-        PolycutoffPairFunction(const double cutoff, const double rmin, const double prefactor = 1.0) : _rmin(rmin) {
-            _cutoff = cutoff;
-            _intervalInverse = 1.0 / (_cutoff - _rmin);
-            _prefactor = prefactor;
+        SETUP_PARSER_AND_SERIALIZATION(EamPairFunction, PolycutoffPairFunction, polycutoff)
+
+        PolycutoffPairFunction(const double cutoff, const double rMin, const double prefactor = 1.0)
+            : EamPairFunction(cutoff, prefactor), _rMin(rMin)
+        {
+            _intervalInverse = 1.0 / (cutoff_ - _rMin);
         }
 
         ~PolycutoffPairFunction() override = default;
 
         double evaluate(const double distance) override {
-            if (distance >= _cutoff) return 0.0;
-            if (distance <= _rmin) return _prefactor;
+            if (distance >= cutoff_) return 0.0;
+            if (distance <= _rMin) return prefactor_;
 
-            const double chi = (distance - _rmin) * _intervalInverse;
-            return _prefactor * (1.0 - chi * chi * chi * (6 * chi * chi - 15 * chi + 10));
+            const double chi = (distance - _rMin) * _intervalInverse;
+            return prefactor_ * (1.0 - chi * chi * chi * (6 * chi * chi - 15 * chi + 10));
         }
 
         double differentiate(const double distance) override {
-            if (distance >= _cutoff || distance <= _rmin) return 0;
+            if (distance >= cutoff_ || distance <= _rMin) return 0;
 
-            const double chi = (distance - _rmin) * _intervalInverse;
+            const double chi = (distance - _rMin) * _intervalInverse;
             const double dchi_dr = _intervalInverse;
 
-            return _prefactor * (dchi_dr * chi * chi * ( -30 * chi * chi + 60 * chi - 30));
+            return prefactor_ * (dchi_dr * chi * chi * ( -30 * chi * chi + 60 * chi - 30));
         }
 
-        string getType() override { return TYPE; }
-
     private:
-        double _rmin;
+        double _rMin;
         double _intervalInverse;
     };
 
-    REGISTER_PARSER(EamPairFunction, PolycutoffPairFunction)
+    inline std::shared_ptr<PolycutoffPairFunction> PolycutoffPairFunction::fromDataNode(const DataNode &params) {
+        return std::make_shared<PolycutoffPairFunction>(
+            require(params, "cutoff"),
+            params.getOrDefault(
+                "r_min",
+            require(params, "cutoff").asDouble() - require(params, "cutoff_transition_width").asDouble()
+            ),
+            params.getOrDefault("prefactor", 1.0)
+        );
+    }
+
+    inline DataNode PolycutoffPairFunction::serialize() {
+        return DataNode{
+            {"prefactor", prefactor_},
+            {"cutoff", cutoff_},
+            {"r_min", _rMin}
+        };
+    }
 }
 
 

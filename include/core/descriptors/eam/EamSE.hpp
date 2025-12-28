@@ -7,37 +7,32 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-
-    class EamSE : public EamKernel {
+    class EamSE : public EamKernel, Serializable {
     public:
-        static constexpr string TYPE = "squared_exp";
-        EamSE(Species species, double energyScale, double lengthScale, double density, optional<double> coeff = {});
+        SETUP_PARSER_AND_SERIALIZATION(EamKernel, EamSE, squared_exp)
 
-        EamSE(const nlohmann::json &params);
-        string getType() override { return TYPE; }
-        nlohmann::json serialize() override;
+        EamSE(Species species, double energyScale, double lengthScale, double density,
+              std::optional<double> coeff = {});
 
-        double crossCovariance(const shared_ptr<IKernel>& other) override;
+        double crossCovariance(const std::shared_ptr<IKernel> &other) override;
 
-        Species getFilter() override { return _idSpecies; }
-        pair<double, double> getDensityRange() override { return {_density, _density}; }
+        Species getFilter() override { return id_species_; }
+        std::pair<double, double> getDensityRange() override { return {density_, density_}; }
 
     private:
         // raw params
-        Species _idSpecies;
-        double _energyScale;
-        double _lengthScale;
-        double _density;
+        Species id_species_;
+        double energy_scale_;
+        double length_scale_;
+        double density_;
 
         // optimized for calculation
-        double _totalPrefactor;
-        double _inverseThetaSq;
+        double total_prefactor_;
+        double inverse_theta_sq;
 
         double valueInternal(const double &density) const override;
         double derivativeInternal(const double &density) const override;
     };
-
-    REGISTER_PARSER(EamKernel, EamSE)
 }
 
 #endif

@@ -2,14 +2,14 @@
 
 namespace jgap {
 
-    vector<double> BSplineTools::toSplineCoefficients(const vector<double> &original, const double spacing) {
-        static constexpr array basis = {1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0};
+    std::vector<double> BSplineTools::toSplineCoefficients(const std::vector<double> &original, const double spacing) {
+        static constexpr std::array basis = {1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0};
 
         const size_t nCoefficients = original.size() + 2;
 
         const double inverseSpacing = 1.0 / spacing;
         const double inverseSpacingSq = inverseSpacing * inverseSpacing;
-        vector<array<double, 4>> bands(nCoefficients);
+        std::vector<std::array<double, 4>> bands(nCoefficients);
         bands[0] = {inverseSpacingSq, -2.0 * inverseSpacingSq, inverseSpacingSq, 0.0};
         bands[nCoefficients-1] = {inverseSpacingSq, -2.0 * inverseSpacingSq, inverseSpacingSq, 0.0};
 
@@ -48,7 +48,7 @@ namespace jgap {
         bands[nCoefficients-1][3] /= bands[nCoefficients-1][2];
         bands[nCoefficients-1][2] = 1.0;
 
-        vector coefficients(nCoefficients, 0.0);
+        std::vector coefficients(nCoefficients, 0.0);
         coefficients[nCoefficients-1] = bands[nCoefficients-1][3];
         for (size_t i = nCoefficients-2; i > 0; i--) {
             coefficients[i] = bands[i][3] - bands[i][2] * coefficients[i+1];

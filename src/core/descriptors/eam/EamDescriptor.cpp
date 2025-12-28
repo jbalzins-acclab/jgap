@@ -9,39 +9,39 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    EamDescriptor::EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
-                                 shared_ptr<EamPairFunction> &defaultPairFunction,
-                                 map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions)
-        : _kernels(std::move(kernels)),
-          _pairFunctions(std::move(pairFunctions)) {
+    EamDescriptor::EamDescriptor(std::vector<std::shared_ptr<EamKernel>> kernels,
+                                 std::shared_ptr<EamPairFunction> &default_pair_function,
+                                 std::map<ContributorReceiverSpecies, std::shared_ptr<EamPairFunction>> pairFunctions)
+        : kernels_(std::move(kernels)),
+          pair_functions_(std::move(pairFunctions)) {
 
-        if (defaultPairFunction == nullptr) {
-            defaultPairFunction = make_shared<FailOnUsePairFunction>();
+        if (default_pair_function == nullptr) {
+            default_pair_function = std::make_shared<FailOnUsePairFunction>();
         } else {
-            defaultPairFunction = _defaultPairFunction;
+            default_pair_function = default_pair_function_;
         }
 
-        _maxCutoff = 0;
-        for (const auto& pf: pairFunctions | views::values) {
-            _maxCutoff = max(_maxCutoff, pf->getCutoff());
+        max_cutoff_ = 0;
+        for (const auto& pf: pairFunctions | std::views::values) {
+            max_cutoff_ = std::max(max_cutoff_, pf->getCutoff());
         }
         mapKernelIds();
     }
 
-    EamDescriptor::EamDescriptor(const nlohmann::json &params) {
+    std::shared_ptr<EamDescriptor> EamDescriptor::fromDataNode(const DataNode &params) {
         JGAP_LOG_DEBUG("Parsing EAM descriptor params");
 
-        _kernels = {};
+        kernels_ = {};
         if (params.contains("kernels")) {
-            for (const nlohmann::json& kernelParams : params["kernels"]) {
-                _kernels.push_back(ParserRegistry<EamKernel>::get(kernelParams));
+            for (const DataNode& kernelParams : params["kernels"].asArray()) {
+                kernels_.push_back(REGISTRY_GET(EamKernel, kernelParams));
             }
         }
         mapKernelIds();
 
         _kernelSetups = {};
         if (params.contains("kernel_setups")) {
-            for (const nlohmann::json& kernelSetup : params["kernel_setups"]) {
+            for (const DataNode& kernelSetup : params["kernel_setups"]) {
                 _kernelSetups.push(kernelSetup);
             }
         }
@@ -49,47 +49,51 @@ namespace jgap {
             _kernelSetups.push(params["kernel_setup"]);
         }
 
-        _maxCutoff = 0;
+        max_cutoff_ = 0;
         for (const auto& pfParams: params["pair_functions"]) {
 
-            auto pf = ParserRegistry<EamPairFunction>::get(pfParams);
+            auto pf = REGISTRY_GET(EamPairFunction, pfParams);
 
             if (pfParams.contains("species")) {
                 auto s1 = pfParams["species"][0];
                 auto s2 = pfParams["species"][1];
-                _pairFunctions[{s1, s2}] = pf;
-                _pairFunctions[{s2, s1}] = pf;
+                pair_functions_[{s1, s2}] = pf;
+                pair_functions_[{s2, s1}] = pf;
             } else if (pfParams.contains("contributor_receiver_species")) {
                 auto s1 = pfParams["contributor_receiver_species"][0];
                 auto s2 = pfParams["contributor_receiver_species"][1];
-                _pairFunctions[{s1, s2}] = pf;
+                pair_functions_[{s1, s2}] = pf;
             } else {
-                _defaultPairFunction = pf;
+                default_pair_function_ = pf;
             }
 
-            _maxCutoff = max(_maxCutoff, pf->getCutoff());
+            max_cutoff_ = std::max(max_cutoff_, pf->getCutoff());
         }
     }
 
-    nlohmann::json EamDescriptor::serialize() {
+    DataNode EamDescriptor::serialize() {
 
-        auto kernelsData = nlohmann::json::array();
-        for (const auto &kernel : _kernels) {
-            kernelsData.push_back(kernel->serialize());
-            kernelsData.back()["type"] = kernel->getType();
+        auto kernelsData = DataNode::array();
+        for (const auto &kernel : kernels_) {
+            auto serial = std::dynamic_pointer_cast<Serializable>(kernel);
+
+            kernelsData.pushBack(serial->serialize());
+            kernelsData.back()["type"] = serial->getTypeId();
         }
 
-        nlohmann::json pfData = nlohmann::json::array();
+        DataNode pfData = DataNode::array();
+        auto defaultPf = std::dynamic_pointer_cast<Serializable>(default_pair_function_);
 
-        auto defaultPairFunctionData = _defaultPairFunction->serialize();
-        defaultPairFunctionData["type"] = _defaultPairFunction->getType();
-        pfData.push_back(defaultPairFunctionData);
+        auto defaultPairFunctionData = defaultPf->serialize();
+        defaultPairFunctionData["type"] = defaultPf->getTypeId();
+        pfData.pushBack(defaultPairFunctionData);
 
-        for (const auto& [speciesPair, pf]: _pairFunctions) {
-            auto newPfData = pf->serialize();
-            newPfData["type"] = pf->getType();
-            newPfData["contributor_receiver_species"] = vector{speciesPair.contributor, speciesPair.receiver};
-            pfData.push_back(newPfData);
+        for (const auto& [speciesPair, pf]: pair_functions_) {
+            auto serial = std::dynamic_pointer_cast<Serializable>(pf);
+            auto newPfData = serial->serialize();
+            newPfData["type"] = serial->getTypeId();
+            newPfData["contributor_receiver_species"] = std::vector{speciesPair.contributor, speciesPair.receiver};
+            pfData.pushBack(newPfData);
         }
 
         return {
@@ -99,12 +103,12 @@ namespace jgap {
     }
 
     CutoffRanges EamDescriptor::getCutoff() {
-        auto res = CutoffRanges{.twoBody = _maxCutoff};
+        auto res = CutoffRanges{.twoBody = max_cutoff_};
 
-        double minDensity = 0.0, maxDensity = numeric_limits<double>::min();
-        for (const auto& kernel: _kernels) {
-            minDensity = min(minDensity, kernel->getDensityRange().first);
-            maxDensity = max(maxDensity, kernel->getDensityRange().second);
+        double minDensity = 0.0, maxDensity = std::numeric_limits<double>::std::min();
+        for (const auto& kernel: kernels_) {
+            minDensity = std::min(minDensity, kernel->getDensityRange().first);
+            maxDensity = std::max(maxDensity, kernel->getDensityRange().second);
         }
         res.minEam = minDensity;
         res.maxEam = maxDensity;
@@ -112,17 +116,17 @@ namespace jgap {
         return res;
     }
 
-    vector<shared_ptr<IKernel>> EamDescriptor::getKernels() {
-        vector<shared_ptr<IKernel>> res;
-        for (const auto& kernelIds : _kernelIndicesPerSpecies | views::values) {
+    std::vector<std::shared_ptr<IKernel>> EamDescriptor::getKernels() {
+        std::vector<std::shared_ptr<IKernel>> res;
+        for (const auto& kernelIds : _kernelIndicesPerSpecies | std::views::values) {
             for (const auto& id: kernelIds) {
-                res.push_back(_kernels[id]);
+                res.push_back(kernels_[id]);
             }
         }
         return res;
     }
 
-    void EamDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+    void EamDescriptor::setupSparseKernels(const std::vector<AtomicStructure> &fromData) {
         JGAP_LOG_INFO("Doing EAM sparsification from data");
 
         if (_kernelSetups.empty()) {
@@ -130,8 +134,8 @@ namespace jgap {
             return;
         }
 
-        map<Species, vector<vector<double>>> allDensitiesPerSpecies;
-        vector<EamKernelIndex> indexArr;
+        std::map<Species, std::vector<std::vector<double>>> allDensitiesPerSpecies;
+        std::vector<EamKernelIndex> indexArr;
         for (const auto& structure : fromData) {
             for (auto structureIndex = doIndex(structure);
                  const auto& [species, densities]: structureIndex) {
@@ -141,21 +145,21 @@ namespace jgap {
                 for (const auto& densityData: densities) {
                     // TODO: low density cap - avoid zero of isolated_atom density(?):
                     // if (densityData.density < 0.2) continue;
-                    allDensitiesPerSpecies[species].push_back(vector{densityData.density});
+                    allDensitiesPerSpecies[species].push_back(std::vector{densityData.density});
                 }
             }
         }
 
         while (!_kernelSetups.empty()) {
-            nlohmann::json setup = _kernelSetups.front();
+            DataNode setup = _kernelSetups.front();
             _kernelSetups.pop();
 
-            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
+            std::string sparsifierType = setup.value("sparsifier", "histogram_uniform");
             setup.erase("sparsifier");
             setup["sparse_param"] = setup.value("sparse_param", "density");
 
             for (const auto& [species, densities]: allDensitiesPerSpecies) {
-                nlohmann::json setupPerSpecies = setup;
+                DataNode setupPerSpecies = setup;
 
                 if (setupPerSpecies.contains("species")) {
                     if (setupPerSpecies["species"].is_string()) {
@@ -167,9 +171,9 @@ namespace jgap {
 
                 auto sparsifier = ParserRegistry<Sparsifier>::getRegistry()[sparsifierType](setupPerSpecies);
 
-                for (nlohmann::json& kernelParams : sparsifier->selectSparsePoints(densities)) {
+                for (DataNode& kernelParams : sparsifier->selectSparsePoints(densities)) {
                     kernelParams["species"] = species;
-                    _kernels.push_back(ParserRegistry<EamKernel>::get(kernelParams));
+                    kernels_.push_back(ParserRegistry<EamKernel>::get(kernelParams));
                 }
             }
         }
@@ -177,8 +181,8 @@ namespace jgap {
         mapKernelIds();
     }
 
-    vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
-        vector<Covariance> result;
+    std::vector<Covariance> EamDescriptor::covariate(const AtomicStructure &atomicStructure) {
+        std::vector<Covariance> result;
 
         EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
@@ -186,24 +190,24 @@ namespace jgap {
             if (!kernelIndex.contains(species)) kernelIndex[species] = {};
 
             for (auto& id: kernelIds) {
-                result.push_back(_kernels[id]->covariance(atomicStructure, kernelIndex[species]));
+                result.push_back(kernels_[id]->covariance(atomicStructure, kernelIndex[species]));
             }
         }
 
         return result;
     }
 
-    vector<shared_ptr<MatrixBlock>> EamDescriptor::selfCovariate() {
+    std::vector<std::shared_ptr<MatrixBlock>> EamDescriptor::selfCovariate() {
 
-        vector<shared_ptr<MatrixBlock>> result;
+        std::vector<std::shared_ptr<MatrixBlock>> result;
 
-        for (const auto &kernelIds: _kernelIndicesPerSpecies | views::values) {
+        for (const auto &kernelIds: _kernelIndicesPerSpecies | std::views::values) {
 
-            auto covariance = make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
+            auto covariance = std::make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
 
             for (size_t i = 0; i < kernelIds.size(); i++) {
                 for (size_t j = i; j < kernelIds.size(); j++) {
-                    (*covariance)(i, j) = _kernels[i]->crossCovariance(_kernels[j]);
+                    (*covariance)(i, j) = kernels_[i]->crossCovariance(kernels_[j]);
                     (*covariance)(j, i) = (*covariance)(i, j);
                 }
             }
@@ -217,7 +221,7 @@ namespace jgap {
     Predictions EamDescriptor::predict(const AtomicStructure &atomicStructure) {
         auto indexes = doIndex(atomicStructure);
         Predictions result{};
-        for (const auto& kernel: _kernels) {
+        for (const auto& kernel: kernels_) {
             result = result + kernel->predict(atomicStructure, indexes[kernel->getFilter()]);
         }
         return result;
@@ -229,21 +233,21 @@ namespace jgap {
         for (const auto& [species, kernelIds]: _kernelIndicesPerSpecies) {
             for (const auto& it: eamTable.getOrMakeEnergyGrid(species)) {
                 for (auto& id: kernelIds) {
-                    it.value += _kernels[id]->value(it.pos) * _kernels[id]->coefficient.value();
+                    it.value += kernels_[id]->value(it.pos) * kernels_[id]->coefficient.value();
                 }
             }
         }
 
-        for (const auto& contributorSpecies: _kernelIndicesPerSpecies | views::keys) {
-            for (const auto& receiverSpecies: _kernelIndicesPerSpecies | views::keys) {
+        for (const auto& contributorSpecies: _kernelIndicesPerSpecies | std::views::keys) {
+            for (const auto& receiverSpecies: _kernelIndicesPerSpecies | std::views::keys) {
 
                 auto speciesPair = ContributorReceiverSpecies{
                     .contributor = contributorSpecies, .receiver = receiverSpecies
                 };
 
-                auto pairFunction = _defaultPairFunction;
-                if (_pairFunctions.contains(speciesPair)) {
-                    pairFunction = _pairFunctions[speciesPair];
+                auto pairFunction = default_pair_function_;
+                if (pair_functions_.contains(speciesPair)) {
+                    pairFunction = pair_functions_[speciesPair];
                 }
 
                 for (const auto& it: eamTable.getOrMakePairFunctionGrid(speciesPair)) {
@@ -260,19 +264,19 @@ namespace jgap {
         for (size_t atomIdx = 0; atomIdx < structure.size(); atomIdx++) {
 
             double totalDensity = 0;
-            vector<pair<NeighbourData, double>> densityDerivatives;
+            std::vector<std::pair<NeighbourData, double>> densityDerivatives;
 
             Species species = structure.species[atomIdx];
             for (NeighbourData neighbour: structure.neighbours.value()[atomIdx]) {
-                if (neighbour.distance > _maxCutoff) continue;
+                if (neighbour.distance > max_cutoff_) continue;
 
                 ContributorReceiverSpecies orderedSpeciesPair = {
                     structure.species[neighbour.index],  species
                 };
 
-                shared_ptr<EamPairFunction> pf = _defaultPairFunction;
-                if (_pairFunctions.contains(orderedSpeciesPair)) {
-                    pf = _pairFunctions.at(orderedSpeciesPair);
+                std::shared_ptr<EamPairFunction> pf = default_pair_function_;
+                if (pair_functions_.contains(orderedSpeciesPair)) {
+                    pf = pair_functions_.at(orderedSpeciesPair);
                 }
 
                 totalDensity += pf->evaluate(neighbour.distance);
@@ -294,11 +298,11 @@ namespace jgap {
 
     void EamDescriptor::mapKernelIds() {
         _kernelIndicesPerSpecies.clear();
-        for (size_t i = 0; i < _kernels.size(); i++) {
-            if (!_kernelIndicesPerSpecies.contains(_kernels[i]->getFilter())) {
-                _kernelIndicesPerSpecies[_kernels[i]->getFilter()] = {};
+        for (size_t i = 0; i < kernels_.size(); i++) {
+            if (!_kernelIndicesPerSpecies.contains(kernels_[i]->getFilter())) {
+                _kernelIndicesPerSpecies[kernels_[i]->getFilter()] = {};
             }
-            _kernelIndicesPerSpecies[_kernels[i]->getFilter()].push_back(i);
+            _kernelIndicesPerSpecies[kernels_[i]->getFilter()].push_back(i);
         }
     }
 }

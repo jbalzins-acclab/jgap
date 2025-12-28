@@ -2,7 +2,7 @@
 <Potential label="pairpot" init_args="IP Glue"/>
 <Glue_params n_types="4">
  <per_type_data atomic_num="24" type="1">
-  <!-- Cr, Z: 24, many-body data ==> zero energy for pair potential! -->
+  <!-- Cr, Z: 24, many-body data ==> zero energy for std::pair potential! -->
   <density num_points="10" density_y1="0.0" density_yn="0.0">
    <point a="0.5" rho="0.2"/>
    <point a="1.0" rho="0.2"/>
@@ -29,7 +29,7 @@
   </potential_density>
  </per_type_data>
  <per_type_data atomic_num="25" type="2">
-  <!-- Mn, Z: 25, many-body data ==> zero energy for pair potential! -->
+  <!-- Mn, Z: 25, many-body data ==> zero energy for std::pair potential! -->
   <density num_points="10" density_y1="0.0" density_yn="0.0">
    <point a="0.5" rho="0.2"/>
    <point a="1.0" rho="0.2"/>
@@ -56,7 +56,7 @@
   </potential_density>
  </per_type_data>
  <per_type_data atomic_num="26" type="3">
-  <!-- Fe, Z: 26, many-body data ==> zero energy for pair potential! -->
+  <!-- Fe, Z: 26, many-body data ==> zero energy for std::pair potential! -->
   <density num_points="10" density_y1="0.0" density_yn="0.0">
    <point a="0.5" rho="0.2"/>
    <point a="1.0" rho="0.2"/>
@@ -83,7 +83,7 @@
   </potential_density>
  </per_type_data>
  <per_type_data atomic_num="28" type="4">
-  <!-- Ni, Z: 28, many-body data ==> zero energy for pair potential! -->
+  <!-- Ni, Z: 28, many-body data ==> zero energy for std::pair potential! -->
   <density num_points="10" density_y1="0.0" density_yn="0.0">
    <point a="0.5" rho="0.2"/>
    <point a="1.0" rho="0.2"/>
@@ -110,7 +110,7 @@
   </potential_density>
  </per_type_data>
  <per_pair_data type1="1" type2="1">
-  <!-- Cr-Cr, Z: 24-24 pair potential -->
+  <!-- Cr-Cr, Z: 24-24 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="212249.08457718606"/>
    <point r="0.03543859649122807" E="171807.01264510455"/>
@@ -515,7 +515,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="1" type2="2">
-  <!-- Cr-Mn, Z: 24-25 pair potential -->
+  <!-- Cr-Mn, Z: 24-25 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="220041.04941960404"/>
    <point r="0.03543859649122807" E="178140.3494401119"/>
@@ -920,7 +920,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="1" type2="3">
-  <!-- Cr-Fe, Z: 24-26 pair potential -->
+  <!-- Cr-Fe, Z: 24-26 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="228259.41307326176"/>
    <point r="0.03543859649122807" E="184688.0385154319"/>
@@ -1325,7 +1325,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="1" type2="4">
-  <!-- Cr-Ni, Z: 24-28 pair potential -->
+  <!-- Cr-Ni, Z: 24-28 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="244791.37282340426"/>
    <point r="0.03543859649122807" E="197940.5435993546"/>
@@ -1730,7 +1730,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="2" type2="2">
-  <!-- Mn-Mn, Z: 25-25 pair potential -->
+  <!-- Mn-Mn, Z: 25-25 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="229938.49943037666"/>
    <point r="0.03543859649122807" E="186114.18133508708"/>
@@ -2135,7 +2135,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="2" type2="3">
-  <!-- Mn-Fe, Z: 25-26 pair potential -->
+  <!-- Mn-Fe, Z: 25-26 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="237892.37003884756"/>
    <point r="0.03543859649122807" E="192538.08386830593"/>
@@ -2540,7 +2540,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="2" type2="4">
-  <!-- Mn-Ni, Z: 25-28 pair potential -->
+  <!-- Mn-Ni, Z: 25-28 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="254672.58476279478"/>
    <point r="0.03543859649122807" E="206025.3482019361"/>
@@ -2945,7 +2945,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="3" type2="3">
-  <!-- Fe-Fe, Z: 26-26 pair potential -->
+  <!-- Fe-Fe, Z: 26-26 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="247961.14662712358"/>
    <point r="0.03543859649122807" E="200557.07435130246"/>
@@ -3350,7 +3350,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="3" type2="4">
-  <!-- Fe-Ni, Z: 26-28 pair potential -->
+  <!-- Fe-Ni, Z: 26-28 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="264692.077472359"/>
    <point r="0.03543859649122807" E="214115.07671519314"/>
@@ -3755,7 +3755,7 @@
   </potential_pair>
  </per_pair_data>
  <per_pair_data type1="4" type2="4">
-  <!-- Ni-Ni, Z: 28-28 pair potential -->
+  <!-- Ni-Ni, Z: 28-28 std::pair potential -->
   <potential_pair num_points="400" y1="1e+50" yn="0.0">
    <point r="0.03" E="285620.78662228805"/>
    <point r="0.03543859649122807" E="230872.72280224148"/>

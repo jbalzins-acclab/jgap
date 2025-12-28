@@ -7,13 +7,13 @@
 namespace jgap {
     class PerriotPolynomialCutoff : public CutoffFunction {
     public:
-        static constexpr string TYPE = "perriot";
+        static constexpr std::string TYPE = "perriot";
 
-        PerriotPolynomialCutoff(const nlohmann::json& params);
+        PerriotPolynomialCutoff(const DataNode& params);
         PerriotPolynomialCutoff(double rMin, double cutoff);
 
-        string getType() override { return TYPE; }
-        nlohmann::json serialize() override;
+        std::string getType() override { return TYPE; }
+        DataNode serialize() override;
         double getCutoff() override { return _cutoff; }
 
         double evaluate(double r) override;
@@ -25,7 +25,7 @@ namespace jgap {
         double _cutoffWidthInverse;
     };
 
-    REGISTER_PARSER(CutoffFunction, PerriotPolynomialCutoff)
+    SETUP_PARSER(CutoffFunction, PerriotPolynomialCutoff)
 }
 
 #endif

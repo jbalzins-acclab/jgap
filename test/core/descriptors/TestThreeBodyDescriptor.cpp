@@ -9,7 +9,7 @@
 using namespace jgap;
 
 AtomicStructure pythagorian3b;
-nlohmann::json params3b;
+DataNode params3b;
 
 void initPythagorian3b() {
     pythagorian3b = AtomicStructure{
@@ -29,7 +29,7 @@ void initPythagorian3b() {
 }
 
 void initThreeBodyParams() {
-    params3b = nlohmann::json::parse(R"(
+    params3b = DataNode::parse(R"(
     {
         "kernels": [
             {

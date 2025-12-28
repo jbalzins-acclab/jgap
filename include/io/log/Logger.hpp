@@ -15,12 +15,12 @@ namespace jgap {
         virtual ~Logger() = default;
 
         // Core virtual
-        virtual void log(LogLevel level, string_view msg) = 0;
+        virtual void log(LogLevel level, std::string_view msg) = 0;
 
         // Extended API with source location metadata (file/line/func)
         // Default implementation falls back to legacy log() if derived class doesn't override it
         virtual void logWithSrc(LogLevel level,
-                                string_view msg,
+                                std::string_view msg,
                                 const char* file,
                                 int line,
                                 const char* func) {
@@ -30,59 +30,59 @@ namespace jgap {
 
         // Convenience overloads with formatting
         template <typename... Args>
-        void debug(const string_view fmt, Args&&... args) {
-            log(LogLevel::Debug, vformat(fmt, make_format_args(args...)));
+        void debug(const std::string_view fmt, Args&&... args) {
+            log(LogLevel::Debug, std::vformat(fmt, std::make_format_args(args...)));
         }
 
         template <typename... Args>
-        void info(const string_view fmt, Args&&... args) {
-            log(LogLevel::Info, vformat(fmt, make_format_args(args...)));
+        void info(const std::string_view fmt, Args&&... args) {
+            log(LogLevel::Info, std::vformat(fmt, std::make_format_args(args...)));
         }
 
         template <typename... Args>
-        void warn(const string_view fmt, Args&&... args) {
-            log(LogLevel::Warn, vformat(fmt, make_format_args(args...)));
+        void warn(const std::string_view fmt, Args&&... args) {
+            log(LogLevel::Warn, std::vformat(fmt, std::make_format_args(args...)));
         }
 
         template <typename... Args>
-        void error(const string_view fmt, Args&&... args) {
-            log(LogLevel::Error, vformat(fmt, make_format_args(args...)));
+        void error(const std::string_view fmt, Args&&... args) {
+            log(LogLevel::Error, std::vformat(fmt, std::make_format_args(args...)));
         }
 
         // Convenience helpers that also pass source location metadata
         template <typename... Args>
-        void debugSrc(const char* file, int line, const char* func, const string_view fmt, Args&&... args) {
-            logWithSrc(LogLevel::Debug, vformat(fmt, make_format_args(args...)), file, line, func);
+        void debugSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+            logWithSrc(LogLevel::Debug, std::vformat(fmt, std::make_format_args(args...)), file, line, func);
         }
 
         template <typename... Args>
-        void infoSrc(const char* file, int line, const char* func, const string_view fmt, Args&&... args) {
-            logWithSrc(LogLevel::Info, vformat(fmt, make_format_args(args...)), file, line, func);
+        void infoSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+            logWithSrc(LogLevel::Info, std::vformat(fmt, std::make_format_args(args...)), file, line, func);
         }
 
         template <typename... Args>
-        void warnSrc(const char* file, int line, const char* func, const string_view fmt, Args&&... args) {
-            logWithSrc(LogLevel::Warn, vformat(fmt, make_format_args(args...)), file, line, func);
+        void warnSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+            logWithSrc(LogLevel::Warn, std::vformat(fmt, std::make_format_args(args...)), file, line, func);
         }
 
         template <typename... Args>
-        void errorSrc(const char* file, int line, const char* func, const string_view fmt, Args&&... args) {
-            logWithSrc(LogLevel::Error, vformat(fmt, make_format_args(args...)), file, line, func);
+        void errorSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+            logWithSrc(LogLevel::Error, std::vformat(fmt, std::make_format_args(args...)), file, line, func);
         }
 
         template <typename... Args>
-        [[noreturn]] void logAndThrow(const string_view fmt, Args&&... args) {
-            const string msg = vformat(fmt, make_format_args(args...));
+        [[noreturn]] void logAndThrow(const std::string_view fmt, Args&&... args) {
+            const std::string msg = std::vformat(fmt, std::make_format_args(args...));
             log(LogLevel::Error, msg);
-            throw runtime_error(msg);
+            throw std::runtime_error(msg);
         }
 
         // Same as logAndThrow but also passes source location metadata
         template <typename... Args>
-        [[noreturn]] void logAndThrowSrc(const char* file, int line, const char* func, const string_view fmt, Args&&... args) {
-            const string msg = vformat(fmt, make_format_args(args...));
+        [[noreturn]] void logAndThrowSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+            const std::string msg = std::vformat(fmt, std::make_format_args(args...));
             logWithSrc(LogLevel::Error, msg, file, line, func);
-            throw runtime_error(msg);
+            throw std::runtime_error(msg);
         }
     };
 }

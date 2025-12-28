@@ -8,13 +8,12 @@ namespace jgap {
     class CosCutoff : public CutoffFunction {
     public:
         CosCutoff(double cutoff, double cutoffTransitionWidth);
+        explicit CosCutoff(const DataNode& params);
 
-        static constexpr string TYPE = "coscutoff";
+        static constexpr const char* TYPE = "coscutoff";
 
-        static shared_ptr<CosCutoff> fromJson(nlohmann::json params);
-
-        string getType() override {return TYPE;};
-        nlohmann::json serialize() override;
+        std::string getType() override {return TYPE;};
+        DataNode serialize() override;
         double getCutoff() override { return _cutoff; }
 
         ~CosCutoff() override = default;
@@ -28,6 +27,6 @@ namespace jgap {
         double _cutoffTransitionWidthInverse;
     };
 
-    REGISTER_PARSER(CutoffFunction, CosCutoff)
+    SETUP_PARSER(CutoffFunction, CosCutoff)
 }
 #endif

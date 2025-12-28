@@ -1,3 +1,5 @@
+#include "../../../include/data/atomic/AtomicStructure.hpp"
+
 #include "data/Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 
@@ -28,7 +30,7 @@ namespace jgap {
             }
 
             if (!forces.has_value()) {
-                forces = vector(size(), Vector3{0.0, 0.0, 0.0});
+                forces = std::vector(size(), Vector3{0.0, 0.0, 0.0});
             }
             for (size_t i = 0; i < size(); i++) {
                 (*forces)[i] += prediction.forces.value()[i] * sign;
@@ -37,7 +39,7 @@ namespace jgap {
 
         if (prediction.virials.has_value() && (this->virials.has_value() || setEmpty)) {
             if (!this->virials.has_value()) {
-                this->virials = array{Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}};
+                this->virials = {Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}, Vector3{0.0,0.0,0.0}};
             }
             for (size_t i = 0; i < 3; i++) {
                 (*this->virials)[i] = (*this->virials)[i] + prediction.virials.value()[i] * sign;
@@ -63,7 +65,7 @@ namespace jgap {
         cpy.forceSigmasInverse = {};
 
         if (forces.has_value()) {
-            cpy.forces = vector<Vector3>{};
+            cpy.forces = std::vector<Vector3>{};
         }
         for (size_t i = 0; i < a; i++) {
             for (size_t j = 0; j < b; j++) {

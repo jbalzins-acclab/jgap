@@ -7,12 +7,14 @@
 #include <memory>
 #include <core/tabulation/SimpleTabulation.hpp>
 
-
 namespace jgap {
+
+    using DataSet = std::vector<AtomicStructure>;
+
     class Fit {
     public:
         virtual ~Fit() = default;
-        virtual shared_ptr<Potential> fit(const vector<AtomicStructure>& trainingData) = 0;
+        virtual std::shared_ptr<Potential> fit(const std::vector<AtomicStructure>& training_data) = 0;
     };
 }
 

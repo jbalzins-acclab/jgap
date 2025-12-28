@@ -2,13 +2,12 @@
 #define SPARSIFIER_HPP
 
 #include <vector>
-#include <Eigen/Dense>
 
-#include "data/Vector3.hpp"
+#include "data/DataNode.hpp"
 
 namespace jgap {
 
-    using KernelParams = nlohmann::json;
+    using KernelParams = DataNode;
 
     class Sparsifier {
     public:

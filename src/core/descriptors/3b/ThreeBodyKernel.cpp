@@ -8,7 +8,7 @@ namespace jgap {
     Covariance ThreeBodyKernel::covariance(const AtomicStructure &structure,
                                            const ThreeBodyIndex &index) {
         double energy = 0;
-        vector forces(structure.size(), Vector3{0, 0, 0});
+        std::vector forces(structure.size(), Vector3{0, 0, 0});
         array<Vector3, 3> virials{};
 
         for (auto [atomIndexes,

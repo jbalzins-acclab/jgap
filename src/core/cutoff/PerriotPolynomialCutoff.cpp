@@ -11,7 +11,7 @@ namespace jgap {
         _cutoffWidthInverse = 1.0 / (_cutoff - _rMin);
     }
 
-    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const nlohmann::json &params) {
+    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const DataNode &params) {
         _cutoff = params["cutoff"].get<double>();
         if (params.contains("r_min")) {
             _rMin = params["r_min"].get<double>();
@@ -21,7 +21,7 @@ namespace jgap {
         _cutoffWidthInverse = 1.0 / (_cutoff - _rMin);
     }
 
-    nlohmann::json PerriotPolynomialCutoff::serialize() {
+    DataNode PerriotPolynomialCutoff::serialize() {
         return {
             {"r_min", _rMin},
             {"cutoff", _cutoff}

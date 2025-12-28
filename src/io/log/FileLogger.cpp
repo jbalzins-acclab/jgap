@@ -18,20 +18,20 @@ namespace fs = std::filesystem;
 
 namespace jgap {
 
-    static string timestamp_for_filename() {
+    static std::string timestamp_for_filename() {
         // Use local time in human-readable safe format: YYYYMMDD-HHMMSS
         auto now = chrono::system_clock::now();
         return format("{:%Y%m%d-%H%M%S}", now);
     }
 
-    string FileLogger::autoFilePath() {
-        const string baseDir = "logs/jgap";
+    std::string FileLogger::autoFilePath() {
+        const std::string baseDir = "logs/jgap";
         fs::create_directories(baseDir);
-        const string name = format("jgap-{}-{}.log", timestamp_for_filename(), jgap_getpid());
-        return (fs::path(baseDir) / name).string();
+        const std::string name = format("jgap-{}-{}.log", timestamp_for_filename(), jgap_getpid());
+        return (fs::path(baseDir) / name).std::string();
     }
 
-    string FileLogger::levelTag(LogLevel level) {
+    std::string FileLogger::levelTag(LogLevel level) {
         switch (level) {
             case LogLevel::Debug: return "[DEBUG]";
             case LogLevel::Info:  return "[INFO ]";
@@ -64,7 +64,7 @@ namespace jgap {
             log(level, msg);
             return;
         }
-        const string withSrc = format("{} ({}:{}:{})", msg, file ? file : "?", line, func ? func : "?");
+        const std::string withSrc = format("{} ({}:{}:{})", msg, file ? file : "?", line, func ? func : "?");
         log(level, withSrc);
     }
 }

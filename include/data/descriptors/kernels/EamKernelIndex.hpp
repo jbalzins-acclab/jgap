@@ -6,17 +6,16 @@
 
 #include "data/Vector3.hpp"
 
-
 namespace jgap {
     struct EamDensityData {
-        // to avoid overhead vector.index =
+        // to avoid overhead std::vector.index =
         size_t atAtomIndex;
         double density; // rho_i = sum(...)
-        vector<pair<NeighbourData, double>> densityDerivatives; // drho_i / dr_ij (j = NeighbourData.index)
+        std::vector<std::pair<NeighbourData, double>> densityDerivatives; // drho_i / dr_ij (j = NeighbourData.index)
     };
 
-    using EamKernelIndexPerSpecies = vector<EamDensityData>;
-    using EamKernelIndex = map<Species, EamKernelIndexPerSpecies>;
+    using EamKernelIndexPerSpecies = std::vector<EamDensityData>;
+    using EamKernelIndex = std::map<Species, EamKernelIndexPerSpecies>;
 }
 
 #endif

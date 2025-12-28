@@ -6,8 +6,10 @@
 #include <cstddef>
 #include <iterator>
 #include <utility>
+#include <vector>
+#include <cmath>
 
-#include "Vector3.hpp"
+#include "../Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 
@@ -24,7 +26,7 @@ namespace jgap {
             data.resize(size, 0.0);
         }
 
-        Grid1d(vector<double> data, double spacing, double origin)
+        Grid1d(std::vector<double> data, double spacing, double origin)
             : data(std::move(data)), spacing(spacing), origin(origin) {}
 
         // --- Element access ---
@@ -79,7 +81,7 @@ namespace jgap {
 
         double spacing{};
         double origin{};
-        vector<double> data{};
+        std::vector<double> data{};
 
         void checkShape(const Grid1d& other) const {
             assert(size() == other.size() && "Grid1d dimensions don't match");

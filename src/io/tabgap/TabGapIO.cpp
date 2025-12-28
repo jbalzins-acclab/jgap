@@ -39,7 +39,7 @@ namespace jgap {
 
     FileNames TabGapIO::write(const TabulationData &valuesTables,
                                    const TabulationData &splineTables,
-                                   optional<string> outputFileNamePrefix) {
+                                   std::optional<std::string> outputFileNamePrefix) {
 
         if (!outputFileNamePrefix.has_value()) {
             outputFileNamePrefix = generateFileNamePrefix(splineTables);
@@ -56,26 +56,26 @@ namespace jgap {
         return resultingFileNames;
     }
 
-    string TabGapIO::generateFileNamePrefix(const TabulationData &table) {
-        string speciesStr;
-        for (const string& species: table.allSpecies()) {
+    std::string TabGapIO::generateFileNamePrefix(const TabulationData &table) {
+        std::string speciesStr;
+        for (const std::string& species: table.allSpecies()) {
             speciesStr += species;
         }
 
         return speciesStr + uniqueStamp();
     }
 
-    string TabGapIO::writeH5(const TabulationData &valuesTables,
+    std::string TabGapIO::writeH5(const TabulationData &valuesTables,
                              const TabulationData &splineTables,
-                             const string &outputFileNamePrefix) {
+                             const std::string &outputFileNamePrefix) {
 
         // REMEMBER(!): Spline grid written, but with original grid specifications
         HighFive::File tabGapFile(outputFileNamePrefix + ".tabgap.h5", HighFive::File::Overwrite);
 
-        const string comment1 = "UNITS: metal";
-        tabGapFile.createDataSet<string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
-        const string comment2 = "pair_style tabgap";
-        tabGapFile.createDataSet<string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
+        const std::string comment1 = "UNITS: metal";
+        tabGapFile.createDataSet<std::string>("comment1", HighFive::DataSpace::From(comment1)).write(comment1);
+        const std::string comment2 = "pair_style tabgap";
+        tabGapFile.createDataSet<std::string>("comment2", HighFive::DataSpace::From(comment2)).write(comment2);
 
         auto e0Group = tabGapFile.createGroup("e0");
         e0Group.createAttribute("Nelements", splineTables.isolatedEnergies.size())
@@ -86,7 +86,7 @@ namespace jgap {
 
         if (splineTables.eamTabulationData.empty()) {
             tabGapFile.createDataSet(
-                "npots", vector{splineTables.pairGrids.size(), splineTables.tripletGrids.size()}
+                "npots", std::vector{splineTables.pairGrids.size(), splineTables.tripletGrids.size()}
                 );
 
             for (const auto& [speciesPair, coeffs2b] : splineTables.pairGrids) {
@@ -97,7 +97,7 @@ namespace jgap {
 
                 const auto& pairEnergies = valuesTables.pairGrids.at(speciesPair);
                 pairGroup.createDataSet( /*Original grid, not spline coeffs*/
-                    "grid_limits", vector{pairEnergies.origin, pairEnergies.cutoff()}
+                    "grid_limits", std::vector{pairEnergies.origin, pairEnergies.cutoff()}
                 );
 
                 pairGroup.createAttribute("N", pairEnergies.size())
@@ -106,7 +106,7 @@ namespace jgap {
             }
 
         } else {
-            tabGapFile.createDataSet("npots", vector{0, splineTables.tripletGrids.size()});
+            tabGapFile.createDataSet("npots", std::vector{0, splineTables.tripletGrids.size()});
         }
 
         for (const auto& [speciesTriplet, coeffs] : splineTables.tripletGrids) {
@@ -121,12 +121,12 @@ namespace jgap {
 
             const auto& tripletEnergies = valuesTables.tripletGrids.at(speciesTriplet);
 
-            tripletGroup.createDataSet("grid_limits", vector{
+            tripletGroup.createDataSet("grid_limits", std::vector{
                 tripletEnergies.origin.x, tripletEnergies.origin.y, -1.0,
                 tripletEnergies.cutoff(), tripletEnergies.cutoff(), 1.0
             });
 
-            tripletGroup.createDataSet("N", vector{
+            tripletGroup.createDataSet("N", std::vector{
                 tripletEnergies.nR, tripletEnergies.nR, tripletEnergies.nAngular
             });
 
@@ -137,9 +137,9 @@ namespace jgap {
         return tabGapFile.getName();
     }
 
-    string TabGapIO::writeEamFs(const TabulationData &valueTables, size_t index, const string &outputFileNamePrefix) {
+    std::string TabGapIO::writeEamFs(const TabulationData &valueTables, size_t index, const std::string &outputFileNamePrefix) {
 
-        const string filename = outputFileNamePrefix + (index != 0 ? "#" + to_string(index) : "") + ".eam.fs";
+        const std::string filename = outputFileNamePrefix + (index != 0 ? "#" + to_string(index) : "") + ".eam.fs";
 
         ofstream eamFsFile(filename);
         if (!eamFsFile.is_open()) {
@@ -148,9 +148,9 @@ namespace jgap {
         eamFsFile << fixed << setprecision(17);
 
         // Lines 1–3: Comments/metadata.
-        eamFsFile << "# UNITS: metal" << endl;
-        eamFsFile << "# EAM part of a potential tabulated with jGAP"  << endl;
-        eamFsFile << "# pair_style eam/fs" << endl;
+        eamFsFile << "# UNITS: metal" << std::endl;
+        eamFsFile << "# EAM part of a potential tabulated with jGAP"  << std::endl;
+        eamFsFile << "# pair_style eam/fs" << std::endl;
 
         const EamTabulationData& eamTables = valueTables.eamTabulationData.at(index);
 
@@ -160,30 +160,30 @@ namespace jgap {
 
         // Account for no EAM energy for some element and/or no contribution to density from some element
         // (unlikely to be useful, but being careful is never bad)
-        set<Species> elementsSet;
-        for (const auto& species : eamTables.densityGrids | views::keys) {
+        std::set<Species> elementsSet;
+        for (const auto& species : eamTables.densityGrids | std::views::keys) {
             elementsSet.insert(species);
         }
-        for (const auto& speciesPair : eamTables.eamPairFunctionGrids | views::keys) {
+        for (const auto& speciesPair : eamTables.eamPairFunctionGrids | std::views::keys) {
             elementsSet.insert(speciesPair.contributor);
             elementsSet.insert(speciesPair.receiver);
         }
-        for (const auto& speciesPair : valueTables.pairGrids | views::keys) {
+        for (const auto& speciesPair : valueTables.pairGrids | std::views::keys) {
             elementsSet.insert(speciesPair.first());
             elementsSet.insert(speciesPair.second());
         }
 
         // Fix the order, and keep the indexing consistent
-        vector elements(elementsSet.begin(), elementsSet.end());
+        std::vector elements(elementsSet.begin(), elementsSet.end());
         // Line 4: Number of elements (N) followed by each element’s symbol
         eamFsFile << eamTables.densityGrids.size() << " ";
         for (const auto& element: elements) {
             eamFsFile << element << " ";
         }
-        eamFsFile << endl;
+        eamFsFile << std::endl;
 
         auto& densityGridSample = eamTables.densityGrids.at(elements[0]);
-        for (const auto& grid: eamTables.densityGrids | views::values) {
+        for (const auto& grid: eamTables.densityGrids | std::views::values) {
             if (grid.size() != densityGridSample.size()
                 || grid.origin != densityGridSample.origin || grid.spacing != densityGridSample.spacing) {
                 // Shouldn't happen but just in case
@@ -192,21 +192,21 @@ namespace jgap {
         }
 
         if (eamTables.eamPairFunctionGrids.empty()) {
-            JGAP_LOG_AND_THROW("No EAM pair-function tables");
+            JGAP_LOG_AND_THROW("No EAM std::pair-function tables");
         }
         auto& pfGridSample = eamTables.eamPairFunctionGrids.begin()->second;
-        for (const auto& pfGrid: eamTables.eamPairFunctionGrids | views::values) {
+        for (const auto& pfGrid: eamTables.eamPairFunctionGrids | std::views::values) {
             if (pfGrid.size() != pfGridSample.size()
                 || pfGrid.origin != pfGridSample.origin || pfGrid.spacing != pfGridSample.spacing) {
-                JGAP_LOG_AND_THROW("Differing EAM pair-function grid setups");
+                JGAP_LOG_AND_THROW("Differing EAM std::pair-function grid setups");
             }
         }
 
-        for (const auto& pairEnergyGrid: valueTables.pairGrids | views::values) {
+        for (const auto& pairEnergyGrid: valueTables.pairGrids | std::views::values) {
             if (pairEnergyGrid.size() != pfGridSample.size()
                 || pairEnergyGrid.origin != pfGridSample.origin || pairEnergyGrid.spacing != pfGridSample.spacing) {
                 JGAP_LOG_AND_THROW(
-                    "EAM pair-function grid setup differs from a pair-energy grid setup"
+                    "EAM std::pair-function grid setup differs from a std::pair-energy grid setup"
                     );
             }
         }
@@ -216,7 +216,7 @@ namespace jgap {
         eamFsFile << densityGridSample.spacing << " ";
         eamFsFile << pfGridSample.size() << " ";
         eamFsFile << pfGridSample.spacing << " ";
-        eamFsFile << pfGridSample.cutoff() << endl;
+        eamFsFile << pfGridSample.cutoff() << std::endl;
 
         // Per-element Sections:
         /*
@@ -226,23 +226,23 @@ namespace jgap {
          */
         for (const Species& species1: elements) {
             eamFsFile << static_cast<size_t>(ATOMIC_NUMBERS[species1]) << " ";
-            eamFsFile << ATOMIC_MASSES[species1] << " 1.0 ZZZ" << endl;
+            eamFsFile << ATOMIC_MASSES[species1] << " 1.0 ZZZ" << std::endl;
 
             for (const auto& energyGridSlot : eamTables.getEnergyGridOrNull(species1)) {
-                eamFsFile << energyGridSlot.value << endl;
+                eamFsFile << energyGridSlot.value << std::endl;
             }
 
             // contributor = species1
             for (const Species& receiver: elements) {
                 for (const auto& pairFunctionGridSlot : eamTables.getPairFunctionGridOrNull({species1, receiver})) {
-                    eamFsFile << pairFunctionGridSlot.value << endl;
+                    eamFsFile << pairFunctionGridSlot.value << std::endl;
                 }
             }
         }
 
         /*
         *Pair Potential Tables (for all i ≥ j pairs):
-            *Tabulated \phi_{\alpha\beta}(r) values for each unique pair (symmetry is exploited),
+            *Tabulated \phi_{\alpha\beta}(r) values for each unique std::pair (symmetry is exploited),
             *listing Nr points per interaction
          */
 
@@ -253,7 +253,7 @@ namespace jgap {
                 }
 
                 for (const auto& pairEnergyGridSlot: valueTables.getOrNull({elements[i], elements[j]})) {
-                    eamFsFile << (index == 0 ? pairEnergyGridSlot.value * pairEnergyGridSlot.pos : 0.0) << endl;
+                    eamFsFile << (index == 0 ? pairEnergyGridSlot.value * pairEnergyGridSlot.pos : 0.0) << std::endl;
                 }
             }
         }
@@ -263,7 +263,7 @@ namespace jgap {
         return filename;
     }
 
-    void TabGapIO::readH5(const string &fileName, TabulationData &splineCoefficients) {
+    void TabGapIO::readH5(const std::string &fileName, TabulationData &splineCoefficients) {
         HighFive::File tabGapFile(fileName, HighFive::File::ReadOnly);
 
         // Read isolated atom energies
@@ -279,7 +279,7 @@ namespace jgap {
         }
 
         // Read npots to know counts; but we will iterate groups by name
-        vector<string> objectNames = tabGapFile.listObjectNames();
+        std::vector<std::string> objectNames = tabGapFile.listObjectNames();
         for (const auto &name : objectNames) {
             if (name == "e0" || name == "npots" || name == "comment1" || name == "comment2") continue;
             // Count number of '-' to distinguish 2b vs 3b
@@ -291,18 +291,18 @@ namespace jgap {
                 Species iSpec, jSpec;
                 group.getAttribute("element_i").read(iSpec);
                 group.getAttribute("element_j").read(jSpec);
-                SpeciesPair pair{iSpec, jSpec};
+                SpeciesPair std::pair{iSpec, jSpec};
 
-                vector<double> limits; // origin, cutoff
-                tabGapFile.getDataSet(name + string("/grid_limits")).read(limits);
+                std::vector<double> limits; // origin, cutoff
+                tabGapFile.getDataSet(name + std::string("/grid_limits")).read(limits);
 
                 size_t N_originalGrid;
                 group.getAttribute("N").read(N_originalGrid);
 
-                vector<double> splineCoeffs2b;
-                tabGapFile.getDataSet(name + string("/energies")).read(splineCoeffs2b);
+                std::vector<double> splineCoeffs2b;
+                tabGapFile.getDataSet(name + std::string("/energies")).read(splineCoeffs2b);
                 if (splineCoeffs2b.size() != N_originalGrid + 2) {
-                    JGAP_LOG_AND_THROW("Invalid H5 pair data size for {}-{}", iSpec + string("-") + jSpec);
+                    JGAP_LOG_AND_THROW("Invalid H5 std::pair data size for {}-{}", iSpec + std::string("-") + jSpec);
                 }
 
                 double originalGridOrigin = limits.at(0);
@@ -311,12 +311,12 @@ namespace jgap {
                 Grid1d splineGrid(N_originalGrid + 2, spacing, originalGridOrigin - spacing);
 
                 splineGrid.data = std::move(splineCoeffs2b);
-                if (splineCoefficients.pairGrids.contains(pair)) {
-                    for (const auto& energy: splineCoefficients.pairGrids[pair]) {
+                if (splineCoefficients.pairGrids.contains(std::pair)) {
+                    for (const auto& energy: splineCoefficients.pairGrids[std::pair]) {
                         assert(abs(energy.value) < 1e-20 && "Conflicting 2b energies in files");
                     }
                 }
-                splineCoefficients.pairGrids[pair] = std::move(splineGrid);
+                splineCoefficients.pairGrids[std::pair] = std::move(splineGrid);
 
             } else if (dashCount == 2) {
                 // Triplet group: element_i, element_j, element_k
@@ -325,12 +325,12 @@ namespace jgap {
                 group.getAttribute("element_j").read(jSpec);
                 group.getAttribute("element_k").read(kSpec);
 
-                vector<size_t> Nvec; // nR, nR, nAngular
-                tabGapFile.getDataSet(name + string("/N")).read(Nvec);
-                vector<double> limits; // rmin,rmin,-1, rmax,rmax,1
-                tabGapFile.getDataSet(name + string("/grid_limits")).read(limits);
-                vector<double> splineCoeffs3b;
-                tabGapFile.getDataSet(name + string("/energies")).read(splineCoeffs3b);
+                std::vector<size_t> Nvec; // nR, nR, nAngular
+                tabGapFile.getDataSet(name + std::string("/N")).read(Nvec);
+                std::vector<double> limits; // rmin,rmin,-1, rmax,rmax,1
+                tabGapFile.getDataSet(name + std::string("/grid_limits")).read(limits);
+                std::vector<double> splineCoeffs3b;
+                tabGapFile.getDataSet(name + std::string("/energies")).read(splineCoeffs3b);
 
                 assert(Nvec[0] == Nvec[1] && "Only symmetric table supported");
                 size_t originalGrid_nR = Nvec.at(0);
@@ -355,13 +355,13 @@ namespace jgap {
         }
     }
 
-    void TabGapIO::readEamFs(const string &fileName, TabulationData &splineCoefficients) {
+    void TabGapIO::readEamFs(const std::string &fileName, TabulationData &splineCoefficients) {
         ifstream inFile(fileName);
         if (!inFile.is_open()) {
             JGAP_LOG_AND_THROW("Could not open {} as .eam.fs", fileName);
         }
 
-        string line;
+        std::string line;
         for (size_t i = 0; i < 3; i++) {
             if (!getLine(inFile, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing comment #{}", i);
         }
@@ -372,7 +372,7 @@ namespace jgap {
         std::istringstream iss(line);
         size_t N;
         iss >> N;
-        vector<Species> elements(N);
+        std::vector<Species> elements(N);
         for (size_t i = 0; i < N; i++) iss >> elements[i];
         if (elements.empty()) JGAP_LOG_AND_THROW("Invalid EAM/FS: zero elements");
 
@@ -421,7 +421,7 @@ namespace jgap {
                 Grid1d pairGrid(Nr, dr, 0.0);
                 for (size_t k = 0; k < Nr; k++) {
                     if (!getLine(inFile, line)) {
-                        JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete pair potential table");
+                        JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete std::pair potential table");
                     }
                     double phi = std::stod(line);
                     double r = static_cast<double>(k) * dr; // origin assumed 0

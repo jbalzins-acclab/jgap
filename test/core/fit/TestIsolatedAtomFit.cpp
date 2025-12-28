@@ -20,10 +20,10 @@ jgap::AtomicStructure makeIsolated(jgap::Species species) {
 
 TEST(TestIsolatedAtom, testCrMnFeNi650) {
 
-    string xyzDataFn = "test/resources/xyz-samples/iter-3-3-train.xyz";
+    std::string xyzDataFn = "test/resources/xyz-samples/iter-3-3-train.xyz";
     auto structs = jgap::readXyz(xyzDataFn);
 
-    auto fit = jgap::IsolatedAtomFit(nlohmann::json::parse("{}"));
+    auto fit = jgap::IsolatedAtomFit(DataNode::parse("{}"));
     auto pot = fit.fit(structs);
 
     ASSERT_NEAR(pot->predict(makeIsolated("Cr")).energy.value(), -5.4323394, 1e-9);

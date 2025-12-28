@@ -6,12 +6,12 @@
 
 #include <memory>
 #include <vector>
-#include <nlohmann/json_fwd.hpp>
+#include <string>
+#include "data/DataNode.hpp"
 
 #include "Kernel.hpp"
 #include "data/CutoffRanges.hpp"
-#include "data/TabulationData.hpp"
-
+#include "../../data/tabulation/TabulationData.hpp"
 
 namespace jgap {
 
@@ -19,19 +19,17 @@ namespace jgap {
     public:
         virtual ~Descriptor() = default;
 
-        virtual nlohmann::json serialize() = 0;
-        virtual string getType() = 0;
         virtual CutoffRanges getCutoff() = 0;
         // Must be in same order as @covariate and @selfCovariate
-        virtual vector<shared_ptr<IKernel>> getKernels() = 0;
+        virtual std::vector<std::shared_ptr<IKernel>> getKernels() = 0;
 
         // Sparsification strategy to constructor
-        virtual void setupSparseKernels(const vector<AtomicStructure> &fromData) = 0;
+        virtual void setupSparseKernels(const std::vector<AtomicStructure> &from_data) = 0;
 
-        virtual vector<Covariance> covariate(const AtomicStructure &atomicStructure) = 0;
-        virtual vector<shared_ptr<MatrixBlock>> selfCovariate() = 0;
+        virtual std::vector<Covariance> covariate(const AtomicStructure &atomic_structure) = 0;
+        virtual std::vector<std::shared_ptr<MatrixBlock>> selfCovariate() = 0;
 
-        virtual Predictions predict(const AtomicStructure &atomicStructure) = 0;
+        virtual Predictions predict(const AtomicStructure &atomic_structure) = 0;
 
         virtual void tabulate(TabulationData &table) = 0;
     };

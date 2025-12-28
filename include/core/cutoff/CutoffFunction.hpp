@@ -3,6 +3,7 @@
 
 #include <string>
 #include <nlohmann/json.hpp>
+#include "data/DataNode.hpp"
 
 
 namespace jgap {
@@ -14,8 +15,8 @@ namespace jgap {
         virtual double evaluate(double r) = 0;
         virtual double differentiate(double r) = 0;
 
-        virtual string getType() = 0;
-        virtual nlohmann::json serialize() = 0;
+        virtual std::string getType() = 0;
+        virtual jgap::DataNode serialize() = 0;
         virtual double getCutoff() = 0;
     };
 }

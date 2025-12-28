@@ -29,7 +29,7 @@ void setupEquilateralTriangle() {
 TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     setupEquilateralTriangle();
 
-    const auto params = nlohmann::json::parse(R"(
+    const auto params = DataNode::parse(R"(
     {
         "descriptors": {
             "2b_test": {
@@ -72,7 +72,7 @@ TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
         };
     //NeighbourFinder::findNeighbours(equilateralTriangle, 10.0);
     //auto a = desc2b.covariate(equilateralTriangle);
-    auto pot = fit.fit(vector{equilateralTriangle});
+    auto pot = fit.fit(std::vector{equilateralTriangle});
 
     auto res = pot->serialize();
     double c = res["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
@@ -89,9 +89,9 @@ TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     // GPWRITE=1 VERBOSE=1 gap_fit at_file=train.xyz e0=0.0 sparse_jitter=1e-8 do_copy_at_file=False gp_file=gap_out.xml rnd_seed=999 default_sigma="{4.0 1.0 0 0}" gap="{distance_2b cutoff=10.0 covariance_type=ard_se delta=1.0 theta_uniform=1.0 sparse_method=FILE sparse_file=mysparse.desc print_sparse_index=sparse_indices_2b.out}"
 }
 
-nlohmann::json makeParams2bDesc(double theta, double delta, double rMin, double cutoff, vector<double> sparsePts) {
+DataNode makeParams2bDesc(double theta, double delta, double rMin, double cutoff, std::vector<double> sparsePts) {
 
-    nlohmann::json kernels = nlohmann::json::array();
+    DataNode kernels = DataNode::array();
     for (auto r: sparsePts) {
         kernels.push_back({
             {"species_pair", {"Fe", "Fe"}},
@@ -103,7 +103,7 @@ nlohmann::json makeParams2bDesc(double theta, double delta, double rMin, double 
         });
     }
 
-    return nlohmann::json{
+    return DataNode{
         {"type", "2b"},
         {"kernels", kernels},
         {"cutoff", {
@@ -115,8 +115,8 @@ nlohmann::json makeParams2bDesc(double theta, double delta, double rMin, double 
     };
 }
 
-nlohmann::json makeSimpleSigmaRules(double E, double F, double liquid, double shortRange) {
-    return nlohmann::json{
+DataNode makeSimpleSigmaRules(double E, double F, double liquid, double shortRange) {
+    return DataNode{
         {"type", "simple"},
         {"E_per_root_n_atoms", E},
         {"F_component", F},
@@ -125,8 +125,8 @@ nlohmann::json makeSimpleSigmaRules(double E, double F, double liquid, double sh
     };
 }
 
-nlohmann::json makeFitParams(nlohmann::json desc, string descName, nlohmann::json srules) {
-    return nlohmann::json{
+DataNode makeFitParams(DataNode desc, std::string descName, DataNode srules) {
+    return DataNode{
         {"descriptors", {
                 {descName, desc}
             }
@@ -155,7 +155,7 @@ void setupTwoAtoms() {
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
     setupTwoAtoms();
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0, 4.0}),
+            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0, 4.0}),
             "2b_test",
             makeSimpleSigmaRules(1, 1, 5, 5)
         );
@@ -167,7 +167,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
         Vector3{0.0, 0.0, 0.0},
         Vector3{0.0, 0.0, 0.0}
     };
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
@@ -179,7 +179,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
 
     setupTwoAtoms();
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0}),
+            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
             "2b_test",
             makeSimpleSigmaRules(10000000, 1, 5, 5)
         );
@@ -191,7 +191,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
         Vector3{1.0, 0.0, 0.0},
         Vector3{0.0, 0.0, 0.0}
     };
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0, -0.30764655994411466, 1e-6);
@@ -200,7 +200,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
     setupTwoAtoms();
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0}),
+            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
             "2b_test",
             makeSimpleSigmaRules(10000000, 1, 5, 5)
         );
@@ -213,10 +213,10 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
         Vector3{0.0, 0.0, 0.0}
     };
     twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
+    std::cout << coeffs.dump() << std::endl;
 
     double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0 , -.15382666452610533, 1e-6);
@@ -225,7 +225,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
     setupTwoAtoms();
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0}),
+            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
             "2b_test",
             makeSimpleSigmaRules(10000000, 2, 5, 5)
         );
@@ -238,7 +238,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
         Vector3{-1.0, -1.0, -1.0}
     };
     twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0, -.47733536744854282, 1e-6);
@@ -247,7 +247,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
     setupTwoAtoms();
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, vector{2.0, 2.5, 4.0}),
+            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0, 2.5, 4.0}),
             "2b_test",
             makeSimpleSigmaRules(1, 2, 5, 5)
         );
@@ -260,7 +260,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
         Vector3{-1.0, -1.0, -1.0}
     };
     twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
     double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
@@ -276,16 +276,16 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
 TEST(TestQRGapFit, twoBodyQuipCompatibilityRealBox) {
     auto box = readXyz("test/resources/xyz-samples/fe-only.xyz")[0];
     const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 10.0, 4.0, 5.0, vector{2.0, 2.5, 4.0}),
+            makeParams2bDesc(1.0, 10.0, 4.0, 5.0, std::vector{2.0, 2.5, 4.0}),
             "2b_test",
             makeSimpleSigmaRules(0.001, 0.05, 1, 1)
         );
 
     auto fit = InRamJgapFit(params);
 
-    auto pot = fit.fit(vector{box});
+    auto pot = fit.fit(std::vector{box});
     auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
+    std::cout << coeffs.dump() << std::endl;
 
     ASSERT_NEAR(coeffs[0].get<double>() , -.91130660366840928E-002, 1e-6);
     ASSERT_NEAR(coeffs[1].get<double>() , -.30763954226713420E-003, 1e-6);
@@ -293,11 +293,11 @@ TEST(TestQRGapFit, twoBodyQuipCompatibilityRealBox) {
 }
 */
 
-nlohmann::json makeParamsEamDesc(double theta, double delta, double rMin, double cutoff, vector<double> sparsePts) {
+DataNode makeParamsEamDesc(double theta, double delta, double rMin, double cutoff, std::vector<double> sparsePts) {
 
-    nlohmann::json kernels = nlohmann::json::array();
+    DataNode kernels = DataNode::array();
     for (auto rho: sparsePts) {
-        kernels.push_back({
+        kernels.pushBack({
             {"species", "Fe"},
             {"type", "squared_exp"},
             {"length_scale", theta},
@@ -306,7 +306,7 @@ nlohmann::json makeParamsEamDesc(double theta, double delta, double rMin, double
         });
     }
 
-    return nlohmann::json{
+    return DataNode{
         {"type", "eam"},
         {"kernels", kernels},
         {"pair_functions", {
@@ -330,13 +330,13 @@ TEST(TestQRGapFit, twoAtomsEamQuipCompatibility) {
     };
 
     const auto params = makeFitParams(
-            makeParamsEamDesc(1.0, 1.0, 0.0, 5.0, vector{1.0}),
+            makeParamsEamDesc(1.0, 1.0, 0.0, 5.0, std::vector{1.0}),
             "eam_test",
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
     auto fit = QRGapFit(params);
 
-    auto pot = fit.fit(vector{twoAtoms});
+    auto pot = fit.fit(std::vector{twoAtoms});
 
     double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0, .17637586136984833E-001, 1e-6);
@@ -347,13 +347,13 @@ TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
     box.virials.reset();
 
     const auto params = makeFitParams(
-        makeParamsEamDesc(3.0, 2.0, 0.0, 5.0, vector{1.0, 2.5, 4.0}),
+        makeParamsEamDesc(3.0, 2.0, 0.0, 5.0, std::vector{1.0, 2.5, 4.0}),
         "eam_test",
         makeSimpleSigmaRules(0.001, 0.05, 1, 1)
     );
     auto fit = QRGapFit(params);
 
-    auto pot = fit.fit(vector{box});
+    auto pot = fit.fit(std::vector{box});
 
     double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
     double c1 = pot->serialize()["descriptors"]["eam_test"]["kernels"][1]["coefficient"];
@@ -369,9 +369,9 @@ TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
     ASSERT_NEAR(c2, -.16117464517539212, 1e-6);
 }
 
-nlohmann::json makeParams3bDesc(double theta, double delta, double rMin, double cutoff, vector<Vector3> sparsePts) {
+DataNode makeParams3bDesc(double theta, double delta, double rMin, double cutoff, std::vector<Vector3> sparsePts) {
 
-    auto kernels = nlohmann::json::array();
+    auto kernels = DataNode::array();
     for (const auto &q: sparsePts) {
 
         double rij = (sqrt(q.y) - q.x) / 2.0;
@@ -389,7 +389,7 @@ nlohmann::json makeParams3bDesc(double theta, double delta, double rMin, double 
         });
     }
 
-    return nlohmann::json{
+    return DataNode{
         {"type", "3b"},
         {"kernels", kernels},
         {"cutoff", {
@@ -412,14 +412,14 @@ TEST(TestQRGapFit, equilateralTriangle3bQuipCompatibility) {
     };
 
     const auto params = makeFitParams(
-            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, vector{Vector3{6.0, 0.0, 3.0}}),
+            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, std::vector{Vector3{6.0, 0.0, 3.0}}),
             "3b_test",
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
 
     auto fit = QRGapFit(params);
 
-    auto pot = fit.fit(vector{equilateralTriangle});
+    auto pot = fit.fit(std::vector{equilateralTriangle});
 
     double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0, .15381640115291151, 1e-8);
@@ -457,14 +457,14 @@ TEST(TestQRGapFit, pythagorian3bQuipCompatibility) {
     };
 
     const auto params = makeFitParams(
-            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, vector{Vector3{6.0, 0.0, 3.0}}),
+            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, std::vector{Vector3{6.0, 0.0, 3.0}}),
             "3b_test",
             makeSimpleSigmaRules(1, 1, 1, 1)
         );
 
     auto fit = QRGapFit(params);
 
-    auto pot = fit.fit(vector{pythagorian});
+    auto pot = fit.fit(std::vector{pythagorian});
 
     double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
     ASSERT_NEAR(c0, -.13044210897182607, 1e-8);
@@ -476,7 +476,7 @@ TEST(TestQRGapFit, hard3bQuipCompatibility) {
     auto box = readXyz("test/resources/xyz-samples/FeOnly.xyz")[15];
 
     const auto params = makeFitParams(
-    makeParams3bDesc(0.5, 3.0, 3.9, 4.5, vector{
+    makeParams3bDesc(0.5, 3.0, 3.9, 4.5, std::vector{
                 Vector3{6, 0, 3},
                 Vector3{8, 2, 1},
                 Vector3{5, 3, 8}
@@ -487,10 +487,10 @@ TEST(TestQRGapFit, hard3bQuipCompatibility) {
 
     auto fit = InRamJgapFit(params);
 
-    auto pot = fit.fit(vector{box});
-    // cout << pot->serialize();
+    auto pot = fit.fit(std::vector{box});
+    // std::cout << pot->serialize();
     auto coeffs = pot->serialize()["descriptors"]["3b_test"]["sparse_data"]["Fe,Fe,Fe"]["coefficients"];
-    cout << coeffs.dump() << endl;
+    std::cout << coeffs.dump() << std::endl;
     /*      <sparseX i="1" alpha="-.63024066682173821E-001" sparseCutoff="1.0000000000000000"/>
       <sparseX i="2" alpha="20.858471601167693" sparseCutoff="1.0000000000000000"/>
       <sparseX i="3" alpha="-190.02399797873642" sparseCutoff="1.0000000000000000"/>/

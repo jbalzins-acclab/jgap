@@ -6,7 +6,7 @@ namespace jgap {
                                      const EamKernelIndexPerSpecies &indexes) {
 
         double energy = 0;
-        vector forces(structure.size(), Vector3{0.0, 0.0, 0.0});
+        std::vector forces(structure.size(), Vector3{0.0, 0.0, 0.0});
         array<Vector3, 3> virials{};
 
         for (const auto &index : indexes) {

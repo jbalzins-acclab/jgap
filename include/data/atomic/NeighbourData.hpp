@@ -1,6 +1,6 @@
 #ifndef JGAP_NEIGHBOURDATA_HPP
 #define JGAP_NEIGHBOURDATA_HPP
-#include "Vector3.hpp"
+#include "../Vector3.hpp"
 
 namespace jgap {
     struct NeighbourData {
@@ -10,7 +10,7 @@ namespace jgap {
         double distance;
     };
 
-    using NeighboursData = vector<NeighbourData>;
+    using NeighboursData = std::vector<NeighbourData>;
 }
 
 #endif

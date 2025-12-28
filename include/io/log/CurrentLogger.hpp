@@ -4,21 +4,23 @@
 #include "Logger.hpp"
 #include "RouterLogger.hpp"
 #include "LogConfig.hpp"
+#include <memory>
+#include <string>
 
 namespace jgap {
     class CurrentLogger {
     public:
-        static shared_ptr<Logger> get() {
+        static std::shared_ptr<Logger> get() {
             return _logger;
         }
-        static void setLogger(const shared_ptr<Logger> &logger) {
+        static void setLogger(const std::shared_ptr<Logger> &logger) {
             _logger = logger;
         }
         static void initDefault(const LogConfig& cfg = LogConfig{}, const std::string& filePath = {}) {
-            _logger = make_shared<RouterLogger>(cfg, filePath);
+            _logger = std::make_shared<RouterLogger>(cfg, filePath);
         }
     private:
-        inline static shared_ptr<Logger> _logger = make_shared<RouterLogger>(LogConfig{});
+        inline static std::shared_ptr<Logger> _logger = std::make_shared<RouterLogger>(LogConfig{});
     };
 }
 

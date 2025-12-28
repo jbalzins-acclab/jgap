@@ -5,8 +5,10 @@
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <vector>
+#include <cmath>
 
-#include "Vector3.hpp"
+#include "../Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -16,7 +18,7 @@ namespace jgap {
         size_t nR{}, nAngular{};
         Vector3 spacing{};
         Vector3 origin{};
-        vector<double> dataFlat{};
+        std::vector<double> dataFlat{};
 
         Grid3d() = default;
         Grid3d(const Grid3d&) = default;  // allow copying
@@ -73,24 +75,24 @@ namespace jgap {
             return *this;
         }
 
-        vector<double> slice_ij(size_t i, size_t j) const {
-            vector<double> result(nAngular);
+        std::vector<double> slice_ij(size_t i, size_t j) const {
+            std::vector<double> result(nAngular);
             for (size_t k = 0; k < nAngular; k++) {
                 result[k] = dataFlat[i*nR*nR + j*nR + k];
             }
             return result;
         }
 
-        vector<double> slice_ik(size_t i, size_t k) const {
-            vector<double> result(nR);
+        std::vector<double> slice_ik(size_t i, size_t k) const {
+            std::vector<double> result(nR);
             for (size_t j = 0; j < nR; j++) {
                 result[j] = dataFlat[i*nR*nR + j*nR + k];
             }
             return result;
         }
 
-        vector<double> slice_jk(size_t j, size_t k) const {
-            vector<double> result(nR);
+        std::vector<double> slice_jk(size_t j, size_t k) const {
+            std::vector<double> result(nR);
             for (size_t i = 0; i < nR; i++) {
                 result[j] = dataFlat[i*nR*nR + j*nR + k];
             }
@@ -107,11 +109,11 @@ namespace jgap {
         }
 
         // --- Find closest <= grid index for a given coordinate ---
-        array<size_t, 3> lowerIndex(const Vector3& pos) const {
+        std::array<size_t, 3> lowerIndex(const Vector3& pos) const {
 
             assert(pos.x >= origin.x && pos.y >= origin.y && pos.z >= origin.z && "Point outside Grid3d(too low)");
 
-            auto idx = array{
+            auto idx = std::array{
                 static_cast<size_t>((pos.x - origin.x) / spacing.x),
                 static_cast<size_t>((pos.y - origin.y) / spacing.y),
                 static_cast<size_t>((pos.z - origin.z) / spacing.z),
@@ -130,12 +132,12 @@ namespace jgap {
 
         // --- Iterator support ---
         struct CellRef {
-            array<size_t, 3> index;
+            std::array<size_t, 3> index;
             Vector3 pos;
             double& value;
         };
         struct ConstCellRef {
-            array<size_t, 3> index;
+            std::array<size_t, 3> index;
             Vector3 position;
             const double& value;
         };

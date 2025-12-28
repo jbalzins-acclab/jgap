@@ -40,7 +40,7 @@ namespace jgap {
     }
 
     std::shared_ptr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node quipPairpot) {
-        if (quipPairpot.child("Potential").attribute("init_args").as_std::string() != std::string("IP Glue")) {
+        if (quipPairpot.child("Potential").attribute("init_args").as_string() != std::string("IP Glue")) {
             JGAP_LOG_WARN("Strange 'init_args'");
         }
         if (!quipPairpot.child("Glue_params")) {
@@ -50,13 +50,13 @@ namespace jgap {
         std::map<std::string, Species> typeToSpecies = {};
         for (pugi::xml_node perTypeNode: quipPairpot.child("Glue_params").children("per_type_data")) {
             const size_t atomicNumber = perTypeNode.attribute("atomic_num").as_uint();
-            typeToSpecies[perTypeNode.attribute("type").as_std::string()] = Z_inverse[atomicNumber];
+            typeToSpecies[perTypeNode.attribute("type").as_string()] = CHEM_SYMBOLS[atomicNumber];
         }
 
-        std::map<SpeciesPair, pair<std::vector<double>, std::vector<double>>> points;
+        std::map<SpeciesPair, std::pair<std::vector<double>, std::vector<double>>> points;
         for (pugi::xml_node perPairNode: quipPairpot.child("Glue_params").children("per_pair_data")) {
-            Species species1 = typeToSpecies[perPairNode.attribute("type1").as_std::string()];
-            Species species2 = typeToSpecies[perPairNode.attribute("type2").as_std::string()];
+            Species species1 = typeToSpecies[perPairNode.attribute("type1").as_string()];
+            Species species2 = typeToSpecies[perPairNode.attribute("type2").as_string()];
 
             std::vector<double> r, E;
             for (pugi::xml_node pointNode: perPairNode.child("potential_pair").children("point")) {
@@ -64,7 +64,7 @@ namespace jgap {
                 E.push_back(pointNode.attribute("E").as_double());
             }
 
-            points[SpeciesPair(species1, species2)] = pair{r, E};
+            points[SpeciesPair(species1, species2)] = std::pair{r, E};
         }
 
         return std::make_shared<SplinePairPotential>(std::map(points));
@@ -80,7 +80,7 @@ namespace jgap {
             potentials["GAP"] = transformSparseData(quipGapParams.child("gpSparse"));
         }
 
-        return make_shared<CompositePotential>(potentials);
+        return std::make_shared<CompositePotential>(potentials);
     }
 
     bool QuipXmlConverter::QuipDescriptorData::operator==(const QuipDescriptorData &other) const {
@@ -101,7 +101,7 @@ namespace jgap {
         for (pugi::xml_node isolatedAtomNode: quipIsolatedAtomParams.children("e0")) {
             if (isolatedAtomNode.attribute("value").as_double() != 0.0) {
                 const size_t atomicNumber = isolatedAtomNode.attribute("Z").as_uint();
-                isolatedAtomEnergies[Z_inverse[atomicNumber]] = isolatedAtomNode.attribute("value").as_double();
+                isolatedAtomEnergies[CHEM_SYMBOLS[atomicNumber]] = isolatedAtomNode.attribute("value").as_double();
             }
         }
 
@@ -219,7 +219,7 @@ namespace jgap {
             }
         }
 
-        return make_shared<GapPotential>(descriptors);
+        return std::make_shared<GapPotential>(descriptors);
     }
 
     std::shared_ptr<TwoBodyDescriptor> QuipXmlConverter::transformDistance2b(
@@ -237,17 +237,17 @@ namespace jgap {
 
             auto z1StartIdx = descriptorParamString.find("Z1=") + std::string("Z1=").size();
             auto z1EndIdx = descriptorParamString.find(' ', z1StartIdx);
-            Species species1 = Z_inverse[stoi(descriptorParamString.substr(z1StartIdx, z1EndIdx - z1StartIdx))];
+            Species species1 = CHEM_SYMBOLS[stoi(descriptorParamString.substr(z1StartIdx, z1EndIdx - z1StartIdx))];
 
             auto z2StartIdx = descriptorParamString.find("Z2=") + std::string("Z2=").size();
             auto z2EndIdx = descriptorParamString.find(' ', z2StartIdx);
-            Species species2 = Z_inverse[stoi(descriptorParamString.substr(z2StartIdx, z2EndIdx - z2StartIdx))];
+            Species species2 = CHEM_SYMBOLS[stoi(descriptorParamString.substr(z2StartIdx, z2EndIdx - z2StartIdx))];
 
             SpeciesPair sp{species1, species2};
 
             // coeffs
             double r, coeff;
-            std::ifstream fin(distanceNode.attribute("sparseX_filename").as_std::string());
+            std::ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
             for (pugi::xml_node pt: distanceNode.children("sparseX")) {
                 fin >> r;
                 coeff = pt.attribute("alpha").as_double();
@@ -286,7 +286,6 @@ namespace jgap {
 
             SpeciesTriplet st{rootSpecies, {species1, species2}};
 
-            // coeffs
             double coeff;
             Vector3 q{};
             std::ifstream fin(distanceNode.attribute("sparseX_filename").as_string());

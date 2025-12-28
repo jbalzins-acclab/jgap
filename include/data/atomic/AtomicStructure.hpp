@@ -2,28 +2,29 @@
 #define JGAP_ATOMICSTRUCTURE_HPP
 
 #include "NeighbourData.hpp"
-#include "Vector3.hpp"
+#include "../Vector3.hpp"
 #include "PredictionData.hpp"
 #include "SpeciesData.hpp"
 
 namespace jgap {
 
     struct AtomicStructure {
-        map<string, string> properties;
-        array<Vector3, 3> lattice;
-        vector<Vector3> positions;
-        vector<Species> species;
+        std::map<std::string, std::string> properties;
+        std::array<Vector3, 3> lattice;
+        std::vector<Vector3> positions;
+        std::vector<Species> species;
 
-        optional<double> neighbourListCutoff;
-        optional<vector<NeighboursData>> neighbours;
+        std::optional<double> neighbourListCutoff;
 
-        optional<double> energy;
-        optional<vector<Vector3>> forces;
-        optional<array<Vector3, 3>> virials;
+        std::optional<std::vector<NeighboursData>> neighbours;
 
-        optional<double> energySigmaInverse;
-        optional<vector<Vector3>> forceSigmasInverse;
-        optional<array<Vector3, 3>> virialSigmasInverse;
+        std::optional<double> energy;
+        std::optional<std::vector<Vector3>> forces;
+        std::optional<std::array<Vector3, 3>> virials;
+
+        std::optional<double> energySigmaInverse;
+        std::optional<std::vector<Vector3>> forceSigmasInverse;
+        std::optional<std::array<Vector3, 3>> virialSigmasInverse;
 
         struct AtomProxy {
             size_t index;
@@ -34,17 +35,17 @@ namespace jgap {
 
             Vector3& force() const {
                 if (!structure->forces)
-                    throw std::runtime_error("Forces not set");
+                    throw std::runtime_error("Forces not std::set");
                 return (*structure->forces)[index];
             }
             Vector3& forceSigmasInverse() const {
                 if (!structure->forceSigmasInverse)
-                    throw std::runtime_error("Forces not set");
+                    throw std::runtime_error("Forces not std::set");
                 return (*structure->forceSigmasInverse)[index];
             }
             NeighboursData& neighbours() const {
                 if (!structure->neighbours)
-                    throw std::runtime_error("Neighbours not set");
+                    throw std::runtime_error("Neighbours not std::set");
                 return (*structure->neighbours)[index];
             }
         };
@@ -58,17 +59,17 @@ namespace jgap {
 
             Vector3 force() const {
                 if (!structure->forces)
-                    throw std::runtime_error("Forces not set");
+                    throw std::runtime_error("Forces not std::set");
                 return (*structure->forces)[index];
             }
             Vector3 forceSigmasInverse() const {
                 if (!structure->forceSigmasInverse)
-                    throw std::runtime_error("Forces not set");
+                    throw std::runtime_error("Forces not std::set");
                 return (*structure->forceSigmasInverse)[index];
             }
             NeighboursData neighbours() const {
                 if (!structure->neighbours)
-                    throw std::runtime_error("Neighbours not set");
+                    throw std::runtime_error("Neighbours not std::set");
                 return (*structure->neighbours)[index];
             }
         };

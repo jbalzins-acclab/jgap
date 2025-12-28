@@ -25,13 +25,13 @@ int main(int argc, char** argv) {
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
         jgap::JGAP_LOG_INFO("Using {} potential to predict on data from {}", argv[1], argv[2]);
 
-        string potentialFileName = argv[1];
+        std::string potentialFileName = argv[1];
         ifstream potentialParamFile(potentialFileName);
         if (!potentialParamFile.is_open()) {
             jgap::JGAP_LOG_ERROR("Cannot open pot-param file {}", potentialFileName);
             return EXIT_FAILURE;
         }
-        nlohmann::json potParams;
+        DataNode potParams;
         potentialParamFile >> potParams;
         if (!potParams.contains("type")) {
             potParams["type"] = "composite";
@@ -46,14 +46,14 @@ int main(int argc, char** argv) {
         // ------------------------ PREDICT IN PARALLEL -------------------------------
         jgap::JGAP_LOG_INFO("Evaluation started");
         jgap::NeighbourFinder::findNeighbours(toBePredicted, potential->getCutoff());
-        vector<jgap::Predictions> predictions(toBePredicted.size());
+        std::vector<jgap::Predictions> predictions(toBePredicted.size());
         tbb::parallel_for(0uz, toBePredicted.size(), [&](const size_t i) {
             predictions[i] = potential->predict(toBePredicted[i]);
         });
         jgap::JGAP_LOG_INFO("Evaluation finished");
 
         // ------------------------ GATHER PREDICTIONS AND SAVE -------------------------------
-        vector<jgap::AtomicStructure> result;
+        std::vector<jgap::AtomicStructure> result;
         for (size_t i = 0; i < toBePredicted.size(); i++) {
             auto structure = toBePredicted[i];
             structure.setEnergyData(predictions[i]);

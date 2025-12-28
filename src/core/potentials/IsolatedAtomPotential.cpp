@@ -1,30 +1,26 @@
-//
-// Created by Jegors Balzins on 22.6.2025.
-//
-
 #include "core/potentials/IsolatedAtomPotential.hpp"
 
 #include "io/log/StdoutLogger.hpp"
 
 namespace jgap {
-    IsolatedAtomPotential::IsolatedAtomPotential(const nlohmann::json& params) {
+    IsolatedAtomPotential::IsolatedAtomPotential(const DataNode& params) {
         JGAP_LOG_DEBUG("Parsing isolated atom potentials params");
-        _errorOnUnknownSpecies = params.value("error_on_unknown", true);
-        _isolatedEnergies = {};
+        error_on_unknown_species_ = params.value("error_on_unknown", true);
+        isolated_energies_ = {};
         for (const auto& [element, energy]: params["energies"].items()) {
-            _isolatedEnergies[element] = energy.get<double>();
+            isolated_energies_[element] = energy.get<double>();
         }
     }
 
-    IsolatedAtomPotential::IsolatedAtomPotential(const map<Species, double> &isolatedAtomEnergies, bool errorOnUnknown) {
-        _isolatedEnergies = isolatedAtomEnergies;
-        _errorOnUnknownSpecies = errorOnUnknown;
+    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, double> &isolated_atom_energies, bool error_on_unknown) {
+        isolated_energies_ = isolated_atom_energies;
+        error_on_unknown_species_ = error_on_unknown;
     }
 
-    nlohmann::json IsolatedAtomPotential::serialize() {
-        return {
-            {"error_on_unknown", _errorOnUnknownSpecies},
-            {"energies", _isolatedEnergies}
+    DataNode IsolatedAtomPotential::serialize() {
+        return DataNode::object(){
+            {"error_on_unknown", error_on_unknown_species_},
+            {"energies", isolated_energies_}
         };
     }
 
@@ -33,10 +29,10 @@ namespace jgap {
         double result = 0;
 
         for (const auto &atom: structure) {
-            if (_isolatedEnergies.contains(atom.species())) {
-                result += _isolatedEnergies[atom.species()];
+            if (isolated_energies_.contains(atom.species())) {
+                result += isolated_energies_[atom.species()];
             } else {
-                if (_errorOnUnknownSpecies) {
+                if (error_on_unknown_species_) {
                     JGAP_LOG -> error("Unknown isolated_atom energy for " + atom.species(),true);
                 }
             }
@@ -46,7 +42,7 @@ namespace jgap {
     }
 
     void IsolatedAtomPotential::tabulate(TabulationData &table) {
-        for (const auto &[species, energy]: _isolatedEnergies) {
+        for (const auto &[species, energy]: isolated_energies_) {
             if (table.isolatedEnergies.contains(species)) {
                 JGAP_LOG_WARN("Conflicting isolated atom energies for {}", species);
             } else {

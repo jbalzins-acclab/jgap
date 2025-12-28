@@ -9,20 +9,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
 
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 find_package(OpenBLAS CONFIG REQUIRED)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 file(READ "${CMAKE_SOURCE_DIR}/vcpkg.json" VCPKG_JSON_CONTENT)
 string(REGEX MATCH "\"version\"[ \t]*:[ \t]*\"([^\"]+)\"" _ ${VCPKG_JSON_CONTENT})
 set(PACKAGE_VERSION ${CMAKE_MATCH_1})
 
 configure_file(
-        ${CMAKE_SOURCE_DIR}/include/Version.hpp.in
+        ${CMAKE_SOURCE_DIR}/src/Version.hpp.in
         ${CMAKE_BINARY_DIR}/generated/Version.hpp
         @ONLY
 )
@@ -31,19 +31,19 @@ include_directories(${CMAKE_BINARY_DIR}/generated)
 # Function to generate parser registry header
 function(generate_parser_registry_header)
     # Find all .hpp files in include directory
-    file(GLOB_RECURSE HPP_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
+    file(GLOB_RECURSE HPP_FILES "${PROJECT_SOURCE_DIR}/src/*.hpp")
 
     # Filter for files that likely contain parsers
     set(PARSER_FILES)
-    foreach(HPP_FILE ${HPP_FILES})
+    foreach (HPP_FILE ${HPP_FILES})
         # Read file content
         file(READ "${HPP_FILE}" FILE_CONTENT)
 
         # Check if file contains REGISTER_PARSER macro
-        if(FILE_CONTENT MATCHES "REGISTER_PARSER")
+        if (FILE_CONTENT MATCHES "REGISTER_PARSER")
             list(APPEND PARSER_FILES "${HPP_FILE}")
-        endif()
-    endforeach()
+        endif ()
+    endforeach ()
 
     # Generate the header content
     set(HEADER_CONTENT "// Auto-generated parser registry\n")
@@ -51,15 +51,15 @@ function(generate_parser_registry_header)
     string(APPEND HEADER_CONTENT "#define PARSER_REGISTRY_AUTO_HPP\n\n")
     string(APPEND HEADER_CONTENT "// Auto-include all parser headers\n")
 
-    foreach(PARSER_FILE ${PARSER_FILES})
-        file(RELATIVE_PATH REL_PATH "${PROJECT_SOURCE_DIR}/include" "${PARSER_FILE}")
+    foreach (PARSER_FILE ${PARSER_FILES})
+        file(RELATIVE_PATH REL_PATH "${PROJECT_SOURCE_DIR}/src" "${PARSER_FILE}")
         string(APPEND HEADER_CONTENT "#include \"${REL_PATH}\"\n")
-    endforeach()
+    endforeach ()
 
     string(APPEND HEADER_CONTENT "\n#endif // PARSER_REGISTRY_AUTO_HPP\n")
 
     # Write the generated header
-    set(GENERATED_HEADER "${PROJECT_SOURCE_DIR}/include/ParserRegistryAuto.hpp")
+    set(GENERATED_HEADER "${PROJECT_SOURCE_DIR}/src/ParserRegistryAuto.hpp")
     file(WRITE "${GENERATED_HEADER}" "${HEADER_CONTENT}")
 
     # Make sure the header is regenerated when source files change
@@ -104,7 +104,7 @@ target_link_libraries(jgap_lib PRIVATE
 
 target_link_libraries(jgap_lib PUBLIC
         pugixml::static pugixml::pugixml
-        nlohmann_json::nlohmann_json
+        yaml-cpp::yaml-cpp
         TBB::tbb TBB::tbbmalloc
         HighFive
 )
@@ -131,7 +131,7 @@ add_custom_command(TARGET jgap_lib POST_BUILD
 )
 
 ## TESTS
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(FetchContent)
     FetchContent_Declare(
             googletest

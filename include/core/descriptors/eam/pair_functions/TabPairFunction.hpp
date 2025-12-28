@@ -2,29 +2,24 @@
 #define JGAP_TABPAIRFUNCTION_HPP
 
 #include "EamPairFunction.hpp"
-#include "data/Grid1d.hpp"
+#include "../../../../data/tabulation/Grid1d.hpp"
 #include "utils/BSplineTools.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {
     class TabPairFunction : public EamPairFunction {
     public:
-        static constexpr string TYPE = "tab";
-
-        TabPairFunction(shared_ptr<Grid1d> splineGrid) : _splineGrid(splineGrid) {};
-
-        string getType() override { IO_NOT_INTENDED(TabPairFunction.getType); }
-        nlohmann::json serialize() override { IO_NOT_INTENDED(TabPairFunction.serialize); }
+        TabPairFunction(const std::shared_ptr<Grid1d> &spline_grid) : spline_grid_(spline_grid) {}
 
         double evaluate(double distance) override {
-            return BSplineTools::interpolate(*_splineGrid, distance).value;
+            return BSplineTools::interpolate(*spline_grid_, distance).value;
         }
         double differentiate(double distance) override {
-            return BSplineTools::interpolate(*_splineGrid, distance).gradient;
+            return BSplineTools::interpolate(*spline_grid_, distance).gradient;
         }
 
     private:
-        shared_ptr<Grid1d> _splineGrid;
+        std::shared_ptr<Grid1d> spline_grid_;
     };
 }
 

@@ -1,7 +1,6 @@
 #ifndef HISTOGRAMUNIFORMSPARSIFIER_HPP
 #define HISTOGRAMUNIFORMSPARSIFIER_HPP
 
-#include <nlohmann/json.hpp>
 #include <cmath>
 #include <random>
 #include <set>
@@ -14,20 +13,21 @@ namespace jgap {
 
     class HistogramUniformSparsifier : public Sparsifier {
     public:
-        static constexpr string TYPE = "histogram_uniform";
-        HistogramUniformSparsifier(nlohmann::json params);
-        vector<nlohmann::json> selectSparsePoints(const vector<vector<double>> &allPoints) override;
+        SETUP_PARSER(Sparsifier, HistogramUniformSparsifier, histogram_uniform)
+
+        HistogramUniformSparsifier();
+
+        std::vector<KernelParams> selectSparsePoints(const std::vector<std::vector<double>> &allPoints) override;
+
     private:
         size_t _seed;
         size_t _nSparsePoints;
-        string _sparsifiedParamName;
-        nlohmann::json _kernelParams;
-        optional<vector<size_t>> _gridDimensions;
-        optional<vector<double>> _minPoint;
-        optional<vector<double>> _maxPoint;
+        std::string _sparsifiedParamName;
+        DataNode _kernelParams;
+        std::optional<std::vector<size_t>> _gridDimensions;
+        std::optional<std::vector<double>> _minPoint;
+        std::optional<std::vector<double>> _maxPoint;
     };
-
-    REGISTER_PARSER(Sparsifier, HistogramUniformSparsifier);
 }
 
 #endif

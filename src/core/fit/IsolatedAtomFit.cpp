@@ -8,13 +8,13 @@
 
 namespace jgap {
 
-    IsolatedAtomFit::IsolatedAtomFit(const nlohmann::json& params) {
-        _errorOnUnknownSpecies = params.value("error_on_unknown", false);
+    std::shared_ptr<IsolatedAtomFit> IsolatedAtomFit::fromDataNode(const DataNode& params) {
+        return std::make_shared<IsolatedAtomFit>(params.getOrDefault("error_on_unknown", false));
     }
 
-    shared_ptr<Potential> IsolatedAtomFit::fit(const vector<AtomicStructure> &trainingData) {
+    std::shared_ptr<Potential> IsolatedAtomFit::fit(const std::vector<AtomicStructure> &trainingData) {
 
-        map<Species, double> isolatedEnergies = {};
+        std::map<Species, double> isolatedEnergies = {};
         for (auto &structure: trainingData) {
             if (getOrDefault(structure.properties, "config_type", "-") == "isolated_atom") {
                 if (structure.size() != 1) {
@@ -38,6 +38,6 @@ namespace jgap {
             }
         }
 
-        return make_shared<IsolatedAtomPotential>(isolatedEnergies, _errorOnUnknownSpecies);
+        return std::make_shared<IsolatedAtomPotential>(isolatedEnergies, error_on_unknown_species_);
     }
 }

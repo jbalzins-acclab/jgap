@@ -1,28 +1,25 @@
 #include "core/descriptors/2b/TwoBodyDescriptor.hpp"
 
-#include <nlohmann/json.hpp>
-
 #include "core/descriptors/2b/TwoBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "utils/Utils.hpp"
 
-
 namespace jgap {
-    TwoBodyDescriptor::TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction,
-                                         vector<shared_ptr<TwoBodyKernel>> kernels)
+    TwoBodyDescriptor::TwoBodyDescriptor(std::shared_ptr<CutoffFunction> cutoffFunction,
+                                         std::vector<std::shared_ptr<TwoBodyKernel>> kernels)
         : _cutoffFunction(std::move(cutoffFunction)), _kernels(std::move(kernels)) {
         mapKernelIds();
     }
 
-    TwoBodyDescriptor::TwoBodyDescriptor(const nlohmann::json& params) {
+    TwoBodyDescriptor::TwoBodyDescriptor(const DataNode& params) {
         JGAP_LOG_DEBUG("Parsing 2b descriptor params");
 
-        _cutoffFunction = ParserRegistry<CutoffFunction>::get(params["cutoff"]);
+        _cutoffFunction = ParserRegistry<CutoffFunction>::get(params.["cutoff"]);
 
         _kernels = {};
         if (params.contains("kernels")) {
-            for (const nlohmann::json& kernelParams : params["kernels"]) {
+            for (const DataNode& kernelParams : params["kernels"]) {
                 _kernels.push_back(ParserRegistry<TwoBodyKernel>::get(kernelParams));
             }
         }
@@ -30,7 +27,7 @@ namespace jgap {
 
         _kernelSetups = {};
         if (params.contains("kernel_setups")) {
-            for (const nlohmann::json& kernelSetup : params["kernel_setups"]) {
+            for (const DataNode& kernelSetup : params["kernel_setups"]) {
                 _kernelSetups.push(kernelSetup);
             }
         }
@@ -43,11 +40,11 @@ namespace jgap {
         }
     }
 
-    nlohmann::json TwoBodyDescriptor::serialize() {
+    DataNode TwoBodyDescriptor::serialize() {
 
-        auto kernelsData = nlohmann::json::array();
+        auto kernelsData = DataNode::array();
         for (const auto &kernel : _kernels) {
-            kernelsData.push_back(kernel->serialize());
+            kernelsData.pushBack(kernel->serialize());
             kernelsData.back()["type"] = kernel->getType();
         }
 
@@ -60,9 +57,9 @@ namespace jgap {
         };
     }
 
-    vector<shared_ptr<IKernel>> TwoBodyDescriptor::getKernels() {
-        vector<shared_ptr<IKernel>> res;
-        for (auto& kernelIds : _kernelIdsPerSpeciesPair | views::values) {
+    std::vector<std::shared_ptr<IKernel>> TwoBodyDescriptor::getKernels() {
+        std::vector<std::shared_ptr<IKernel>> res;
+        for (auto& kernelIds : _kernelIdsPerSpeciesPair | std::views::values) {
             for (const auto& kernelId : kernelIds) {
                 res.push_back(static_pointer_cast<IKernel>(_kernels[kernelId]));
             }
@@ -70,46 +67,46 @@ namespace jgap {
         return res;
     }
 
-    void TwoBodyDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+    void TwoBodyDescriptor::setupSparseKernels(const std::vector<AtomicStructure> &fromData) {
         JGAP_LOG_INFO("Doing 2b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            JGAP_LOG_WARN("All 2b kernels were pre-set");
+            JGAP_LOG_WARN("All 2b kernels were pre-std::set");
             return;
         }
 
-        map<SpeciesPair, vector<vector<double>>> allDistances;
+        std::map<SpeciesPair, std::vector<std::vector<double>>> allDistances;
         for (const auto &structure: fromData) {
             const auto structureIndex = doIndex(structure);
 
             for (const auto &[speciesPair, perPairIndex]: structureIndex) {
                 if (!allDistances.contains(speciesPair)) allDistances[speciesPair] = {};
                 for (const auto &entity: perPairIndex) {
-                    allDistances[speciesPair].push_back(vector{entity.r});
+                    allDistances[speciesPair].push_back(std::vector{entity.r});
                 }
             }
         }
 
         while (!_kernelSetups.empty()) {
-            nlohmann::json setup = _kernelSetups.front();
+            DataNode setup = _kernelSetups.front();
             _kernelSetups.pop();
 
-            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
+            std::string sparsifierType = setup.value("sparsifier", "histogram_uniform");
             setup.erase("sparsifier");
             setup["sparse_param"] = setup.value("sparse_param", "r");
 
             for (const auto &[pairInData, distancesPerPair]: allDistances) {
-                nlohmann::json setupPerPair = setup; // modified for the specific pair
+                DataNode setupPerPair = setup; // modified for the specific std::pair
 
-                if (!checkSpecies(pairInData, setupPerPair.value("species", nlohmann::json::array()))) {
+                if (!checkSpecies(pairInData, setupPerPair.value("species", DataNode::array()))) {
                     continue;
                 }
 
                 setupPerPair.erase("species");
                 auto sparsifier = ParserRegistry<Sparsifier>::getRegistry()[sparsifierType](setupPerPair);
 
-                for (nlohmann::json& kernelParams : sparsifier->selectSparsePoints(distancesPerPair)) {
-                    kernelParams["species_pair"] = vector{pairInData.first(), pairInData.second()};
+                for (DataNode& kernelParams : sparsifier->selectSparsePoints(distancesPerPair)) {
+                    kernelParams["species_pair"] = std::vector{pairInData.first(), pairInData.second()};
                     kernelParams["descriptor_prefactors"] = _cutoffFunction->evaluate(kernelParams["r"]);
                     _kernels.push_back(ParserRegistry<TwoBodyKernel>::get(kernelParams));
                 }
@@ -118,11 +115,11 @@ namespace jgap {
         mapKernelIds();
     }
 
-    vector<Covariance> TwoBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
+    std::vector<Covariance> TwoBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
 
         auto indexes = doIndex(atomicStructure);
 
-        auto covariates = vector<Covariance>();
+        auto covariates = std::vector<Covariance>();
         for (const auto &kernel: _kernels) {
             covariates.push_back(
                 kernel->covariance(atomicStructure, GET_OR_DEFAULT(indexes, kernel->getFilter(), TwoBodyIndex{}))
@@ -132,12 +129,12 @@ namespace jgap {
         return covariates;
     }
 
-    vector<shared_ptr<MatrixBlock>> TwoBodyDescriptor::selfCovariate() {
-        vector<shared_ptr<MatrixBlock>> result;
+    std::vector<std::shared_ptr<MatrixBlock>> TwoBodyDescriptor::selfCovariate() {
+        std::vector<std::shared_ptr<MatrixBlock>> result;
 
-        for (auto &kernelIndices: _kernelIdsPerSpeciesPair | views::values) {
+        for (auto &kernelIndices: _kernelIdsPerSpeciesPair | std::views::values) {
 
-            auto covariance = make_shared<MatrixBlock>(kernelIndices.size(), kernelIndices.size());
+            auto covariance = std::make_shared<MatrixBlock>(kernelIndices.size(), kernelIndices.size());
 
             for (size_t i = 0; i < kernelIndices.size(); i++) {
                 for (size_t j = i; j < kernelIndices.size(); j++) {
@@ -174,9 +171,9 @@ namespace jgap {
         }
     }
 
-    map<SpeciesPair, TwoBodyIndex> TwoBodyDescriptor::doIndex(const AtomicStructure &atomicStructure) const {
+    std::map<SpeciesPair, TwoBodyIndex> TwoBodyDescriptor::doIndex(const AtomicStructure &atomicStructure) const {
 
-        map<SpeciesPair, TwoBodyIndex> indexes;
+        std::map<SpeciesPair, TwoBodyIndex> indexes;
 
         for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
             auto atom = atomicStructure[atomIndex];
@@ -206,8 +203,8 @@ namespace jgap {
         return indexes;
     }
 
-    bool TwoBodyDescriptor::checkSpecies(const SpeciesPair& pairInData, nlohmann::json filters) {
-        if (!filters.is_array()) {
+    bool TwoBodyDescriptor::checkSpecies(const SpeciesPair& pairInData, DataNode filters) {
+        if (!filters()) {
             JGAP_LOG_AND_THROW("2b species filter is non-array: {}", filters.dump());
         }
 
@@ -215,7 +212,7 @@ namespace jgap {
 
         if (filters[0].is_string()) {
             // "species": ["Fe", "Ni"] => "species": [["Fe", "Ni"]]
-            filters = nlohmann::json::array({filters});
+            filters = DataNode({filters});
         }
 
         bool passedAFilter = false;

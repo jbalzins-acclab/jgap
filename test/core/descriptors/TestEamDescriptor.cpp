@@ -9,7 +9,7 @@ using namespace jgap;
 
 TEST(EamDescriptorTest, equilateralTriangleEamTest) {
 
-    const vector positions = {
+    const std::vector positions = {
         Vector3{0.0, 0.0, 0.0},
         Vector3{3.0, 0.0, 0.0},
         Vector3{1.5, 2.598, 0.0}
@@ -24,7 +24,7 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
         .species = {"Fe", "Fe", "Fe"}
     };
 
-    const auto params = nlohmann::json::parse(R"(
+    const auto params = DataNode::parse(R"(
     {
         "kernels": [
             {
@@ -62,9 +62,9 @@ TEST(EamDescriptorTest, equilateralTriangleEamTest) {
     for sanity:
 
     sparse point 0:
-    cout << result[0].forces[0].toString() << endl;
-    cout << result[0].forces[1].toString() << endl;
-    cout << result[0].forces[2].toString() << endl;
+    std::cout << result[0].forces[0].toString() << std::endl;
+    std::cout << result[0].forces[1].toString() << std::endl;
+    std::cout << result[0].forces[2].toString() << std::endl;
     OUT:
     0.568627, 0.328292, 0.000000
     -0.568627, 0.328292, 0.000000

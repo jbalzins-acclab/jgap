@@ -6,20 +6,15 @@
 #include "data/descriptors/kernels/ThreeBodyIndex.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
-#include <nlohmann/json.hpp>
-
 #include "ThreeBodyKernel.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class ThreeBodySE : public ThreeBodyKernel {
+    class ThreeBodySE : public ThreeBodyKernel, Serializable {
     public:
-        static constexpr std::string TYPE = "squared_exp";
-        ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales, Vector3 q, double fCut);
+        SETUP_PARSER_AND_SERIALIZATION(ThreeBodyKernel, ThreeBodySE, squared_exp);
 
-        ThreeBodySE(const nlohmann::json& params);
-        std::string getType() override { return TYPE; }
-        nlohmann::json serialize() override;
+        ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales, Vector3 q, double fCut);
 
         double crossCovariance(const std::shared_ptr<IKernel> &other) override;
 
@@ -41,7 +36,7 @@ namespace jgap {
         Vector3 gradientInternal(const Vector3 &q) const;
     };
 
-    REGISTER_PARSER(ThreeBodyKernel, ThreeBodySE);
+    ;
 }
 
 #endif

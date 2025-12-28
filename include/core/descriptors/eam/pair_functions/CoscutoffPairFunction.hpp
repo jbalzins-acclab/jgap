@@ -7,63 +7,66 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class CoscutoffPairFunction : public EamPairFunction {
+    class CoscutoffPairFunction : public EamPairFunction, Serializable {
     public:
-        static constexpr string TYPE = "coscutoff";
-        CoscutoffPairFunction(const nlohmann::json& params) {
-            _cutoff = params["cutoff"];
-            if (params.contains("r_min")) {
-                _rmin = params["r_min"];
-            } else if (params.contains("cutoff_transition_width")) {
-                _rmin = _cutoff - params["cutoff_transition_width"].get<double>();
-            } else {
-                _rmin = 0;
-            }
-            _prefactor = params.value("prefactor", 1.0);
-            _intervalInverse = 1.0 / (_cutoff - _rmin);
-        }
-
-        nlohmann::json serialize() override {
-            return {
-                {"prefactor", _prefactor},
-                {"cutoff", _cutoff},
-                {"r_min", _rmin}
-            };
-        }
-
-        CoscutoffPairFunction(const double cutoff, const double rMin, const double prefactor = 1.0) : _rmin(rMin) {
-            _cutoff = cutoff;
-            _intervalInverse = 1.0 / (_cutoff - _rmin);
-            _prefactor = prefactor;
-        }
+        SETUP_PARSER_AND_SERIALIZATION(EamPairFunction, CoscutoffPairFunction, coscutoff)
 
         ~CoscutoffPairFunction() override = default;
+        CoscutoffPairFunction(const double cutoff, const double rMin, const double prefactor = 1.0) : r_min_(rMin) {
+            cutoff_ = cutoff;
+            interval_inverse_ = 1.0 / (cutoff_ - r_min_);
+            prefactor_ = prefactor;
+        }
 
         double evaluate(const double distance) override {
-            if (distance >= _cutoff) return 0.0;
-            if (distance <= _rmin) return _prefactor;
+            if (distance >= cutoff_) return 0.0;
+            if (distance <= r_min_) return prefactor_;
 
-            const double chi = (distance - _rmin) * _intervalInverse;
-            return _prefactor * 0.5 * (1 + cos(M_PI * chi));
+            const double chi = (distance - r_min_) * interval_inverse_;
+            return prefactor_ * 0.5 * (1 + cos(M_PI * chi));
         };
 
         double differentiate(const double distance) override {
-            if (distance >= _cutoff || distance <= _rmin) return 0;
+            if (distance >= cutoff_ || distance <= r_min_) return 0;
 
-            const double chi = (distance - _rmin) * _intervalInverse;
-            const double dchi_dr = _intervalInverse;
+            const double chi = (distance - r_min_) * interval_inverse_;
+            const double dchi_dr = interval_inverse_;
 
-            return -_prefactor * dchi_dr * 0.5 * M_PI * sin(M_PI * chi);
+            return -prefactor_ * dchi_dr * 0.5 * M_PI * sin(M_PI * chi);
         }
 
-        string getType() override { return TYPE; }
-
     private:
-        double _rmin;
-        double _intervalInverse;
+        double r_min_;
+        double interval_inverse_;
     };
 
-    REGISTER_PARSER(EamPairFunction, CoscutoffPairFunction)
+    inline DataNode CoscutoffPairFunction::serialize() {
+        return {
+            { "prefactor", prefactor_},
+            { "cutoff_", cutoff_},
+            { "r_min", r_min_},
+        };
+    }
+
+    inline std::shared_ptr<CoscutoffPairFunction> CoscutoffPairFunction::fromDataNode(const DataNode &params) {
+
+        double r_min = 0.0;
+        if (params.type == DataNode::Type::OBJECT) {
+            if (params.contains("r_min")) {
+                r_min = require(params, "r_min").asDouble();
+            } else if (params.contains("cutoff_transition_width")) {
+                r_min = require(params, "cutoff").asDouble() - require(params, "cutoff_transition_width").asDouble();
+            } else {
+                r_min = 0.0;
+            }
+        }
+
+        return std::make_shared<CoscutoffPairFunction>(
+            require(params, "cutoff"),
+            r_min,
+            params.getOrDefault("prefactor", 1.0)
+        );
+    }
 }
 
 #endif //COSCUTOFFPAIRFUNCTION_HPP

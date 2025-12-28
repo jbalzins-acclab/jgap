@@ -8,8 +8,8 @@
 #include "utils/Utils.hpp"
 
 namespace jgap {
-    ThreeBodyDescriptor::ThreeBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction,
-                                             vector<shared_ptr<ThreeBodyKernel>> &kernels)
+    ThreeBodyDescriptor::ThreeBodyDescriptor(std::shared_ptr<CutoffFunction> cutoffFunction,
+                                             std::vector<std::shared_ptr<ThreeBodyKernel>> &kernels)
         : _cutoff(cutoffFunction->getCutoff()),
           _cutoffFunction(std::move(cutoffFunction)),
           _kernels(std::move(kernels)) {
@@ -17,7 +17,7 @@ namespace jgap {
         mapKernelIds();
     }
 
-    ThreeBodyDescriptor::ThreeBodyDescriptor(const nlohmann::json &params) {
+    ThreeBodyDescriptor::ThreeBodyDescriptor(const DataNode &params) {
         JGAP_LOG_DEBUG("Parsing 3b descriptor params");
 
         _cutoffFunction = ParserRegistry<CutoffFunction>::get(require(params, "cutoff"));
@@ -25,7 +25,7 @@ namespace jgap {
 
         _kernels = {};
         if (params.contains("kernels")) {
-            for (const nlohmann::json& kernelParams : params["kernels"]) {
+            for (const DataNode& kernelParams : params["kernels"]) {
                 _kernels.push_back(ParserRegistry<ThreeBodyKernel>::get(kernelParams));
             }
         }
@@ -33,7 +33,7 @@ namespace jgap {
 
         _kernelSetups = {};
         if (params.contains("kernel_setups")) {
-            for (const nlohmann::json& kernelSetup : params["kernel_setups"]) {
+            for (const DataNode& kernelSetup : params["kernel_setups"]) {
                 _kernelSetups.push(kernelSetup);
             }
         }
@@ -42,10 +42,10 @@ namespace jgap {
         }
     }
 
-    nlohmann::json ThreeBodyDescriptor::serialize() {
-        auto kernelsData = nlohmann::json::array();
+    DataNode ThreeBodyDescriptor::serialize() {
+        auto kernelsData = DataNode::array();
         for (const auto &kernel : _kernels) {
-            kernelsData.push_back(kernel->serialize());
+            kernelsData.pushBack(kernel->serialize());
             kernelsData.back()["type"] = kernel->getType();
         }
 
@@ -58,15 +58,15 @@ namespace jgap {
         };
     }
 
-    void ThreeBodyDescriptor::setupSparseKernels(const vector<AtomicStructure> &fromData) {
+    void ThreeBodyDescriptor::setupSparseKernels(const std::vector<AtomicStructure> &fromData) {
         JGAP_LOG_INFO("Doing 3b sparsification from data");
 
         if (_kernelSetups.empty()) {
-            JGAP_LOG_WARN("All 3b kernels were pre-set");
+            JGAP_LOG_WARN("All 3b kernels were pre-std::set");
             return;
         }
 
-        map<SpeciesTriplet, vector<vector<double>>> allTriplets;
+        std::map<SpeciesTriplet, std::vector<std::vector<double>>> allTriplets;
         for (const auto &structure: fromData) {
             for (const auto structureTriplets = doIndex(structure);
                  const auto &[speciesTriplet, points]: structureTriplets) {
@@ -75,31 +75,31 @@ namespace jgap {
                 }
 
                 for (const auto &point: points) {
-                    allTriplets[speciesTriplet].push_back(vector{point.q.x, point.q.y, point.q.z});
+                    allTriplets[speciesTriplet].push_back(std::vector{point.q.x, point.q.y, point.q.z});
                 }
             }
         }
 
         while (!_kernelSetups.empty()) {
-            nlohmann::json setup = _kernelSetups.front();
+            DataNode setup = _kernelSetups.front();
             _kernelSetups.pop();
 
-            string sparsifierType = setup.value("sparsifier", "histogram_uniform");
+            std::string sparsifierType = setup.value("sparsifier", "histogram_uniform");
             setup.erase("sparsifier");
             setup["sparse_param"] = setup.value("sparse_param", "q");
 
             for (const auto &[tripletInData, tripletsPerSpecies]: allTriplets) {
-                nlohmann::json setupPerSpecies = setup;
+                DataNode setupPerSpecies = setup;
 
-                if (!checkSpecies(tripletInData, setupPerSpecies.value("species", nlohmann::json::array()))) {
+                if (!checkSpecies(tripletInData, setupPerSpecies.value("species", DataNode::array()))) {
                     continue;
                 }
 
                 setupPerSpecies.erase("species");
                 auto sparsifier = ParserRegistry<Sparsifier>::getRegistry()[sparsifierType](setupPerSpecies);
 
-                for (nlohmann::json& kernelParams : sparsifier->selectSparsePoints(tripletsPerSpecies)) {
-                    kernelParams["species_triplet"] = vector{
+                for (DataNode& kernelParams : sparsifier->selectSparsePoints(tripletsPerSpecies)) {
+                    kernelParams["species_triplet"] = std::vector{
                         tripletInData.root, tripletInData.nodes.first(), tripletInData.nodes.second()
                     };
                     kernelParams["descriptor_prefactors"] = invariantTripletToCutoff({
@@ -112,9 +112,9 @@ namespace jgap {
         mapKernelIds();
     }
 
-    vector<shared_ptr<IKernel>> ThreeBodyDescriptor::getKernels() {
-        vector<shared_ptr<IKernel>> res;
-        for (auto& kernelIds : _kernelIdsPerSpeciesTriplet | views::values) {
+    std::vector<std::shared_ptr<IKernel>> ThreeBodyDescriptor::getKernels() {
+        std::vector<std::shared_ptr<IKernel>> res;
+        for (auto& kernelIds : _kernelIdsPerSpeciesTriplet | std::views::values) {
             for (const auto& kernelId : kernelIds) {
                 res.push_back(static_pointer_cast<IKernel>(_kernels[kernelId]));
             }
@@ -131,11 +131,11 @@ namespace jgap {
         return result;
     }
 
-    vector<Covariance> ThreeBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
+    std::vector<Covariance> ThreeBodyDescriptor::covariate(const AtomicStructure &atomicStructure) {
 
         auto indexes = doIndex(atomicStructure);
 
-        auto covariates = vector<Covariance>();
+        auto covariates = std::vector<Covariance>();
         for (const auto &kernel: _kernels) {
             covariates.push_back(
                 kernel->covariance(atomicStructure, GET_OR_DEFAULT(indexes, kernel->getFilter(), ThreeBodyIndex{}))
@@ -145,12 +145,12 @@ namespace jgap {
         return covariates;
     }
 
-    vector<shared_ptr<MatrixBlock>> ThreeBodyDescriptor::selfCovariate() {
-        vector<shared_ptr<MatrixBlock>> result;
+    std::vector<std::shared_ptr<MatrixBlock>> ThreeBodyDescriptor::selfCovariate() {
+        std::vector<std::shared_ptr<MatrixBlock>> result;
 
-        for (auto &kernelIds: _kernelIdsPerSpeciesTriplet | views::values) {
+        for (auto &kernelIds: _kernelIdsPerSpeciesTriplet | std::views::values) {
 
-            auto covariance = make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
+            auto covariance = std::make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
 
             for (size_t i = 0; i < kernelIds.size(); i++) {
                 for (size_t j = i; j < kernelIds.size(); j++) {
@@ -178,7 +178,7 @@ namespace jgap {
                 const Vector3 invariantTriplet = toInvariantTriplet(
                     iter.pos.x,
                     iter.pos.y,
-                    sqrt(max/*numeric safety*/(
+                    sqrt(std::max/*numeric safety*/(
                         pow(iter.pos.x, 2) + pow(iter.pos.y, 2) - 2.0 * iter.pos.x * iter.pos.y * iter.pos.z, 0.0
                         ))
                 );
@@ -218,15 +218,15 @@ namespace jgap {
         };
     }
 
-    map<SpeciesTriplet, ThreeBodyIndex> ThreeBodyDescriptor::doIndex(
+    std::map<SpeciesTriplet, ThreeBodyIndex> ThreeBodyDescriptor::doIndex(
                                                 const AtomicStructure &atomicStructure) const {
 
-        map<SpeciesTriplet, ThreeBodyIndex> indexes;
+        std::map<SpeciesTriplet, ThreeBodyIndex> indexes;
 
         for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
             auto atom0 = atomicStructure[atomIndex];
 
-            vector<size_t> usefulNLIndexes{};
+            std::vector<size_t> usefulNLIndexes{};
             usefulNLIndexes.reserve(atom0.neighbours().size());
 
             for (size_t nlIndex1 = 0; nlIndex1 < atom0.neighbours().size(); nlIndex1++) {
@@ -270,7 +270,7 @@ namespace jgap {
         return indexes;
     }
 
-    bool ThreeBodyDescriptor::checkSpecies(const SpeciesTriplet& tripletInData, nlohmann::json filters) {
+    bool ThreeBodyDescriptor::checkSpecies(const SpeciesTriplet& tripletInData, DataNode filters) {
 
         if (!filters.is_array()) {
             JGAP_LOG_AND_THROW("3b species filter is non-array: {}", filters.dump());
@@ -279,7 +279,7 @@ namespace jgap {
 
         if (filters[0].is_string()) {
             // "species": ["Fe", "Ni", "Cr"] => "species": [["Fe", "Ni", "Cr"]]
-            filters = nlohmann::json::array({filters});
+            filters = DataNode::array({filters});
         }
 
         bool passedAFilter = false;

@@ -1,7 +1,7 @@
 #ifndef JGAP_BSPLINETOOLS_HPP
 #define JGAP_BSPLINETOOLS_HPP
 
-#include "data/TabulationData.hpp"
+#include "../data/tabulation/TabulationData.hpp"
 
 namespace jgap {
     class BSplineTools {
@@ -12,7 +12,7 @@ namespace jgap {
             VectorN gradient;
         };
 
-        static vector<double> toSplineCoefficients(const vector<double>& original, double spacing);
+        static std::vector<double> toSplineCoefficients(const std::vector<double>& original, double spacing);
         static Grid1d toSplineCoefficients(const Grid1d& original);
         static Grid3d toSplineCoefficients(const Grid3d& original);
 

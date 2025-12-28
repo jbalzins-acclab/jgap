@@ -6,19 +6,19 @@
 #include "utils/BSplineTools.hpp"
 
 namespace jgap {
-    std::shared_ptr<SimpleTabulation> SimpleTabulation::fromJson(const nlohmann::json &params) {
-        optionallySet(_tableFilenamePrefix, params, "table_filename_prefix");
+    std::shared_ptr<SimpleTabulation> SimpleTabulation::fromDataNode(const DataNode &params) {
+        optionallySet(table_filename_prefix_, params, "table_filename_prefix");
 
-        _defaultParams.n2b = params.value("n2b", 20000);
-        _defaultParams.n3bR = params.value("n3b_r", 150);
-        _defaultParams.n3bR = params.value("n3b_angles", 150);
-        _defaultParams.nEamDensities = params.value("n_eam_densities", 20000);
+        default_params_.n2b = params.value("n2b", 20000);
+        default_params_.n3bR = params.value("n3b_r", 150);
+        default_params_.n3bR = params.value("n3b_angles", 150);
+        default_params_.nEamDensities = params.value("n_eam_densities", 20000);
 
-        optionallySet(_defaultParams.minDensity, params, "min_eam_density");
-        optionallySet(_defaultParams.maxDensity, params, "max_eam_density");
-        optionallySet(_defaultParams.cutoff2b, params, "r_max_2b");
-        optionallySet(_defaultParams.cutoff3b, params, "r_max_3b");
-        optionallySet(_defaultParams.rMin3b, params, "r_min_3b");
+        optionallySet(default_params_.minDensity, params, "min_eam_density");
+        optionallySet(default_params_.maxDensity, params, "max_eam_density");
+        optionallySet(default_params_.cutoff2b, params, "r_max_2b");
+        optionallySet(default_params_.cutoff3b, params, "r_max_3b");
+        optionallySet(default_params_.rMin3b, params, "r_min_3b");
     }
 
     SimpleTabulation::SimpleTabulation(TabulationParams defaultParams, std::optional<std::string> tableFilenamePrefix) {
@@ -31,7 +31,7 @@ namespace jgap {
         auto [valueTables, splineTables] = makeSplineTables(potential, prepareParams(potential));
 
         JGAP_LOG_INFO("Saving tabGAP files");
-        auto tableFiles = TabGapIO::write(valueTables, splineTables, _tableFilenamePrefix);
+        auto tableFiles = TabGapIO::write(valueTables, splineTables, table_filename_prefix_);
 
         return std::make_shared<TabGapPotential>(splineTables, tableFiles);
     }
@@ -48,8 +48,8 @@ namespace jgap {
         TabulationData splineTables;
         splineTables.isolatedEnergies = valueTables.isolatedEnergies;
 
-        for (const auto& [pair, energies]: valueTables.pairGrids) {
-            splineTables.pairGrids[pair] = BSplineTools::toSplineCoefficients(energies);
+        for (const auto& [std::pair, energies]: valueTables.pairGrids) {
+            splineTables.pairGrids[std::pair] = BSplineTools::toSplineCoefficients(energies);
         }
         for (const auto& [triplet, energies]: valueTables.tripletGrids) {
             splineTables.tripletGrids[triplet] = BSplineTools::toSplineCoefficients(energies);
@@ -59,8 +59,8 @@ namespace jgap {
             for (const auto& [species, embeddingEnergies]: valuePart.densityGrids) {
                 splineEamTable.densityGrids[species] = BSplineTools::toSplineCoefficients(embeddingEnergies);
             }
-            for (const auto& [pair, func]: valuePart.eamPairFunctionGrids) {
-                splineEamTable.eamPairFunctionGrids[pair] = BSplineTools::toSplineCoefficients(func);
+            for (const auto& [std::pair, func]: valuePart.eamPairFunctionGrids) {
+                splineEamTable.eamPairFunctionGrids[std::pair] = BSplineTools::toSplineCoefficients(func);
             }
         }
 
@@ -68,7 +68,7 @@ namespace jgap {
     }
 
     TabulationParams SimpleTabulation::prepareParams(const std::shared_ptr<Potential> &potential) const {
-        TabulationParams params = _defaultParams;
+        TabulationParams params = default_params_;
 
         CutoffRanges cutoffs = potential->getCutoff();
         if (!params.cutoff2b.has_value()) {

@@ -2,7 +2,6 @@
 #define JGAP_SIMPLETABULATION_HPP
 
 #include <memory>
-#include <nlohmann/json.hpp>
 
 #include "Tabulation.hpp"
 #include "core/potentials/Potential.hpp"
@@ -11,8 +10,7 @@
 namespace jgap {
     class SimpleTabulation : public Tabulation {
     public:
-        static constexpr std::string TYPE = "default";
-        static std::shared_ptr<SimpleTabulation> fromJson(const nlohmann::json& params);
+        SETUP_PARSER(Tabulation, SimpleTabulation, default)
 
         SimpleTabulation(TabulationParams defaultParams, std::optional<std::string> tableFilenamePrefix);
 
@@ -23,12 +21,11 @@ namespace jgap {
                                                                           const TabulationParams &params);
 
     private:
-        TabulationParams _defaultParams;
-        std::optional<std::string> _tableFilenamePrefix;
+        TabulationParams default_params_;
+        std::optional<std::string> table_filename_prefix_;
 
-        TabulationParams prepareParams(const std::shared_ptr<Potential>& potential) const;
+        TabulationParams prepareParams(const std::shared_ptr<Potential> &potential) const;
     };
-    REGISTER_PARSER(Tabulation, SimpleTabulation)
 }
 
 #endif

@@ -10,7 +10,7 @@
 namespace jgap {
     class Tabulation {
     public:
-        std::shared_ptr<TabGapPotential> tabulate(const std::shared_ptr<Potential>& potential);
+        virtual std::shared_ptr<TabGapPotential> tabulate(const std::shared_ptr<Potential>& potential) = 0;
     };
 }
 

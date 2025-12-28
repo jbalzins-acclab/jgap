@@ -19,7 +19,7 @@ namespace jgap {
         double dCut_dr;
     };
 
-    using TwoBodyIndex = vector<TwoBodyIndexEntity>;
+    using TwoBodyIndex = std::vector<TwoBodyIndexEntity>;
 
     struct TwoBodyDescriptorData {
         double r;

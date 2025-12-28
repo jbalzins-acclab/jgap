@@ -6,7 +6,7 @@
 
 namespace jgap {
 
-    HistogramUniformSparsifier::HistogramUniformSparsifier(nlohmann::json params)
+    HistogramUniformSparsifier::HistogramUniformSparsifier(DataNode params)
             : _kernelParams(std::move(params)) {
 
         _nSparsePoints = require(_kernelParams, "n_sparse");
@@ -23,7 +23,7 @@ namespace jgap {
         }
 
         if (_kernelParams.contains("grid_dimensions")) {
-            _gridDimensions = vector<size_t>();
+            _gridDimensions = std::vector<size_t>();
             for (const auto &dim : _kernelParams["grid_dimensions"]) {
                 _gridDimensions->push_back(dim.get<size_t>());
             }
@@ -40,7 +40,7 @@ namespace jgap {
         }
     }
 
-    vector<KernelParams> HistogramUniformSparsifier::selectSparsePoints(const vector<vector<double>> &allPoints) {
+    std::vector<KernelParams> HistogramUniformSparsifier::selectSparsePoints(const std::vector<std::vector<double>> &allPoints) {
 
         for (const auto &p : allPoints) {
             if (p.size() != allPoints[0].size()) {
@@ -48,8 +48,8 @@ namespace jgap {
             }
         }
 
-        const vector<size_t> gridDimensions = _gridDimensions.value_or(
-             vector<size_t>(
+        const std::vector<size_t> gridDimensions = _gridDimensions.value_or(
+             std::vector<size_t>(
                     allPoints[0].size(),
                     ceil(pow(_nSparsePoints, 1.0 / static_cast<double>(allPoints[0].size())))
                     )
@@ -64,25 +64,25 @@ namespace jgap {
                                               _maxPoint->size(), gridDimensions.size());
         }
 
-        vector<double> minPoint(gridDimensions.size());
-        vector<double> maxPoint(gridDimensions.size());
-        vector<double> step(gridDimensions.size());
+        std::vector<double> minPoint(gridDimensions.size());
+        std::vector<double> maxPoint(gridDimensions.size());
+        std::vector<double> step(gridDimensions.size());
 
         for (size_t d = 0; d < gridDimensions.size(); d++) {
             if (_minPoint.has_value()) {
                 minPoint[d] = _minPoint.value()[d];
             } else {
-                minPoint[d] = numeric_limits<double>::max();
+                minPoint[d] = std::numeric_limits<double>::max();
                 for (const auto &p : allPoints) {
-                    minPoint[d] = min(minPoint[d], p[d]);
+                    minPoint[d] = std::min(minPoint[d], p[d]);
                 }
             }
             if (_maxPoint.has_value()) {
                 maxPoint[d] = _maxPoint.value()[d];
             } else {
-                maxPoint[d] = numeric_limits<double>::min();
+                maxPoint[d] = std::numeric_limits<double>::min();
                 for (const auto &p : allPoints) {
-                    maxPoint[d] = max(maxPoint[d], p[d]+0.0001/*keep all points in bounds*/);
+                    maxPoint[d] = std::max(maxPoint[d], p[d]+0.0001/*keep all points in bounds*/);
                 }
             }
             step[d] = (maxPoint[d] - minPoint[d]) / static_cast<double>(gridDimensions[d]);
@@ -96,11 +96,11 @@ namespace jgap {
                 iteratorToString(step.begin(), step.end())
                 );
 
-        vector<vector<double>> sparsePoints;
-        map<vector<size_t>, vector<size_t>> usefulGridSlots;
+        std::vector<std::vector<double>> sparsePoints;
+        std::map<std::vector<size_t>, std::vector<size_t>> usefulGridSlots;
 
         for (size_t i = 0; i < allPoints.size(); i++) {
-            vector<size_t> gridSlot{};
+            std::vector<size_t> gridSlot{};
             for (size_t d = 0; d < gridDimensions.size(); d++) {
                 gridSlot.push_back((allPoints[i][d] - minPoint[d]) / step[d]);
             }
@@ -117,25 +117,25 @@ namespace jgap {
             usefulGridSlots.size(), reps, leftover
             );
 
-        mt19937 gen(_seed);
-        vector<vector<size_t>> usefulGridSlotsArr = {};
+        std::mt19937 gen(_seed);
+        std::vector<std::vector<size_t>> usefulGridSlotsArr = {};
         for (auto &[gridSlot, pointIndices]: usefulGridSlots) {
             usefulGridSlotsArr.push_back(gridSlot);
 
-            ranges::shuffle(pointIndices.begin(), pointIndices.end(), gen);
-            for (size_t rep = 0; rep < min(pointIndices.size(), reps); rep++) {
+            std::ranges::shuffle(pointIndices.begin(), pointIndices.end(), gen);
+            for (size_t rep = 0; rep < std::min(pointIndices.size(), reps); rep++) {
                 sparsePoints.push_back(allPoints[pointIndices[rep]]);
             }
         }
 
-        uniform_int_distribution<> indexDist(0, usefulGridSlotsArr.size() - 1);
+        std::uniform_int_distribution<> indexDist(0, usefulGridSlotsArr.size() - 1);
 
         while (sparsePoints.size() < _nSparsePoints) {
-            const vector<size_t>& gridSlot = usefulGridSlotsArr[indexDist(gen)];
+            const std::vector<size_t>& gridSlot = usefulGridSlotsArr[indexDist(gen)];
 
-            vector<double> point(gridDimensions.size());
+            std::vector<double> point(gridDimensions.size());
             for (size_t d = 0; d < gridDimensions.size(); d++) {
-                uniform_real_distribution<> marginDist(0, step[d]);
+                std::uniform_real_distribution<> marginDist(0, step[d]);
                 point[d] = minPoint[d] + step[d] * static_cast<double>(gridSlot[d]) + marginDist(gen);
             }
 
@@ -143,7 +143,7 @@ namespace jgap {
             JGAP_LOG_DEBUG(iteratorToString(point.begin(), point.end()));
         }
 
-        vector<KernelParams> sparseKernelsParams;
+        std::vector<KernelParams> sparseKernelsParams;
         for (const auto& point: sparsePoints) {
             sparseKernelsParams.push_back(_kernelParams);
             if (point.size() == 1) {

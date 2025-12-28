@@ -5,7 +5,7 @@
 namespace jgap {
     class DebugToFileLogger : public StdoutLogger {
     public:
-        DebugToFileLogger(optional<string> debugFileName);
+        DebugToFileLogger(std::optional<std::string> debugFileName);
         void log(LogLevel level, std::string_view msg) override;
     };
 }

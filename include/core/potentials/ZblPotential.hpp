@@ -1,7 +1,6 @@
 #ifndef ZBLPOTENTIAL_HPP
 #define ZBLPOTENTIAL_HPP
 
-#include <nlohmann/json.hpp>
 #include <set>
 
 #include "Potential.hpp"
@@ -16,39 +15,35 @@
 namespace jgap {
     class ZblPotential : public Potential {
     public:
-        static constexpr string TYPE = "zbl";
+        SETUP_PARSER(Potential, ZblPotential, zbl)
 
-        ZblPotential(const nlohmann::json& zblParams);
         ~ZblPotential() override = default;
+        ZblPotential(double cutoff, std::string coeffFileName);
 
         Predictions predict(const AtomicStructure& structure) override;
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; }
-        CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = _cutoff}; }
+        CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = cutoff_}; }
 
         void tabulate(TabulationData& table) override;
 
     private:
-        static constexpr double _MINIMAL_TABULATED_R = 1e-4;
-        static constexpr double _EPSILON = 8.854187817e-12;
-        static constexpr double _ELECTRON_CHARGE = 1.60217657e-19;
+        static constexpr double MINIMAL_TABULATED_R_ = 1e-4;
+        static constexpr double EPSILON_ = 8.854187817e-12;
+        static constexpr double ELECTRON_CHARGE_ = 1.60217657e-19;
 
-        double _cutoff;
-        string _coeffFileName;
+        double cutoff_;
+        std::string coeff_file_name_;
 
-        set<Species> _relevantSpecies{};
+        std::set<Species> relevant_species_{};
 
-        std::map<SpeciesPair, array<double, 6>> _dmolFitCoefficients;
-        shared_ptr<CutoffFunction> _cutoffFunction;
+        std::map<SpeciesPair, std::array<double, 6>> dmol_fit_coefficients_;
+        std::shared_ptr<CutoffFunction> cutoff_function_;
 
-        static string getResourcesCoeffFilePath(const string& fileName = "dmol-fit.json");
+        static std::string getResourcesCoeffFilePath(const std::string& fileName = "dmol-fit.json");
 
         double zbl_eV(const SpeciesPair& speciesPair, double r);
         double zblWithCutoff_eV(const SpeciesPair& speciesPair, double r);
         double zblWithCutoffDerivative_eV_per_Ang(const SpeciesPair& speciesPair, double r);
     };
-
-    REGISTER_PARSER(Potential, ZblPotential)
 }
 
-#endif //ZBLPOTENTIAL_HPP
+#endif

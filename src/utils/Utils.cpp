@@ -15,10 +15,9 @@
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/CurrentLogger.hpp"
 
-
 namespace jgap {
-    map<string, string> parseHeaderLine(const string &line) {
-        map<string, string> header;
+    std::map<std::string, std::string> parseHeaderLine(const std::string &line) {
+        std::map<std::string, std::string> header;
 
         try {
             size_t pos = 0;
@@ -28,18 +27,18 @@ namespace jgap {
                     continue;
                 }
 
-                string property = "";
+                std::string property;
                 while (line[pos] != '=') {
                     property += line[pos];
                     pos++;
 
                     if (pos >= line.size() || isspace(line[pos])) {
-                        throw runtime_error("'=' not found after " + property);
+                        throw std::runtime_error("'=' not found after " + property);
                     }
                 }
                 pos++;
 
-                string value = "";
+                std::string value;
                 if (line[pos] == '"') {
                     pos++;
                     while (pos < line.size() && line[pos] != '"') {
@@ -56,7 +55,7 @@ namespace jgap {
 
                 header[property] = value;
             }
-        } catch (exception& e) {
+        } catch (std::exception& e) {
             JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
         } catch (...) {
             JGAP_LOG_AND_THROW("Formatting error in: {}", line);
@@ -66,7 +65,7 @@ namespace jgap {
         return header;
     }
 
-    bool getLine(ifstream &file, string &line) {
+    bool getLine(std::ifstream &file, std::string &line) {
         if (!getline(file, line)) return false;
         if (!line.empty() && line.back() == '\r') {
             line.pop_back(); // remove Windows carriage return
@@ -74,7 +73,7 @@ namespace jgap {
         return true;
     }
 
-    string uniqueStamp() {
+    std::string uniqueStamp() {
         using namespace std::chrono;
 
         auto now = system_clock::now();
@@ -104,20 +103,20 @@ namespace jgap {
         return oss.str();
     }
 
-    vector<AtomicStructure> readXyz(const string& fileName) {
+    std::vector<AtomicStructure> readXyz(const std::string& fileName) {
 
-        vector<AtomicStructure> result;
-        ifstream file(fileName);
+        std::vector<AtomicStructure> result;
+        std::ifstream file(fileName);
 
         if (!file) {
             JGAP_LOG_ERROR( format("Error opening file {}", fileName), true);
         }
 
-        string line;
+        std::string line;
         while (getLine(file, line)) {
             // n_atoms
             size_t n;
-            istringstream iss(line);
+            std::istringstream iss(line);
             iss >> n;
             if (!iss.eof()) {
                 JGAP_LOG_AND_THROW("Expected single integer, got {}", line);
@@ -126,49 +125,49 @@ namespace jgap {
             // metadata
             getLine(file, line);
 
-            map<string, string> properties = parseHeaderLine(line);
+            std::map<std::string, std::string> properties = parseHeaderLine(line);
 
             if (!properties.contains("pbc") || properties["pbc"] != "T T T") {
                 JGAP_LOG_AND_THROW("No PBC? : {}", line);
             }
             properties.erase("pbc");
 
-            array<Vector3, 3> lattice{};
+            std::array<Vector3, 3> lattice{};
             if (!properties.contains("Lattice")) {
                 JGAP_LOG_AND_THROW("Lattice unspecified in {}", line);
             }
-            iss = istringstream(properties["Lattice"]);
+            iss = std::istringstream(properties["Lattice"]);
             iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
                 >> lattice[1].x >> lattice[1].y >> lattice[1].z
                 >> lattice[2].x >> lattice[2].y >> lattice[2].z;
             properties.erase("Lattice");
 
-            optional<double> energy{};
+            std::optional<double> energy{};
             if (properties.contains("energy")) {
-                iss = istringstream(properties["energy"]);
+                iss = std::istringstream(properties["energy"]);
                 double energyVal;
                 iss >> energyVal;
                 energy = energyVal;
                 properties.erase("energy");
             }
 
-            optional<double> energySigmaInverse{};
+            std::optional<double> energySigmaInverse{};
             if (properties.contains("energy_sigma")) {
-                iss = istringstream(properties["energy_sigma"]);
+                iss = std::istringstream(properties["energy_sigma"]);
                 double energySigmaVal;
                 iss >> energySigmaVal;
                 energySigmaInverse = 1.0 / energySigmaVal;
                 properties.erase("energy_sigma");
             }
 
-            optional<array<Vector3, 3>> virials{};
+            std::optional<std::array<Vector3, 3>> virials{};
             if (properties.contains("virials")) {
                 properties["virial"] = properties["virials"];
                 properties.erase("virials");
             }
             if (properties.contains("virial")) {
-                iss = istringstream(properties["virial"]);
-                array<Vector3, 3> virialsVal{};
+                iss = std::istringstream(properties["virial"]);
+                std::array<Vector3, 3> virialsVal{};
                 iss >> virialsVal[0].x >> virialsVal[0].y >> virialsVal[0].z
                     >> virialsVal[1].x >> virialsVal[1].y >> virialsVal[1].z
                     >> virialsVal[2].x >> virialsVal[2].y >> virialsVal[2].z;
@@ -176,24 +175,24 @@ namespace jgap {
                 properties.erase("virial");
             }
 
-            optional<array<Vector3, 3>> virialsSigmasInverse{};
+            std::optional<std::array<Vector3, 3>> virialsSigmasInverse{};
             if (properties.contains("virials_sigma")) {
-                iss = istringstream(properties["virials_sigma"]);
+                iss = std::istringstream(properties["virials_sigma"]);
                 double virialsSigmaVal;
                 iss >> virialsSigmaVal;
-                virialsSigmasInverse = array{
+                virialsSigmasInverse = std::array{
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
                     Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal}
                 };
                 properties.erase("virials_sigma");
             } else if (properties.contains("virials_sigmas")) {
-                iss = istringstream(properties["virials_sigmas"]);
-                array<Vector3, 3> virialsSigmasVal{};
+                iss = std::istringstream(properties["virials_sigmas"]);
+                std::array<Vector3, 3> virialsSigmasVal{};
                 iss >> virialsSigmasVal[0].x >> virialsSigmasVal[0].y >> virialsSigmasVal[0].z
                     >> virialsSigmasVal[1].x >> virialsSigmasVal[1].y >> virialsSigmasVal[1].z
                     >> virialsSigmasVal[2].x >> virialsSigmasVal[2].y >> virialsSigmasVal[2].z;
-                virialsSigmasInverse = array{
+                virialsSigmasInverse = std::array{
                     Vector3{1.0 / virialsSigmasVal[0].x, 1.0 / virialsSigmasVal[0].y, 1.0 / virialsSigmasVal[0].z},
                     Vector3{1.0 / virialsSigmasVal[1].x, 1.0 / virialsSigmasVal[1].y, 1.0 / virialsSigmasVal[1].z},
                     Vector3{1.0 / virialsSigmasVal[2].x, 1.0 / virialsSigmasVal[2].y, 1.0 / virialsSigmasVal[2].z}
@@ -201,27 +200,27 @@ namespace jgap {
                 properties.erase("virials_sigmas");
             }
 
-            vector<Vector3> positions(n);
-            optional<vector<Vector3>> forces;
-            optional<vector<Vector3>> forceSigmas;
-            vector<Species> species(n);
+            std::vector<Vector3> positions(n);
+            std::optional<std::vector<Vector3>> forces;
+            std::optional<std::vector<Vector3>> forceSigmas;
+            std::vector<Species> species(n);
             // todo
             if (line.contains("Properties=species:S:1:pos:R:3:force:R:3:force_sigma:R:3")) {
-                forces = vector<Vector3>(n);
-                forceSigmas = vector<Vector3>(n);
+                forces = std::vector<Vector3>(n);
+                forceSigmas = std::vector<Vector3>(n);
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
-                    iss = istringstream(line);
+                    iss = std::istringstream(line);
                     iss >> species[i];
                     iss >> positions[i].x >> positions[i].y >> positions[i].z;
                     iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
                     iss >> (*forceSigmas)[i].x >> (*forceSigmas)[i].y >> (*forceSigmas)[i].z;
                 }
             } else if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
-                forces = vector<Vector3>(n);
+                forces = std::vector<Vector3>(n);
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
-                    iss = istringstream(line);
+                    iss = std::istringstream(line);
                     iss >> species[i];
                     iss >> positions[i].x >> positions[i].y >> positions[i].z;
                     iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
@@ -229,7 +228,7 @@ namespace jgap {
             } else if (line.contains("Properties=species:S:1:pos:R:3")) {
                 for (size_t i = 0; i < n; i++) {
                     getline(file, line);
-                    iss = istringstream(line);
+                    iss = std::istringstream(line);
                     iss >> species[i];
                     iss >> positions[i].x >> positions[i].y >> positions[i].z;
                 }
@@ -246,7 +245,7 @@ namespace jgap {
                 .forces = forces,
                 .virials = virials,
                 .energySigmaInverse = energySigmaInverse,
-                .forceSigmasInverse = forceSigmas.transform([](vector<Vector3> v) {
+                .forceSigmasInverse = forceSigmas.transform([](std::vector<Vector3> v) {
                     return v | std::views::transform([](const Vector3& v_i) {
                         return Vector3{1.0 / v_i.x,1.0 / v_i.x,1.0 / v_i.x};
                     }) | std::ranges::to<std::vector>();
@@ -258,25 +257,26 @@ namespace jgap {
         return result;
     }
 
-    vector<AtomicStructure> readXyz(const string &fileName, const double cutoff) {
+    std::vector<AtomicStructure> readXyz(const std::string &fileName, const double cutoff) {
         auto result = readXyz(fileName);
         NeighbourFinder::findNeighbours(result, cutoff);
         return result;
     }
 
-    void writeXyz(const string &fileName, const vector<AtomicStructure> &structures) {
-        ofstream outputStream(fileName);
+    void writeXyz(const std::string &fileName, const std::vector<AtomicStructure> &structures) {
+        std::ofstream outputStream(fileName);
         writeXyz(outputStream, structures);
+        outputStream.close();
     }
 
-    void writeXyz(ofstream &outputStream, const vector<AtomicStructure> &structures) {
+    void writeXyz(std::ofstream &outputStream, const std::vector<AtomicStructure> &structures) {
         for (auto& structure: structures) {
-            outputStream << structure.size() << endl;
+            outputStream << structure.size() << std::endl;
 
-            string meta = "";
+            std::string meta;
             meta += "pbc=\"T T T\" ";
             meta += "Lattice=\"";
-            meta += format(
+            meta += std::format(
                 "{} {} {} {} {} {} {} {} {}",
                 structure.lattice[0].x, structure.lattice[0].y, structure.lattice[0].z,
                 structure.lattice[1].x, structure.lattice[1].y, structure.lattice[1].z,
@@ -291,11 +291,11 @@ namespace jgap {
                 }
             }
             if (structure.energy.has_value()) {
-                meta += "energy=" + to_string(structure.energy.value()) + " ";
+                meta += "energy=" + std::to_string(structure.energy.value()) + " ";
             }
             if (structure.virials.has_value()) {
                 meta += "virials=\"";
-                meta += format(
+                meta += std::format(
                     "{} {} {} {} {} {} {} {} {}",
                     structure.virials.value()[0].x, structure.virials.value()[0].y, structure.virials.value()[0].z,
                     structure.virials.value()[1].x, structure.virials.value()[1].y, structure.virials.value()[1].z,
@@ -309,7 +309,7 @@ namespace jgap {
                 meta += "Properties=species:S:1:pos:R:3";
             }
 
-            outputStream << meta << endl;
+            outputStream << meta << std::endl;
 
             for (const auto& atom: structure) {
                 outputStream << atom.species() << " ";
@@ -317,14 +317,13 @@ namespace jgap {
                 if (structure.forces.has_value()) {
                     outputStream << atom.force().x << " " << atom.force().y << " " << atom.force().z;
                 }
-                outputStream << endl;
+                outputStream << std::endl;
             }
         }
         outputStream.flush();
-        outputStream.close();
     }
 
-    double rms(const vector<double> &x) {
+    double rms(const std::vector<double> &x) {
         if (x.empty()) return 0.0;
         double res = 0.0;
         for (double i : x) {
@@ -334,7 +333,7 @@ namespace jgap {
         return res;
     }
 
-    double deviation(const vector<double> &x) {
+    double deviation(const std::vector<double> &x) {
         if (x.empty()) return 0.0;
         double mean = 0.0;
         for (double i : x) {
@@ -349,10 +348,10 @@ namespace jgap {
         return sqrt(variance);
     }
 
-    vector<string> split(const string& s, char delimiter) {
-        vector<string> result;
-        stringstream ss(s);
-        string token;
+    std::vector<std::string> split(const std::string& s, char delimiter) {
+        std::vector<std::string> result;
+        std::stringstream ss(s);
+        std::string token;
 
         while (getline(ss, token, delimiter)) {
             result.push_back(token);
@@ -361,8 +360,21 @@ namespace jgap {
         return result;
     }
 
-    string matrixToString(const Eigen::MatrixXd& mat) {
-        stringstream ss;
+    std::string join(const std::vector<std::string> &strs, char delimiter) {
+        std::string res = strs[0];
+        for (size_t i = 1; i < strs.size(); i++) {
+            res += std::string{delimiter} + strs[i];
+        }
+        return res;
+    }
+
+    std::string withoutExtension(const std::string &s) {
+        auto after_split = split(s, '.');
+        return join(std::vector(after_split.begin(), after_split.end() - 1), '.');
+    }
+
+    std::string matrixToString(const Eigen::MatrixXd& mat) {
+        std::stringstream ss;
         for (int i = 0; i < mat.rows(); ++i) {
             for (int j = 0; j < mat.cols(); ++j) {
                 ss << mat(i, j);
@@ -374,8 +386,8 @@ namespace jgap {
         return ss.str();
     }
 
-    string vectorToString(const Eigen::VectorXd &vec) {
-        stringstream ss;
+    std::string vectorToString(const Eigen::VectorXd &vec) {
+        std::stringstream ss;
         for (int i = 0; i < vec.size(); ++i) {
             ss << vec[i];
             if (i != vec.size() - 1) {
@@ -385,8 +397,8 @@ namespace jgap {
         return ss.str();
     }
 
-    string vectorToString(const vector<double> &vec) {
-        stringstream ss;
+    std::string vectorToString(const std::vector<double> &vec) {
+        std::stringstream ss;
         for (int i = 0; i < vec.size(); ++i) {
             ss << vec[i];
             if (i != vec.size() - 1) {
@@ -396,8 +408,8 @@ namespace jgap {
         return ss.str();
     }
 
-    string vectorToString(const vector<size_t> &vec) {
-        stringstream ss;
+    std::string vectorToString(const std::vector<size_t> &vec) {
+        std::stringstream ss;
         for (int i = 0; i < vec.size(); ++i) {
             ss << vec[i];
             if (i != vec.size() - 1) {
@@ -407,8 +419,8 @@ namespace jgap {
         return ss.str();
     }
 
-    string vectorToString(const vector<string> &vec) {
-        stringstream ss;
+    std::string vectorToString(const std::vector<std::string> &vec) {
+        std::stringstream ss;
         for (int i = 0; i < vec.size(); ++i) {
             ss << vec[i];
             if (i != vec.size() - 1) {
@@ -418,61 +430,87 @@ namespace jgap {
         return ss.str();
     }
 
-    nlohmann::json &requireFull(nlohmann::json &j,
-                                const std::string &key,
-                                const char *file,
+    static bool nodeIsObject(const DataNode& n) {
+        return n.type == DataNode::Type::OBJECT;
+    }
+
+    static bool nodeIsArray(const DataNode& n) {
+        return n.type == DataNode::Type::ARRAY;
+    }
+
+    DataNode& requireFull(DataNode& n,
+                          const std::string& key,
+                          const char* file,
+                          int line,
+                          const char* function) {
+        if (!nodeIsObject(n)) {
+            std::ostringstream oss;
+            oss << "Node is not an object when accessing key: \"" << key << "\"\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
+            throw std::domain_error(oss.str());
+        }
+        auto& m = std::get<std::map<std::string, DataNode>>(n.value);
+        auto it = m.find(key);
+        if (it == m.end()) {
+            std::ostringstream oss;
+            oss << "Node key not found: \"" << key << "\"\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
+            throw std::out_of_range(oss.str());
+        }
+        return it->second;
+    }
+
+    const DataNode& requireFull(const DataNode& n,
+                                const std::string& key,
+                                const char* file,
                                 int line,
-                                const char *function) {
-        if (!j.contains(key)) {
+                                const char* function) {
+        if (!nodeIsObject(n)) {
             std::ostringstream oss;
-            oss << "JSON key not found: \"" << key << "\"\n"
-                    << "  at " << file << ":" << line << "\n"
-                    << "  in " << function;
-            throw std::out_of_range(oss.str());
-        }
-        return j.at(key);
-    }
-
-    const nlohmann::json &requireFull(const nlohmann::json &j,
-                                      const std::string &key,
-                                      const char *file,
-                                      int line,
-                                      const char *function) {
-        if (!j.contains(key)) {
-            std::ostringstream oss;
-            oss << "JSON key not found: \"" << key << "\"\n"
-                    << "  at " << file << ":" << line << "\n"
-                    << "  in " << function;
-            throw std::out_of_range(oss.str());
-        }
-        return j.at(key);
-    }
-
-    nlohmann::json requireArrayFull(nlohmann::json &j,
-                                    const char *file,
-                                    int line,
-                                    const char *function) {
-        if (!j.is_array()) {
-            std::ostringstream oss;
-            oss << "JSON element is not an array: " << j.dump()
-                    << "\n  at " << file << ":" << line
-                    << "\n  in " << function;
+            oss << "DataNode is not an object when accessing key: \"" << key << "\"\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
             throw std::domain_error(oss.str());
         }
-        return j;
+        const auto& m = std::get<std::map<std::string, DataNode>>(n.value);
+        auto it = m.find(key);
+        if (it == m.end()) {
+            std::ostringstream oss;
+            oss << "Node key not found: \"" << key << "\"\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
+            throw std::out_of_range(oss.str());
+        }
+        return it->second;
     }
 
-    const nlohmann::json &requireArrayFull(const nlohmann::json &j,
-                                           const char *file,
-                                           int line,
-                                           const char *function) {
-        if (!j.is_array()) {
+    DataNode requireArrayFull(DataNode &n,
+                              const char* file,
+                              int line,
+                              const char* function) {
+        if (!nodeIsArray(n)) {
             std::ostringstream oss;
-            oss << "JSON element is not an array: " << j.dump()
-                    << "\n  at " << file << ":" << line
-                    << "\n  in " << function;
+            oss << "Node element is not an array\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
             throw std::domain_error(oss.str());
         }
-        return j;
+        return n;
+    }
+
+    const DataNode& requireArrayFull(const DataNode &n,
+                                     const char* file,
+                                     int line,
+                                     const char* function) {
+        if (!nodeIsArray(n)) {
+            std::ostringstream oss;
+            oss << "Node element is not an array\n"
+                << "  at " << file << ":" << line << "\n"
+                << "  in " << function;
+            throw std::domain_error(oss.str());
+        }
+        return n;
     }
 }

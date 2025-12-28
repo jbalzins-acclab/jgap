@@ -4,19 +4,19 @@
 #include <iostream>
 
 namespace jgap {
-    void NeighbourFinder::findNeighbours(vector<AtomicStructure> &structures, double cutoff) {
+    void NeighbourFinder::findNeighbours(std::vector<AtomicStructure> &structures, double cutoff) {
         tbb::parallel_for_each(
             structures.begin(), structures.end(),
             [cutoff](AtomicStructure &structure) { findNeighbours(structure, cutoff); }
         );
     }
 
-    tuple<int, int, int> findMaxRep(const AtomicStructure& structure, const double cutoff) {
+    std::tuple<int, int, int> findMaxRep(const AtomicStructure& structure, const double cutoff) {
         const Vector3 side1 = structure.lattice[0],
                       side2 = structure.lattice[1],
                       side3 = structure.lattice[2];
 
-        tuple<int, int, int> maxRep = {
+        std::tuple<int, int, int> maxRep = {
             cutoff / side1.len() + 2,
             cutoff / side2.len() + 2,
             cutoff / side3.len() + 2
@@ -35,7 +35,7 @@ namespace jgap {
     void NeighbourFinder::findNeighbours(AtomicStructure& structure, const double cutoff) {
 
         /*
-        vector<Vector3> corners;
+        std::vector<Vector3> corners;
         for (int mask = 0; mask < 8; mask++) {
             auto corner =
                 structure->latticeVectors[0] * ((mask & 1) != 0)
@@ -47,7 +47,7 @@ namespace jgap {
 
         const auto maxRep = findMaxRep(structure, cutoff);
 
-        vector<Vector3> possibleOffsets;
+        std::vector<Vector3> possibleOffsets;
         const auto zeroVec = Vector3(0, 0, 0);
 
         for (int rep0 = -get<0>(maxRep); rep0 <= get<0>(maxRep); rep0++) {
@@ -66,7 +66,7 @@ namespace jgap {
 
         // avoid heap corruption
         if (!structure.neighbours.has_value()) {
-            structure.neighbours = vector(structure.size(), NeighboursData());
+            structure.neighbours = std::vector(structure.size(), NeighboursData());
         } else {
             for (size_t i = 0; i < structure.size(); i++) {
                 (*structure.neighbours)[i].clear();

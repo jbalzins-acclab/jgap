@@ -12,9 +12,9 @@ TEST(TestTwoBodyDescriptor, covariance) {
 
     auto structs = readXyz("test/resources/xyz-samples/iter-3-3-test.xyz");
     NeighbourFinder::findNeighbours(structs, 5.0);
-    vector<AtomicStructure> selectedStructs = structs;
+    std::vector<AtomicStructure> selectedStructs = structs;
 
-    const auto params2b = nlohmann::json::parse(R"(
+    const auto params2b = DataNode::parse(R"(
     {
         "kernels": [
             {
@@ -65,7 +65,7 @@ TEST(TestTwoBodyDescriptor, covariance) {
     );
     ASSERT_EQ(covariance.size(), 4);
 
-    auto U = vector{
+    auto U = std::vector{
         291, 307, // self interact
         725, 550 // do not self interact
     }; // => double chack changes if this fails
@@ -118,14 +118,14 @@ AtomicStructure makeDimer(const Species &species, double x) {
 }
 
 TEST(TestTwoBodyDescriptor, dimerRepSign) {
-    vector structures = {
+    std::vector structures = {
         makeDimer("Fe", 1.0),
         makeDimer("Fe", 2.5),
         makeDimer("Fe", 4),
         };
     NeighbourFinder::findNeighbours(structures, 5.0);
 
-    const auto params2b = nlohmann::json::parse(R"(
+    const auto params2b = DataNode::parse(R"(
     {
         "kernels": [
             {
@@ -189,7 +189,7 @@ auto equilateralTriangle_2b = AtomicStructure{
 };
 
 TwoBodyDescriptor setupDesc2bSimple_2b() {
-    const auto params2b = nlohmann::json::parse(R"(
+    const auto params2b = DataNode::parse(R"(
     {
         "kernels": [
             {
@@ -242,20 +242,20 @@ TEST(TestTwoBodyDescriptor, twoBodyEquilateralTriangle) {
             derivatives_at2 = derivatives_at2 + (positions[i] - positions[j]).normalize() * dkdr_at_2;
             derivatives_at4 = derivatives_at4 + (positions[i] - positions[j]).normalize() * dkdr_at_4;
         }
-        cout << i << " at 2: " << derivatives_at2.toString() << endl;
-        cout << i << " at 4: " << derivatives_at4.toString() << endl;
+        std::cout << i << " at 2: " << derivatives_at2.toString() << std::endl;
+        std::cout << i << " at 4: " << derivatives_at4.toString() << std::endl;
         ASSERT_NEAR((res[0].forces[i]+derivatives_at2).len(), 0, 1e-4);
         ASSERT_NEAR((res[1].forces[i]+derivatives_at4).len(), 0, 1e-4);
     }
 
-    cout << desc.serialize().dump() << endl;
+    std::cout << desc.serialize().dump() << std::endl;
 }
 
 TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
-    vector structs = readXyz("test/resources/xyz-samples/fe-only.xyz");
+    std::vector structs = readXyz("test/resources/xyz-samples/fe-only.xyz");
     NeighbourFinder::findNeighbours(structs, 5.0);
 
-    const auto params2b = nlohmann::json::parse(R"(
+    const auto params2b = DataNode::parse(R"(
     {
         "kernels": [
             {
@@ -298,7 +298,7 @@ TEST(TestTwoBodyDescriptor, doubleBoxDoubleEnergy) {
 
     for (size_t i = 71; i < 440; i++) {
         auto structure = structs[i];
-        cout << structure.size() << endl;
+        std::cout << structure.size() << std::endl;
         auto rep = structure.repeat(2,2,2);
         NeighbourFinder::findNeighbours(rep, 5.0);
         auto predOrig = desc2b.predict(structure);

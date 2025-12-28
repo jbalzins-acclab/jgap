@@ -5,15 +5,13 @@
 #include "utils/Utils.hpp"
 
 namespace jgap {
-
     ThreeBodySE::ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales,
-                         Vector3 q, double fCut)
+                             Vector3 q, double fCut)
         : _idTriplet(std::move(idTriplet)),
           _energyScale(energyScale),
           _lengthScale(lengthScales),
           _q(q),
           _descriptorPrefactors(fCut) {
-
         _totalPrefactor = _descriptorPrefactors;
         _inverseThetaSq = {
             1.0 / (_lengthScale.x * _lengthScale.x),
@@ -22,15 +20,14 @@ namespace jgap {
         };
     }
 
-    ThreeBodySE::ThreeBodySE(const nlohmann::json &params)
+    ThreeBodySE::ThreeBodySE(const DataNode &params)
         : _idTriplet(SpeciesTriplet{
-            require(params, "species_triplet")[0],
-            SpeciesPair{require(params, "species_triplet")[1], require(params, "species_triplet")[2]}
+              require(params, "species_triplet")[0],
+              SpeciesPair{require(params, "species_triplet")[1], require(params, "species_triplet")[2]}
           }),
           _energyScale(require(params, "energy_scale")),
           _descriptorPrefactors(require(params, "descriptor_prefactors")),
           _q({require(params, "q")[0], require(params, "q")[1], require(params, "q")[2]}) {
-
         auto lsJson = require(params, "length_scale");
         if (lsJson.is_number()) {
             _lengthScale = {lsJson, lsJson, lsJson};
@@ -50,12 +47,12 @@ namespace jgap {
         }
     }
 
-    nlohmann::json ThreeBodySE::serialize() {
-        nlohmann::json res = {
-            {"species_triplet", vector{_idTriplet.root, _idTriplet.nodes.first(), _idTriplet.nodes.second()}},
-            {"length_scale", vector{_lengthScale.x, _lengthScale.y, _lengthScale.z}},
+    DataNode ThreeBodySE::serialize() {
+        DataNode res = {
+            {"species_triplet", std::vector{_idTriplet.root, _idTriplet.nodes.first(), _idTriplet.nodes.second()}},
+            {"length_scale", std::vector{_lengthScale.x, _lengthScale.y, _lengthScale.z}},
             {"energy_scale", _energyScale},
-            {"q", vector{_q.x, _q.y, _q.z}},
+            {"q", std::vector{_q.x, _q.y, _q.z}},
             {"descriptor_prefactors", _descriptorPrefactors}
         };
         if (coefficient.has_value()) {
@@ -64,7 +61,7 @@ namespace jgap {
         return res;
     }
 
-    double ThreeBodySE::crossCovariance(const shared_ptr<IKernel> &other) {
+    double ThreeBodySE::crossCovariance(const std::shared_ptr<IKernel> &other) {
         const auto otherSE = std::dynamic_pointer_cast<ThreeBodySE>(other);
 
         if (!otherSE) {
@@ -81,9 +78,9 @@ namespace jgap {
 
     double ThreeBodySE::valueInternal(const Vector3 &q) const {
         return _totalPrefactor
-            * exp(-pow(_q.x - q.x, 2.0) * 0.5 * _inverseThetaSq.x)
-            * exp(-pow(_q.y - q.y, 2.0) * 0.5 * _inverseThetaSq.y)
-            * exp(-pow(_q.z - q.z, 2.0) * 0.5 * _inverseThetaSq.z);
+               * exp(-pow(_q.x - q.x, 2.0) * 0.5 * _inverseThetaSq.x)
+               * exp(-pow(_q.y - q.y, 2.0) * 0.5 * _inverseThetaSq.y)
+               * exp(-pow(_q.z - q.z, 2.0) * 0.5 * _inverseThetaSq.z);
     }
 
     Vector3 ThreeBodySE::gradientInternal(const Vector3 &changingQ) const {

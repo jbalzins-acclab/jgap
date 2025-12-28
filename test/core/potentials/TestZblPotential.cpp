@@ -10,13 +10,13 @@ using namespace std;
 using namespace jgap;
 
 TEST(TestZblPotential, DimersData) {
-    auto zblPot = ZblPotential(nlohmann::json::parse("{}"));
+    auto zblPot = ZblPotential(DataNode::parse("{}"));
 
-    string xyzDataFn = "test/resources/zbl/quip-test.out.xyz";
+    std::string xyzDataFn = "test/resources/zbl/quip-test.out.xyz";
     auto structs = readXyz(xyzDataFn);
     NeighbourFinder::findNeighbours(structs, 5);
 
-    vector selected = {structs[1]};
+    std::vector selected = {structs[1]};
     for (int i: {24, 25, 26, 28}) {
         for (int j: {24, 25, 26, 28}) {
             if (j < i) {
@@ -38,9 +38,9 @@ TEST(TestZblPotential, DimersData) {
 }
 
 // TODO: re-fit/check quip cutoff
-void testVsQuipPairpot(const string& xyzDataFn) {
+void testVsQuipPairpot(const std::string& xyzDataFn) {
 
-    auto zblPot = ZblPotential(nlohmann::json::parse("{}"));
+    auto zblPot = ZblPotential(DataNode::parse("{}"));
 
     auto structs = readXyz(xyzDataFn);
     NeighbourFinder::findNeighbours(structs, 5);
@@ -50,7 +50,7 @@ void testVsQuipPairpot(const string& xyzDataFn) {
         auto pred = zblPot.predict(structs[i]);
 
         if (abs(structs[i].energy.value()) < 1.0) {
-            cout << i << endl;
+            std::cout << i << std::endl;
             ASSERT_NEAR(pred.energy.value(), structs[i].energy.value(), 0.08);
         } else {
             ASSERT_NEAR((pred.energy.value()-structs[i].energy.value())/structs[i].energy.value(), 0, 0.08);

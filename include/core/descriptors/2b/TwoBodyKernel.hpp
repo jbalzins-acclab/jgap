@@ -3,8 +3,8 @@
 
 #include "../Kernel.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
-#include "data/AtomicStructure.hpp"
-#include "data/PredictionData.hpp"
+#include "../../../data/atomic/AtomicStructure.hpp"
+#include "../../../data/atomic/PredictionData.hpp"
 #include "data/descriptors/kernels/TwoBodyIndex.hpp"
 namespace jgap {
 

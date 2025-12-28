@@ -1,16 +1,16 @@
-#include "data/PredictionData.hpp"
+#include "../../../include/data/atomic/PredictionData.hpp"
 
 namespace jgap {
     Predictions Predictions::operator+(const Predictions &other) const {
 
-        optional<double> _energy;
+        std::optional<double> _energy;
         if (energy.has_value() || other.energy.has_value()) {
             _energy = energy.value_or(0.0) + other.energy.value_or(0.0);
         }
 
-        optional<vector<Vector3>> _forces;
+        std::optional<std::vector<Vector3>> _forces;
         if (forces.has_value() && other.forces.has_value()) {
-            _forces = vector<Vector3>(forces.value().size());
+            _forces = std::vector<Vector3>(forces.value().size());
             for (size_t i = 0; i < forces.value().size(); i++) {
                 _forces->at(i) = forces.value()[i] + other.forces.value()[i];
             }
@@ -20,7 +20,7 @@ namespace jgap {
             _forces = other.forces.value();
         }
 
-        optional<array<Vector3, 3>> _virials;
+        std::optional<std::array<Vector3, 3>> _virials;
         if (virials.has_value() && other.virials.has_value()) {
             _virials = virials;
             (*_virials)[0] += other.virials.value()[0];

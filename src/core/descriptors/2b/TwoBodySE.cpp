@@ -1,4 +1,6 @@
 #include <utility>
+#include <memory>
+#include <optional>
 
 #include "core/descriptors/2b/TwoBodySE.hpp"
 
@@ -8,7 +10,7 @@
 
 namespace jgap {
     TwoBodySE::TwoBodySE(SpeciesPair speciesPair, double energyScale, double lengthScale, double r, double fCut,
-                         optional<double> coeff)
+                         std::optional<double> coeff)
         : _idPair(std::move(speciesPair)),
           _energyScale(energyScale),
           _lengthScale(lengthScale),
@@ -21,36 +23,39 @@ namespace jgap {
         coefficient = coeff;
     }
 
-    TwoBodySE::TwoBodySE(const nlohmann::json &params)
-        : _idPair(SpeciesPair{require(params, "species_pair")[0], require(params, "species_pair")[1]}),
-          _energyScale(require(params, "energy_scale")),
-          _lengthScale(require(params, "length_scale")),
-          _r(require(params, "r")),
-          _descriptorPrefactors(require(params, "descriptor_prefactors")) {
+    TwoBodySE::TwoBodySE(const jgap::DataNode &params)
+        : _idPair(SpeciesPair{
+              static_cast<std::string>(require(params, "species_pair")[0]),
+              static_cast<std::string>(require(params, "species_pair")[1])
+          }),
+          _energyScale(require(params, "energy_scale").asDouble()),
+          _lengthScale(require(params, "length_scale").asDouble()),
+          _r(require(params, "r").asDouble()),
+          _descriptorPrefactors(require(params, "descriptor_prefactors").asDouble()) {
 
         _totalPrefactor = _descriptorPrefactors * _energyScale * _energyScale;
         _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
 
         if (params.contains("coefficient")) {
-            coefficient = params["coefficient"];
+            coefficient = params.value("coefficient", 0.0);
         }
     }
 
-    nlohmann::json TwoBodySE::serialize() {
-        nlohmann::json res = {
-            {"species_pair", vector{_idPair.first(), _idPair.second()}},
+    jgap::DataNode TwoBodySE::serialize() {
+        jgap::DataNode res = {
+            {"species_pair", std::vector{_idPair.first(), _idPair.second()}},
             {"length_scale", _lengthScale},
             {"energy_scale", _energyScale},
             {"r", _r},
             {"descriptor_prefactors", _descriptorPrefactors}
         };
         if (coefficient.has_value()) {
-            res["coefficient"] = coefficient.value();
+            res["coefficient"] = jgap::DataNode(coefficient.value());
         }
         return res;
     }
 
-    double TwoBodySE::crossCovariance(const shared_ptr<IKernel> &other) {
+    double TwoBodySE::crossCovariance(const std::shared_ptr<IKernel> &other) {
         const auto otherSE = std::dynamic_pointer_cast<TwoBodySE>(other);
 
         if (!otherSE) {

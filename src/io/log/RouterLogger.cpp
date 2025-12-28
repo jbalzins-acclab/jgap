@@ -9,12 +9,12 @@ namespace jgap {
         if (_cfg.routing == OutputRouting::BothStdoutAndFiles || _cfg.routing == OutputRouting::MixedNonDebugToStdout) {
             // For stdout, metadata visibility is FilesOnly -> only include metadata in files by default
             const auto stdoutMeta = (_cfg.metadata == MetadataVisibility::Both) ? MetadataVisibility::Both : MetadataVisibility::None;
-            _stdoutLogger = make_shared<StdoutLogger>(_cfg.stdoutLogDebug, stdoutMeta);
+            _stdoutLogger = std::make_shared<StdoutLogger>(_cfg.stdoutLogDebug, stdoutMeta);
         }
 
         // Setup file logger depending on routing
         if (_cfg.routing == OutputRouting::FilesOnly || _cfg.routing == OutputRouting::BothStdoutAndFiles || _cfg.routing == OutputRouting::MixedNonDebugToStdout) {
-            _fileLogger = make_shared<FileLogger>(std::move(filePath), _cfg.metadata == MetadataVisibility::None ? MetadataVisibility::None : MetadataVisibility::FilesOnly);
+            _fileLogger = std::make_shared<FileLogger>(std::move(filePath), _cfg.metadata == MetadataVisibility::None ? MetadataVisibility::None : MetadataVisibility::FilesOnly);
         }
     }
 

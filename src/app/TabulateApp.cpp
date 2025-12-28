@@ -27,20 +27,20 @@ int main(int argc, char** argv) {
         // ------------------------ READ PARAMS AND PREPARE -------------------------------
         jgap::JGAP_LOG_INFO("Tabulation as specified in: {}", argv[1]);
 
-        string paramFileName = argv[1];
+        std::string paramFileName = argv[1];
         ifstream paramFile(paramFileName);
         if (!paramFile.is_open()) {
             jgap::JGAP_LOG_ERROR("Cannot open tabulation-param file {}", paramFileName);
             return EXIT_FAILURE;
         }
 
-        nlohmann::json tabulationParams;
+        DataNode tabulationParams;
         paramFile >> tabulationParams;
 
-        const string outputFilePrefix = tabulationParams["output_file_prefix"];
-        const string potentialFileName = tabulationParams["potential_file"];
+        const std::string outputFilePrefix = tabulationParams["output_file_prefix"];
+        const std::string potentialFileName = tabulationParams["potential_file"];
 
-        shared_ptr<jgap::Potential> potential;
+        std::shared_ptr<jgap::Potential> potential;
         if (potentialFileName.ends_with(".xml")) {
 
             pugi::xml_document quipDocument;
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
                 jgap::JGAP_LOG_ERROR("Cannot open pot-param file {}", potentialFileName);
                 return EXIT_FAILURE;
             }
-            nlohmann::json potParams;
+            DataNode potParams;
             potentialParamFile >> potParams;
             potential = jgap::ParserRegistry<jgap::Potential>::get(potParams);
         }

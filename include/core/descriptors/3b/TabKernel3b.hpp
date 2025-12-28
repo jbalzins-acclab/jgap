@@ -2,23 +2,23 @@
 #define JGAP_TABKERNEL3B_HPP
 
 #include "ThreeBodyKernel.hpp"
-#include "data/Grid3d.hpp"
+#include "../../../data/tabulation/Grid3d.hpp"
 #include "utils/BSplineTools.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {
     class TabKernel3b : public ThreeBodyKernel {
     public:
-        TabKernel3b(const SpeciesTriplet &idSpecies, const shared_ptr<Grid3d> &splineGrid)
+        TabKernel3b(const SpeciesTriplet &idSpecies, const std::shared_ptr<Grid3d> &splineGrid)
             : _idSpecies(idSpecies),
               _splineGrid(splineGrid) {
             coefficient = 1.0;
         }
 
-        string getType() override { IO_NOT_INTENDED(TabKernel3b.getType); }
-        nlohmann::json serialize() override { IO_NOT_INTENDED(TabKernel3b.serialize); }
-        double crossCovariance(const shared_ptr<IKernel> &kernel) override {
-            throw logic_error("TabKernel3b not intended for fitting | crossCovariance()");
+        std::string getType() override { IO_NOT_INTENDED(TabKernel3b.getType); }
+        DataNode serialize() override { IO_NOT_INTENDED(TabKernel3b.serialize); }
+        double crossCovariance(const std::shared_ptr<IKernel> &kernel) override {
+            throw std::logic_error("TabKernel3b not intended for fitting | crossCovariance()");
         }
 
         SpeciesTriplet getFilter() override { return _idSpecies; }
@@ -30,13 +30,13 @@ namespace jgap {
         Vector3 gradientInternal(const Vector3 &q) const override {
             Vector3 mu = fromInvariantTriplet(q);
             Vector3 dE_dmu = BSplineTools::interpolate(*_splineGrid, mu).gradient;
-            array<Vector3, 3> _dMu_dq = dMu_dq(q);
+            std::array<Vector3, 3> _dMu_dq = dMu_dq(q);
             return _dMu_dq[0] * dE_dmu.x + _dMu_dq[1] * dE_dmu.y + _dMu_dq[2] * dE_dmu.z;
         }
 
     private:
         SpeciesTriplet _idSpecies;
-        shared_ptr<Grid3d> _splineGrid;
+        std::shared_ptr<Grid3d> _splineGrid;
 
         static Vector3 fromInvariantTriplet(const Vector3 &q) {
 
@@ -52,7 +52,7 @@ namespace jgap {
             return {r01, r02, cosTheta};
         }
 
-        static array<Vector3, 3> dMu_dq(Vector3 q) {
+        static std::array<Vector3, 3> dMu_dq(Vector3 q) {
             // const double r12 = q.z;
 
             const double D = std::sqrt(q.y);
@@ -68,7 +68,7 @@ namespace jgap {
                 return (dNominator_dqi*denominator - nominator*dDenominator_dqi) / (denominator*denominator);
             };
 
-            array<Vector3, 3> res;
+            std::array<Vector3, 3> res{};
 
             // ---------------- qx ----------------
             // dr01_dqx = 0.5;

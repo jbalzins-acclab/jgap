@@ -6,16 +6,15 @@
 namespace jgap {
     class IsolatedAtomFit : public Fit {
     public:
-        static constexpr string TYPE = "isolated_atom";
+        SETUP_PARSER(Fit, IsolatedAtomFit, isolated_atom)
 
-        IsolatedAtomFit(const nlohmann::json& params);
-        shared_ptr<Potential> fit(const vector<AtomicStructure> &trainingData) override;
+        IsolatedAtomFit(bool errorOnUnknownSpecies = false) : error_on_unknown_species_(errorOnUnknownSpecies) {}
+
+        std::shared_ptr<Potential> fit(const std::vector<AtomicStructure> &trainingData) override;
 
     private:
-        bool _errorOnUnknownSpecies;
+        bool error_on_unknown_species_;
     };
-
-    REGISTER_PARSER(Fit, IsolatedAtomFit)
 }
 
 #endif

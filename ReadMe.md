@@ -6,8 +6,8 @@
 - Screened coulomb pre-fit for all element pairs(see resources/dmol-screening-fit & */core/potentials/ZblPotential.cpp)
 - Significant speedup in kernel matrix formation & RAM usage improvement compared to QUIP with basic compilation:
   - ~20 sec(on my laptop) for Iron potential | ~500Mb
-  - ~1 min(on my laptop) for FeNi potential | ~6Gb RAM
-  - ~3 min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
+  - ~1 std::min(on my laptop) for FeNi potential | ~6Gb RAM
+  - ~3 std::min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
   - more to be tested.
   - RAM usage can be estimated from logs(look for matrix size).
   - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
@@ -52,7 +52,7 @@ vcpkg install
 # on local device
 cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
 # on Puhti: 
-cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
+cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-std::vector-width=512" 
 cmake --build build -j ...
 ```
 - This should produce 3 executables:

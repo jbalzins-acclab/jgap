@@ -6,7 +6,7 @@
 #include "core/potentials/CompositePotential.hpp"
 
 namespace jgap {
-    CompositePotentialFit::CompositePotentialFit(const nlohmann::json &params) {
+    CompositePotentialFit::CompositePotentialFit(const DataNode &params) {
         if (params.contains("external")) {
             JGAP_LOG_INFO("External potential setup");
             _externalPotential = REGISTRY_GET(Potential, params["external"]);
@@ -15,8 +15,8 @@ namespace jgap {
                 format("External potential setup from {}", params["external_from_file"].dump())
             );
 
-            nlohmann::json externalPotentialParams;
-            ifstream externalPotentialFile(params["external_from_file"].get<string>());
+            DataNode externalPotentialParams;
+            ifstream externalPotentialFile(params["external_from_file"].get<std::string>());
             if (!externalPotentialFile.is_open()) {
                 JGAP_LOG_ERROR("Could not open external potential file", true);
             }
@@ -49,7 +49,7 @@ namespace jgap {
             if (_fits.size() == 1) {
                 _fitOrder = {_fits.begin()->first};
             } else if (_fits.size() == 2 && _fits.contains("isolated_atom")) {
-                _fitOrder = vector(views::keys(_fits).begin(), views::keys(_fits).end());
+                _fitOrder = std::vector(std::views::keys(_fits).begin(), std::views::keys(_fits).end());
                 if (_fitOrder[0] != "isolated_atom") {
                     swap(_fitOrder[0], _fitOrder[1]);
                 }
@@ -59,17 +59,17 @@ namespace jgap {
         }
     }
 
-    shared_ptr<Potential> CompositePotentialFit::fit(const vector<AtomicStructure> &trainingData) {
-        vector<AtomicStructure> dataToBeFit;
+    std::shared_ptr<Potential> CompositePotentialFit::fit(const std::vector<AtomicStructure> &trainingData) {
+        std::vector<AtomicStructure> dataToBeFit;
 
         if (_externalPotential.has_value()) {
             JGAP_LOG_INFO("Subtracting external contributions");
             dataToBeFit = subtractExternalContribution(trainingData, _externalPotential.value());
         } else {
-            dataToBeFit = vector(trainingData);
+            dataToBeFit = std::vector(trainingData);
         }
 
-        map<string, shared_ptr<Potential>> resultingPotentials;
+        std::map<std::string, std::shared_ptr<Potential>> resultingPotentials;
         for (const auto &label: _fitOrder) {
 
             JGAP_LOG_INFO("Doing \"{}\" potential fit", label);
@@ -89,15 +89,15 @@ namespace jgap {
             resultingPotentials["external"] = _externalPotential.value();
         }
 
-        return make_shared<CompositePotential>(resultingPotentials);
+        return std::make_shared<CompositePotential>(resultingPotentials);
     }
 
-    vector<AtomicStructure> CompositePotentialFit::subtractExternalContribution(
-        const vector<AtomicStructure> &originalData, const shared_ptr<Potential> &potential) {
+    std::vector<AtomicStructure> CompositePotentialFit::subtractExternalContribution(
+        const std::vector<AtomicStructure> &originalData, const std::shared_ptr<Potential> &potential) {
 
         JGAP_LOG_INFO("Subtracting external potential contributions");
 
-        vector dataToBeFit(originalData.begin(), originalData.end());
+        std::vector dataToBeFit(originalData.begin(), originalData.end());
         NeighbourFinder::findNeighbours(dataToBeFit, potential->getCutoff().maxOverall());
 
         tbb::parallel_for_each(dataToBeFit.begin(), dataToBeFit.end(), [&](AtomicStructure& structure) -> void {

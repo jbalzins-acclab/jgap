@@ -3,22 +3,26 @@
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    CompositePotential::CompositePotential(const map<string, shared_ptr<Potential>>& potentials) {
-        _potentials = potentials;
-    }
+    std::shared_ptr<CompositePotential> CompositePotential::fromDataNode(const DataNode &params) {
 
-    CompositePotential::CompositePotential(const nlohmann::json &params) {
         JGAP_LOG_DEBUG("Parsing composite potential");
-        _potentials = {};
-        for (const auto &[label, potentialParams] : require(params, "potentials").items()) {
-            _potentials[label] = ParserRegistry<Potential>::get(potentialParams);
+
+        std::map<std::string, std::shared_ptr<Potential>> potentials{};
+        for (auto &[label, potentialParams] : require(params, "potentials").asObject()) {
+            potentials[label] = REGISTRY_GET(Potential, potentialParams);
         }
+
+        return std::make_shared<CompositePotential>(potentials);
     }
 
-    nlohmann::json CompositePotential::serialize() {
-        nlohmann::json result{};
-        result["potentials"] = nlohmann::json{};
-        for (const auto &[label, potential] : _potentials) {
+    CompositePotential::CompositePotential(const std::map<std::string, std::shared_ptr<Potential>> &potentialsMap)
+        : potentials(potentialsMap) {
+    }
+
+    DataNode CompositePotential::serialize() {
+        DataNode result{};
+        result["potentials"] = DataNode::object();
+        for (const auto &[label, potential] : potentials) {
             result["potentials"][label] = potential->serialize();
             result["potentials"][label]["type"] = potential->getType();
         }
@@ -27,7 +31,7 @@ namespace jgap {
 
     CutoffRanges CompositePotential::getCutoff() {
         CutoffRanges res{};
-        for (const auto &potential: _potentials | views::values) {
+        for (const auto &potential: potentials | std::views::values) {
             res += potential->getCutoff();
         }
         return res;
@@ -35,14 +39,14 @@ namespace jgap {
 
     Predictions CompositePotential::predict(const AtomicStructure &structure) {
         Predictions result{};
-        for (const auto &potential : _potentials | views::values) {
+        for (const auto &potential : potentials | std::views::values) {
             result = result + potential->predict(structure);
         }
         return result;
     }
 
     void CompositePotential::tabulate(TabulationData &table) {
-        for (const auto &[label, potential] : _potentials) {
+        for (const auto &[label, potential] : potentials) {
             JGAP_LOG_DEBUG("Tabulating {} potential", label);
             potential->tabulate(table);
         }

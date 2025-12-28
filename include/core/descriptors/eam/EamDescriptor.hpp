@@ -1,7 +1,6 @@
 #ifndef EAMDESCRIPTOR_HPP
 #define EAMDESCRIPTOR_HPP
 
-#include <nlohmann/json.hpp>
 #include <utility>
 #include <queue>
 
@@ -13,50 +12,45 @@
 #include "io/parse/ParserRegistry.hpp"
 #include "EamSE.hpp"
 #include "memory/MatrixBlock.hpp"
-#include "../sparsification/Sparsifier.hpp"
 
 namespace jgap {
 
-    class EamDescriptor : public Descriptor {
+    class EamDescriptor : public Descriptor, Serializable {
     public:
-        static constexpr string TYPE = "eam";
-        EamDescriptor(vector<shared_ptr<EamKernel>> kernels,
-                      shared_ptr<EamPairFunction> &defaultPairFunction,
-                      map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> pairFunctions);
+        SETUP_PARSER_AND_SERIALIZATION(Descriptor, EamDescriptor, eam)
 
-        EamDescriptor(const nlohmann::json &params);
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; }
+        EamDescriptor(std::vector<std::shared_ptr<EamKernel>> kernels,
+                      std::shared_ptr<EamPairFunction> &default_pair_function,
+                      std::map<ContributorReceiverSpecies,
+                      std::shared_ptr<EamPairFunction>> pairFunctions);
 
         CutoffRanges getCutoff() override;;
 
-        vector<shared_ptr<IKernel>> getKernels() override;
-        void setupSparseKernels(const vector<AtomicStructure> &fromData) override;
+        std::vector<std::shared_ptr<IKernel>> getKernels() override;
+        void setupSparseKernels(const std::vector<AtomicStructure> &fromData) override;
 
-        vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
-        vector<shared_ptr<MatrixBlock>> selfCovariate() override;
+        std::vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
+        std::vector<std::shared_ptr<MatrixBlock>> selfCovariate() override;
 
         Predictions predict(const AtomicStructure &atomicStructure) override;
 
         void tabulate(TabulationData &table) override;
 
     private:
-        double _maxCutoff;
-        vector<shared_ptr<EamKernel>> _kernels;
-        map<Species, vector<size_t>> _kernelIndicesPerSpecies;
+        double max_cutoff_;
+        std::vector<std::shared_ptr<EamKernel>> kernels_;
+        std::map<Species, std::vector<size_t>> _kernelIndicesPerSpecies;
 
         // A queue to emphasize the one-time use
-        queue<nlohmann::json> _kernelSetups;
+        std::queue<DataNode> _kernelSetups;
 
-        shared_ptr<EamPairFunction> _defaultPairFunction;
-        map<ContributorReceiverSpecies, shared_ptr<EamPairFunction>> _pairFunctions;
+        std::shared_ptr<EamPairFunction> default_pair_function_;
+        std::map<ContributorReceiverSpecies, std::shared_ptr<EamPairFunction>> pair_functions_;
 
         EamKernelIndex doIndex(const AtomicStructure &structure) const;
 
         void mapKernelIds();
     };
-
-    REGISTER_PARSER(Descriptor, EamDescriptor)
 }
 
 

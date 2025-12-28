@@ -1,39 +1,42 @@
 #include "core/potentials/GapPotential.hpp"
 #include "io/parse/ParserRegistry.hpp"
+#include "utils/Utils.hpp"
 
 namespace jgap {
-    GapPotential::GapPotential(const nlohmann::json &params) {
+    GapPotential::GapPotential(const DataNode &params) {
         JGAP_LOG_DEBUG("Parsing jGAP potential params");
         _descriptors = {};
-        for (const auto& [label, descriptorParams]: params["descriptors"].items()) {
-            _descriptors[label] = ParserRegistry<Descriptor>::get(descriptorParams);
+        const auto& descsNode = require(params, "descriptors");
+        const auto& m = std::get<std::map<std::string, DataNode>>(descsNode.value);
+        for (const auto& [label, descriptorParams] : m) {
+            _descriptors[label] = REGISTRY_GET(Descriptor, descriptorParams);
         }
     }
 
     Predictions GapPotential::predict(const AtomicStructure &structure) {
         Predictions prediction{};
-        for (const auto &descriptor: _descriptors | views::values) {
+        for (const auto &descriptor: _descriptors | std::views::values) {
             prediction = prediction + descriptor->predict(structure);
         }
         return prediction;
     }
 
-    nlohmann::json GapPotential::serialize() {
-        nlohmann::json descriptors;
-
+    DataNode GapPotential::serialize() {
+        DataNode descriptors = DataNode::object();
+        auto& dm = std::get<std::map<std::string, DataNode>>(descriptors.value);
         for (const auto &[descriptorLabel, descriptor] : _descriptors) {
             descriptors[descriptorLabel] = descriptor->serialize();
             descriptors[descriptorLabel]["type"] = descriptor->getType();
         }
 
-        return{
+        return DataNode{
             {"descriptors", descriptors}
         };
     }
 
     CutoffRanges GapPotential::getCutoff() {
         CutoffRanges cutoff{};
-        for (const auto& descriptor : _descriptors | views::values) {
+        for (const auto& descriptor : _descriptors | std::views::values) {
             cutoff += descriptor->getCutoff();
         }
         return cutoff;

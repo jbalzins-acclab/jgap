@@ -1,15 +1,14 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "data/AtomicStructure.hpp"
+#include "../data/atomic/AtomicStructure.hpp"
 
 #include <string>
 #include <vector>
 #include <Eigen/Dense>
-#include <nlohmann/json.hpp>
+#include "data/DataNode.hpp"
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
-#define IO_NOT_INTENDED(func) throw std::logic_error("IO not intended for " + std::string(#func))
 
 namespace jgap {
     std::map<std::string, std::string> parseHeaderLine(const std::string &line);
@@ -26,23 +25,25 @@ namespace jgap {
     double deviation(const std::vector<double>&);
 
     std::vector<std::string> split(const std::string& s, char delimiter);
+    std::string join(const std::vector<std::string>& s, char delimiter);
+    std::string withoutExtension(const std::string& s);
 
-    std::string matrixToString(const Eigen::MatrixXd& mat);
-    std::string vectorToString(const Eigen::VectorXd& vec);
-    std::string vectorToString(const std::vector<double>& vec);
-    std::string vectorToString(const std::vector<size_t>& vec);
-    std::string vectorToString(const std::vector<std::string>& vec);
+    std::string matrixToString(const Eigen::MatrixXd&);
+    std::string vectorToString(const Eigen::VectorXd&);
+    std::string vectorToString(const std::vector<double>&);
+    std::string vectorToString(const std::vector<size_t>&);
+    std::string vectorToString(const std::vector<std::string>&);
 
-    nlohmann::json& requireFull(nlohmann::json& j, const std::string& key, const char* file, int line, const char* function);
-    const nlohmann::json& requireFull(const nlohmann::json& j, const std::string& key, const char* file, int line,
-                                      const char* function);
+    DataNode& requireFull(DataNode& n, const std::string& key, const char* file, int line, const char* function);
+    const DataNode& requireFull(const DataNode& n, const std::string& key, const char* file,
+                                int line, const char* function);
 
-    nlohmann::json requireArrayFull(nlohmann::json &j, const char* file, int line, const char* function);
-    const nlohmann::json& requireArrayFull(const nlohmann::json& j, const char* file, int line, const char* function);
+    DataNode requireArrayFull(DataNode &n, const char* file, int line, const char* function);
+    const DataNode& requireArrayFull(const DataNode& n, const char* file, int line, const char* function);
 
-    #define require(j, key) requireFull((j), (key), __FILE__, __LINE__, __func__)
-    #define requireArray(j) requireArrayFull((j), __FILE__, __LINE__, __func__)
-    #define optionallySet(val, j, key) if (j.contains(key)) { val = j[key]; }
+    #define require(node, key) requireFull((node), (key), __FILE__, __LINE__, __func__)
+    #define requireArray(node) requireArrayFull((node), __FILE__, __LINE__, __func__)
+    #define optionallySet(val, node, key) if (node.contains(key)) { val = node[key]; }
 
     template<typename Map, typename Key, typename Value>
     auto getOrDefault(const Map& m, const Key& k, const Value& defaultValue) -> decltype(m.at(k)) {

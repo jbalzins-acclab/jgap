@@ -14,45 +14,47 @@
 #include <utility>
 #include <set>
 #include <queue>
-#include <nlohmann/json.hpp>
 
 namespace jgap {
 
     class TwoBodyDescriptor : public Descriptor {
     public:
-        static constexpr string TYPE = "2b";
-        TwoBodyDescriptor(shared_ptr<CutoffFunction> cutoffFunction, vector<shared_ptr<TwoBodyKernel>> kernels);
-        TwoBodyDescriptor(const nlohmann::json& params);
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; };
+        static constexpr std::string TYPE = "2b";
+        static std::shared_ptr<TwoBodyDescriptor> fromDataNode(const DataNode& params);
+
+        TwoBodyDescriptor(std::shared_ptr<CutoffFunction> cutoffFunction, std::vector<std::shared_ptr<TwoBodyKernel>> kernels);
+
+        DataNode serialize() override;
+
+        std::string getType() override { return TYPE; };
 
         CutoffRanges getCutoff() override { return CutoffRanges{.twoBody = _cutoffFunction->getCutoff()}; }
 
-        vector<shared_ptr<IKernel>> getKernels() override;
-        void setupSparseKernels(const vector<AtomicStructure> &fromData) override;
+        std::vector<std::shared_ptr<IKernel>> getKernels() override;
+        void setupSparseKernels(const std::vector<AtomicStructure> &fromData) override;
 
-        vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
-        vector<shared_ptr<MatrixBlock>> selfCovariate() override;
+        std::vector<Covariance> covariate(const AtomicStructure &atomicStructure) override;
+        std::vector<std::shared_ptr<MatrixBlock>> selfCovariate() override;
 
         Predictions predict(const AtomicStructure &atomicStructure) override;
 
         void tabulate(TabulationData &table) override;
 
     protected:
-        shared_ptr<CutoffFunction> _cutoffFunction;
-        vector<shared_ptr<TwoBodyKernel>> _kernels;
-        map<SpeciesPair, vector<size_t>> _kernelIdsPerSpeciesPair;
+        std::shared_ptr<CutoffFunction> _cutoffFunction;
+        std::vector<std::shared_ptr<TwoBodyKernel>> _kernels;
+        std::map<SpeciesPair, std::vector<size_t>> _kernelIdsPerSpeciesPair;
 
         // A queue to emphasize the one-time use
-        queue<nlohmann::json> _kernelSetups;
+        std::queue<DataNode> _kernelSetups;
 
-        map<SpeciesPair, TwoBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
-        bool checkSpecies(const SpeciesPair& pairInData, nlohmann::json filters);
+        std::map<SpeciesPair, TwoBodyIndex> doIndex(const AtomicStructure &atomicStructure) const;
+        bool checkSpecies(const SpeciesPair& pairInData, DataNode filters);
 
         void mapKernelIds();
     };
 
-    REGISTER_PARSER(Descriptor, TwoBodyDescriptor)
+    SETUP_PARSER(Descriptor, TwoBodyDescriptor)
 }
 
-#endif //TWOBODYDESCRIPTOR_HPP
+#endif

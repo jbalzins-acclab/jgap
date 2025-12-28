@@ -4,26 +4,31 @@
 #include "TwoBodyKernel.hpp"
 #include "../Kernel.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
-#include "data/AtomicStructure.hpp"
-#include "data/PredictionData.hpp"
+#include "../../../data/atomic/AtomicStructure.hpp"
+#include "../../../data/atomic/PredictionData.hpp"
 #include "data/descriptors/kernels/TwoBodyIndex.hpp"
 #include "io/parse/ParserRegistry.hpp"
+#include "data/DataNode.hpp"
+
+#include <string>
+#include <optional>
+#include <memory>
 
 namespace jgap {
 
-
-    class TwoBodySE : public TwoBodyKernel {
+    class TwoBodySE : public TwoBodyKernel, Serializable {
     public:
-        static constexpr string TYPE = "squared_exp";
+        SETUP_PARSER_AND_SERIALIZATION(TwoBodyKernel, TwoBodySE, squared_exp)
+
         TwoBodySE(SpeciesPair speciesPair, double energyScale, double lengthScale, double r, double fCut,
-                  optional<double> coeff = {});
-        TwoBodySE(const nlohmann::json &params);
-        string getType() override { return TYPE; }
-        nlohmann::json serialize() override;
+                  std::optional<double> coeff = {});
 
         SpeciesPair getFilter() override { return _idPair; }
+        double crossCovariance(const std::shared_ptr<IKernel>& other) override;
 
-        double crossCovariance(const shared_ptr<IKernel>& other) override;
+    protected:
+        double valueInternal(const double &r) const override;
+        double derivativeInternal(const double &changingR) const override;
 
     private:
         // raw params
@@ -36,12 +41,7 @@ namespace jgap {
         // optimized for calculation
         double _totalPrefactor;
         double _inverseThetaSq;
-
-        double valueInternal(const double &r) const;
-        double derivativeInternal(const double &changingR) const;
     };
-
-    REGISTER_PARSER(TwoBodyKernel, TwoBodySE)
 }
 
 #endif

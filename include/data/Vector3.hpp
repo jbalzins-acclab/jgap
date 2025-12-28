@@ -82,7 +82,7 @@ namespace jgap {
         Vector3 normalize() const {
             return *this * (1.0 / len());
         }
-        double min() const {
+        double std::min() const {
             const double t = abs(x) < abs(y) ? x : y;
             return abs(t) < abs(z) ? abs(t) : abs(z);
         }
@@ -94,8 +94,8 @@ namespace jgap {
         bool operator==(const Vector3& other) const {
             return x == other.x && y == other.y && z == other.z;
         }
-        string toString() const {
-            return to_string(x) + ", " + to_string(y) + ", " + to_string(z);
+        std::string toString() const {
+            return std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z);
         }
     };
 }

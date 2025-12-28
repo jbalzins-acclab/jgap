@@ -13,35 +13,35 @@
 
 namespace jgap {
 
-    std::shared_ptr<QRGapFit> QRGapFit::fromJson(const nlohmann::json& params) {
+    std::shared_ptr<QRGapFit> QRGapFit::fromDataNode(const DataNode& params) {
 
         std::map<std::string, std::shared_ptr<Descriptor>> descriptors{};
-        for (const auto& [label, descriptorParams] : require(params, "descriptors").items()) {
+        for (const auto& [label, descriptorParams]: require(params, "descriptors").asObject()) {
             descriptors[label] = REGISTRY_GET(Descriptor, descriptorParams);
         }
 
         auto regularizationRules = REGISTRY_GET(RegularizationRules, require(params, "regularization_rules"));
-        double jitter = params.value("jitter", 1e-8);
+        double jitter = params.getOrDefault("jitter", 1e-8);
 
         return std::make_shared<QRGapFit>(descriptors, regularizationRules, jitter);
     }
 
     QRGapFit::QRGapFit(
         const std::map<std::string, std::shared_ptr<Descriptor>> &descriptors,
-        const std::shared_ptr<RegularizationRules> &regularizationRules,
+        const std::shared_ptr<RegularizationRules> &regularization_rules,
         const double jitter
-        ) : _descriptors(descriptors), _regularizationRules(regularizationRules), _jitter(jitter) {
+        ) : descriptors_(descriptors), regularization_rules_(regularization_rules), _jitter(jitter) {
     }
 
-    std::shared_ptr<Potential> QRGapFit::fit(const std::vector<AtomicStructure>& trainingData) {
+    std::shared_ptr<Potential> QRGapFit::fit(const std::vector<AtomicStructure>& training_data) {
         JGAP_LOG_INFO("Starting JGAP fit");
 
-        std::vector _trainingData(trainingData);
+        std::vector<AtomicStructure> _trainingData(training_data);
         JGAP_LOG_INFO("Checking sparse points");
 
         double maxCutoff = 0;
         auto descriptorsAsVec = std::vector<std::shared_ptr<Descriptor>>();
-        for (const auto& descriptor: _descriptors | std::views::values) {
+        for (const auto& descriptor: descriptors_ | std::views::values) {
             descriptorsAsVec.push_back(descriptor);
 
             NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff().maxOverall());
@@ -50,14 +50,14 @@ namespace jgap {
             maxCutoff = std::max(maxCutoff, descriptor->getCutoff().maxOverall());
         }
 
-        JGAP_LOG_DEBUG("Full neighbour-list");
+        JGAP_LOG_DEBUG("Full neighbour-std::list");
         NeighbourFinder::findNeighbours(_trainingData, maxCutoff);
 
         //// ----------------------------------------------------------------------------------------------------
 
         JGAP_LOG_INFO("Setting up regularization parameters");
         for (auto& structure: _trainingData) {
-            _regularizationRules->fillSigmas(structure);
+            regularization_rules_->fillSigmas(structure);
         }
 
         //// ----------------------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ namespace jgap {
         JGAP_LOG_INFO("Making matrix A");
         auto A = makeA(descriptorsAsVec, _trainingData);
 
-        JGAP_LOG_INFO("Making feature vector b");
+        JGAP_LOG_INFO("Making feature std::vector b");
         auto b = makeB(descriptorsAsVec, _trainingData);
 
         //// ----------------------------------------------------------------------------------------------------
@@ -74,13 +74,13 @@ namespace jgap {
         auto c = leastSquares(A, b);
 
         size_t counter = 0;
-        for (const auto &descriptor: _descriptors | std::views::values) {
+        for (const auto &descriptor: descriptors_ | std::views::values) {
             for (const auto& kernel: descriptor->getKernels()) {
                 kernel->coefficient = c[counter++];
             }
         }
 
-        return std::make_shared<GapPotential>(_descriptors);
+        return std::make_shared<GapPotential>(descriptors_);
     }
 
     std::vector<double> QRGapFit::leastSquares(Eigen::MatrixXd &A, Eigen::VectorXd &b) {
@@ -103,11 +103,11 @@ namespace jgap {
     }
 
     Eigen::MatrixXd QRGapFit::makeA(const std::vector<std::shared_ptr<Descriptor>> &descriptors,
-                                    const std::vector<AtomicStructure> &atomicStructures) const {
+                                    const std::vector<AtomicStructure> &atomic_structures) const {
 
         size_t r = 0;
         std::vector<std::pair<size_t, AtomicStructure>> startingRowsK_nm;
-        for (const auto& structure : atomicStructures) {
+        for (const auto& structure : atomic_structures) {
             startingRowsK_nm.emplace_back(r, structure);
             if (structure.energy.has_value()) r += 1;
             if (structure.forces.has_value()) r += 3 * structure.size();
@@ -156,9 +156,9 @@ namespace jgap {
     }
 
     Eigen::VectorXd QRGapFit::makeB(const std::vector<std::shared_ptr<Descriptor>> &descriptors,
-                                    const std::vector<AtomicStructure> &atomicStructures) {
+                                    const std::vector<AtomicStructure> &atomic_structures) {
         std::vector<double> b;
-        for (auto& structure: atomicStructures) {
+        for (auto& structure: atomic_structures) {
             if (structure.energy.has_value()) {
                 b.push_back(structure.energy.value() * structure.energySigmaInverse.value());
             }
@@ -189,27 +189,27 @@ namespace jgap {
     }
 
     void QRGapFit::fillInverseSigmaK_nm(const std::vector<std::shared_ptr<Descriptor>> &descriptors,
-                                        const AtomicStructure &atomicStructure,
+                                        const AtomicStructure &atomic_structure,
                                         Eigen::MatrixXd &A,
-                                        const size_t startingRow) {
+                                        const size_t starting_row) {
         size_t contributionColumn = 0;
         for (const auto& descriptor : descriptors) {
-            auto contributions = descriptor->covariate(atomicStructure);
+            auto contributions = descriptor->covariate(atomic_structure);
 
             for (const auto& contribution: contributions) {
 
-                size_t currentRow = startingRow;
+                size_t currentRow = starting_row;
 
-                if (atomicStructure.energy.has_value()) {
+                if (atomic_structure.energy.has_value()) {
                     A(currentRow++, contributionColumn) =
-                        contribution.total * atomicStructure.energySigmaInverse.value();
+                        contribution.total * atomic_structure.energySigmaInverse.value();
                 }
 
-                if (atomicStructure.forces.has_value() && !contribution.forces.empty()) {
+                if (atomic_structure.forces.has_value() && !contribution.forces.empty()) {
                     for (size_t rowInc = 0; rowInc < contribution.forces.size(); rowInc++) {
 
                         const auto force = contribution.forces[rowInc]; // FORCE IS NEGATIVE
-                        const auto fSigmasInverse = (*atomicStructure.forceSigmasInverse)[rowInc];
+                        const auto fSigmasInverse = (*atomic_structure.forceSigmasInverse)[rowInc];
 
                         A(currentRow++, contributionColumn) = force.x * fSigmasInverse.x;
                         A(currentRow++, contributionColumn) = force.y * fSigmasInverse.y;
@@ -217,22 +217,22 @@ namespace jgap {
                     }
                 }
 
-                if (atomicStructure.virials.has_value()) {
+                if (atomic_structure.virials.has_value()) {
                     auto virials = contribution.virials;
                     A(currentRow++, contributionColumn) =
-                        virials[0].x * atomicStructure.virialSigmasInverse.value()[0].x;
+                        virials[0].x * atomic_structure.virialSigmasInverse.value()[0].x;
                     A(currentRow++, contributionColumn) =
-                        virials[0].y * atomicStructure.virialSigmasInverse.value()[0].y;
+                        virials[0].y * atomic_structure.virialSigmasInverse.value()[0].y;
                     A(currentRow++, contributionColumn) =
-                        virials[0].z * atomicStructure.virialSigmasInverse.value()[0].z;
+                        virials[0].z * atomic_structure.virialSigmasInverse.value()[0].z;
 
                     A(currentRow++, contributionColumn) =
-                        virials[1].y * atomicStructure.virialSigmasInverse.value()[1].y;
+                        virials[1].y * atomic_structure.virialSigmasInverse.value()[1].y;
                     A(currentRow++, contributionColumn) =
-                        virials[1].z * atomicStructure.virialSigmasInverse.value()[1].z;
+                        virials[1].z * atomic_structure.virialSigmasInverse.value()[1].z;
 
                     A(currentRow++, contributionColumn) =
-                        virials[2].z * atomicStructure.virialSigmasInverse.value()[2].z;
+                        virials[2].z * atomic_structure.virialSigmasInverse.value()[2].z;
                 }
 
                 contributionColumn++;
@@ -262,8 +262,8 @@ namespace jgap {
         }
     }
 
-    Eigen::MatrixXd QRGapFit::choleskyDecomposition(Eigen::MatrixXd &matrixBlock) {
-        Eigen::LLT<Eigen::MatrixXd> llt(matrixBlock);
+    Eigen::MatrixXd QRGapFit::choleskyDecomposition(Eigen::MatrixXd &matrix_block) {
+        Eigen::LLT<Eigen::MatrixXd> llt(matrix_block);
         if (llt.info() != Eigen::Success) {
             JGAP_LOG_ERROR("Cholesky decomposition failed: matrix not positive definite", true);
         }
@@ -271,9 +271,9 @@ namespace jgap {
         return llt.matrixU();
     }
 
-    Eigen::MatrixXd QRGapFit::convertToEigen(MatrixBlock &matrixBlock) {
+    Eigen::MatrixXd QRGapFit::convertToEigen(MatrixBlock &matrix_block) {
         return Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-            matrixBlock.rawData().data(), matrixBlock.rows(), matrixBlock.columns()
+            matrix_block.rawData().data(), matrix_block.rows(), matrix_block.columns()
             );
     }
 }

@@ -3,11 +3,11 @@
 
 #include <algorithm>
 
-#include "Vector3.hpp"
+#include "../Vector3.hpp"
 
 namespace jgap {
 
-    using Species = string;
+    using Species = std::string;
 
     struct ContributorReceiverSpecies {
         Species contributor;
@@ -38,7 +38,7 @@ namespace jgap {
             return _pair < other._pair;
         }
 
-        string toString() const {
+        std::string toString() const {
             return _pair.first + "," + _pair.second;
         }
 
@@ -47,7 +47,7 @@ namespace jgap {
         }
 
     private:
-        pair<Species, Species> _pair;
+        std::pair<Species, Species> _pair;
     };
 
     struct SpeciesTriplet {
@@ -66,7 +66,7 @@ namespace jgap {
             return root < other.root;
         }
 
-        string toString() const {
+        std::string toString() const {
             return root + "," + nodes.toString();
         }
     };

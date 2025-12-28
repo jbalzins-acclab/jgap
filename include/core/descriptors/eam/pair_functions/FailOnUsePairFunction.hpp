@@ -6,28 +6,28 @@
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class FailOnUsePairFunction : public EamPairFunction {
+    class FailOnUsePairFunction : public EamPairFunction, Serializable {
     public:
-        static constexpr string TYPE = "fail_on_use";
+        SETUP_PARSER_AND_SERIALIZATION(EamPairFunction, FailOnUsePairFunction, fail_on_use)
 
         FailOnUsePairFunction();
-        FailOnUsePairFunction(const nlohmann::json& json);
 
         double evaluate(double distance) override { doFail(); }
         double differentiate(double distance) override { doFail(); }
-        string getType() override { return TYPE; }
-        nlohmann::json serialize() override { return nlohmann::json(); }
 
     private:
         static void doFail() {
             JGAP_LOG_AND_THROW(
-                "Attempted evaluation of a {} EAM pair function"
+                "Attempted evaluation of a {} EAM std::pair function"
                 "(try comparing species in data and what is specified in settings)",
-                TYPE
+                TYPE_ID
                 );
         }
     };
-    REGISTER_PARSER(EamPairFunction, FailOnUsePairFunction)
+
+    inline DataNode FailOnUsePairFunction::serialize() {
+        return DataNode::object();
+    }
 }
 
 #endif

@@ -5,25 +5,25 @@
 
 namespace jgap {
 
-    using FileNames = vector<string>;
+    using FileNames = std::vector<std::string>;
 
     class TabGapIO {
     public:
         static TabulationData read(const FileNames& fileNames);
         static FileNames write(const TabulationData& valuesTables,
                                const TabulationData& splineTables,
-                               optional<string> outputFileNamePrefix);
+                               std::optional<std::string> outputFileNamePrefix);
 
     private:
-        static string generateFileNamePrefix(const TabulationData& coeffs);
+        static std::string generateFileNamePrefix(const TabulationData& coeffs);
 
-        static string writeH5(const TabulationData &valuesTables,
+        static std::string writeH5(const TabulationData &valuesTables,
                               const TabulationData &splineTables,
-                              const string &outputFileNamePrefix);
-        static string writeEamFs(const TabulationData& valueTables, size_t index, const string &outputFileNamePrefix);
+                              const std::string &outputFileNamePrefix);
+        static std::string writeEamFs(const TabulationData& valueTables, size_t index, const std::string &outputFileNamePrefix);
 
-        static void readH5(const string& fileName, TabulationData& splineCoefficients);
-        static void readEamFs(const string& fileName, TabulationData& splineCoefficients);
+        static void readH5(const std::string& fileName, TabulationData& splineCoefficients);
+        static void readEamFs(const std::string& fileName, TabulationData& splineCoefficients);
     };
 }
 

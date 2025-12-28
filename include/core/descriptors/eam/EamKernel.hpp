@@ -10,7 +10,7 @@ namespace jgap {
         Covariance covariance(const AtomicStructure &structure, const EamKernelIndexPerSpecies &indexes) override;
         double value(const double &density) override;
 
-        virtual pair<double, double> getDensityRange() = 0;
+        virtual std::pair<double, double> getDensityRange() = 0;
 
     protected:
         virtual double valueInternal(const double &density) const = 0;

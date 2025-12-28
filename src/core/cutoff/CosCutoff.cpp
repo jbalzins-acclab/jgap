@@ -12,24 +12,30 @@ namespace jgap {
         _cutoffTransitionWidthInverse = 1.0 / _cutoffTransitionWidth;
     }
 
-    shared_ptr<CosCutoff> CosCutoff::fromJson(nlohmann::json params) {
-
-        double cutoff = require(params, "cutoff");
-        double cutoffTransitionWidth;
-        if (params.contains("cutoff_transition_width")) {
-            cutoffTransitionWidth = params["cutoff_transition_width"];
+    CosCutoff::CosCutoff(const DataNode &params) {
+        const auto &cutoffNode = require(params, "cutoff");
+        _cutoff = cutoffNode.asDouble();
+        if (params.type == DataNode::Type::OBJECT) {
+            if (params.contains("cutoff_transition_width")) {
+                _cutoffTransitionWidth = params.value("cutoff_transition_width", 0.0);
+            } else if (params.contains("r_min")) {
+                const double rmin = params.value("r_min", 0.0);
+                _cutoffTransitionWidth = _cutoff - rmin;
+            } else {
+                _cutoffTransitionWidth = 0.0;
+            }
         } else {
-            cutoffTransitionWidth = cutoff - require(params, "r_min").get<double>();
+            _cutoffTransitionWidth = 0.0;
         }
-
-        return make_shared<CosCutoff>(cutoff, cutoffTransitionWidthInverse);
+        _cutoffTransitionWidthInverse = _cutoffTransitionWidth != 0.0 ? (1.0 / _cutoffTransitionWidth) : 0.0;
     }
 
-    nlohmann::json CosCutoff::serialize() {
-        return {
-            {"cutoff", _cutoff},
-            {"cutoff_transition_width", _cutoffTransitionWidth}
-        };
+    DataNode CosCutoff::serialize() {
+        DataNode obj = DataNode::object();
+        auto &m = std::get<std::map<std::string, DataNode>>(obj.value);
+        m["cutoff"] = DataNode(_cutoff);
+        m["cutoff_transition_width"] = DataNode(_cutoffTransitionWidth);
+        return obj;
     }
 
     double CosCutoff::differentiate(const double r) {

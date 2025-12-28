@@ -8,38 +8,38 @@
 
 namespace jgap {
 
-    EamSE::EamSE(Species species, double energyScale, double lengthScale, double density, optional<double> coeff)
-        : _idSpecies(std::move(species)),
-          _energyScale(energyScale),
-          _lengthScale(lengthScale),
-          _density(density) {
+    EamSE::EamSE(Species species, double energyScale, double lengthScale, double density, std::optional<double> coeff)
+        : id_species_(std::move(species)),
+          energy_scale_(energyScale),
+          length_scale_(lengthScale),
+          density_(density) {
 
-        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
-        _totalPrefactor = energyScale * energyScale;
+        inverse_theta_sq = 1.0 / (length_scale_ * length_scale_);
+        total_prefactor_ = energyScale * energyScale;
 
         coefficient = coeff;
     }
 
-    EamSE::EamSE(const nlohmann::json &params)
-        : _idSpecies(require(params, "species")),
-          _energyScale(require(params, "energy_scale")),
-          _lengthScale(require(params, "length_scale")),
-          _density(require(params, "density")) {
+    EamSE::EamSE(const DataNode &params)
+        : id_species_(require(params, "species")),
+          energy_scale_(require(params, "energy_scale")),
+          length_scale_(require(params, "length_scale")),
+          density_(require(params, "density")) {
 
-        _totalPrefactor = _energyScale * _energyScale;
-        _inverseThetaSq = 1.0 / (_lengthScale * _lengthScale);
+        total_prefactor_ = energy_scale_ * energy_scale_;
+        inverse_theta_sq = 1.0 / (length_scale_ * length_scale_);
 
         if (params.contains("coefficient")) {
             coefficient = params["coefficient"];
         }
     }
 
-    nlohmann::json EamSE::serialize() {
-        nlohmann::json res = {
-            {"species", _idSpecies},
-            {"length_scale", _lengthScale},
-            {"energy_scale", _energyScale},
-            {"density", _density}
+    DataNode EamSE::serialize() {
+        DataNode res = {
+            {"species", id_species_},
+            {"length_scale", length_scale_},
+            {"energy_scale", energy_scale_},
+            {"density", density_}
         };
         if (coefficient.has_value()) {
             res["coefficient"] = coefficient.value();
@@ -48,7 +48,7 @@ namespace jgap {
     }
 
 
-    double EamSE::crossCovariance(const shared_ptr<IKernel> &other) {
+    double EamSE::crossCovariance(const std::shared_ptr<IKernel> &other) {
 
         const auto otherSE = std::dynamic_pointer_cast<EamSE>(other);
 
@@ -57,15 +57,15 @@ namespace jgap {
             return 0.0;
         }
 
-        return _energyScale * otherSE->_energyScale
-               * exp(-pow(_density - otherSE->_density, 2.0) / (2.0 * _lengthScale * otherSE->_lengthScale));
+        return energy_scale_ * otherSE->energy_scale_
+               * exp(-pow(density_ - otherSE->density_, 2.0) / (2.0 * length_scale_ * otherSE->length_scale_));
     }
 
     double EamSE::valueInternal(const double &density) const {
-        return _totalPrefactor * exp(-pow(density - _density, 2) * 0.5 * _inverseThetaSq);
+        return total_prefactor_ * exp(-pow(density - density_, 2) * 0.5 * inverse_theta_sq);
     }
 
     double EamSE::derivativeInternal(const double &density) const {
-        return (_density - density) * _inverseThetaSq * valueInternal(density);
+        return (density_ - density) * inverse_theta_sq * valueInternal(density);
     }
 }

@@ -4,24 +4,23 @@
 #include <map>
 #include <ranges>
 #include <set>
-#include <__ranges/views.h>
 
 #include "Grid1d.hpp"
 #include "Grid3d.hpp"
-#include "SpeciesData.hpp"
+#include "../atomic/SpeciesData.hpp"
 #include "data/Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
     struct TabulationParams {
         size_t n2b;
-        optional<double> cutoff2b;
+        std::optional<double> cutoff2b;
 
         size_t nEamDensities;
-        optional<double> minDensity, maxDensity;
+        std::optional<double> minDensity, maxDensity;
 
         size_t n3bR, n3bCosTheta;
-        optional<double> rMin3b, cutoff3b;
+        std::optional<double> rMin3b, cutoff3b;
     };
 
     class EamTabulationData {
@@ -29,7 +28,7 @@ namespace jgap {
         std::map<Species, Grid1d> densityGrids;
         std::map<ContributorReceiverSpecies, Grid1d> eamPairFunctionGrids;
 
-        EamTabulationData(const optional<TabulationParams> &params) : _params(params) {}
+        EamTabulationData(const std::optional<TabulationParams> &params) : _params(params) {}
 
         Grid1d& getOrMakeEnergyGrid(const Species& species) {
             if (!densityGrids.contains(species)) {
@@ -62,7 +61,7 @@ namespace jgap {
         Grid1d& getOrMakePairFunctionGrid(const ContributorReceiverSpecies& species) {
             if (!eamPairFunctionGrids.contains(species)) {
                 if (!_params.has_value() || !_params->cutoff2b.has_value()) {
-                    JGAP_LOG_AND_THROW("Invalid EAM tabulation params -> can't make pair function");
+                    JGAP_LOG_AND_THROW("Invalid EAM tabulation params -> can't make std::pair function");
                 }
 
                 eamPairFunctionGrids[species] = Grid1d(
@@ -86,15 +85,15 @@ namespace jgap {
         }
 
     private:
-        const optional<TabulationParams>& _params;
+        const std::optional<TabulationParams>& _params;
     };
 
     class TabulationData {
     public:
-        map<Species, double> isolatedEnergies{};
-        map<SpeciesPair, Grid1d> pairGrids{};
-        vector<EamTabulationData> eamTabulationData{};
-        map<SpeciesTriplet, Grid3d> tripletGrids{};
+        std::map<Species, double> isolatedEnergies{};
+        std::map<SpeciesPair, Grid1d> pairGrids{};
+        std::vector<EamTabulationData> eamTabulationData{};
+        std::map<SpeciesTriplet, Grid3d> tripletGrids{};
 
         TabulationData() : _params({}) {}
         TabulationData(const TabulationParams &params) : _params(params) {}
@@ -147,26 +146,26 @@ namespace jgap {
             return eamTabulationData.back();
         }
 
-        set<Species> allSpecies() const {
-            set<Species> result;
+        std::set<Species> allSpecies() const {
+            std::set<Species> result;
 
-            for (Species species: isolatedEnergies | views::keys) {
+            for (Species species: isolatedEnergies | std::views::keys) {
                 result.insert(species);
             }
-            for (SpeciesPair speciesPair: pairGrids | views::keys) {
+            for (SpeciesPair speciesPair: pairGrids | std::views::keys) {
                 result.insert(speciesPair.first());
                 result.insert(speciesPair.second());
             }
-            for (SpeciesTriplet speciesTriplet: tripletGrids | views::keys) {
+            for (SpeciesTriplet speciesTriplet: tripletGrids | std::views::keys) {
                 result.insert(speciesTriplet.root);
                 result.insert(speciesTriplet.nodes.first());
                 result.insert(speciesTriplet.nodes.second());
             }
             for (const auto eam: eamTabulationData) {
-                for (Species species: eam.densityGrids | views::keys) {
+                for (Species species: eam.densityGrids | std::views::keys) {
                     result.insert(species);
                 }
-                for (auto [s1, s2]: eam.eamPairFunctionGrids | views::keys) {
+                for (auto [s1, s2]: eam.eamPairFunctionGrids | std::views::keys) {
                     result.insert(s1);
                     result.insert(s2);
                 }
@@ -176,7 +175,7 @@ namespace jgap {
         }
 
     private:
-        optional<TabulationParams> _params;
+        std::optional<TabulationParams> _params;
     };
 }
 

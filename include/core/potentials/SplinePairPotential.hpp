@@ -2,50 +2,46 @@
 #define SPLINEPAIRPOTENTIAL_HPP
 
 #include "Potential.hpp"
-#include "data/AtomicStructure.hpp"
+#include "../../data/atomic/AtomicStructure.hpp"
 #include "data/PredictionData.hpp"
+#include "io/Serializable.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
-    class SplinePairPotential : public Potential {
+    class SplinePairPotential : public Potential, Serializable {
     public:
-        static constexpr string TYPE = "spline_pairpot";
+        SETUP_PARSER_AND_SERIALIZATION(Potential, SplinePairPotential, spline_pairpot)
 
         class NaturalCubicSpline {
         public:
-            NaturalCubicSpline(nlohmann::json params);
-            NaturalCubicSpline(const vector<double>& r, const vector<double>& E);
+            NaturalCubicSpline(const DataNode& params);
+            NaturalCubicSpline(const std::vector<double>& r, const std::vector<double>& E);
 
             double evaluate(double r) const;
             double derivative(double r) const;
-            double getCutoff() const { return _r.back(); };
+            double getCutoff() const { return r_.back(); };
 
-            nlohmann::json serialize() const;
+            DataNode serialize() const;
 
         private:
-            vector<double> _r, _energies, _b, _c, _d;
+            std::vector<double> r_, energies_, b_, c_, d_;
 
-            void init(const vector<double> &r, const vector<double> &E);
-            size_t findInterval(double r) const;
+            void init(const std::vector<double> &r, const std::vector<double> &E);
+            std::size_t findInterval(double r) const;
         };
 
-        SplinePairPotential(const nlohmann::json& params);
-        SplinePairPotential(const std::map<SpeciesPair, pair<vector<double>, vector<double>> >& points);
+        SplinePairPotential(const std::map<SpeciesPair, std::pair<std::vector<double>, std::vector<double>> >& points);
         ~SplinePairPotential() override = default;
 
         Predictions predict(const AtomicStructure &structure) override;
 
-        nlohmann::json serialize() override;
-        string getType() override { return TYPE; }
         CutoffRanges getCutoff() override;
 
         void tabulate(TabulationData& table) override;
 
     private:
-        std::map<SpeciesPair, shared_ptr<NaturalCubicSpline>> _perSpeciesInterpolators;
+        std::map<SpeciesPair, std::shared_ptr<NaturalCubicSpline>> per_species_interpolators_;
     };
-
-    REGISTER_PARSER(Potential, SplinePairPotential)
 }
 
 #endif

@@ -13,8 +13,8 @@ namespace jgap {
         double evaluate(double r) override { return 1.0; }
         double differentiate(double r) override { return 0.0; }
 
-        string getType() override { IO_NOT_INTENDED(FakeCutoff.getType); }
-        nlohmann::json serialize() override { IO_NOT_INTENDED(FakeCutoff.serialize); }
+        std::string getType() override { IO_NOT_INTENDED(FakeCutoff.getType); }
+        DataNode serialize() override { IO_NOT_INTENDED(FakeCutoff.serialize); }
         double getCutoff() override { return _r; }
 
     private:
