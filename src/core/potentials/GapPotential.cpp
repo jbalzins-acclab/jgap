@@ -6,7 +6,7 @@ namespace jgap {
     GapPotential::GapPotential(const DataNode &params) {
         JGAP_LOG_DEBUG("Parsing jGAP potential params");
         _descriptors = {};
-        const auto& descsNode = require(params, "descriptors");
+        const auto& descsNode = REQUIRE(params, "descriptors");
         const auto& m = std::get<std::map<std::string, DataNode>>(descsNode.value);
         for (const auto& [label, descriptorParams] : m) {
             _descriptors[label] = REGISTRY_GET(Descriptor, descriptorParams);

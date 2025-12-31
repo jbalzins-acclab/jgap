@@ -5,7 +5,6 @@
 #include "core/neighbours/NeighbourFinder.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "utils/Utils.hpp"
-#include "core/matrices/regularization/RegularizationRules.hpp"
 
 #include <tbb/parallel_for_each.h>
 
@@ -16,7 +15,7 @@ namespace jgap {
     std::shared_ptr<QRGapFit> QRGapFit::fromDataNode(const DataNode& params) {
 
         std::map<std::string, std::shared_ptr<Descriptor>> descriptors{};
-        for (const auto& [label, descriptorParams]: require(params, "descriptors").asObject()) {
+        for (const auto& [label, descriptorParams]: REQUIRE(params, "descriptors").asObject()) {
             descriptors[label] = REGISTRY_GET(Descriptor, descriptorParams);
         }
 
@@ -36,7 +35,7 @@ namespace jgap {
     std::shared_ptr<Potential> QRGapFit::fit(const std::vector<AtomicStructure>& training_data) {
         JGAP_LOG_INFO("Starting JGAP fit");
 
-        std::vector<AtomicStructure> _trainingData(training_data);
+        std::vector training_data_local_copy(training_data);
         JGAP_LOG_INFO("Checking sparse points");
 
         double maxCutoff = 0;
@@ -44,29 +43,29 @@ namespace jgap {
         for (const auto& descriptor: descriptors_ | std::views::values) {
             descriptorsAsVec.push_back(descriptor);
 
-            NeighbourFinder::findNeighbours(_trainingData, descriptor->getCutoff().maxOverall());
-            descriptor->setupSparseKernels(_trainingData);
+            NeighbourFinder::findNeighbours(training_data_local_copy, descriptor->getCutoff().maxOverall());
+            descriptor->setupSparseKernels(training_data_local_copy);
 
             maxCutoff = std::max(maxCutoff, descriptor->getCutoff().maxOverall());
         }
 
-        JGAP_LOG_DEBUG("Full neighbour-std::list");
-        NeighbourFinder::findNeighbours(_trainingData, maxCutoff);
+        JGAP_LOG_DEBUG("Full neighbour-list");
+        NeighbourFinder::findNeighbours(training_data_local_copy, maxCutoff);
 
         //// ----------------------------------------------------------------------------------------------------
 
         JGAP_LOG_INFO("Setting up regularization parameters");
-        for (auto& structure: _trainingData) {
+        for (auto& structure: training_data_local_copy) {
             regularization_rules_->fillSigmas(structure);
         }
 
         //// ----------------------------------------------------------------------------------------------------
 
         JGAP_LOG_INFO("Making matrix A");
-        auto A = makeA(descriptorsAsVec, _trainingData);
+        auto A = makeA(descriptorsAsVec, training_data_local_copy);
 
         JGAP_LOG_INFO("Making feature std::vector b");
-        auto b = makeB(descriptorsAsVec, _trainingData);
+        auto b = makeB(descriptorsAsVec, training_data_local_copy);
 
         //// ----------------------------------------------------------------------------------------------------
 
@@ -160,7 +159,7 @@ namespace jgap {
         std::vector<double> b;
         for (auto& structure: atomic_structures) {
             if (structure.energy.has_value()) {
-                b.push_back(structure.energy.value() * structure.energySigmaInverse.value());
+                b.push_back(structure.energy.value() * structure.energy_sigma_inverse.value());
             }
             if (structure.forces.has_value()) {
                 for (const auto& atom: structure) {
@@ -170,14 +169,14 @@ namespace jgap {
                 }
             }
             if (structure.virials.has_value()) {
-                b.push_back(structure.virials.value()[0].x * structure.virialSigmasInverse.value()[0].x);
-                b.push_back(structure.virials.value()[0].y * structure.virialSigmasInverse.value()[0].y);
-                b.push_back(structure.virials.value()[0].z * structure.virialSigmasInverse.value()[0].z);
+                b.push_back(structure.virials.value()[0].x * structure.virial_sigmas_inverse.value()[0].x);
+                b.push_back(structure.virials.value()[0].y * structure.virial_sigmas_inverse.value()[0].y);
+                b.push_back(structure.virials.value()[0].z * structure.virial_sigmas_inverse.value()[0].z);
 
-                b.push_back(structure.virials.value()[1].y * structure.virialSigmasInverse.value()[1].y);
-                b.push_back(structure.virials.value()[1].z * structure.virialSigmasInverse.value()[1].z);
+                b.push_back(structure.virials.value()[1].y * structure.virial_sigmas_inverse.value()[1].y);
+                b.push_back(structure.virials.value()[1].z * structure.virial_sigmas_inverse.value()[1].z);
 
-                b.push_back(structure.virials.value()[2].z * structure.virialSigmasInverse.value()[2].z);
+                b.push_back(structure.virials.value()[2].z * structure.virial_sigmas_inverse.value()[2].z);
             }
         }
 
@@ -202,14 +201,14 @@ namespace jgap {
 
                 if (atomic_structure.energy.has_value()) {
                     A(currentRow++, contributionColumn) =
-                        contribution.total * atomic_structure.energySigmaInverse.value();
+                        contribution.total * atomic_structure.energy_sigma_inverse.value();
                 }
 
                 if (atomic_structure.forces.has_value() && !contribution.forces.empty()) {
                     for (size_t rowInc = 0; rowInc < contribution.forces.size(); rowInc++) {
 
                         const auto force = contribution.forces[rowInc]; // FORCE IS NEGATIVE
-                        const auto fSigmasInverse = (*atomic_structure.forceSigmasInverse)[rowInc];
+                        const auto fSigmasInverse = (*atomic_structure.force_sigmas_inverse)[rowInc];
 
                         A(currentRow++, contributionColumn) = force.x * fSigmasInverse.x;
                         A(currentRow++, contributionColumn) = force.y * fSigmasInverse.y;
@@ -220,19 +219,19 @@ namespace jgap {
                 if (atomic_structure.virials.has_value()) {
                     auto virials = contribution.virials;
                     A(currentRow++, contributionColumn) =
-                        virials[0].x * atomic_structure.virialSigmasInverse.value()[0].x;
+                        virials[0].x * atomic_structure.virial_sigmas_inverse.value()[0].x;
                     A(currentRow++, contributionColumn) =
-                        virials[0].y * atomic_structure.virialSigmasInverse.value()[0].y;
+                        virials[0].y * atomic_structure.virial_sigmas_inverse.value()[0].y;
                     A(currentRow++, contributionColumn) =
-                        virials[0].z * atomic_structure.virialSigmasInverse.value()[0].z;
+                        virials[0].z * atomic_structure.virial_sigmas_inverse.value()[0].z;
 
                     A(currentRow++, contributionColumn) =
-                        virials[1].y * atomic_structure.virialSigmasInverse.value()[1].y;
+                        virials[1].y * atomic_structure.virial_sigmas_inverse.value()[1].y;
                     A(currentRow++, contributionColumn) =
-                        virials[1].z * atomic_structure.virialSigmasInverse.value()[1].z;
+                        virials[1].z * atomic_structure.virial_sigmas_inverse.value()[1].z;
 
                     A(currentRow++, contributionColumn) =
-                        virials[2].z * atomic_structure.virialSigmasInverse.value()[2].z;
+                        virials[2].z * atomic_structure.virial_sigmas_inverse.value()[2].z;
                 }
 
                 contributionColumn++;

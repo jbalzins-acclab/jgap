@@ -7,25 +7,25 @@ namespace jgap {
     std::shared_ptr<PerConfigTypeRegularizationRules> PerConfigTypeRegularizationRules::fromDataNode(
                                                         const DataNode &params) {
 
-        double e = require(params, Conventions::ENERGY_PER_ATOM);
+        double e = REQUIRE(params, Conventions::ENERGY_PER_ATOM);
         double f = params.getOrDefault(Conventions::FORCE_COMPONENT, e * 50.0);
 
         double vIso, vAniso;
         if (params.contains(Conventions::VIRIAL_ISO_PER_ATOM)
             || params.contains(Conventions::VIRIAL_ANISO_PER_ATOM)) {
 
-            vIso = require(params, Conventions::VIRIAL_ISO_PER_ATOM);
-            vAniso = require(params, Conventions::VIRIAL_ANISO_PER_ATOM);
+            vIso = REQUIRE(params, Conventions::VIRIAL_ISO_PER_ATOM);
+            vAniso = REQUIRE(params, Conventions::VIRIAL_ANISO_PER_ATOM);
 
         } else if (params.contains(Conventions::VIRIAL_PER_ATOM)) {
-            vIso = vAniso = require(params, Conventions::VIRIAL_PER_ATOM);
+            vIso = vAniso = REQUIRE(params, Conventions::VIRIAL_PER_ATOM);
         } else {
             vIso = vAniso = e * 100;
         }
 
         std::map<std::string, double> exact;
         if (params.contains("exact")) {
-            for (const auto &[ct, multiplier]: require(params, "exact").asObject()) {
+            for (const auto &[ct, multiplier]: REQUIRE(params, "exact").asObject()) {
                 if (exact.contains(ct)) {
                     JGAP_LOG_AND_THROW("Multiple 'exact' rules for config_type={}", ct);
                 }
@@ -34,7 +34,7 @@ namespace jgap {
         }
         std::map<std::string, double> contains;
         if (params.contains("contains")) {
-            for (const auto &[ct, multiplier]: require(params, "contains").asObject()) {
+            for (const auto &[ct, multiplier]: REQUIRE(params, "contains").asObject()) {
                 if (contains.contains(ct)) {
                     JGAP_LOG_AND_THROW("Multiple 'contains' rules for config_type={}", ct);
                 }

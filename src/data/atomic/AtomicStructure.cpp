@@ -1,4 +1,4 @@
-#include "../../../include/data/atomic/AtomicStructure.hpp"
+#include "AtomicStructure.hpp"
 
 #include "data/Vector3.hpp"
 #include "io/log/CurrentLogger.hpp"
@@ -55,9 +55,9 @@ namespace jgap {
             return val * static_cast<double>(a) * static_cast<double>(b) * static_cast<double>(c);
         });
 
-        cpy.lattice[0] = this->lattice[0] * static_cast<double>(a);
-        cpy.lattice[1] = this->lattice[1] * static_cast<double>(b);
-        cpy.lattice[2] = this->lattice[2] * static_cast<double>(c);
+        cpy.lattice_vectors[0] = this->lattice_vectors[0] * static_cast<double>(a);
+        cpy.lattice_vectors[1] = this->lattice_vectors[1] * static_cast<double>(b);
+        cpy.lattice_vectors[2] = this->lattice_vectors[2] * static_cast<double>(c);
 
         cpy.species = {};
         cpy.positions = {};
@@ -74,9 +74,9 @@ namespace jgap {
                         cpy.species.push_back(atom.species());
                         cpy.positions.push_back(
                             atom.position()
-                                + this->lattice[0] * static_cast<double>(i)
-                                + this->lattice[1] * static_cast<double>(j)
-                                + this->lattice[2] * static_cast<double>(k)
+                                + this->lattice_vectors[0] * static_cast<double>(i)
+                                + this->lattice_vectors[1] * static_cast<double>(j)
+                                + this->lattice_vectors[2] * static_cast<double>(k)
                             );
                         if (forces.has_value()) {
                             cpy.forces->push_back(atom.force());
@@ -90,6 +90,11 @@ namespace jgap {
     }
 
     double AtomicStructure::volume() const {
-        return abs(lattice[0].cross(lattice[1]).dot(lattice[2]));
+        return abs(lattice_vectors[0].cross(lattice_vectors[1]).dot(lattice_vectors[2]));
+    }
+
+    void AtomicStructure::encodeSpecies() {
+        species_encoded = std::vector<EncodedSpecies>(size());
+
     }
 }

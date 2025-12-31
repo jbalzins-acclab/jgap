@@ -2,6 +2,7 @@
 
 #include <tbb/parallel_for_each.h>
 #include <iostream>
+#include <algorithm>
 
 namespace jgap {
     void NeighbourFinder::findNeighbours(std::vector<AtomicStructure> &structures, double cutoff) {
@@ -11,39 +12,28 @@ namespace jgap {
         );
     }
 
-    std::tuple<int, int, int> findMaxRep(const AtomicStructure& structure, const double cutoff) {
-        const Vector3 side1 = structure.lattice[0],
-                      side2 = structure.lattice[1],
-                      side3 = structure.lattice[2];
+    std::array<int, 3> findMaxRep(const AtomicStructure& structure, const double cutoff) {
+        const Vector3 side1 = structure.lattice_vectors[0],
+                      side2 = structure.lattice_vectors[1],
+                      side3 = structure.lattice_vectors[2];
 
-        std::tuple<int, int, int> maxRep = {
-            cutoff / side1.len() + 2,
-            cutoff / side2.len() + 2,
-            cutoff / side3.len() + 2
+        std::array maxRep = {
+            static_cast<int>(cutoff / side1.len() + 2),
+            static_cast<int>(cutoff / side2.len() + 2),
+            static_cast<int>(cutoff / side3.len() + 2)
         };
 
         // triclinic
         if (side1.dot(side2) > 1e-6 || side1.dot(side3) > 1e-6 || side2.dot(side3) > 1e-6) {
-            get<0>(maxRep) = static_cast<int>(cutoff / side1.aproject(side2, side3)) + 2;
-            get<1>(maxRep) = static_cast<int>(cutoff / side2.aproject(side1, side3)) + 2;
-            get<2>(maxRep) = static_cast<int>(cutoff / side3.aproject(side2, side1)) + 2;
+            maxRep[0] = static_cast<int>(cutoff / side1.aproject(side2, side3)) + 2;
+            maxRep[1] = static_cast<int>(cutoff / side2.aproject(side1, side3)) + 2;
+            maxRep[2] = static_cast<int>(cutoff / side3.aproject(side2, side1)) + 2;
         }
 
         return maxRep;
     }
 
     void NeighbourFinder::findNeighbours(AtomicStructure& structure, const double cutoff) {
-
-        /*
-        std::vector<Vector3> corners;
-        for (int mask = 0; mask < 8; mask++) {
-            auto corner =
-                structure->latticeVectors[0] * ((mask & 1) != 0)
-                + structure->latticeVectors[1] * ((mask & 2) != 0)
-                + structure->latticeVectors[2] * ((mask & 4) != 0);
-            corners.push_back(corner);
-        }
-        */
 
         const auto maxRep = findMaxRep(structure, cutoff);
 
@@ -55,9 +45,9 @@ namespace jgap {
                 for (int rep2 = -get<2>(maxRep); rep2 <= get<2>(maxRep); rep2++) {
 
                     auto offset = zeroVec
-                        + structure.lattice[0] * rep0
-                        + structure.lattice[1] * rep1
-                        + structure.lattice[2] * rep2;
+                        + structure.lattice_vectors[0] * rep0
+                        + structure.lattice_vectors[1] * rep1
+                        + structure.lattice_vectors[2] * rep2;
 
                     possibleOffsets.push_back(offset);
                 }
@@ -65,11 +55,11 @@ namespace jgap {
         }
 
         // avoid heap corruption
-        if (!structure.neighbours.has_value()) {
-            structure.neighbours = std::vector(structure.size(), NeighboursData());
+        if (!structure.neighbours_ascending_separation.has_value()) {
+            structure.neighbours_ascending_separation = std::vector(structure.size(), NeighboursData());
         } else {
             for (size_t i = 0; i < structure.size(); i++) {
-                (*structure.neighbours)[i].clear();
+                (*structure.neighbours_ascending_separation)[i].clear();
             }
         }
 
@@ -78,13 +68,21 @@ namespace jgap {
                 for (const auto &offset : possibleOffsets) {
                     auto dist = (structure[i].position() - (structure[j].position() + offset)).len();
                     if (0 < dist && dist <= cutoff) {
-                        (*structure.neighbours)[i].push_back({.index=j, .offset=offset, .distance = dist});
+                        (*structure.neighbours_ascending_separation)[i].push_back({
+                            .index=j, .offset=offset, .distance = dist
+                        });
                         if (i != j) {
-                            (*structure.neighbours)[j].push_back({.index=i, .offset=offset * -1, .distance = dist});
+                            (*structure.neighbours_ascending_separation)[j].push_back({
+                                .index = i, .offset = offset * -1, .distance = dist
+                            });
                         }
                     }
                 }
             }
+        }
+        
+        for (auto& neighbours_data : *structure.neighbours_ascending_separation) {
+            std::ranges::sort(neighbours_data, [](auto& a, auto& b) { return a.distance < b.distance; });
         }
     }
 }

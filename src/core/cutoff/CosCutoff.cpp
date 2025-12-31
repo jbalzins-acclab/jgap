@@ -13,7 +13,7 @@ namespace jgap {
     }
 
     CosCutoff::CosCutoff(const DataNode &params) {
-        const auto &cutoffNode = require(params, "cutoff");
+        const auto &cutoffNode = REQUIRE(params, "cutoff");
         _cutoff = cutoffNode.asDouble();
         if (params.type == DataNode::Type::OBJECT) {
             if (params.contains("cutoff_transition_width")) {

@@ -4,4 +4,7 @@ namespace jgap {
     ProcessingPipeline ProcessingPipeline::fromDataNode(const DataNode &node) {
 
     }
+
+    void ProcessingPipeline::execute() {
+    }
 }

@@ -103,6 +103,13 @@ namespace jgap {
         return oss.str();
     }
 
+    double factorial(size_t n) {
+        double result = 1.0;
+        for (int i = 2; i <= n; ++i)
+            result *= i;
+        return result;
+    }
+
     std::vector<AtomicStructure> readXyz(const std::string& fileName) {
 
         std::vector<AtomicStructure> result;
@@ -238,19 +245,19 @@ namespace jgap {
 
             result.push_back(AtomicStructure{
                 .properties = properties,
-                .lattice = lattice,
+                .lattice_vectors = lattice,
                 .positions = positions,
                 .species = species,
                 .energy = energy,
                 .forces = forces,
                 .virials = virials,
-                .energySigmaInverse = energySigmaInverse,
-                .forceSigmasInverse = forceSigmas.transform([](std::vector<Vector3> v) {
+                .energy_sigma_inverse = energySigmaInverse,
+                .force_sigmas_inverse = forceSigmas.transform([](std::vector<Vector3> v) {
                     return v | std::views::transform([](const Vector3& v_i) {
                         return Vector3{1.0 / v_i.x,1.0 / v_i.x,1.0 / v_i.x};
                     }) | std::ranges::to<std::vector>();
                 }),
-                .virialSigmasInverse = virialsSigmasInverse
+                .virial_sigmas_inverse = virialsSigmasInverse
             });
         }
 
@@ -278,9 +285,9 @@ namespace jgap {
             meta += "Lattice=\"";
             meta += std::format(
                 "{} {} {} {} {} {} {} {} {}",
-                structure.lattice[0].x, structure.lattice[0].y, structure.lattice[0].z,
-                structure.lattice[1].x, structure.lattice[1].y, structure.lattice[1].z,
-                structure.lattice[2].x, structure.lattice[2].y, structure.lattice[2].z
+                structure.lattice_vectors[0].x, structure.lattice_vectors[0].y, structure.lattice_vectors[0].z,
+                structure.lattice_vectors[1].x, structure.lattice_vectors[1].y, structure.lattice_vectors[1].z,
+                structure.lattice_vectors[2].x, structure.lattice_vectors[2].y, structure.lattice_vectors[2].z
                 );
             meta += "\" ";
             for (auto &[k, v]: structure.properties) {
@@ -369,6 +376,11 @@ namespace jgap {
     }
 
     std::string withoutExtension(const std::string &s) {
+
+        if (s.find('.') == std::string::npos) {
+            return s;
+        }
+
         auto after_split = split(s, '.');
         return join(std::vector(after_split.begin(), after_split.end() - 1), '.');
     }

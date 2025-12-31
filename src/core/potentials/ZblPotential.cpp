@@ -103,7 +103,7 @@ namespace jgap {
             auto atom1 = structure[i];
             relevant_species_.insert(atom1.species());
 
-            for (const NeighbourData& neighbour: atom1.neighbours()) {
+            for (const NeighbourData& neighbour: atom1.neighboursAscendingSeparation()) {
                 if (neighbour.index < i || neighbour.distance > cutoff_) continue;
 
                 auto atom2 = structure[neighbour.index];

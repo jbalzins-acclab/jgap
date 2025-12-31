@@ -1,6 +1,6 @@
 #include "core/descriptors/2b/TwoBodyDescriptor.hpp"
 
-#include "core/descriptors/2b/TwoBodySE.hpp"
+#include "../../kernels/2b/TwoBodySE.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
 #include "utils/Utils.hpp"
@@ -178,8 +178,8 @@ namespace jgap {
         for (size_t atomIndex = 0; atomIndex < atomicStructure.size(); atomIndex++) {
             auto atom = atomicStructure[atomIndex];
 
-            for (size_t neighbourListIndex = 0; neighbourListIndex < atom.neighbours().size(); neighbourListIndex++) {
-                const auto neighbour = atom.neighbours()[neighbourListIndex];
+            for (size_t neighbourListIndex = 0; neighbourListIndex < atom.neighboursAscendingSeparation().size(); neighbourListIndex++) {
+                const auto neighbour = atom.neighboursAscendingSeparation()[neighbourListIndex];
 
                 if (neighbour.index < atomIndex) continue;
                 if (neighbour.distance > _cutoffFunction->getCutoff()) continue;

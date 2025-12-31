@@ -4,6 +4,7 @@
 #include <oneapi/tbb/parallel_for_each.h>
 
 #include "core/potentials/CompositePotential.hpp"
+#include "data/DataNode.hpp"
 
 namespace jgap {
     CompositePotentialFit::CompositePotentialFit(const DataNode &params) {

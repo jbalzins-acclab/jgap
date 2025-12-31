@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 project(jgap)
 
-#set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -81,8 +79,8 @@ endfunction()
 
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
 
-#list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/main\\.cpp")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/Main\\.cpp")
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
 add_library(jgap_lib STATIC ${LIBRARY_SOURCE_FILES})
@@ -94,7 +92,7 @@ file(GLOB APP_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/app/*.cpp")
 
 add_executable(jgap
         ${PROJECT_SOURCE_DIR}/src/Main.cpp
-        ${APP_SOURCE_FILES}
+        #${APP_SOURCE_FILES}
 )
 
 target_link_libraries(jgap_lib PRIVATE

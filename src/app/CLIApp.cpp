@@ -17,6 +17,7 @@
 
 #include "app/ProcessingPipeline.hpp"
 #include "app/instructions/LoadInstruction.hpp"
+#include "instructions/SaveInstruction.hpp"
 #include "io/convert/QuipXmlConverter.hpp"
 #include "io/convert/YamlConverter.hpp"
 
@@ -84,11 +85,9 @@ namespace jgap {
         }
 
         ProcessingPipeline pipeline(std::vector<std::shared_ptr<PipelineInstruction>>{
-            std::make_shared<LoadInstruction>(quip_pot_file_name, ""),
-
+            std::make_shared<LoadInstruction>(quip_pot_file_name, withoutExtension(quip_pot_file_name)),
+            std::make_shared<SaveInstruction>()
         });
-        auto potential = convertQuipXml(quip_pot_file_name);
-        savePotential(potential, output_file_name);
 
         return true;
     }

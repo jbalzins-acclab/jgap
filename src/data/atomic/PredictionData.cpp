@@ -1,39 +1,62 @@
-#include "../../../include/data/atomic/PredictionData.hpp"
+#include "PredictionData.hpp"
 
 namespace jgap {
     Predictions Predictions::operator+(const Predictions &other) const {
+        Predictions result;
+        result.energy = energy + other.energy;
+        result.virials = virials + other.virials;
 
-        std::optional<double> _energy;
-        if (energy.has_value() || other.energy.has_value()) {
-            _energy = energy.value_or(0.0) + other.energy.value_or(0.0);
-        }
-
-        std::optional<std::vector<Vector3>> _forces;
-        if (forces.has_value() && other.forces.has_value()) {
-            _forces = std::vector<Vector3>(forces.value().size());
-            for (size_t i = 0; i < forces.value().size(); i++) {
-                _forces->at(i) = forces.value()[i] + other.forces.value()[i];
+        // Assuming forces vector sizes are compatible for addition
+        // If one is empty and the other is not, the non-empty one is taken.
+        // If both are empty, result.forces remains empty.
+        // If both are non-empty, they are added element-wise.
+        if (hasForces() && other.hasForces()) {
+            result.forces_optional.resize(forces_optional.size());
+            for (size_t i = 0; i < forces_optional.size(); ++i) {
+                result.forces_optional[i] = forces_optional[i] + other.forces_optional[i];
             }
-        } else if (forces.has_value()) {
-            _forces = forces.value();
-        } else if (other.forces.has_value()) {
-            _forces = other.forces.value();
+        } else if (!forces_optional.empty()) {
+            result.forces_optional = forces_optional;
+        } else if (!other.forces_optional.empty()) {
+            result.forces_optional = other.forces_optional;
         }
+        return result;
+    }
 
-        std::optional<std::array<Vector3, 3>> _virials;
-        if (virials.has_value() && other.virials.has_value()) {
-            _virials = virials;
-            (*_virials)[0] += other.virials.value()[0];
-            (*_virials)[1] += other.virials.value()[1];
-            (*_virials)[2] += other.virials.value()[2];
-        } else if (virials.has_value()) {
-            _virials = virials.value();
-        } else if (other.virials.has_value()) {
-            _virials = other.virials.value();
+    Predictions & Predictions::operator+=(const Predictions &other) {
+        energy += other.energy;
+        virials += other.virials;
+
+        if (hasForces() && other.hasForces()) {
+            for (size_t i = 0; i < forces_optional.size(); ++i) {
+                forces_optional[i] += other.forces_optional[i];
+            }
+        } else if (!other.forces_optional.empty()) {
+            // If current object has no forces but other does, copy other's forces
+            forces_optional = other.forces_optional;
         }
+        // If current object has forces and other does not, keep current forces.
+        // If both are empty, they remain empty.
+        return *this;
+    }
 
-        return Predictions{
-            _energy, _forces, _virials
-        };
+    Predictions Predictions::operator*(double scalar) const {
+        Predictions result;
+        result.energy = energy * scalar;
+        result.virials = virials * scalar;
+        result.forces_optional.resize(forces_optional.size());
+        for (size_t i = 0; i < forces_optional.size(); ++i) {
+            result.forces_optional[i] = forces_optional[i] * scalar;
+        }
+        return result;
+    }
+
+    Predictions & Predictions::operator*=(double scalar) {
+        energy *= scalar;
+        virials *= scalar;
+        for (auto& force : forces_optional) {
+            force *= scalar;
+        }
+        return *this;
     }
 }

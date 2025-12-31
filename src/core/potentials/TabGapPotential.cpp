@@ -85,7 +85,7 @@ namespace jgap {
             cutoff3b = std::max(cutoff3b, grid.cutoff());
             kernels3b.push_back(std::make_shared<TabKernel3b>(speciesTriplet, std::make_shared<Grid3d>(std::move(grid))));
         }
-        three_body_ = std::make_shared<ThreeBodyDescriptor>(std::make_shared<FakeCutoff>(cutoff3b), kernels3b);
+        three_body_ = std::make_shared<ThreeBodyDescriptorFinder>(std::make_shared<FakeCutoff>(cutoff3b), kernels3b);
 
         for (auto& eamPart: spline_coefficients.eamTabulationData) {
 

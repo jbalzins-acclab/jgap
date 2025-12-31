@@ -7,18 +7,18 @@
 
 namespace jgap {
     std::shared_ptr<SimpleTabulation> SimpleTabulation::fromDataNode(const DataNode &params) {
-        optionallySet(table_filename_prefix_, params, "table_filename_prefix");
+        OPTIONALLY_SET(table_filename_prefix_, params, "table_filename_prefix");
 
         default_params_.n2b = params.value("n2b", 20000);
         default_params_.n3bR = params.value("n3b_r", 150);
         default_params_.n3bR = params.value("n3b_angles", 150);
         default_params_.nEamDensities = params.value("n_eam_densities", 20000);
 
-        optionallySet(default_params_.minDensity, params, "min_eam_density");
-        optionallySet(default_params_.maxDensity, params, "max_eam_density");
-        optionallySet(default_params_.cutoff2b, params, "r_max_2b");
-        optionallySet(default_params_.cutoff3b, params, "r_max_3b");
-        optionallySet(default_params_.rMin3b, params, "r_min_3b");
+        OPTIONALLY_SET(default_params_.minDensity, params, "min_eam_density");
+        OPTIONALLY_SET(default_params_.maxDensity, params, "max_eam_density");
+        OPTIONALLY_SET(default_params_.cutoff2b, params, "r_max_2b");
+        OPTIONALLY_SET(default_params_.cutoff3b, params, "r_max_3b");
+        OPTIONALLY_SET(default_params_.rMin3b, params, "r_min_3b");
     }
 
     SimpleTabulation::SimpleTabulation(TabulationParams defaultParams, std::optional<std::string> tableFilenamePrefix) {
@@ -48,8 +48,8 @@ namespace jgap {
         TabulationData splineTables;
         splineTables.isolatedEnergies = valueTables.isolatedEnergies;
 
-        for (const auto& [std::pair, energies]: valueTables.pairGrids) {
-            splineTables.pairGrids[std::pair] = BSplineTools::toSplineCoefficients(energies);
+        for (const auto& [pair, energies]: valueTables.pairGrids) {
+            splineTables.pairGrids[pair] = BSplineTools::toSplineCoefficients(energies);
         }
         for (const auto& [triplet, energies]: valueTables.tripletGrids) {
             splineTables.tripletGrids[triplet] = BSplineTools::toSplineCoefficients(energies);
@@ -59,8 +59,8 @@ namespace jgap {
             for (const auto& [species, embeddingEnergies]: valuePart.densityGrids) {
                 splineEamTable.densityGrids[species] = BSplineTools::toSplineCoefficients(embeddingEnergies);
             }
-            for (const auto& [std::pair, func]: valuePart.eamPairFunctionGrids) {
-                splineEamTable.eamPairFunctionGrids[std::pair] = BSplineTools::toSplineCoefficients(func);
+            for (const auto& [pair, func]: valuePart.eamPairFunctionGrids) {
+                splineEamTable.eamPairFunctionGrids[pair] = BSplineTools::toSplineCoefficients(func);
             }
         }
 

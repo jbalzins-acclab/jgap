@@ -14,7 +14,7 @@ TEST(NeighbourFinderTest, Sample1CorrectNumberOfNeighbours) {
     size_t total = 0;
     for (const auto &structure: structs) {
         for (const auto &atomData : structure) {
-            total += atomData.neighbours().size();
+            total += atomData.neighboursAscendingSeparation().size();
         }
     }
     EXPECT_EQ(total, 862046);
@@ -29,7 +29,7 @@ TEST(NeighbourFinderTest, Sample2CorrectNumberOfNeighbours) {
     size_t total = 0;
     for (const auto &structure: structs) {
         for (const auto &atomData : structure) {
-            total += atomData.neighbours().size();
+            total += atomData.neighboursAscendingSeparation().size();
         }
     }
     EXPECT_EQ(total, 8815680);

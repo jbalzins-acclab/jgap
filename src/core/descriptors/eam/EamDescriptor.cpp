@@ -3,7 +3,7 @@
 #include <random>
 #include <utility>
 
-#include "core/descriptors/eam/EamSE.hpp"
+#include "../../kernels/eam/EamSE.hpp"
 #include "core/descriptors/eam/pair_functions/FailOnUsePairFunction.hpp"
 #include "io/log/StdoutLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
@@ -118,7 +118,7 @@ namespace jgap {
 
     std::vector<std::shared_ptr<IKernel>> EamDescriptor::getKernels() {
         std::vector<std::shared_ptr<IKernel>> res;
-        for (const auto& kernelIds : _kernelIndicesPerSpecies | std::views::values) {
+        for (const auto& kernelIds : kernel_indices_per_species_ | std::views::values) {
             for (const auto& id: kernelIds) {
                 res.push_back(kernels_[id]);
             }
@@ -186,7 +186,7 @@ namespace jgap {
 
         EamKernelIndex kernelIndex = doIndex(atomicStructure);
 
-        for (auto &[species, kernelIds]: _kernelIndicesPerSpecies) {
+        for (auto &[species, kernelIds]: kernel_indices_per_species_) {
             if (!kernelIndex.contains(species)) kernelIndex[species] = {};
 
             for (auto& id: kernelIds) {
@@ -201,7 +201,7 @@ namespace jgap {
 
         std::vector<std::shared_ptr<MatrixBlock>> result;
 
-        for (const auto &kernelIds: _kernelIndicesPerSpecies | std::views::values) {
+        for (const auto &kernelIds: kernel_indices_per_species_ | std::views::values) {
 
             auto covariance = std::make_shared<MatrixBlock>(kernelIds.size(), kernelIds.size());
 
@@ -230,7 +230,7 @@ namespace jgap {
     void EamDescriptor::tabulate(TabulationData &table) {
         auto& eamTable = table.newEamGrids();
 
-        for (const auto& [species, kernelIds]: _kernelIndicesPerSpecies) {
+        for (const auto& [species, kernelIds]: kernel_indices_per_species_) {
             for (const auto& it: eamTable.getOrMakeEnergyGrid(species)) {
                 for (auto& id: kernelIds) {
                     it.value += kernels_[id]->value(it.pos) * kernels_[id]->coefficient.value();
@@ -238,8 +238,8 @@ namespace jgap {
             }
         }
 
-        for (const auto& contributorSpecies: _kernelIndicesPerSpecies | std::views::keys) {
-            for (const auto& receiverSpecies: _kernelIndicesPerSpecies | std::views::keys) {
+        for (const auto& contributorSpecies: kernel_indices_per_species_ | std::views::keys) {
+            for (const auto& receiverSpecies: kernel_indices_per_species_ | std::views::keys) {
 
                 auto speciesPair = ContributorReceiverSpecies{
                     .contributor = contributorSpecies, .receiver = receiverSpecies
@@ -267,7 +267,7 @@ namespace jgap {
             std::vector<std::pair<NeighbourData, double>> densityDerivatives;
 
             Species species = structure.species[atomIdx];
-            for (NeighbourData neighbour: structure.neighbours.value()[atomIdx]) {
+            for (NeighbourData neighbour: structure.neighbours_ascending_separation.value()[atomIdx]) {
                 if (neighbour.distance > max_cutoff_) continue;
 
                 ContributorReceiverSpecies orderedSpeciesPair = {
@@ -297,12 +297,12 @@ namespace jgap {
     }
 
     void EamDescriptor::mapKernelIds() {
-        _kernelIndicesPerSpecies.clear();
+        kernel_indices_per_species_.clear();
         for (size_t i = 0; i < kernels_.size(); i++) {
-            if (!_kernelIndicesPerSpecies.contains(kernels_[i]->getFilter())) {
-                _kernelIndicesPerSpecies[kernels_[i]->getFilter()] = {};
+            if (!kernel_indices_per_species_.contains(kernels_[i]->getFilter())) {
+                kernel_indices_per_species_[kernels_[i]->getFilter()] = {};
             }
-            _kernelIndicesPerSpecies[kernels_[i]->getFilter()].push_back(i);
+            kernel_indices_per_species_[kernels_[i]->getFilter()].push_back(i);
         }
     }
 }
