@@ -8,11 +8,7 @@
 
 namespace jgap {
 
-    DescriptorFinder<3, 3>::DescriptorsFiltered ThreeBodyDescriptorFinder::
-    find(const AtomicStructure &atomic_structure) {
-
-    }
-
+    /*
     DataNode ThreeBodyDescriptorFinder::serialize() {
         auto kernelsData = DataNode::array();
         for (const auto &kernel : _kernels) {
@@ -139,7 +135,7 @@ namespace jgap {
                 const Vector3 invariantTriplet = toInvariantTriplet(
                     iter.pos.x,
                     iter.pos.y,
-                    sqrt(std::max/*numeric safety*/(
+                    sqrt(std::max/*numeric safety*//*(
                         pow(iter.pos.x, 2) + pow(iter.pos.y, 2) - 2.0 * iter.pos.x * iter.pos.y * iter.pos.z, 0.0
                         ))
                 );
@@ -148,7 +144,7 @@ namespace jgap {
                 for (const size_t kernelId: kernelIds) {
                     contribution += _kernels[kernelId]->value(
                         {.q = invariantTriplet, .f_cut = invariantTripletToCutoff(invariantTriplet)}
-                        ) * 2.0/*q_ijk + q_jik*/ * _kernels[kernelId]->coefficient.value();
+                        ) * 2.0/*q_ijk + q_jik*//* * _kernels[kernelId]->coefficient.value();
                 }
                 iter.value += contribution;
                 if (iter.index[0] != iter.index[1]) {
@@ -158,7 +154,6 @@ namespace jgap {
         }
 
     }
-
     double ThreeBodyDescriptorFinder::invariantTripletToCutoff(const Vector3 &q) const {
         const double dDiff = sqrt(q.y);
         const double d1 = (dDiff + q.x) / 2.0;
@@ -166,91 +161,188 @@ namespace jgap {
 
         return cutoff_function_->evaluate(d1) * cutoff_function_->evaluate(d2);
     }
+    */
 
-    Vector3 ThreeBodyDescriptorFinder::toInvariantTriplet(const double r01, const double r02, const double r12) const {
-        return {r01 + r02, (r01-r02) * (r01 - r02), r12};
-    }
+    ThreeBodyDescriptorsFiltered ThreeBodyDescriptorFinder::findSeparations(
+        const AtomicStructure &atomic_structure) const {
 
-    std::array<Vector3, 3> ThreeBodyDescriptorFinder::invariantTripletGradients(const double r01, const double r02) const {
-        return {
-            Vector3{1, 2 * (r01 - r02), 0},
-            Vector3{1, 2 * (r02 - r01), 0},
-            Vector3{0, 0, 1},
-        };
-    }
+        const double cutoff = cutoff_function->getCutoff();
 
-    std::vector<std::shared_ptr<IKernel>> ThreeBodyKernelCollection::getKernels() {
-    }
+        std::map<EncodedSpeciesSets, std::vector<NewThreeBodyDescriptor>> result;
 
-    std::map<SpeciesTriplet, ThreeBodyIndex> ThreeBodyDescriptorFinder::doIndex(
-                                                const AtomicStructure &atomic_structure) const {
+        for (size_t atom0_index = 0; atom0_index < atomic_structure.size(); atom0_index++) {
+            auto atom0 = atomic_structure[atom0_index];
 
-        std::map<SpeciesTriplet, ThreeBodyIndex> indexes;
+            for (size_t nl_index1 = 0; nl_index1 < atom0.neighboursAscendingSeparation().size(); nl_index1++) {
 
-        const double cutoff = cutoff_function_->getCutoff();
-
-        for (size_t atomIndex = 0; atomIndex < atomic_structure.size(); atomIndex++) {
-            auto atom0 = atomic_structure[atomIndex];
-
-            for (size_t nlIndex1 = 0; nlIndex1 < atom0.neighboursAscendingSeparation().size(); nlIndex1++) {
-                auto neighbour1 = atom0.neighboursAscendingSeparation()[nlIndex1];
+                auto neighbour1 = atom0.neighboursAscendingSeparation()[nl_index1];
                 auto atom1 = atomic_structure[neighbour1.index];
                 if (neighbour1.distance > cutoff) continue;
 
-                for (const auto& neighbour2: atom0.neighboursAscendingSeparation()) {
+                for (size_t nl_index2 = nl_index1 + 1; nl_index2 < atom0.neighboursAscendingSeparation().size(); nl_index2++) {
+
+                    auto neighbour2 = atom0.neighboursAscendingSeparation()[nl_index2];
                     auto atom2 = atomic_structure[neighbour2.index];
+                    if (neighbour2.distance > cutoff) continue;
 
-                    auto species_triplet = SpeciesTriplet{atom0.species(),{atom1.species(), atom2.species()}};
+                    auto species_triplet = SpeciesEncoder::asSet(
+                        atom0.speciesEncoded(),
+                        atom1.speciesEncoded(), atom2.speciesEncoded()
+                        );
 
-                    if (!indexes.contains(species_triplet)) {
-                        indexes[species_triplet] = ThreeBodyIndex();
+                    if (!result.contains(species_triplet)) {
+                        result[species_triplet] = {};
                     }
 
                     std::array r_ij = {
-                        atom1.position() + neighbour1.offset - atom0.position(),
-                        atom2.position() + neighbour2.offset - atom0.position(),
-                        atom2.position() + neighbour2.offset - (atom1.position() + neighbour1.offset)
+                        atom1.position() + neighbour1.offset - atom0.position(), // 0->1
+                        atom2.position() + neighbour2.offset - atom0.position(), // 0->2
+                        atom2.position() + neighbour2.offset - (atom1.position() + neighbour1.offset) // 1->2
                     };
-                    indexes[species_triplet].push_back({
-                        .atom_index = {atomIndex, neighbour1.index, neighbour2.index},
-                        .r_ij = r_ij,
-                        .grad_rij_wrt_rj = {r_ij[0].normalize(), r_ij[1].normalize(), r_ij[2].normalize()},
-                        .fCut01 = cutoff_function_->evaluate(r_ij[0].len()),
-                        .fCut02 = cutoff_function_->evaluate(r_ij[1].len()),
-                        .dfCut_dr_01 = cutoff_function_->differentiate(r_ij[0].len()),
-                        .dfCut_dr_02 = cutoff_function_->differentiate(r_ij[1].len()),
-                        .q = toInvariantTriplet(r_ij[0].len(), r_ij[1].len(), r_ij[2].len()),
-                        .dq_k_dr_ij = invariantTripletGradients(r_ij[0].len(), r_ij[1].len())
+
+                    double r_01 = r_ij[0].len();
+                    double r_02 = r_ij[1].len();
+                    double r_12 = r_ij[1].len();
+
+                    double f_cut_01 = cutoff_function->evaluate(r_01);
+                    double f_cut_02 = cutoff_function->evaluate(r_02);
+
+                    if (!calculate_derivatives) {
+                        result[species_triplet].push_back(NewThreeBodyDescriptor{
+                            .value = { r_01, r_02, r_12 },
+                            .f_cut = f_cut_01 * f_cut_02
+                        });
+                        continue;
+                    }
+                    // ELSE
+
+                    std::array grad_rij_wrt_j/*[j][ij]*/ = {
+                        // ij = 01, 02, 12
+                        std::array{ r_ij[0].normalize() * -1.0, r_ij[1].normalize() * -1.0, Vector3() },
+                        std::array{ r_ij[0].normalize(),  Vector3(), r_ij[2].normalize() * -1.0 },
+                        std::array{ Vector3(), r_ij[1].normalize(), r_ij[2].normalize() }
+                    };
+
+                    std::array<Virials, 3> virials{};
+
+                    #pragma unroll
+                    for (size_t ij = 0; ij < 3; ij++) {
+                        constexpr std::array i_ij = {0, 0, 1};
+                        virials[ij] = {
+                            .xx = r_ij[ij].x * grad_rij_wrt_j[i_ij[ij]][ij].x,
+                            .xy = r_ij[ij].x * grad_rij_wrt_j[i_ij[ij]][ij].y,
+                            .xz = r_ij[ij].x * grad_rij_wrt_j[i_ij[ij]][ij].z,
+                            .yy = r_ij[ij].y * grad_rij_wrt_j[i_ij[ij]][ij].y,
+                            .yz = r_ij[ij].y * grad_rij_wrt_j[i_ij[ij]][ij].z,
+                            .zz = r_ij[ij].z * grad_rij_wrt_j[i_ij[ij]][ij].z,
+                        };
+                    }
+
+                    double df_cut_01_dr = cutoff_function->differentiate(r_01);
+                    double df_cut_02_dr = cutoff_function->differentiate(r_02);
+
+                    Vector3 df_cut_wrt1  = grad_rij_wrt_j[1][0] * df_cut_01_dr * f_cut_02;
+                    Vector3 df_cut_wrt2  = grad_rij_wrt_j[2][1] * df_cut_02_dr * f_cut_01;
+                    Vector3 df_cut_wrt0 = (df_cut_wrt1 + df_cut_wrt2) * -1;
+
+                    result[species_triplet].push_back(NewThreeBodyDescriptor{
+                        .value = { r_01, r_02, r_12 },
+                        .virials = virials,
+                        .gradients = {
+                            NewThreeBodyDescriptor::GradientData{ atom0_index, grad_rij_wrt_j[0] },
+                            NewThreeBodyDescriptor::GradientData{ neighbour1.index, grad_rij_wrt_j[1] },
+                            NewThreeBodyDescriptor::GradientData{ neighbour2.index, grad_rij_wrt_j[2] }
+                        },
+                        .f_cut = f_cut_01 * f_cut_02,
+                        .f_cut_gradients = { df_cut_wrt0, df_cut_wrt1, df_cut_wrt2 }
                     });
                 }
             }
         }
 
-        return indexes;
+        return result;
     }
 
-    bool ThreeBodyDescriptorFinder::checkSpecies(const SpeciesTriplet& tripletInData, DataNode filters) {
+    ThreeBodyDescriptorsFiltered ThreeBodyDescriptorFinder::find(const AtomicStructure &atomic_structure) const {
+        const auto separations = findSeparations(atomic_structure);
+        return toInvariantTriplets(separations);
+    }
 
-        if (!filters.is_array()) {
-            JGAP_LOG_AND_THROW("3b species filter is non-array: {}", filters.dump());
-        }
-        if (filters.empty()) return true;
+    ThreeBodyDescriptorsFiltered ThreeBodyDescriptorFinder::toInvariantTriplets(
+        const ThreeBodyDescriptorsFiltered& separations) const {
 
-        if (filters[0].is_string()) {
-            // "species": ["Fe", "Ni", "Cr"] => "species": [["Fe", "Ni", "Cr"]]
-            filters = DataNode::array({filters});
-        }
-
-        bool passedAFilter = false;
-        for (const auto &filter: filters) {
-            if (!filter.is_array() || filter.size() != 3) {
-                JGAP_LOG_AND_THROW("Wrong 3b species specs: {}", filters.dump());
-            }
-            if (tripletInData == SpeciesTriplet(filter[0], {filter[1], filter[2]})) {
-                passedAFilter = true;
-                break;
+        ThreeBodyDescriptorsFiltered result{};
+        for (const auto& [filter, per_filter]: separations) {
+            result[filter] = {};
+            for (const auto& descriptor: per_filter) {
+                result[filter].push_back(toInvariantTriplet(descriptor));
             }
         }
-        return passedAFilter;
+        return result;
+    }
+
+    NewThreeBodyDescriptor ThreeBodyDescriptorFinder::toInvariantTriplet(
+        const NewThreeBodyDescriptor &separations) const {
+
+        const auto& [q, dq_dr_ij] = toInvariantTriplet(separations.value);
+
+        if (!calculate_derivatives) {
+            return {
+                .value = q,
+                .f_cut = separations.f_cut
+            };
+        }
+        // ELSE
+
+        std::array<Virials, 3> virials{}; // [k]
+        for (size_t ij = 0; ij < 3; ij++) {
+            virials[0] += separations.virials[0] * dq_dr_ij[ij].x;
+            virials[1] += separations.virials[1] * dq_dr_ij[ij].y;
+            virials[2] += separations.virials[2] * dq_dr_ij[ij].z;
+        }
+
+        std::array<NewThreeBodyDescriptor::GradientData, 3>  dqk_drl{}; // [l].grad(wrt l)[k]
+        for (size_t l = 0; l < 3; l++) {
+            auto& dq = dqk_drl[l];
+            dq.wrt_atom_index = separations.gradients[l].wrt_atom_index;
+
+            const auto& drij_drl = separations.gradients[l].gradients;
+
+            auto& g0 = dq.gradients[0];
+            auto& g1 = dq.gradients[1];
+            auto& g2 = dq.gradients[2];
+
+            for (size_t ij = 0; ij < 3; ij++) {
+                g0 += drij_drl[ij] * dq_dr_ij[ij].x;
+                g1 += drij_drl[ij] * dq_dr_ij[ij].y;
+                g2 += drij_drl[ij] * dq_dr_ij[ij].z;
+            }
+        }
+
+        return {
+            .value = q,
+            .virials = virials,
+            .gradients = dqk_drl,
+            .f_cut = separations.f_cut,
+            .f_cut_gradients = separations.f_cut_gradients
+        };
+    }
+
+    ThreeBodySeparationsTransformed ThreeBodyDescriptorFinder::toInvariantTriplet(
+        const std::array<double, 3>& separations) const {
+
+        const auto&[r01, r02, r12] = separations;
+
+        std::array q = { r01 + r02, (r01-r02) * (r01 - r02), r12 }; // [k]
+
+        if (!calculate_derivatives) return {.q = q};
+
+        std::array dq_dr_ij = { // [ij]
+            Vector3{1.0, 2.0 * (r01 - r02), 0.0},
+            Vector3{1.0, 2.0 * (r02 - r01), 0.0},
+            Vector3{0.0, 0.0,               1.0}
+        };
+
+        return { q, dq_dr_ij };
     }
 }

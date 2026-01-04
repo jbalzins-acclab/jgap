@@ -15,18 +15,21 @@
 
 namespace jgap {
 
-    template<size_t N_DIMENSIONS, size_t N_GRADIENTS>
+    template<size_t N_DIMENSIONS, size_t N_ATOMS>
     struct Descriptor {
         struct GradientData {
             size_t wrt_atom_index{};
-            Vector3 value{};
+            std::array<Vector3, N_DIMENSIONS> gradients{};
         };
 
         std::array<double, N_DIMENSIONS> value; // q
-        std::array<std::array<GradientData, N_DIMENSIONS>, N_GRADIENTS> gradients; // dq_i/dr_i
         // dq_i/dH_ab, where H is a matrix s.t.
         // strained cell{\vec{a}, \vec{b}, \vec{c}} = matr{H} * cell{\vec{a}, \vec{b}, \vec{c}}
-        std::array<Virials, N_GRADIENTS> virials;
+        std::array<Virials, N_DIMENSIONS> virials;
+        std::array<GradientData, N_ATOMS> gradients; // dq_i/dr_i
+
+        double f_cut;
+        std::array<Vector3, N_ATOMS> f_cut_gradients;
     };
     /*template<size_t N_DIMENSIONS, size_t N_GRADIENTS>
         class DescriptorFinder {

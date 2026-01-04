@@ -10,13 +10,15 @@
 #include "data/DataNode.hpp"
 #include "utils/Utils.hpp"
 
+#define ENCODED_SPECIES_SET_DS_LENGTH 32 // optimized for x86 Cache lane (?)
+
 namespace jgap {
 
     using Species = std::string;
     using EncodedSpecies = std::uint16_t;
 
     using SpeciesSets = std::vector<std::set<Species>>;
-    using EncodedSpeciesSets = std::array<EncodedSpecies, 32/*x86 Cache lane*/>;
+    using EncodedSpeciesSets = std::array<EncodedSpecies, ENCODED_SPECIES_SET_DS_LENGTH>;
 
     class SpeciesEncoder {
     public:
@@ -28,6 +30,10 @@ namespace jgap {
 
         static DataNode toDataNode(const SpeciesSets& species_sets);
         static SpeciesSets fromDataNode(const DataNode& node);
+
+        static EncodedSpeciesSets asSet(EncodedSpecies species);
+        static EncodedSpeciesSets asSet(EncodedSpecies invariant1, EncodedSpecies invariant2);
+        static EncodedSpeciesSets asSet(EncodedSpecies root, EncodedSpecies node1, EncodedSpecies node2);
 
         static double symmetryFactor(EncodedSpeciesSets& sets);
 

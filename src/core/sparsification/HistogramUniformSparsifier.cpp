@@ -1,4 +1,6 @@
-#include "core/descriptors/sparsification/HistogramUniformSparsifier.hpp"
+
+    /*
+     *#include "HistogramUniformSparsifier.hpp"
 
 #include <utility>
 
@@ -40,6 +42,7 @@ namespace jgap {
         }
     }
 
+    template<>
     std::vector<KernelParams> HistogramUniformSparsifier::selectSparsePoints(const std::vector<std::vector<double>> &allPoints) {
 
         for (const auto &p : allPoints) {
@@ -82,7 +85,7 @@ namespace jgap {
             } else {
                 maxPoint[d] = std::numeric_limits<double>::min();
                 for (const auto &p : allPoints) {
-                    maxPoint[d] = std::max(maxPoint[d], p[d]+0.0001/*keep all points in bounds*/);
+                    maxPoint[d] = std::max(maxPoint[d], p[d]+0.0001/*keep all points in bounds*//*);
                 }
             }
             step[d] = (maxPoint[d] - minPoint[d]) / static_cast<double>(gridDimensions[d]);
@@ -155,4 +158,4 @@ namespace jgap {
 
         return sparseKernelsParams;
     }
-}
+}*/

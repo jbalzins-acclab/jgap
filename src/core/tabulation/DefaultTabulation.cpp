@@ -80,12 +80,12 @@ namespace jgap {
                 );
         }
         if (!params.cutoff3b.has_value()) {
-            params.cutoff3b = cutoffs.threeBody;
-        } else if (cutoffs.threeBody.has_value()
-                    && abs(params.cutoff3b.value() - cutoffs.threeBody.value()) > 1e-5) {
+            params.cutoff3b = cutoffs.three_body;
+        } else if (cutoffs.three_body.has_value()
+                    && abs(params.cutoff3b.value() - cutoffs.three_body.value()) > 1e-5) {
             JGAP_LOG_WARN(
                 "Specified 3b cutoff={} doesn't match the potential's 3b cutoff={}",
-                params.cutoff3b.value(), cutoffs.threeBody.value()
+                params.cutoff3b.value(), cutoffs.three_body.value()
             );
         }
         if (!params.minDensity.has_value()) {

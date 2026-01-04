@@ -88,6 +88,34 @@ namespace jgap {
         return result;
     }
 
+    EncodedSpeciesSets SpeciesEncoder::asSet(EncodedSpecies species) {
+        EncodedSpeciesSets result{};
+        result[0] = 1;
+        result[1] = species;
+        return result;
+    }
+
+    EncodedSpeciesSets SpeciesEncoder::asSet(EncodedSpecies invariant1, EncodedSpecies invariant2) {
+        EncodedSpeciesSets result{};
+        result[0] = 2;
+        result[1] = invariant1;
+        result[2] = invariant2;
+        return result;
+    }
+
+    EncodedSpeciesSets SpeciesEncoder::asSet(EncodedSpecies root, EncodedSpecies node1, EncodedSpecies node2) {
+        EncodedSpeciesSets result{};
+
+        result[0] = 1;
+        result[1] = root;
+
+        result[2] = 2;
+        result[3] = node1;
+        result[4] = node2;
+
+        return result;
+    }
+
     double SpeciesEncoder::symmetryFactor(EncodedSpeciesSets &sets) {
         double result = 1.0;
         size_t index = 0;

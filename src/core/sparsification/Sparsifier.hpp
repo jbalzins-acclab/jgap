@@ -7,12 +7,12 @@
 
 namespace jgap {
 
-    using KernelParams = DataNode;
-
+    template<size_t N_DIMENSIONS, size_t N_ATOMS>
     class Sparsifier {
     public:
         virtual ~Sparsifier() = default;
-        virtual std::vector<KernelParams> selectSparsePoints(const std::vector<std::vector<double>> &allPoints) = 0;
+        virtual std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> selectSparsePoints(
+            const std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> &descriptors) = 0;
     };
 }
 

@@ -9,7 +9,6 @@
 
 namespace jgap {
 
-
     class KernelCollection {
     public:
         virtual ~KernelCollection() = default;

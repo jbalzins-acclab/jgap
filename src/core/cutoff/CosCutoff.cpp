@@ -6,53 +6,53 @@
 
 namespace jgap {
 
-    CosCutoff::CosCutoff(const double cutoff, const double cutoffTransitionWidth) {
-        _cutoff = cutoff;
-        _cutoffTransitionWidth = cutoffTransitionWidth;
-        _cutoffTransitionWidthInverse = 1.0 / _cutoffTransitionWidth;
+    CosCutoff::CosCutoff(const double cutoff, const double cutoff_transition_width) {
+        cutoff_ = cutoff;
+        cutoff_transition_width_ = cutoff_transition_width;
+        cutoff_transition_width_inverse_ = 1.0 / cutoff_transition_width_;
     }
 
     CosCutoff::CosCutoff(const DataNode &params) {
         const auto &cutoffNode = REQUIRE(params, "cutoff");
-        _cutoff = cutoffNode.asDouble();
+        cutoff_ = cutoffNode.asDouble();
         if (params.type == DataNode::Type::OBJECT) {
             if (params.contains("cutoff_transition_width")) {
-                _cutoffTransitionWidth = params.value("cutoff_transition_width", 0.0);
+                cutoff_transition_width_ = params.value("cutoff_transition_width", 0.0);
             } else if (params.contains("r_min")) {
                 const double rmin = params.value("r_min", 0.0);
-                _cutoffTransitionWidth = _cutoff - rmin;
+                cutoff_transition_width_ = cutoff_ - rmin;
             } else {
-                _cutoffTransitionWidth = 0.0;
+                cutoff_transition_width_ = 0.0;
             }
         } else {
-            _cutoffTransitionWidth = 0.0;
+            cutoff_transition_width_ = 0.0;
         }
-        _cutoffTransitionWidthInverse = _cutoffTransitionWidth != 0.0 ? (1.0 / _cutoffTransitionWidth) : 0.0;
+        cutoff_transition_width_inverse_ = cutoff_transition_width_ != 0.0 ? (1.0 / cutoff_transition_width_) : 0.0;
     }
 
     DataNode CosCutoff::serialize() {
         DataNode obj = DataNode::object();
         auto &m = std::get<std::map<std::string, DataNode>>(obj.value);
-        m["cutoff"] = DataNode(_cutoff);
-        m["cutoff_transition_width"] = DataNode(_cutoffTransitionWidth);
+        m["cutoff"] = DataNode(cutoff_);
+        m["cutoff_transition_width"] = DataNode(cutoff_transition_width_);
         return obj;
     }
 
     double CosCutoff::differentiate(const double r) {
-        if (r <= _cutoff - _cutoffTransitionWidth || r >= _cutoff) {
+        if (r <= cutoff_ - cutoff_transition_width_ || r >= cutoff_) {
             return 0;
         }
-        return -0.5 * M_PI * _cutoffTransitionWidthInverse
-                * sin(M_PI*(r - _cutoff + _cutoffTransitionWidth) * _cutoffTransitionWidthInverse) ;
+        return -0.5 * M_PI * cutoff_transition_width_inverse_
+                * sin(M_PI*(r - cutoff_ + cutoff_transition_width_) * cutoff_transition_width_inverse_) ;
     }
 
     double CosCutoff::evaluate(const double r) {
-        if (r <= _cutoff - _cutoffTransitionWidth) {
+        if (r <= cutoff_ - cutoff_transition_width_) {
             return 1;
         }
-        if (r >= _cutoff) {
+        if (r >= cutoff_) {
             return 0;
         }
-        return 0.5 * (cos(M_PI * (r - _cutoff + _cutoffTransitionWidth) * _cutoffTransitionWidthInverse) + 1);
+        return 0.5 * (cos(M_PI * (r - cutoff_ + cutoff_transition_width_) * cutoff_transition_width_inverse_) + 1);
     }
 }

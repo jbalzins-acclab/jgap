@@ -8,13 +8,13 @@
 namespace jgap {
     struct CutoffRanges {
         std::optional<double> twoBody;
-        std::optional<double> threeBody;
+        std::optional<double> three_body;
         std::optional<double> minEam, maxEam;
 
         double maxOverall() const {
             double result = 0.0;
             if (twoBody.has_value()) result = twoBody.value();
-            if (threeBody.has_value()) result = threeBody.value();
+            if (three_body.has_value()) result = three_body.value();
             return result;
         }
 
@@ -23,8 +23,8 @@ namespace jgap {
             if (other.twoBody.has_value()) {
                 res.twoBody = std::max(res.twoBody.value_or(0.0), other.twoBody.value());
             }
-            if (other.threeBody.has_value()) {
-                res.threeBody = std::max(res.threeBody.value_or(0.0), other.threeBody.value());
+            if (other.three_body.has_value()) {
+                res.three_body = std::max(res.three_body.value_or(0.0), other.three_body.value());
             }
             if (other.maxEam.has_value()) {
                 res.maxEam = std::max(res.maxEam.value_or(0.0), other.maxEam.value());
