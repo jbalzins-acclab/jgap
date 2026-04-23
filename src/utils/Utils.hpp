@@ -1,16 +1,22 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#ifndef JGAP_UTILS_HPP
+#define JGAP_UTILS_HPP
 
-#include "../data/atomic/AtomicStructure.hpp"
+#include "data/atomic/AtomicStructure.hpp"
 
 #include <string>
 #include <vector>
 #include <Eigen/Dense>
-#include "data/DataNode.hpp"
+#include "../core/DataNode.hpp"
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
 
+#define REQUIRE(node, key) requireFull((node), (key), __FILE__, __LINE__, __func__)
+#define REQUIRE_ARRAY(node) requireArrayFull((node), __FILE__, __LINE__, __func__)
+#define OPTIONALLY_SET(val, node, key) if (node.contains(key)) { val = node[key]; }
+
 namespace jgap {
+    class Box;
+
     std::map<std::string, std::string> parseHeaderLine(const std::string &line);
     bool getLine(std::ifstream &file, std::string &line);
 
@@ -18,10 +24,9 @@ namespace jgap {
 
     double factorial(size_t n);
 
-    std::vector<AtomicStructure> readXyz(const std::string& fileName);
-    std::vector<AtomicStructure> readXyz(const std::string& fileName, double cutoff);
-    void writeXyz(const std::string& fileName, const std::vector<AtomicStructure> &structures);
-    void writeXyz(std::ofstream& outputStream, const std::vector<AtomicStructure> &structures);
+    std::vector<Box> readXyz(const std::string& file_name);
+    void writeXyz(const std::string& fileName, const std::vector<Box> &structures);
+    void writeXyz(std::ofstream& outputStream, const std::vector<Box> &structures);
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);
@@ -43,14 +48,10 @@ namespace jgap {
     DataNode requireArrayFull(DataNode &n, const char* file, int line, const char* function);
     const DataNode& requireArrayFull(const DataNode& n, const char* file, int line, const char* function);
 
-    #define REQUIRE(node, key) requireFull((node), (key), __FILE__, __LINE__, __func__)
-    #define REQUIRE_ARRAY(node) requireArrayFull((node), __FILE__, __LINE__, __func__)
-    #define OPTIONALLY_SET(val, node, key) if (node.contains(key)) { val = node[key]; }
-
     template<typename Map, typename Key, typename Value>
-    auto getOrDefault(const Map& m, const Key& k, const Value& defaultValue) -> decltype(m.at(k)) {
+    auto getOrDefault(const Map& m, const Key& k, const Value& default_value) -> decltype(m.at(k)) {
         auto it = m.find(k);
-        return it != m.end() ? it->second : defaultValue;
+        return it != m.end() ? it->second : default_value;
     }
 
     template <typename Iterator>

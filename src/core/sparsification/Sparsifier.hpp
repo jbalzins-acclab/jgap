@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "data/DataNode.hpp"
+#include "../DataNode.hpp"
 
 namespace jgap {
 

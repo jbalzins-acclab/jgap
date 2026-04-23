@@ -7,30 +7,30 @@
 
 namespace jgap {
     struct CutoffRanges {
-        std::optional<double> twoBody;
+        std::optional<double> two_body;
         std::optional<double> three_body;
-        std::optional<double> minEam, maxEam;
+        std::optional<double> min_eam_density, max_eam_density;
 
         double maxOverall() const {
             double result = 0.0;
-            if (twoBody.has_value()) result = twoBody.value();
+            if (two_body.has_value()) result = two_body.value();
             if (three_body.has_value()) result = three_body.value();
             return result;
         }
 
         CutoffRanges operator+(const CutoffRanges& other) const {
             auto res = *this;
-            if (other.twoBody.has_value()) {
-                res.twoBody = std::max(res.twoBody.value_or(0.0), other.twoBody.value());
+            if (other.two_body.has_value()) {
+                res.two_body = std::max(res.two_body.value_or(0.0), other.two_body.value());
             }
             if (other.three_body.has_value()) {
                 res.three_body = std::max(res.three_body.value_or(0.0), other.three_body.value());
             }
-            if (other.maxEam.has_value()) {
-                res.maxEam = std::max(res.maxEam.value_or(0.0), other.maxEam.value());
+            if (other.max_eam_density.has_value()) {
+                res.max_eam_density = std::max(res.max_eam_density.value_or(0.0), other.max_eam_density.value());
             }
-            if (other.minEam.has_value()) {
-                res.minEam = std::min(res.minEam.value_or(0.0), other.minEam.value());
+            if (other.min_eam_density.has_value()) {
+                res.min_eam_density = std::min(res.min_eam_density.value_or(0.0), other.min_eam_density.value());
             }
             return res;
         }

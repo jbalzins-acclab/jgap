@@ -14,7 +14,7 @@ namespace jgap {
     class FileLogger : public Logger {
     public:
         // If filePath is empty, auto-generate in logs/jgap
-        explicit FileLogger(std::string filePath = {}, MetadataVisibility meta = MetadataVisibility::FilesOnly);
+        explicit FileLogger(std::string filePath = {}, MetadataVisibility meta = MetadataVisibility::FILES_ONLY);
         ~FileLogger() override;
 
         void log(LogLevel level, std::string_view msg) override;

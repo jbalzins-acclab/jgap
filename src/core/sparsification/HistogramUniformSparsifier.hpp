@@ -9,7 +9,7 @@
 #include "Sparsifier.hpp"
 #include "utils/Utils.hpp"
 #include "io/log/CurrentLogger.hpp"
-#include "core/descriptors/Descriptor.hpp"
+#include "../descriptors/Descriptor.hpp"
 
 namespace jgap {
 

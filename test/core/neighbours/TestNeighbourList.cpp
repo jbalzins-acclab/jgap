@@ -1,7 +1,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-#include <core/neighbours/NeighbourFinder.hpp>
+#include <../../../src/core/atomic/neighbours/NeighbourFinder.hpp>
 
 #include "utils/Utils.hpp"
 
@@ -14,7 +14,7 @@ TEST(NeighbourFinderTest, Sample1CorrectNumberOfNeighbours) {
     size_t total = 0;
     for (const auto &structure: structs) {
         for (const auto &atomData : structure) {
-            total += atomData.neighboursAscendingSeparation().size();
+            total += atomData.neighbours().size();
         }
     }
     EXPECT_EQ(total, 862046);
@@ -29,7 +29,7 @@ TEST(NeighbourFinderTest, Sample2CorrectNumberOfNeighbours) {
     size_t total = 0;
     for (const auto &structure: structs) {
         for (const auto &atomData : structure) {
-            total += atomData.neighboursAscendingSeparation().size();
+            total += atomData.neighbours().size();
         }
     }
     EXPECT_EQ(total, 8815680);

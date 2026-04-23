@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "data/DataNode.hpp"
+#include "../core/DataNode.hpp"
 
 namespace jgap {
     class Serializable {

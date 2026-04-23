@@ -3,21 +3,21 @@
 
 namespace jgap {
     enum class OutputRouting {
-        None,                      // Do not print anywhere
-        FilesOnly,                 // Print to log files only
-        BothStdoutAndFiles,        // Print to both stdout and files for all levels
-        MixedNonDebugToStdout      // Default: non-debug to stdout; all levels to files
+        NONE,                      // Do not print anywhere
+        FILES_ONLY,                 // Print to log files only
+        BOTH_STDOUT_AND_FILES,        // Print to both stdout and files for all levels
+        MIXED_NON_DEBUG_STDOUT      // Default: non-debug to stdout; all levels to files
     };
 
     enum class MetadataVisibility {
-        None,        // Do not include file:line/func anywhere
-        FilesOnly,   // Default: include metadata in files only
-        Both         // Include metadata in both stdout and files
+        NONE,        // Do not include file:line/func anywhere
+        FILES_ONLY,   // Default: include metadata in files only
+        BOTH         // Include metadata in both stdout and files
     };
 
     struct LogConfig {
-        OutputRouting routing = OutputRouting::MixedNonDebugToStdout;
-        MetadataVisibility metadata = MetadataVisibility::FilesOnly;
+        OutputRouting routing = OutputRouting::MIXED_NON_DEBUG_STDOUT;
+        MetadataVisibility metadata = MetadataVisibility::FILES_ONLY;
         bool stdoutLogDebug = false; // if routing sends to stdout, should DEBUG appear there?
     };
 }

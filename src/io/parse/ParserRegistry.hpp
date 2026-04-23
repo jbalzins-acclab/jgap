@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 
-#include "data/DataNode.hpp"
+#include "../../core/DataNode.hpp"
 #include "utils/Utils.hpp"
 
 namespace jgap {

@@ -2,7 +2,7 @@
 #define JGAP_CUTOFFFUNCTION_HPP
 
 #include <string>
-#include "data/DataNode.hpp"
+#include "../DataNode.hpp"
 
 namespace jgap {
 
@@ -13,8 +13,6 @@ namespace jgap {
         virtual double evaluate(double r) = 0;
         virtual double differentiate(double r) = 0;
 
-        virtual std::string getType() = 0;
-        virtual jgap::DataNode serialize() = 0;
         virtual double getCutoff() = 0;
     };
 }

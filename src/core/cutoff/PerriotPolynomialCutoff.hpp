@@ -12,20 +12,18 @@ namespace jgap {
         PerriotPolynomialCutoff(const DataNode& params);
         PerriotPolynomialCutoff(double rMin, double cutoff);
 
-        std::string getType() override { return TYPE; }
-        DataNode serialize() override;
-        double getCutoff() override { return _cutoff; }
+        double getCutoff() override { return cutoff_; }
 
         double evaluate(double r) override;
         double differentiate(double r) override;
 
     private:
-        double _cutoff;
-        double _rMin;
-        double _cutoffWidthInverse;
+        double cutoff_;
+        double r_min_;
+        double cutoff_width_inverse_;
     };
 
-    SETUP_PARSER(CutoffFunction, PerriotPolynomialCutoff)
+    //SETUP_PARSER(CutoffFunction, PerriotPolynomialCutoff)
 }
 
 #endif

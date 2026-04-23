@@ -12,8 +12,10 @@
 #include <deque>
 #include <unistd.h>
 
-#include "core/neighbours/NeighbourFinder.hpp"
+#include "../core/atomic/neighbours/NeighbourFinder.hpp"
 #include "io/log/CurrentLogger.hpp"
+#include "../core/atomic/io/XYZData.hpp"
+#include "core/atomic/Box.hpp"
 
 namespace jgap {
     std::map<std::string, std::string> parseHeaderLine(const std::string &line) {
@@ -45,13 +47,13 @@ namespace jgap {
                         value += line[pos];
                         pos++;
                     }
+                    pos++;
                 } else {
                     while (pos < line.size() && !isspace(line[pos])) {
                         value += line[pos];
                         pos++;
                     }
                 }
-                pos++;
 
                 header[property] = value;
             }
@@ -60,7 +62,6 @@ namespace jgap {
         } catch (...) {
             JGAP_LOG_AND_THROW("Formatting error in: {}", line);
         }
-
 
         return header;
     }
@@ -105,227 +106,44 @@ namespace jgap {
 
     double factorial(size_t n) {
         double result = 1.0;
-        for (int i = 2; i <= n; ++i)
+        for (int i = 2; i <= (int)n; ++i)
             result *= i;
         return result;
     }
 
-    std::vector<AtomicStructure> readXyz(const std::string& fileName) {
-
-        std::vector<AtomicStructure> result;
-        std::ifstream file(fileName);
+    std::vector<Box> readXyz(const std::string& file_name) {
+        std::vector<Box> result;
+        std::ifstream file(file_name);
 
         if (!file) {
-            JGAP_LOG_ERROR( format("Error opening file {}", fileName), true);
+            JGAP_LOG_ERROR( std::format("Error opening file {}", file_name), true);
         }
 
-        std::string line;
-        while (getLine(file, line)) {
-            // n_atoms
-            size_t n;
-            std::istringstream iss(line);
-            iss >> n;
-            if (!iss.eof()) {
-                JGAP_LOG_AND_THROW("Expected single integer, got {}", line);
-            }
-
-            // metadata
-            getLine(file, line);
-
-            std::map<std::string, std::string> properties = parseHeaderLine(line);
-
-            if (!properties.contains("pbc") || properties["pbc"] != "T T T") {
-                JGAP_LOG_AND_THROW("No PBC? : {}", line);
-            }
-            properties.erase("pbc");
-
-            std::array<Vector3, 3> lattice{};
-            if (!properties.contains("Lattice")) {
-                JGAP_LOG_AND_THROW("Lattice unspecified in {}", line);
-            }
-            iss = std::istringstream(properties["Lattice"]);
-            iss >> lattice[0].x >> lattice[0].y >> lattice[0].z
-                >> lattice[1].x >> lattice[1].y >> lattice[1].z
-                >> lattice[2].x >> lattice[2].y >> lattice[2].z;
-            properties.erase("Lattice");
-
-            std::optional<double> energy{};
-            if (properties.contains("energy")) {
-                iss = std::istringstream(properties["energy"]);
-                double energyVal;
-                iss >> energyVal;
-                energy = energyVal;
-                properties.erase("energy");
-            }
-
-            std::optional<double> energySigmaInverse{};
-            if (properties.contains("energy_sigma")) {
-                iss = std::istringstream(properties["energy_sigma"]);
-                double energySigmaVal;
-                iss >> energySigmaVal;
-                energySigmaInverse = 1.0 / energySigmaVal;
-                properties.erase("energy_sigma");
-            }
-
-            std::optional<std::array<Vector3, 3>> virials{};
-            if (properties.contains("virials")) {
-                properties["virial"] = properties["virials"];
-                properties.erase("virials");
-            }
-            if (properties.contains("virial")) {
-                iss = std::istringstream(properties["virial"]);
-                std::array<Vector3, 3> virialsVal{};
-                iss >> virialsVal[0].x >> virialsVal[0].y >> virialsVal[0].z
-                    >> virialsVal[1].x >> virialsVal[1].y >> virialsVal[1].z
-                    >> virialsVal[2].x >> virialsVal[2].y >> virialsVal[2].z;
-                virials = virialsVal;
-                properties.erase("virial");
-            }
-
-            std::optional<std::array<Vector3, 3>> virialsSigmasInverse{};
-            if (properties.contains("virials_sigma")) {
-                iss = std::istringstream(properties["virials_sigma"]);
-                double virialsSigmaVal;
-                iss >> virialsSigmaVal;
-                virialsSigmasInverse = std::array{
-                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
-                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal},
-                    Vector3{1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal, 1.0 / virialsSigmaVal}
-                };
-                properties.erase("virials_sigma");
-            } else if (properties.contains("virials_sigmas")) {
-                iss = std::istringstream(properties["virials_sigmas"]);
-                std::array<Vector3, 3> virialsSigmasVal{};
-                iss >> virialsSigmasVal[0].x >> virialsSigmasVal[0].y >> virialsSigmasVal[0].z
-                    >> virialsSigmasVal[1].x >> virialsSigmasVal[1].y >> virialsSigmasVal[1].z
-                    >> virialsSigmasVal[2].x >> virialsSigmasVal[2].y >> virialsSigmasVal[2].z;
-                virialsSigmasInverse = std::array{
-                    Vector3{1.0 / virialsSigmasVal[0].x, 1.0 / virialsSigmasVal[0].y, 1.0 / virialsSigmasVal[0].z},
-                    Vector3{1.0 / virialsSigmasVal[1].x, 1.0 / virialsSigmasVal[1].y, 1.0 / virialsSigmasVal[1].z},
-                    Vector3{1.0 / virialsSigmasVal[2].x, 1.0 / virialsSigmasVal[2].y, 1.0 / virialsSigmasVal[2].z}
-                };
-                properties.erase("virials_sigmas");
-            }
-
-            std::vector<Vector3> positions(n);
-            std::optional<std::vector<Vector3>> forces;
-            std::optional<std::vector<Vector3>> forceSigmas;
-            std::vector<Species> species(n);
-            // todo
-            if (line.contains("Properties=species:S:1:pos:R:3:force:R:3:force_sigma:R:3")) {
-                forces = std::vector<Vector3>(n);
-                forceSigmas = std::vector<Vector3>(n);
-                for (size_t i = 0; i < n; i++) {
-                    getline(file, line);
-                    iss = std::istringstream(line);
-                    iss >> species[i];
-                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
-                    iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
-                    iss >> (*forceSigmas)[i].x >> (*forceSigmas)[i].y >> (*forceSigmas)[i].z;
-                }
-            } else if (line.contains("Properties=species:S:1:pos:R:3:force:R:3")) {
-                forces = std::vector<Vector3>(n);
-                for (size_t i = 0; i < n; i++) {
-                    getline(file, line);
-                    iss = std::istringstream(line);
-                    iss >> species[i];
-                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
-                    iss >> (*forces)[i].x >> (*forces)[i].y >> (*forces)[i].z;
-                }
-            } else if (line.contains("Properties=species:S:1:pos:R:3")) {
-                for (size_t i = 0; i < n; i++) {
-                    getline(file, line);
-                    iss = std::istringstream(line);
-                    iss >> species[i];
-                    iss >> positions[i].x >> positions[i].y >> positions[i].z;
-                }
-            } else {
-                JGAP_LOG_AND_THROW("Unknown properties string: {}", line);
-            }
-
-            result.push_back(AtomicStructure{
-                .properties = properties,
-                .lattice_vectors = lattice,
-                .positions = positions,
-                .species = species,
-                .energy = energy,
-                .forces = forces,
-                .virials = virials,
-                .energy_sigma_inverse = energySigmaInverse,
-                .force_sigmas_inverse = forceSigmas.transform([](std::vector<Vector3> v) {
-                    return v | std::views::transform([](const Vector3& v_i) {
-                        return Vector3{1.0 / v_i.x,1.0 / v_i.x,1.0 / v_i.x};
-                    }) | std::ranges::to<std::vector>();
-                }),
-                .virial_sigmas_inverse = virialsSigmasInverse
-            });
+        while (file.peek() != EOF) {
+            XYZData data = XYZData::read(file);
+            if (data.arrays_3d.empty() && data.arrays_r.empty() && data.arrays_i.empty() && data.arrays_s.empty()) break;
+            result.push_back(data.toAtomicBox());
         }
 
         return result;
     }
 
-    std::vector<AtomicStructure> readXyz(const std::string &fileName, const double cutoff) {
-        auto result = readXyz(fileName);
+    std::vector<Box> readXyz(const std::string &file_name, const double cutoff) {
+        auto result = readXyz(file_name);
         NeighbourFinder::findNeighbours(result, cutoff);
         return result;
     }
 
-    void writeXyz(const std::string &fileName, const std::vector<AtomicStructure> &structures) {
+    void writeXyz(const std::string &fileName, const std::vector<Box> &structures) {
         std::ofstream outputStream(fileName);
         writeXyz(outputStream, structures);
         outputStream.close();
     }
 
-    void writeXyz(std::ofstream &outputStream, const std::vector<AtomicStructure> &structures) {
+    void writeXyz(std::ofstream &outputStream, const std::vector<Box> &structures) {
         for (auto& structure: structures) {
-            outputStream << structure.size() << std::endl;
-
-            std::string meta;
-            meta += "pbc=\"T T T\" ";
-            meta += "Lattice=\"";
-            meta += std::format(
-                "{} {} {} {} {} {} {} {} {}",
-                structure.lattice_vectors[0].x, structure.lattice_vectors[0].y, structure.lattice_vectors[0].z,
-                structure.lattice_vectors[1].x, structure.lattice_vectors[1].y, structure.lattice_vectors[1].z,
-                structure.lattice_vectors[2].x, structure.lattice_vectors[2].y, structure.lattice_vectors[2].z
-                );
-            meta += "\" ";
-            for (auto &[k, v]: structure.properties) {
-                if (v.contains(" ") || v.contains("\t")) {
-                   meta += k + "=\"" + v + "\" ";
-                } else {
-                    meta += k + "=" + v + " ";
-                }
-            }
-            if (structure.energy.has_value()) {
-                meta += "energy=" + std::to_string(structure.energy.value()) + " ";
-            }
-            if (structure.virials.has_value()) {
-                meta += "virials=\"";
-                meta += std::format(
-                    "{} {} {} {} {} {} {} {} {}",
-                    structure.virials.value()[0].x, structure.virials.value()[0].y, structure.virials.value()[0].z,
-                    structure.virials.value()[1].x, structure.virials.value()[1].y, structure.virials.value()[1].z,
-                    structure.virials.value()[2].x, structure.virials.value()[2].y, structure.virials.value()[2].z
-                );
-                meta += "\" ";
-            }
-            if (structure.forces.has_value()) {
-                meta += "Properties=species:S:1:pos:R:3:force:R:3";
-            } else {
-                meta += "Properties=species:S:1:pos:R:3";
-            }
-
-            outputStream << meta << std::endl;
-
-            for (const auto& atom: structure) {
-                outputStream << atom.species() << " ";
-                outputStream << atom.position().x << " " << atom.position().y << " " << atom.position().z << " ";
-                if (structure.forces.has_value()) {
-                    outputStream << atom.force().x << " " << atom.force().y << " " << atom.force().z;
-                }
-                outputStream << std::endl;
-            }
+            XYZData data = XYZData::fromAtomicBox(structure);
+            data.write(outputStream);
         }
         outputStream.flush();
     }
@@ -368,6 +186,7 @@ namespace jgap {
     }
 
     std::string join(const std::vector<std::string> &strs, char delimiter) {
+        if (strs.empty()) return "";
         std::string res = strs[0];
         for (size_t i = 1; i < strs.size(); i++) {
             res += std::string{delimiter} + strs[i];

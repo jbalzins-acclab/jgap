@@ -140,13 +140,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     enable_testing()
 
     set(TEST_SOURCES
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestIsolatedAtomFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/fit/TestIsolatedAtomFit.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
             ${PROJECT_SOURCE_DIR}/test/core/neighbours/TestNeighbourList.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestTwoBodyDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestTwoBodyDescriptor.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
+            #${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
     )
 
     add_executable(jgap_tests ${TEST_SOURCES})

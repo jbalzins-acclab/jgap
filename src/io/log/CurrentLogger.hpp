@@ -1,5 +1,5 @@
-#ifndef CURRENTLOGGER_HPP
-#define CURRENTLOGGER_HPP
+#ifndef JGAP_CURRENTLOGGER_HPP
+#define JGAP_CURRENTLOGGER_HPP
 
 #include "Logger.hpp"
 #include "RouterLogger.hpp"

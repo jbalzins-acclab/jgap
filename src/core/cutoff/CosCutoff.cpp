@@ -12,7 +12,7 @@ namespace jgap {
         cutoff_transition_width_inverse_ = 1.0 / cutoff_transition_width_;
     }
 
-    CosCutoff::CosCutoff(const DataNode &params) {
+    /*CosCutoff::CosCutoff(const DataNode &params) {
         const auto &cutoffNode = REQUIRE(params, "cutoff");
         cutoff_ = cutoffNode.asDouble();
         if (params.type == DataNode::Type::OBJECT) {
@@ -36,7 +36,7 @@ namespace jgap {
         m["cutoff"] = DataNode(cutoff_);
         m["cutoff_transition_width"] = DataNode(cutoff_transition_width_);
         return obj;
-    }
+    }*/
 
     double CosCutoff::differentiate(const double r) {
         if (r <= cutoff_ - cutoff_transition_width_ || r >= cutoff_) {

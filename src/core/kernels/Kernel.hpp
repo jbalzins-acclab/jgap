@@ -1,17 +1,15 @@
 #ifndef JGAP_KERNEL_HPP
 #define JGAP_KERNEL_HPP
 
-#include "data/Vector3.hpp"
+#include "../atomic/geometry/Vector3.hpp"
 #include <optional>
 #include <string>
 #include <memory>
 #include <array>
 #include <vector>
 
-#include "../../data/atomic/AtomicStructure.hpp"
-#include "data/DataNode.hpp"
-#include "../../data/atomic/PredictionData.hpp"
-#include "core/descriptors/Descriptor.hpp"
+#include "../DataNode.hpp"
+#include "../descriptors/Descriptor.hpp"
 #include "io/Serializable.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include "io/parse/ParserRegistry.hpp"
@@ -25,19 +23,18 @@ namespace jgap {
         virtual double crossCovariance(const std::shared_ptr<IKernel> &kernel) = 0;
     };
 
-    template<size_t N_DIMENSIONS, size_t N_ATOMS>
+    template<size_t N_DIMENSIONS>
     class RealKernel : public IKernel {
     public:
         std::array<double, N_DIMENSIONS> sparse_point;
-        double sparse_f_cut;
 
-        RealKernel(std::array<double, N_DIMENSIONS> sparse_point, double f_cut)
-            : sparse_point(sparse_point), sparse_f_cut(f_cut) {
+        RealKernel(std::array<double, N_DIMENSIONS> sparse_point)
+            : sparse_point(sparse_point) {
         }
 
         Predictions covariance(
-            const AtomicStructure& structure,
-            const std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>>& descriptors
+            const Box& structure,
+            const std::vector<Descriptor<N_DIMENSIONS>>& descriptors
             ) {
 
             double energy = 0;
@@ -45,10 +42,10 @@ namespace jgap {
             Virials virials{};
 
             for (const auto &descriptor: descriptors) {
-                const double val = value(descriptor);
+                const double val = value(descriptor.value);
                 energy += val * descriptor.f_cut;
 
-                const auto gradU_wrt_q = gradient(descriptor); // g[i] = dU/dq_i
+                const auto gradU_wrt_q = gradient(descriptor.value, val); // g[i] = dU/dq_i
 
                 for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
                     virials += descriptor.virials[dim] * gradU_wrt_q[dim];
@@ -56,7 +53,7 @@ namespace jgap {
 
                 for (const auto& gradQ_wrt_ri: descriptor.gradients) {
                     for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                        forces[gradQ_wrt_ri[dim].wrt_atom_index] -= gradQ_wrt_ri[dim].value * gradU_wrt_q[dim];
+                        forces[gradQ_wrt_ri.wrt_atom_index] -= gradQ_wrt_ri.gradients[dim] * gradU_wrt_q[dim];
                     }
                 }
             }
@@ -65,22 +62,21 @@ namespace jgap {
         }
 
         virtual double value(std::array<double, N_DIMENSIONS> q) = 0;
-        virtual std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q) = 0;
+        virtual std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q, double val) = 0;
     };
 
-    template<size_t N_DIMENSIONS, size_t N_GRADIENTS>
-    class SquaredExpKernel : public RealKernel<N_DIMENSIONS, N_GRADIENTS> {
+    template<size_t N_DIMENSIONS>
+    class SquaredExpKernel : public RealKernel<N_DIMENSIONS> {
     public:
-        using RealKernel<N_DIMENSIONS, N_GRADIENTS>::sparse_point;
+        using RealKernel<N_DIMENSIONS>::sparse_point;
 
         //static constexpr std::string TYPE_ID = "squared_exp";
         //static std::shared_ptr<RealKernel<N_DIMENSIONS, N_GRADIENTS>> fromDataNode(const DataNode &params);
 
         SquaredExpKernel(const double energy_scale,
                          const std::array<double, N_DIMENSIONS>& length_scales,
-                         const std::array<double, N_DIMENSIONS>& sparse_point,
-                         const double sparse_f_cut)
-            : RealKernel<N_DIMENSIONS, N_GRADIENTS>(sparse_point, sparse_f_cut),
+                         const std::array<double, N_DIMENSIONS>& sparse_point)
+            : RealKernel<N_DIMENSIONS>(sparse_point),
                 energy_scale_(energy_scale), length_scales_(length_scales) {
 
             prefactor_ = energy_scale_ * energy_scale_;
@@ -101,9 +97,7 @@ namespace jgap {
             return prefactor_ * exp(-0.5 * exp_argument);
         }
 
-        std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q) override {
-
-            double val = value(wrt_q);
+        std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q, double val) override {
 
             std::array<double, N_DIMENSIONS> result{};
             for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {

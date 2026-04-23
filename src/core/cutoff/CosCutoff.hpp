@@ -12,8 +12,6 @@ namespace jgap {
 
         static constexpr const char* TYPE = "coscutoff";
 
-        std::string getType() override {return TYPE;};
-        DataNode serialize() override;
         double getCutoff() override { return cutoff_; }
 
         ~CosCutoff() override = default;
@@ -28,6 +26,6 @@ namespace jgap {
         double cutoff_transition_width_inverse_;
     };
 
-    SETUP_PARSER(CutoffFunction, CosCutoff)
+    //SETUP_PARSER(CutoffFunction, CosCutoff)
 }
 #endif
