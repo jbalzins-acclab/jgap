@@ -245,12 +245,13 @@ namespace jgap {
             SpeciesPair sp{species1, species2};
 
             // coeffs
-            double r, coeff;
+            double r, coeff, fcut;
             ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
             for (pugi::xml_node pt: distanceNode.children("sparseX")) {
                 fin >> r;
                 coeff = pt.attribute("alpha").as_double();
-                kernels.push_back(make_shared<TwoBodySE>(sp, mainData.delta, mainData.theta, r, coeff));
+                fcut = pt.attribute("sparseCutoff").as_double();
+                kernels.push_back(make_shared<TwoBodySE>(sp, mainData.delta, mainData.theta, r, fcut, coeff));
             }
             fin.close();
         }
@@ -286,15 +287,16 @@ namespace jgap {
             SpeciesTriplet st{rootSpecies, {species1, species2}};
 
             // coeffs
-            double coeff;
+            double coeff, fcut;
             Vector3 q{};
             ifstream fin(distanceNode.attribute("sparseX_filename").as_string());
             for (pugi::xml_node pt: distanceNode.children("sparseX")) {
                 coeff = pt.attribute("alpha").as_double();
+                fcut = pt.attribute("sparseCutoff").as_double();
                 fin >> q.x >> q.y >> q.z;
                 // TODO: 3d-theta
                 kernels.push_back(make_shared<ThreeBodySE>(
-                    st, mainData.delta, Vector3{mainData.theta, mainData.theta, mainData.theta}, q, coeff
+                    st, mainData.delta, Vector3{mainData.theta, mainData.theta, mainData.theta}, q, fcut, coeff
                     ));
             }
         }

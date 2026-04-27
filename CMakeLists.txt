@@ -1,17 +1,13 @@
-cmake_minimum_required(VERSION 3.11) # TODO: test if that's sufficient
+cmake_minimum_required(VERSION 3.15)
 project(jgap)
 
-set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-# cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+# Only use vcpkg if a toolchain file wasn't explicitly provided but VCPKG_ROOT is available
+if(NOT CMAKE_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT})
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto -DNDEBUG")
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-#set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
-
-set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
 
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -66,9 +62,6 @@ function(generate_parser_registry_header)
     # Write the generated header
     set(GENERATED_HEADER "${PROJECT_SOURCE_DIR}/include/ParserRegistryAuto.hpp")
     file(WRITE "${GENERATED_HEADER}" "${HEADER_CONTENT}")
-
-    # Add to library target
-    #target_include_directories(jgap PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
     # Make sure the header is regenerated when source files change
     add_custom_command(
@@ -180,7 +173,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
             ${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/utils/TestVirials.cpp
     )
 
     add_executable(jgap_tests ${TEST_SOURCES})

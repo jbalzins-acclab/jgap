@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
     if (argc != 2) {
         jgap::CurrentLogger::get()->error(
-            "Expected 1 arguments: \n 1. <<tabulation-params>>.json"
+            "Expected 1 argument: \n 1. <<quip-potential>>.xml"
             );
         return EXIT_FAILURE;
     }

@@ -5,13 +5,13 @@
     "external": {
         "type": "zbl"
     },
-    "fit_order": ["isolated_atom", "jgap_feni_2b_3b_eam"],
+    "fit_order": ["isolated_atom", "jgap_feh_2b_3b_eam"],
     "test_files": ["test_Fe-H.xyz"],
     "fits": {
         "isolated_atom": {
             "type": "isolated_atom"
         },
-        "jgap_feni_2b_3b_eam": {
+        "jgap_feh_2b_3b_eam": {
             "type": "qr_gap",
             "regularization_rules": {
                 "type": "per_ct",

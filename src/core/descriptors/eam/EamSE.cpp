@@ -65,10 +65,10 @@ namespace jgap {
                 forces[index.atAtomIndex] += f10;
                 forces[neighbourData.index] -= f10;
 
-                // x2 since r10.x * f10.x = r01.x * f01.x
-                virials[0] += f10 * r01.x;
-                virials[1] += f10 * r01.y;
-                virials[2] += f10 * r01.z;
+                // x2 since r10.x * f10.x = r01.x * f01.x // what ???
+                virials[0] -= f10 * r01.x;
+                virials[1] -= f10 * r01.y;
+                virials[2] -= f10 * r01.z;
             }
         }
 

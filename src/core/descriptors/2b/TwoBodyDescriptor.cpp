@@ -124,10 +124,14 @@ namespace jgap {
         auto indexes = doIndex(atomicStructure);
 
         auto covariates = vector<Covariance>();
-        for (const auto &kernel: _kernels) {
-            covariates.push_back(
-                kernel->covariance(atomicStructure, GET_OR_DEFAULT(indexes, kernel->getFilter(), TwoBodyIndex{}))
+
+        for (auto &kernelIndices: _kernelIdsPerSpeciesPair | views::values) {
+            for (const auto &kernelId: kernelIndices) {
+                auto& kernel = _kernels[kernelId];
+                covariates.push_back(
+                    kernel->covariance(atomicStructure, GET_OR_DEFAULT(indexes, kernel->getFilter(), TwoBodyIndex{}))
                 );
+            }
         }
 
         return covariates;

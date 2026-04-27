@@ -7,12 +7,14 @@
 namespace jgap {
 
     ThreeBodySE::ThreeBodySE(SpeciesTriplet idTriplet, double energyScale, Vector3 lengthScales,
-                         Vector3 q, double fCut)
+                         Vector3 q, double fCut, optional<double> coeff)
         : _idTriplet(std::move(idTriplet)),
           _energyScale(energyScale),
           _lengthScale(lengthScales),
           _q(q),
           _descriptorPrefactors(fCut) {
+
+        coefficient = coeff;
 
         _totalPrefactor = _descriptorPrefactors;
         _inverseThetaSq = {
