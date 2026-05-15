@@ -2,7 +2,7 @@
 #define JGAP_CUTOFFFUNCTION_HPP
 
 #include <string>
-#include "../DataNode.hpp"
+#include "core/Real.hpp"
 
 namespace jgap {
 
@@ -10,10 +10,10 @@ namespace jgap {
     public:
         virtual ~CutoffFunction() = default;
 
-        virtual double evaluate(double r) = 0;
-        virtual double differentiate(double r) = 0;
+        virtual Real evaluate(Real r) const = 0;
+        virtual Real differentiate(Real r) const = 0;
 
-        virtual double getCutoff() = 0;
+        virtual Real getCutoff() const = 0;
     };
 }
 

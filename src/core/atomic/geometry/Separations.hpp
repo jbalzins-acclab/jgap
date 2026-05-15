@@ -15,12 +15,12 @@ namespace jgap {
         return higher_index*(higher_index-1)/2 + lower_index;
     }
 
-    template<size_t N_ATOMS_CONNECTED>
-    requires(N_ATOMS_CONNECTED > 1)
+    template<size_t AtomsConnected>
+    requires(AtomsConnected > 1)
     struct Separations {
-        static constexpr size_t N_SEPARATIONS = N_ATOMS_CONNECTED * (N_ATOMS_CONNECTED - 1) / 2;
+        static constexpr size_t N_SEPARATIONS = AtomsConnected * (AtomsConnected - 1) / 2;
 
-        std::array<size_t, N_ATOMS_CONNECTED> atom_indexes;
+        std::array<size_t, AtomsConnected> atom_indexes;
         std::array<Separation, N_SEPARATIONS> separations;
 
         const Separation& between(const size_t lower_index, const size_t higher_index) const {

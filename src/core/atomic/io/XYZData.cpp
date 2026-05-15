@@ -10,145 +10,214 @@
 
 namespace jgap {
 
-    XYZData XYZData::read(std::ifstream &in_stream) {
-        XYZData data;
-        std::string line;
-        if (!getLine(in_stream, line)) return data;
+    std::map<std::string, std::string> XYZData::parseHeaderLine(const std::string &line) {
+        std::map<std::string, std::string> header;
 
-        size_t n_atoms = 0;
         try {
-            n_atoms = std::stoul(line);
+            size_t pos = 0;
+            while (pos < line.size()) {
+                if (isspace(line[pos])) {
+                    pos++;
+                    continue;
+                }
+
+                std::string property;
+                while (line[pos] != '=') {
+                    property += line[pos];
+                    pos++;
+
+                    if (pos >= line.size() || isspace(line[pos])) {
+                        throw std::runtime_error("'=' not found after " + property);
+                    }
+                }
+                pos++;
+
+                std::string value;
+                if (line[pos] == '"') {
+                    pos++;
+                    while (pos < line.size() && line[pos] != '"') {
+                        value += line[pos];
+                        pos++;
+                    }
+                    pos++;
+                } else {
+                    while (pos < line.size() && !isspace(line[pos])) {
+                        value += line[pos];
+                        pos++;
+                    }
+                }
+
+                header[property] = value;
+            }
+        } catch (std::exception& e) {
+            JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
         } catch (...) {
-            return data;
+            JGAP_LOG_AND_THROW("Formatting error in: {}", line);
         }
 
-        if (!getLine(in_stream, line)) return data;
+        return header;
+    }
 
-        auto raw_properties = parseHeaderLine(line);
+    bool XYZData::getLine(std::ifstream &file, std::string &line) {
+        if (!getline(file, line)) return false;
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back(); // remove Windows carriage return
+        }
+        return true;
+    }
 
-        for (auto const& [k, v] : raw_properties) {
-            if (k == "Properties") continue;
+    std::vector<XYZData> XYZData::read(std::ifstream &in_stream) {
+        std::vector<XYZData> frames;
 
-            if (k == "pbc") {
-                data.properties[k] = v;
-                continue;
+        while (true) {
+            std::string line;
+            if (!getLine(in_stream, line)) break;
+
+            size_t n_atoms = 0;
+            try {
+                n_atoms = std::stoul(line);
+            } catch (...) {
+                break;
             }
 
-            std::istringstream iss(v);
-            std::vector<double> vals;
-            double val;
-            while (iss >> val) {
-                vals.push_back(val);
-            }
+            XYZData data;
+            if (!getLine(in_stream, line)) break;
 
-            if (k == "Lattice" || k == "lattice") {
-                if (vals.size() == 9) {
-                    data.properties[k] = Lattice{
-                        Vector3{vals[0], vals[1], vals[2]},
-                        Vector3{vals[3], vals[4], vals[5]},
-                        Vector3{vals[6], vals[7], vals[8]}
-                    };
+            auto raw_properties = parseHeaderLine(line);
+
+            for (auto const& [k, v] : raw_properties) {
+                if (k == "Properties") continue;
+
+                if (k == "pbc") {
+                    std::istringstream iss(v);
+                    std::string token;
+                    std::array pbc_vals = {false, false, false};
+                    int idx = 0;
+                    while (iss >> token && idx < 3) {
+                        pbc_vals[idx++] = (token == "T" || token == "true" || token == "1");
+                    }
+                    data.properties[k] = pbc_vals;
+                    continue;
+                }
+
+                std::istringstream iss(v);
+                std::vector<Real> vals;
+                Real val;
+                while (iss >> val) {
+                    vals.push_back(val);
+                }
+
+                if (k == "Lattice" || k == "lattice") {
+                    if (vals.size() == 9) {
+                        data.properties[k] = Lattice{
+                            Vector3{vals[0], vals[1], vals[2]},
+                            Vector3{vals[3], vals[4], vals[5]},
+                            Vector3{vals[6], vals[7], vals[8]}
+                        };
+                    } else if (vals.size() == 3) {
+                        data.properties[k] = Lattice{
+                            Vector3{vals[0], 0, 0},
+                            Vector3{0, vals[1], 0},
+                            Vector3{0, 0, vals[2]}
+                        };
+                    } else {
+                        data.properties[k] = v;
+                    }
+                    continue;
+                }
+
+                if (vals.size() == 1) {
+                    if (v.find('.') != std::string::npos) {
+                        data.properties[k] = (Real)vals[0];
+                    } else {
+                        try {
+                            data.properties[k] = std::stoi(v);
+                        } catch (...) {
+                            data.properties[k] = (Real)vals[0];
+                        }
+                    }
                 } else if (vals.size() == 3) {
-                    data.properties[k] = Lattice{
-                        Vector3{vals[0], 0, 0},
-                        Vector3{0, vals[1], 0},
-                        Vector3{0, 0, vals[2]}
-                    };
+                    data.properties[k] = Vector3{vals[0], vals[1], vals[2]};
+                } else if (vals.size() == 9) {
+                    if (std::abs(vals[1] - vals[3]) < 1e-9 && std::abs(vals[2] - vals[6]) < 1e-9 && std::abs(vals[5] - vals[7]) < 1e-9) {
+                         data.properties[k] = Virials{vals[0], vals[1], vals[2], vals[4], vals[5], vals[8]};
+                    } else {
+                         data.properties[k] = v;
+                    }
                 } else {
                     data.properties[k] = v;
                 }
-                continue;
             }
 
-            if (vals.size() == 1) {
-                if (v.find('.') != std::string::npos) {
-                    data.properties[k] = (Real)vals[0];
-                } else {
-                    try {
-                        data.properties[k] = std::stoi(v);
-                    } catch (...) {
-                        data.properties[k] = (Real)vals[0];
-                    }
-                }
-            } else if (vals.size() == 3) {
-                data.properties[k] = Vector3{vals[0], vals[1], vals[2]};
-            } else if (vals.size() == 9) {
-                if (std::abs(vals[1] - vals[3]) < 1e-9 && std::abs(vals[2] - vals[6]) < 1e-9 && std::abs(vals[5] - vals[7]) < 1e-9) {
-                     data.properties[k] = Virials{vals[0], vals[1], vals[2], vals[4], vals[5], vals[8]};
-                } else {
-                     data.properties[k] = v;
+            struct PropInfo {
+                std::string name;
+                char type;
+                int count;
+            };
+            std::vector<PropInfo> prop_infos;
+
+            if (raw_properties.contains("Properties")) {
+                std::string props_str = raw_properties["Properties"];
+                auto tokens = split(props_str, ':');
+                for (size_t i = 0; i < tokens.size(); i += 3) {
+                    prop_infos.push_back({tokens[i], tokens[i+1][0], std::stoi(tokens[i+2])});
                 }
             } else {
-                data.properties[k] = v;
+                prop_infos.push_back({"species", 'S', 1});
+                prop_infos.push_back({"pos", 'R', 3});
             }
-        }
 
-        struct PropInfo {
-            std::string name;
-            char type;
-            int count;
-        };
-        std::vector<PropInfo> prop_infos;
-
-        if (raw_properties.contains("Properties")) {
-            std::string props_str = raw_properties["Properties"];
-            auto tokens = split(props_str, ':');
-            for (size_t i = 0; i < tokens.size(); i += 3) {
-                prop_infos.push_back({tokens[i], tokens[i+1][0], std::stoi(tokens[i+2])});
-            }
-        } else {
-            prop_infos.push_back({"species", 'S', 1});
-            prop_infos.push_back({"pos", 'R', 3});
-        }
-
-        for (size_t i = 0; i < n_atoms; ++i) {
-            if (!getLine(in_stream, line)) {
-                JGAP_LOG_AND_THROW("Unexpected end of file at atom " + std::to_string(i));
-            }
-            std::istringstream iss(line);
-            for (const auto& info : prop_infos) {
-                if (info.type == 'R') {
-                    if (info.count == 3) {
-                        Vector3 v;
-                        if (!(iss >> v.x >> v.y >> v.z)) JGAP_LOG_AND_THROW("Failed to read Vector3 for property " + info.name + " at atom " + std::to_string(i));
-                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Vector3>();
-                        std::get<std::vector<Vector3>>(data.arrays[info.name]).push_back(v);
-                    } else {
-                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Real>();
-                        for (int c = 0; c < info.count; ++c) {
-                            Real r;
-                            if (!(iss >> r)) JGAP_LOG_AND_THROW("Failed to read Real for property " + info.name + " at atom " + std::to_string(i));
-                            std::get<std::vector<Real>>(data.arrays[info.name]).push_back(r);
+            for (size_t i = 0; i < n_atoms; ++i) {
+                if (!getLine(in_stream, line)) {
+                    JGAP_LOG_AND_THROW("Unexpected end of file at atom " + std::to_string(i));
+                }
+                std::istringstream iss(line);
+                for (const auto& info : prop_infos) {
+                    if (info.type == 'R') {
+                        if (info.count == 3) {
+                            Vector3 v;
+                            if (!(iss >> v.x >> v.y >> v.z)) JGAP_LOG_AND_THROW("Failed to read Vector3 for property " + info.name + " at atom " + std::to_string(i));
+                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Vector3>();
+                            std::get<std::vector<Vector3>>(data.arrays[info.name]).push_back(v);
+                        } else {
+                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Real>();
+                            for (int c = 0; c < info.count; ++c) {
+                                Real r;
+                                if (!(iss >> r)) JGAP_LOG_AND_THROW("Failed to read Real for property " + info.name + " at atom " + std::to_string(i));
+                                std::get<std::vector<Real>>(data.arrays[info.name]).push_back(r);
+                            }
                         }
-                    }
-                } else if (info.type == 'I') {
-                    if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<int>();
-                    for (int c = 0; c < info.count; ++c) {
-                        int val;
-                        if (!(iss >> val)) JGAP_LOG_AND_THROW("Failed to read int for property " + info.name + " at atom " + std::to_string(i));
-                        std::get<std::vector<int>>(data.arrays[info.name]).push_back(val);
-                    }
-                } else if (info.type == 'S') {
-                    if (info.name == "species") {
-                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Species>();
+                    } else if (info.type == 'I') {
+                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<int>();
                         for (int c = 0; c < info.count; ++c) {
-                            std::string s;
-                            if (!(iss >> s)) JGAP_LOG_AND_THROW("Failed to read string for property " + info.name + " at atom " + std::to_string(i));
-                            std::get<std::vector<Species>>(data.arrays[info.name]).push_back(Species(s));
+                            int val;
+                            if (!(iss >> val)) JGAP_LOG_AND_THROW("Failed to read int for property " + info.name + " at atom " + std::to_string(i));
+                            std::get<std::vector<int>>(data.arrays[info.name]).push_back(val);
                         }
-                    } else {
-                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<std::string>();
-                        for (int c = 0; c < info.count; ++c) {
-                            std::string s;
-                            if (!(iss >> s)) JGAP_LOG_AND_THROW("Failed to read string for property " + info.name + " at atom " + std::to_string(i));
-                            std::get<std::vector<std::string>>(data.arrays[info.name]).push_back(s);
+                    } else if (info.type == 'S') {
+                        if (info.name == "species") {
+                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Species>();
+                            for (int c = 0; c < info.count; ++c) {
+                                std::string s;
+                                if (!(iss >> s)) JGAP_LOG_AND_THROW("Failed to read string for property " + info.name + " at atom " + std::to_string(i));
+                                std::get<std::vector<Species>>(data.arrays[info.name]).push_back(Species(s));
+                            }
+                        } else {
+                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<std::string>();
+                            for (int c = 0; c < info.count; ++c) {
+                                std::string s;
+                                if (!(iss >> s)) JGAP_LOG_AND_THROW("Failed to read string for property " + info.name + " at atom " + std::to_string(i));
+                                std::get<std::vector<std::string>>(data.arrays[info.name]).push_back(s);
+                            }
                         }
                     }
                 }
             }
+
+            frames.push_back(std::move(data));
         }
 
-        return data;
+        return frames;
     }
 
     void XYZData::write(std::ofstream &out_stream) const {
@@ -184,6 +253,10 @@ namespace jgap {
                 } else if constexpr (std::is_same_v<T, Lattice>) {
                     std::ostringstream oss;
                     oss << arg.a.x << " " << arg.a.y << " " << arg.a.z << " " << arg.b.x << " " << arg.b.y << " " << arg.b.z << " " << arg.c.x << " " << arg.c.y << " " << arg.c.z;
+                    val_str = oss.str();
+                } else if constexpr (std::is_same_v<T, std::array<bool, 3>>) {
+                    std::ostringstream oss;
+                    oss << (arg[0] ? "T" : "F") << " " << (arg[1] ? "T" : "F") << " " << (arg[2] ? "T" : "F");
                     val_str = oss.str();
                 }
             }, v);

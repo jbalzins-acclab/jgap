@@ -12,66 +12,13 @@
 #include <deque>
 #include <unistd.h>
 
-#include "../core/atomic/neighbours/NeighbourFinder.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include "../core/atomic/io/XYZData.hpp"
-#include "core/atomic/Box.hpp"
+#include "core/atomic/Atoms.hpp"
 
 namespace jgap {
-    std::map<std::string, std::string> parseHeaderLine(const std::string &line) {
-        std::map<std::string, std::string> header;
-
-        try {
-            size_t pos = 0;
-            while (pos < line.size()) {
-                if (isspace(line[pos])) {
-                    pos++;
-                    continue;
-                }
-
-                std::string property;
-                while (line[pos] != '=') {
-                    property += line[pos];
-                    pos++;
-
-                    if (pos >= line.size() || isspace(line[pos])) {
-                        throw std::runtime_error("'=' not found after " + property);
-                    }
-                }
-                pos++;
-
-                std::string value;
-                if (line[pos] == '"') {
-                    pos++;
-                    while (pos < line.size() && line[pos] != '"') {
-                        value += line[pos];
-                        pos++;
-                    }
-                    pos++;
-                } else {
-                    while (pos < line.size() && !isspace(line[pos])) {
-                        value += line[pos];
-                        pos++;
-                    }
-                }
-
-                header[property] = value;
-            }
-        } catch (std::exception& e) {
-            JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
-        } catch (...) {
-            JGAP_LOG_AND_THROW("Formatting error in: {}", line);
-        }
-
-        return header;
-    }
-
-    bool getLine(std::ifstream &file, std::string &line) {
-        if (!getline(file, line)) return false;
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back(); // remove Windows carriage return
-        }
-        return true;
+    std::vector<Atoms> readAtoms(const std::string& filename) {
+        return mapVector(XYZData::read(filename), [](const XYZData& d) { return Atoms(d); });
     }
 
     std::string uniqueStamp() {
@@ -109,43 +56,6 @@ namespace jgap {
         for (int i = 2; i <= (int)n; ++i)
             result *= i;
         return result;
-    }
-
-    std::vector<Box> readXyz(const std::string& file_name) {
-        std::vector<Box> result;
-        std::ifstream file(file_name);
-
-        if (!file) {
-            JGAP_LOG_ERROR( std::format("Error opening file {}", file_name), true);
-        }
-
-        while (file.peek() != EOF) {
-            XYZData data = XYZData::read(file);
-            if (data.arrays_3d.empty() && data.arrays_r.empty() && data.arrays_i.empty() && data.arrays_s.empty()) break;
-            result.push_back(data.toAtomicBox());
-        }
-
-        return result;
-    }
-
-    std::vector<Box> readXyz(const std::string &file_name, const double cutoff) {
-        auto result = readXyz(file_name);
-        NeighbourFinder::findNeighbours(result, cutoff);
-        return result;
-    }
-
-    void writeXyz(const std::string &fileName, const std::vector<Box> &structures) {
-        std::ofstream outputStream(fileName);
-        writeXyz(outputStream, structures);
-        outputStream.close();
-    }
-
-    void writeXyz(std::ofstream &outputStream, const std::vector<Box> &structures) {
-        for (auto& structure: structures) {
-            XYZData data = XYZData::fromAtomicBox(structure);
-            data.write(outputStream);
-        }
-        outputStream.flush();
     }
 
     double rms(const std::vector<double> &x) {
@@ -261,6 +171,7 @@ namespace jgap {
         return ss.str();
     }
 
+    /*
     static bool nodeIsObject(const DataNode& n) {
         return n.type == DataNode::Type::OBJECT;
     }
@@ -282,7 +193,7 @@ namespace jgap {
             throw std::domain_error(oss.str());
         }
         auto& m = std::get<std::map<std::string, DataNode>>(n.value);
-        auto it = m.find(key);
+        auto it = m.form(key);
         if (it == m.end()) {
             std::ostringstream oss;
             oss << "Node key not found: \"" << key << "\"\n"
@@ -306,7 +217,7 @@ namespace jgap {
             throw std::domain_error(oss.str());
         }
         const auto& m = std::get<std::map<std::string, DataNode>>(n.value);
-        auto it = m.find(key);
+        auto it = m.form(key);
         if (it == m.end()) {
             std::ostringstream oss;
             oss << "Node key not found: \"" << key << "\"\n"
@@ -343,5 +254,5 @@ namespace jgap {
             throw std::domain_error(oss.str());
         }
         return n;
-    }
+    }*/
 }

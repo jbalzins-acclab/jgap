@@ -5,7 +5,7 @@
 
 namespace jgap {
     struct Virials {
-        Real xx, xy, xz, yy, yz, zz;
+        Real xx{0}, xy{0}, xz{0}, yy{0}, yz{0}, zz{0};
 
         Virials operator+(const Virials& other) const {
             return {xx + other.xx, xy + other.xy, xz + other.xz,

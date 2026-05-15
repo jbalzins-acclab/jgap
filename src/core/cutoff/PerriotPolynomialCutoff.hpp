@@ -2,6 +2,7 @@
 #define JGAP_PERRIOTPOLYNOMIALCUTOFF_HPP
 
 #include "CutoffFunction.hpp"
+#include "core/Real.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
@@ -9,18 +10,17 @@ namespace jgap {
     public:
         static constexpr std::string TYPE = "perriot";
 
-        PerriotPolynomialCutoff(const DataNode& params);
-        PerriotPolynomialCutoff(double rMin, double cutoff);
+        PerriotPolynomialCutoff(Real r_min, Real cutoff);
 
-        double getCutoff() override { return cutoff_; }
+        Real getCutoff() const override { return cutoff; }
 
-        double evaluate(double r) override;
-        double differentiate(double r) override;
+        Real evaluate(Real r) const override;
+        Real differentiate(Real r) const override;
 
     private:
-        double cutoff_;
-        double r_min_;
-        double cutoff_width_inverse_;
+        Real cutoff;
+        Real r_min;
+        Real cutoff_width_inverse;
     };
 
     //SETUP_PARSER(CutoffFunction, PerriotPolynomialCutoff)

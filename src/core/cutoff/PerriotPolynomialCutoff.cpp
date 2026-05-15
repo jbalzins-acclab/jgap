@@ -3,20 +3,22 @@
 //
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
 
+#include "core/Real.hpp"
+
 namespace jgap {
 
-    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const double rMin, const double cutoff) {
-        r_min_ = rMin;
-        cutoff_ = cutoff;
-        cutoff_width_inverse_ = 1.0 / (cutoff_ - r_min_);
+    PerriotPolynomialCutoff::PerriotPolynomialCutoff(const Real r_min, const Real cutoff)
+        : r_min(r_min), cutoff(cutoff)
+    {
+        cutoff_width_inverse = static_cast<Real>(1.0) / (cutoff - r_min);
     }
 
     /*PerriotPolynomialCutoff::PerriotPolynomialCutoff(const DataNode &params) {
-        _cutoff = params["cutoff"].get<double>();
+        _cutoff = params["cutoff"].get<Real>();
         if (params.contains("r_min")) {
-            _rMin = params["r_min"].get<double>();
+            _rMin = params["r_min"].get<Real>();
         } else {
-            _rMin = _cutoff - params["cutoff_transition_width"].get<double>();
+            _rMin = _cutoff - params["cutoff_transition_width"].get<Real>();
         }
         _cutoffWidthInverse = 1.0 / (_cutoff - _rMin);
     }
@@ -28,7 +30,7 @@ namespace jgap {
         };
     }*/
 
-    double PerriotPolynomialCutoff::evaluate(double r) {
+    Real PerriotPolynomialCutoff::evaluate(Real r) const {
         /*
             # Perriot polynomial cutoff
             if r < rmin:
@@ -39,18 +41,18 @@ namespace jgap {
                 chi = (r - rmin) / (rmax - rmin)
                 y = 1.0 - chi**3 * (6.0*chi**2 - 15*chi + 10.0)
                 */
-        if (r <= r_min_) return 1.0;
-        if (r >= cutoff_) return 0.0;
+        if (r <= r_min) return 1.0;
+        if (r >= cutoff) return 0.0;
 
-        const double chi = (r - r_min_) * cutoff_width_inverse_;
+        const Real chi = (r - r_min) * cutoff_width_inverse;
         return 1.0 - chi * chi * chi * (6.0 * chi * chi - 15.0 * chi + 10.0);
     }
 
-    double PerriotPolynomialCutoff::differentiate(double r) {
-        if (r <= r_min_ || r >= cutoff_) return 0.0;
+    Real PerriotPolynomialCutoff::differentiate(Real r) const {
+        if (r <= r_min || r >= cutoff) return 0.0;
 
-        const double chi = (r - r_min_) * cutoff_width_inverse_;
-        const double dchi_dr = cutoff_width_inverse_;
+        const Real chi = (r - r_min) * cutoff_width_inverse;
+        const Real dchi_dr = cutoff_width_inverse;
 
         return dchi_dr * (
                    - 3.0 * chi * chi * (6.0 * chi * chi - 15.0 * chi + 10.0)

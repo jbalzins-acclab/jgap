@@ -4,101 +4,93 @@
 #include <cmath>
 #include <random>
 #include <set>
-#include <numeric> // For std::iota
 
 #include "Sparsifier.hpp"
 #include "utils/Utils.hpp"
 #include "io/log/CurrentLogger.hpp"
-#include "../descriptors/Descriptor.hpp"
+#include "../atomic/Descriptor.hpp"
 
 namespace jgap {
 
-    template<size_t N_DIMENSIONS, size_t N_ATOMS>
-    class HistogramUniformSparsifier : public Sparsifier<N_DIMENSIONS, N_ATOMS> {
+    template<size_t Dim>
+    class HistogramUniformSparsifier : public Sparsifier<Dim> {
     public:
-        //SETUP_PARSER(Sparsifier, HistogramUniformSparsifier, histogram_uniform)
-
-        //using Sparsifier<N_DIMENSIONS>::DescriptorValue;
-
         HistogramUniformSparsifier(size_t seed,
                                    size_t n_sparse_points,
-                                   std::optional<std::array<size_t, N_DIMENSIONS>> grid_dimensions = std::nullopt,
-                                   std::optional<std::array<double, N_DIMENSIONS>> min_point = std::nullopt,
-                                   std::optional<std::array<double, N_DIMENSIONS>> max_point = std::nullopt)
-            : seed_(seed),
-              n_sparse_points_(n_sparse_points),
-              grid_dimensions_(grid_dimensions),
-              min_point_(min_point),
-              max_point_(max_point) {
+                                   std::optional<std::array<size_t, Dim>> grid_dimensions = std::nullopt,
+                                   std::optional<std::array<Real, Dim>> min_point = std::nullopt,
+                                   std::optional<std::array<Real, Dim>> max_point = std::nullopt)
+            : seed(seed),
+              n_sparse_points(n_sparse_points),
+              grid_dimensions(grid_dimensions),
+              min_point(min_point),
+              max_point(max_point) {
         }
 
-        std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> selectSparsePoints(
-            const std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> &descriptors);
-
-        //std::vector<DescriptorValue<N_DIMENSIONS>> selectSparsePoints(const std::vector<std::vector<double>> &allPoints) override;
+        std::vector<Descriptor<Dim>> selectSparsePoints(const std::vector<Descriptor<Dim>> &descriptors) override;
 
     private:
-        size_t seed_;
-        size_t n_sparse_points_;
-        std::optional<std::array<size_t, N_DIMENSIONS>> grid_dimensions_;
-        std::optional<std::array<double, N_DIMENSIONS>> min_point_;
-        std::optional<std::array<double, N_DIMENSIONS>> max_point_;
+        size_t seed;
+        size_t n_sparse_points;
+        std::optional<std::array<size_t, Dim>> grid_dimensions;
+        std::optional<std::array<Real, Dim>> min_point;
+        std::optional<std::array<Real, Dim>> max_point;
     };
 
-    template<size_t N_DIMENSIONS, size_t N_ATOMS>
-    std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> HistogramUniformSparsifier<N_DIMENSIONS, N_ATOMS>
-        ::selectSparsePoints(const std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> &descriptors) {
+    template<size_t Dim>
+    std::vector<Descriptor<Dim>> HistogramUniformSparsifier<Dim>::selectSparsePoints(
+        const std::vector<Descriptor<Dim>> &descriptors) {
 
         if (descriptors.empty()) {
             return {};
         }
 
-        std::array<size_t, N_DIMENSIONS> grid_dimensions;
-        if (grid_dimensions_.has_value()) {
-            grid_dimensions = grid_dimensions_.value();
+        std::array<size_t, Dim> grid_dimensions_;
+        if (grid_dimensions.has_value()) {
+            grid_dimensions_ = grid_dimensions.value();
         } else {
-            grid_dimensions.fill(ceil(pow(n_sparse_points_, 1.0 / static_cast<double>(N_DIMENSIONS))));
+            grid_dimensions_.fill(ceil(pow(n_sparse_points, 1.0 / static_cast<Real>(Dim))));
         }
 
-        std::array<double, N_DIMENSIONS> min_point{};
-        std::array<double, N_DIMENSIONS> max_point{};
-        std::array<double, N_DIMENSIONS> step{};
+        std::array<Real, Dim> min_point_{};
+        std::array<Real, Dim> max_point_{};
+        std::array<Real, Dim> step{};
 
-        for (size_t d = 0; d < N_DIMENSIONS; d++) {
-            if (min_point_.has_value()) {
-                min_point[d] = min_point_.value()[d];
+        for (size_t d = 0; d < Dim; d++) {
+            if (min_point.has_value()) {
+                min_point_[d] = min_point.value()[d];
             } else {
-                min_point[d] = std::numeric_limits<double>::max();
+                min_point_[d] = std::numeric_limits<Real>::max();
                 for (const auto &p : descriptors) {
-                    min_point[d] = std::min(min_point[d], p.value[d]);
+                    min_point_[d] = std::min(min_point_[d], p.value[d]);
                 }
             }
-            if (max_point_.has_value()) {
-                max_point[d] = max_point_.value()[d];
+            if (max_point.has_value()) {
+                max_point_[d] = max_point.value()[d];
             } else {
-                max_point[d] = std::numeric_limits<double>::min();
+                max_point_[d] = std::numeric_limits<Real>::lowest();
                 for (const auto &p : descriptors) {
-                    max_point[d] = std::max(max_point[d], p.value[d] + 0.0001/*keep all points in bounds*/);
+                    max_point_[d] = std::max(max_point_[d], p.value[d] + static_cast<Real>(0.0001)/*keep all points in bounds*/);
                 }
             }
-            step[d] = (max_point[d] - min_point[d]) / static_cast<double>(grid_dimensions[d]);
+            step[d] = (max_point_[d] - min_point_[d]) / static_cast<Real>(grid_dimensions_[d]);
         }
 
         JGAP_LOG_INFO(
             "{}d histogram in range {} - {} with {} long bins:",
-            N_DIMENSIONS,
-            iteratorToString(min_point.begin(), min_point.end()),
-            iteratorToString(max_point.begin(), max_point.end()),
+            Dim,
+            iteratorToString(min_point_.begin(), min_point_.end()),
+            iteratorToString(max_point_.begin(), max_point_.end()),
             iteratorToString(step.begin(), step.end())
         );
 
-        std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> sparse_points;
-        std::map<std::array<size_t, N_DIMENSIONS>, std::vector<size_t>> useful_grid_slots;
+        std::vector<Descriptor<Dim>> sparse_points;
+        std::map<std::array<size_t, Dim>, std::vector<size_t>> useful_grid_slots;
 
         for (size_t i = 0; i < descriptors.size(); i++) {
-            std::array<size_t, N_DIMENSIONS> grid_slot{};
-            for (size_t d = 0; d < N_DIMENSIONS; d++) {
-                grid_slot[d] = static_cast<size_t>((descriptors[i].value[d] - min_point[d]) / step[d]);
+            std::array<size_t, Dim> grid_slot{};
+            for (size_t d = 0; d < Dim; d++) {
+                grid_slot[d] = static_cast<size_t>((descriptors[i].value[d] - min_point_[d]) / step[d]);
             }
 
             if (!useful_grid_slots.contains(grid_slot)) {
@@ -106,15 +98,17 @@ namespace jgap {
             }
             useful_grid_slots[grid_slot].push_back(i);
         }
-        const size_t reps = n_sparse_points_ / useful_grid_slots.size();
-        const size_t leftover = n_sparse_points_ - useful_grid_slots.size() * reps;
+
+        const size_t reps = n_sparse_points / useful_grid_slots.size();
+        const size_t leftover = n_sparse_points - useful_grid_slots.size() * reps;
+
         JGAP_LOG_DEBUG(
             "Found {} grid slots containing some points -> attempting to sample each {} times / {} assigned randomly",
             useful_grid_slots.size(), reps, leftover
         );
 
-        std::mt19937 gen(seed_);
-        std::vector<std::array<size_t, N_DIMENSIONS>> useful_grid_slots_arr = {};
+        std::mt19937 gen(seed);
+        std::vector<std::array<size_t, Dim>> useful_grid_slots_arr = {};
         for (auto &[grid_slot, point_indices]: useful_grid_slots) {
             useful_grid_slots_arr.push_back(grid_slot);
 
@@ -126,13 +120,13 @@ namespace jgap {
 
         std::uniform_int_distribution<> index_dist(0, useful_grid_slots_arr.size() - 1);
 
-        while (sparse_points.size() < n_sparse_points_) {
-            const std::array<size_t, N_DIMENSIONS>& grid_slot = useful_grid_slots_arr[index_dist(gen)];
+        while (sparse_points.size() < n_sparse_points) {
+            const std::array<size_t, Dim>& grid_slot = useful_grid_slots_arr[index_dist(gen)];
 
-            Descriptor<N_DIMENSIONS, N_ATOMS> d{};
-            for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
+            Descriptor<Dim> d{};
+            for (size_t dim = 0; dim < Dim; dim++) {
                 std::uniform_real_distribution<> margin_dist(0, step[dim]);
-                d.value[dim] = min_point[dim] + step[dim] * static_cast<double>(grid_slot[dim]) + margin_dist(gen);
+                d.value[dim] = min_point_[dim] + step[dim] * static_cast<Real>(grid_slot[dim]) + margin_dist(gen);
             }
 
             sparse_points.push_back(d);

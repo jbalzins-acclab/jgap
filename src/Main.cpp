@@ -1,12 +1,27 @@
 #include <exception>
 #include <iostream>
 #include <ostream>
+#include <ranges>
+#include <memory>
 #include <oneapi/tbb/parallel_for_each.h>
+#include <oneapi/tbb/global_control.h>
 
-#include "core/descriptors/3b/ThreeBodyDescriptorFinder.hpp"
-#include "core/kernels/ThreeBodyKernelCollection.hpp"
+#include "core/atomic/io/XYZData.hpp"
+#include "core/atomic/Atoms.hpp"
+#include "core/cutoff/CosCutoff.hpp"
+#include "core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "core/kernels/SquaredExpKernel.hpp"
+#include "core/kernels/groups/BlindKernelGroup.hpp"
+#include "core/kernels/groups/PerSpeciesKernelGroup.hpp"
+#include "core/potentials/gap/GapComponent.hpp"
+#include "core/potentials/gap/GapPotential.hpp"
 #include "core/sparsification/HistogramUniformSparsifier.hpp"
+#include "core/transform/3b/Angle3bTransformer.hpp"
+#include "core/fit/gap/GapFit.hpp"
+#include "core/fit/gap/QRGapFit.hpp"
+#include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "utils/Utils.hpp"
+
 
 // #include "app/CLIApp.hpp"
 
@@ -14,74 +29,63 @@ using namespace jgap;
 using namespace std;
 
 int main(int argc, char** argv) {
-//#ifndef DEBUG
-    try {
-        //return jgap::CLIApp::main(argc, argv);
+    /*tbb::global_control control(
+        tbb::global_control::max_allowed_parallelism, 1
+    );*/
 
-        JGAP_LOG_WARN("TIMESTEP1");
-        auto data = readXyz("resources/xyz-samples/feni-train.xyz", 4.0);
+    auto training_data = readAtoms("/Users/jegorsbalzins/jgap/resources/xyz-samples/db_Fe.xyz");
 
-        
+    auto cutoff1 = CosCutoff(3.7, 0.6);
+    auto cutoff2 = PerriotPolynomialCutoff(3.5, 3.7);
 
-        /*JGAP_LOG_WARN("TIMESTEP2");
-        std::shared_ptr<ThreeBodyDescriptorFinder> finder = std::make_shared<ThreeBodyDescriptorFinder>(4.0, 0.6, false);
+    std::shared_ptr<Transformer<4, 3>> trans1 = std::make_shared<Angle3bTransformer<CosCutoff>>(cutoff1);
+    std::shared_ptr<Transformer<4, 3>> trans2 = std::make_shared<Angle3bTransformer<CosCutoff>>(cutoff1);
 
-        map<EncodedSpeciesSets, std::vector<Descriptor<3, 3>>> pts{};
-        for (const auto& as: data) {
-            auto mp = finder->find(as);
-            for ( const auto& [k,v]: mp) {
-                if (!pts.contains(k)) pts[k] = {};
-                auto &arr = pts[k];
-                for (auto& h: v) arr.push_back(h);
-            }
-        }
+    auto kernel1 = SquaredExpKernel<3, 1, 3>(3.0, {1.0, 1.0, 1.0});
+    auto kernel2 = SquaredExpKernel<3, 1, 3>(2.0, {0.5, 0.5, 0.5});
 
-        JGAP_LOG_WARN("TIMESTEP3");
-        std::map<EncodedSpeciesSets, std::vector<std::shared_ptr<RealKernel<3, 3>>>> kernels_per_species_triplet;
-        auto a = make_shared<HistogramUniformSparsifier<3, 3>>(30, 500);
-        for (auto& [sp, ppts]: pts) {
-            auto sparse_pts = a->selectSparsePoints(ppts);
-            kernels_per_species_triplet[sp] = {};
-            auto& b = kernels_per_species_triplet[sp];
-            JGAP_LOG_INFO("encoded: {} {} {} {} {} {}::{}", sp[0], sp[1], sp[2], sp[3], sp[4], sp[5], ppts.size());
-            for (auto& pt: sparse_pts) {
-                std::shared_ptr<RealKernel<3, 3>> kernel = std::make_shared<SquaredExpKernel<3, 3>>(1.0, array{1.0, 1.0, 1.0}, pt.value, pt.f_cut);
-                b.push_back(kernel);
-                //JGAP_LOG_INFO("{}:{}:{}", pt.value[0], pt.value[1], pt.value[2]);
-            }
-        }
-        finder->calculate_derivatives = true;
+    auto sparsifier1 = std::make_shared<HistogramUniformSparsifier<4>>(100, 500);
+    auto sparsifier2 = std::make_shared<HistogramUniformSparsifier<4>>(120, 500);
 
-        JGAP_LOG_WARN("TIMESTEP4");
-        ThreeBodyKernelCollection collection(finder, kernels_per_species_triplet);
-        atomic_int64_t n = 0;
-        double r = 0;
-        atomic_int64_t i = 0;
+    // Generate neighbour lists using the helper
+    auto neighbour_lists = NeighbourList::generateFor(training_data, trans1, trans2);
 
-        tbb::parallel_for_each(data.begin(), data.end(), [&](AtomicStructure& as)-> void {
-        //for (auto& as: data) {
-                //JGAP_LOG_WARN("iii{}", i.load());
-            if (i++ % 100 == 0) {
-                JGAP_LOG_WARN("iii{}", i.load());
-            }
-            auto aaa = collection.covariate(as).back();
-            n += aaa.forces_optional.size();
-            if (!aaa.forces_optional.empty()) {
-                r += aaa.forces_optional.back().len();
-            }
-        }
-        );
-        JGAP_LOG_WARN("TIMESTEP5: {}, {}", n.load(), r);
+    // Construct Kernel Groups
+    std::shared_ptr<KernelGroup<4, 3>> kernel_group1 = std::make_shared<BlindKernelGroup<SquaredExpKernel<3, 1, 3>>>(
+        BlindKernelGroup<SquaredExpKernel<3, 1, 3>>::constructFromTrainingData(
+            kernel1, trans1, sparsifier1, neighbour_lists
+        )
+    );
 
-        return EXIT_SUCCESS;
-        */
+    std::map<SpeciesSet, std::shared_ptr<Sparsifier<4>>> empty_sparsifiers;
+    std::map<SpeciesSet, SquaredExpKernel<3, 1, 3>> empty_kernels;
 
-    } catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-/*#else
-    // Not to lose the exception when doing a debug run.
-    return jgap::CLIApp::main(argc, argv);
-#endif*/
+    auto kernel_group2 = std::make_shared<PerSpeciesKernelGroup<SquaredExpKernel<3, 1, 3>>>(
+        PerSpeciesKernelGroup<SquaredExpKernel<3, 1, 3>>::constructFromTrainingData(
+            trans2,
+            neighbour_lists,
+            empty_sparsifiers,
+            sparsifier2,
+            empty_kernels,
+            kernel2,
+            true
+        )
+    );
+
+    // Construct Gap Components
+
+    auto component1 = std::make_shared<GapComponent<4, 3>>(trans1, kernel_group1);
+    auto component2 = std::make_shared<GapComponent<4, 3>>(trans2, kernel_group2);
+
+    std::vector<std::shared_ptr<IGapComponent>> components = {component2};
+
+    // Construct Potential
+    auto potential = std::make_unique<GapPotential>(std::move(components));
+
+    std::shared_ptr<RegularizationRules> regularization_rules = std::make_shared<SimpleRegularizationRules>();
+
+    // Fit
+    QRGapFit fitter;
+    fitter.fit(*potential, training_data, neighbour_lists, {}, regularization_rules);
+
 }

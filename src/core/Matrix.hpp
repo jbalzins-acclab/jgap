@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "Real.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {

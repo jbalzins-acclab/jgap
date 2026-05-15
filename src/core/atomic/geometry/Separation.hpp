@@ -1,15 +1,15 @@
 #ifndef JGAP_SEPARATION_HPP
 #define JGAP_SEPARATION_HPP
+
 #include "Vector3.hpp"
 #include "core/Real.hpp"
 #include "core/atomic/energy/Virials.hpp"
 
 namespace jgap {
     struct Separation {
-        Real magnitude;
-        Vector3 direction;
-        Virials virials;
-        //Vector3 vec;
+        Real magnitude{};
+        Vector3 direction{};
+        Virials virials{};
 
         Separation() = default;
         Separation(const Separation&) = default;

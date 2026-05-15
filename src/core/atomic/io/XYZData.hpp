@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <variant>
+#include <array>
 
 #include "core/Real.hpp"
 #include "core/atomic/geometry/Vector3.hpp"
@@ -14,7 +15,7 @@
 #include "core/atomic/species/Species.hpp"
 
 namespace jgap {
-    using PropertyValue = std::variant<std::string, int, Real, Vector3, Virials, Lattice>;
+    using PropertyValue = std::variant<std::string, int, Real, Vector3, Virials, Lattice, std::array<bool, 3>>;
     using ArrayValue = std::variant<
         std::vector<int>, std::vector<Real>, std::vector<Vector3>, std::vector<std::string>, std::vector<Species>
     >;
@@ -23,11 +24,14 @@ namespace jgap {
         std::map<std::string, PropertyValue> properties;
         std::map<std::string, ArrayValue> arrays;
 
-        static XYZData read(const std::string &filename) {
+        static std::map<std::string, std::string> parseHeaderLine(const std::string &line);
+        static bool getLine(std::ifstream &file, std::string &line);
+
+        static std::vector<XYZData> read(const std::string &filename) {
             std::ifstream in(filename);
             return read(in);
         }
-        static XYZData read(std::ifstream &in_stream);
+        static std::vector<XYZData> read(std::ifstream &in_stream);
 
         void write(const std::string &filename) const {
             std::ofstream out(filename);

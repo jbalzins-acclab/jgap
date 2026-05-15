@@ -8,150 +8,87 @@
 #include <array>
 #include <vector>
 
-#include "../DataNode.hpp"
-#include "../descriptors/Descriptor.hpp"
-#include "io/Serializable.hpp"
-#include "io/log/CurrentLogger.hpp"
-#include "io/parse/ParserRegistry.hpp"
+#include "../atomic/Descriptor.hpp"
+#include "core/atomic/energy/AtomicQuantity.hpp"
 
 namespace jgap {
-    class IKernel {
-    public:
-        std::optional<double> coefficient{};
 
-        virtual ~IKernel() = default;
-        virtual double crossCovariance(const std::shared_ptr<IKernel> &kernel) = 0;
+    template<size_t DescriptorDim, size_t DescriptorDependencies>
+    class Kernel {
+    public:
+        constexpr static size_t Dim = DescriptorDim;
+        constexpr static size_t Dependencies = DescriptorDependencies;
+
+        using TDescriptor = Descriptor<DescriptorDim, DescriptorDependencies, CalculationType::ValueOnly>;
+        using TDescWithGradients = Descriptor<DescriptorDim, DescriptorDependencies, CalculationType::WithGradients>;
+        using TValue = typeof(TDescriptor::value);
+
+        struct KernelValueAndGradient {
+            Real value;
+            std::array<Real, Dim> gradient;
+        };
+
+        virtual ~Kernel() = default;
+
+        virtual Real value(const TValue& q1, const TValue& q2) const = 0;
+        virtual KernelValueAndGradient valueAndGradient(const TValue& sparse_point, const TValue& q) const = 0;
+
+        Real covariance(const TValue& sparse_point, const std::vector<TDescriptor>& descriptors) const;
+        void covariance(AtomicQuantity& added_to, const TValue& sparse_point,
+                        const std::vector<TDescWithGradients>& descriptors) const;
     };
 
-    template<size_t N_DIMENSIONS>
-    class RealKernel : public IKernel {
-    public:
-        std::array<double, N_DIMENSIONS> sparse_point;
+    template<size_t DescriptorDim, size_t DescriptorDependencies>
+    void Kernel<DescriptorDim, DescriptorDependencies>::covariance(AtomicQuantity &added_to,
+        const TValue &sparse_point, const std::vector<TDescWithGradients> &descriptors) const {
 
-        RealKernel(std::array<double, N_DIMENSIONS> sparse_point)
-            : sparse_point(sparse_point) {
-        }
+        Real& energy = added_to.value;
+        Virials& virials = added_to.virials;
+        std::vector<Vector3>& forces = added_to.forces;
 
-        Predictions covariance(
-            const Box& structure,
-            const std::vector<Descriptor<N_DIMENSIONS>>& descriptors
-            ) {
+        for (const auto &descriptor: descriptors) {
 
-            double energy = 0;
-            auto forces = std::vector(structure.size(), Vector3());
-            Virials virials{};
+            // g[i] = dU/dq_i
+            const auto [val, gradK_wrt_q] = valueAndGradient(sparse_point, descriptor.value);
 
-            for (const auto &descriptor: descriptors) {
-                const double val = value(descriptor.value);
-                energy += val * descriptor.f_cut;
+            energy += val;
 
-                const auto gradU_wrt_q = gradient(descriptor.value, val); // g[i] = dU/dq_i
+            for (size_t dim = 0; dim < DescriptorDim; dim++) {
+                virials += descriptor.virials[dim] * gradK_wrt_q[dim];
+            }
 
-                for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                    virials += descriptor.virials[dim] * gradU_wrt_q[dim];
+            if constexpr (DescriptorDependencies == GradientData::UNKNOWN_DEPENDENCIES) {
+                // Descriptor contains: std::array<std::vector<Vector3>, Dim> gradients;
+                for (int i = 0; i < forces.size(); i++) {
+                    for (size_t dim = 0; dim < DescriptorDim; dim++) {
+                        forces[i] -= descriptor.gradients[dim][i] * gradK_wrt_q[dim];
+                    }
                 }
-
-                for (const auto& gradQ_wrt_ri: descriptor.gradients) {
-                    for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                        forces[gradQ_wrt_ri.wrt_atom_index] -= gradQ_wrt_ri.gradients[dim] * gradU_wrt_q[dim];
+            } else {
+                // Descriptor contains: std::array<std::array<GradientData, DependencyAtoms>, Dim> gradients{};
+                for (size_t dim = 0; dim < DescriptorDim; dim++) {
+                    for (size_t i = 0; i < DescriptorDependencies; i++) {
+                        const GradientData& gradQdim_wrt_ri = descriptor.gradients[dim][i];
+                        forces[gradQdim_wrt_ri.wrt_atom_index] -= gradQdim_wrt_ri.value * gradK_wrt_q[dim];
                     }
                 }
             }
+        }
+    }
 
-            return { energy, virials, forces };
+
+    template<size_t DescriptorDim, size_t DescriptorDependencies>
+    Real Kernel<DescriptorDim, DescriptorDependencies>::covariance(
+        const TValue &sparse_point, const std::vector<TDescriptor> &descriptors) const {
+
+        Real energy = 0;
+
+        for (const auto &descriptor: descriptors) {
+            energy += value(sparse_point, descriptor.value);
         }
 
-        virtual double value(std::array<double, N_DIMENSIONS> q) = 0;
-        virtual std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q, double val) = 0;
-    };
-
-    template<size_t N_DIMENSIONS>
-    class SquaredExpKernel : public RealKernel<N_DIMENSIONS> {
-    public:
-        using RealKernel<N_DIMENSIONS>::sparse_point;
-
-        //static constexpr std::string TYPE_ID = "squared_exp";
-        //static std::shared_ptr<RealKernel<N_DIMENSIONS, N_GRADIENTS>> fromDataNode(const DataNode &params);
-
-        SquaredExpKernel(const double energy_scale,
-                         const std::array<double, N_DIMENSIONS>& length_scales,
-                         const std::array<double, N_DIMENSIONS>& sparse_point)
-            : RealKernel<N_DIMENSIONS>(sparse_point),
-                energy_scale_(energy_scale), length_scales_(length_scales) {
-
-            prefactor_ = energy_scale_ * energy_scale_;
-            for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                length_scales_squared_[dim] = length_scales_[dim] * length_scales_[dim];
-            }
-        }
-
-        double crossCovariance(const std::shared_ptr<IKernel> &kernel) override {
-            return 0;
-        }
-
-        double value(std::array<double, N_DIMENSIONS> q) override {
-            double exp_argument = 0;
-            for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                exp_argument += length_scales_squared_[dim] * (q[dim] - sparse_point[dim]);
-            }
-            return prefactor_ * exp(-0.5 * exp_argument);
-        }
-
-        std::array<double, N_DIMENSIONS> gradient(std::array<double, N_DIMENSIONS> wrt_q, double val) override {
-
-            std::array<double, N_DIMENSIONS> result{};
-            for (size_t dim = 0; dim < N_DIMENSIONS; dim++) {
-                result[dim] = val * (sparse_point[dim] - wrt_q[dim]) / length_scales_squared_[dim];
-            }
-
-            return result;
-        }
-
-    private:
-        double energy_scale_;
-        std::array<double, N_DIMENSIONS> length_scales_;
-
-        double prefactor_;
-        std::array<double, N_DIMENSIONS> length_scales_squared_;
-    };
-
-    /*
-    template<class TFilter, class TIndex, class TDescriptorData>
-    class Kernel : public IKernel {
-    public:
-        ~Kernel() override = default;
-
-        virtual Covariance covariance(const AtomicStructure&, const TIndex&) = 0;
-        virtual double value(const TDescriptorData&) = 0;
-        virtual TFilter getFilter() = 0;
-
-        Predictions predict(const AtomicStructure& structure, const TIndex& indexes);
-    };
-
-    template<class TFilter, class TIndex, class TDescriptorData>
-    Predictions Kernel<TFilter, TIndex, TDescriptorData>::predict(const AtomicStructure& structure,
-                                                                  const TIndex& indexes) {
-        if (!coefficient.has_value()) {
-            JGAP_LOG_AND_THROW("Kernel coefficient not set");
-        }
-
-        const Covariance structure_covariance = covariance(structure, indexes);
-
-        Predictions result{};
-        result.energy = *coefficient * structure_covariance.total;
-        result.virials = std::array{
-            structure_covariance.virials[0] * (*coefficient),
-            structure_covariance.virials[1] * (*coefficient),
-            structure_covariance.virials[2] * (*coefficient)
-        };
-        result.forces = std::vector<Vector3>();
-        result.forces->reserve(structure.size());
-        for (const auto &force: structure_covariance.forces) {
-            result.forces->push_back(force * (*coefficient));
-        }
-
-        return result;
-    }*/
+        return energy;
+    }
 }
 
 #endif

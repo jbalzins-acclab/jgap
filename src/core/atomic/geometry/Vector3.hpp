@@ -12,11 +12,7 @@
 
 namespace jgap {
 
-    struct alignas(sizeof(Real) * 4) Vector3 {
-    private:
-        Real padding_ = 0;
-
-    public:
+    struct Vector3 {
         Vector3() : x(0.0), y(0.0), z(0.0) {}
         Vector3(Real x, Real y, Real z) : x(x), y(y), z(z) {}
         Vector3(const Vector3& other) = default;

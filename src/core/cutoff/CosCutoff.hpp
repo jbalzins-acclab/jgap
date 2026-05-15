@@ -2,28 +2,27 @@
 #define JGAP_DEFAULTCUTOFFFUNCTION_HPP
 
 #include "CutoffFunction.hpp"
+#include "core/Real.hpp"
 #include "io/parse/ParserRegistry.hpp"
 
 namespace jgap {
     class CosCutoff : public CutoffFunction {
     public:
-        CosCutoff(double cutoff, double cutoff_transition_width);
-        explicit CosCutoff(const DataNode& params);
-
+        CosCutoff(Real cutoff, Real cutoff_transition_width);
         static constexpr const char* TYPE = "coscutoff";
 
-        double getCutoff() override { return cutoff_; }
+        Real getCutoff() const override { return cutoff; }
 
         ~CosCutoff() override = default;
 
-        double evaluate(double r) override;
-        double differentiate(double r) override;
+        Real evaluate(Real r) const override;
+        Real differentiate(Real r) const override;
 
     private:
-        double cutoff_;
-        double cutoff_transition_width_;
+        Real cutoff;
+        Real cutoff_transition_width;
 
-        double cutoff_transition_width_inverse_;
+        Real cutoff_transition_width_inverse;
     };
 
     //SETUP_PARSER(CutoffFunction, CosCutoff)

@@ -6,9 +6,9 @@
 #include <functional>
 #include <memory>
 
-#include "../../core/DataNode.hpp"
 #include "utils/Utils.hpp"
 
+/*
 namespace jgap {
     template<class TBase>
     class ParserRegistry {
@@ -21,7 +21,7 @@ namespace jgap {
         }
     };
 }
-
+*/
 
 #define ADD_PARSER(BaseType, RegType, type_id) \
     struct RegType##BaseType##type_id##Register { \

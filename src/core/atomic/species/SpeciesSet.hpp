@@ -4,10 +4,13 @@
 #include "Species.hpp"
 #include <array>
 #include <algorithm>
+#include <string>
+#include <sstream>
 
 namespace jgap {
     class SpeciesSet {
     public:
+        static constexpr int16_t None = -1;
 #ifdef MAX_SPECIES_IN_SET
         static constexpr size_t MAX_SPECIES = MAX_SPECIES_IN_SET;
 #else
@@ -17,7 +20,7 @@ namespace jgap {
         SpeciesSet(const SpeciesSet& other) = default;
 
         SpeciesSet(const Species& root) {
-            representation_.fill(-1);
+            representation_.fill(None);
             representation_[0] = root.id();
         }
 
@@ -43,6 +46,21 @@ namespace jgap {
 
         int16_t operator[](size_t index) const {
             return representation_[index];
+        }
+
+        std::string toString() const {
+            std::stringstream ss;
+            bool first = true;
+            for (size_t i = 0; i < MAX_SPECIES; i++) {
+                if (representation_[i] != None) {
+                    if (!first) {
+                        ss << ",";
+                    }
+                    ss << representation_[i];
+                    first = false;
+                }
+            }
+            return ss.str();
         }
 
     private:

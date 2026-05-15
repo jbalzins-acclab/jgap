@@ -1,12 +1,10 @@
 #ifndef JGAP_UTILS_HPP
 #define JGAP_UTILS_HPP
 
-#include "data/atomic/AtomicStructure.hpp"
-
 #include <string>
 #include <vector>
+#include <ranges>
 #include <Eigen/Dense>
-#include "../core/DataNode.hpp"
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
 
@@ -15,18 +13,13 @@
 #define OPTIONALLY_SET(val, node, key) if (node.contains(key)) { val = node[key]; }
 
 namespace jgap {
-    class Box;
+    class Atoms;
 
-    std::map<std::string, std::string> parseHeaderLine(const std::string &line);
-    bool getLine(std::ifstream &file, std::string &line);
+    std::vector<Atoms> readAtoms(const std::string& filename);
 
     std::string uniqueStamp();
 
     double factorial(size_t n);
-
-    std::vector<Box> readXyz(const std::string& file_name);
-    void writeXyz(const std::string& fileName, const std::vector<Box> &structures);
-    void writeXyz(std::ofstream& outputStream, const std::vector<Box> &structures);
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);
@@ -41,13 +34,14 @@ namespace jgap {
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
 
+    /*
     DataNode& requireFull(DataNode& n, const std::string& key, const char* file, int line, const char* function);
     const DataNode& requireFull(const DataNode& n, const std::string& key, const char* file,
                                 int line, const char* function);
 
     DataNode requireArrayFull(DataNode &n, const char* file, int line, const char* function);
     const DataNode& requireArrayFull(const DataNode& n, const char* file, int line, const char* function);
-
+    */
     template<typename Map, typename Key, typename Value>
     auto getOrDefault(const Map& m, const Key& k, const Value& default_value) -> decltype(m.at(k)) {
         auto it = m.find(k);
@@ -71,6 +65,11 @@ namespace jgap {
 
         oss << "]";
         return oss.str();
+    }
+
+    template <typename InputRange, typename Func>
+    auto mapVector(InputRange&& range, Func func) {
+        return range | std::views::transform(func) | std::ranges::to<std::vector>();
     }
 }
 

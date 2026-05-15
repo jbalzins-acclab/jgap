@@ -3,34 +3,57 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <ranges>
 #include <set>
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
+    Species NeighbourList::speciesOf(size_t atom_index) const {
+        for (const auto& [species, atom_indices] : atoms_by_species) {
+            for (size_t index : atom_indices) {
+                if (index == atom_index) {
+                    return species;
+                }
+            }
+        }
+        throw std::runtime_error("Atom index not found in any species.");
+    }
 
-    std::array<int, 3> NeighbourList::findMaxRep(const Box& structure, const double cutoff) {
-        const Vector3 side1 = structure.getLattice().a,
-                      side2 = structure.getLattice().b,
-                      side3 = structure.getLattice().c;
+    std::array<int, 3> NeighbourList::findMaxRep(const Atoms& structure, const Real cutoff) {
+        auto pbc = structure.getPbc();
+        auto lattice_opt = structure.getLattice();
+
+        if (!lattice_opt) {
+            if (pbc[0] || pbc[1] || pbc[2]) {
+                JGAP_LOG_AND_THROW("PBC is true but no lattice is provided.");
+            }
+            return {0, 0, 0};
+        }
+        const auto& lattice = *lattice_opt;
+
+        const Vector3 side1 = lattice.a,
+                      side2 = lattice.b,
+                      side3 = lattice.c;
 
         std::array maxRep = {
-            static_cast<int>(cutoff / side1.norm() + 2),
-            static_cast<int>(cutoff / side2.norm() + 2),
-            static_cast<int>(cutoff / side3.norm() + 2)
+            pbc[0] ? static_cast<int>(cutoff / side1.norm() + 2) : 0,
+            pbc[1] ? static_cast<int>(cutoff / side2.norm() + 2) : 0,
+            pbc[2] ? static_cast<int>(cutoff / side3.norm() + 2) : 0
         };
 
         // triclinic
         if (abs(side1.dot(side2)) > 1e-6 || abs(side1.dot(side3)) > 1e-6 || abs(side2.dot(side3)) > 1e-6) {
-            maxRep[0] = static_cast<int>(cutoff / side1.aproject(side2, side3)) + 2;
-            maxRep[1] = static_cast<int>(cutoff / side2.aproject(side1, side3)) + 2;
-            maxRep[2] = static_cast<int>(cutoff / side3.aproject(side2, side1)) + 2;
+            if (pbc[0]) maxRep[0] = static_cast<int>(cutoff / side1.aproject(side2, side3)) + 2;
+            if (pbc[1]) maxRep[1] = static_cast<int>(cutoff / side2.aproject(side1, side3)) + 2;
+            if (pbc[2]) maxRep[2] = static_cast<int>(cutoff / side3.aproject(side2, side1)) + 2;
         }
 
         return maxRep;
     }
 
-    NeighbourList::NeighbourList(const Box& box, double cutoff) : cutoff(cutoff) {
-        const auto maxRep = findMaxRep(box, cutoff);
+    NeighbourList::NeighbourList(const Atoms& box, Real cutoff) : cutoff(cutoff) {
+        const auto max_rep = findMaxRep(box, cutoff);
+        auto lattice_opt = box.getLattice();
 
         neighbours_per_atom.resize(box.nAtoms());
 
@@ -42,18 +65,24 @@ namespace jgap {
             auto& neighbours_i = neighbours_per_atom[i];
 
             for (size_t j = 0; j < box.nAtoms(); j++) {
-                for (int rep0 = -maxRep[0]; rep0 <= maxRep[0]; rep0++) {
-                    for (int rep1 = -maxRep[1]; rep1 <= maxRep[1]; rep1++) {
-                        for (int rep2 = -maxRep[2]; rep2 <= maxRep[2]; rep2++) {
+                for (int rep0 = -max_rep[0]; rep0 <= max_rep[0]; rep0++) {
+                    for (int rep1 = -max_rep[1]; rep1 <= max_rep[1]; rep1++) {
+                        for (int rep2 = -max_rep[2]; rep2 <= max_rep[2]; rep2++) {
 
-                            auto offset = box.getLattice().a * rep0
-                                        + box.getLattice().b * rep1
-                                        + box.getLattice().c * rep2;
+                            Vector3 offset = {0.0, 0.0, 0.0};
+                            if (lattice_opt) {
+                                const auto&[a, b, c] = *lattice_opt;
+                                offset = a * rep0
+                                       + b * rep1
+                                       + c * rep2;
+                            }
 
-                            auto pos_j_offset = box.getPositions()[j] + offset;
-                            auto separation_ij = Separation(box.getPositions()[i], pos_j_offset);
+                            if (i == j && rep0 == 0 && rep1 == 0 && rep2 == 0) continue;
 
-                            if (0 < separation_ij.magnitude && separation_ij.magnitude <= cutoff) {
+                            auto pos_j_plus_offset = box.getPositions()[j] + offset;
+                            auto separation_ij = Separation(box.getPositions()[i], pos_j_plus_offset);
+
+                            if (separation_ij.magnitude > 0 && separation_ij.magnitude <= cutoff) {
                                 neighbours_i[box.getSpecies()[j]].emplace_back(j, separation_ij);
                             }
                         }
@@ -61,8 +90,8 @@ namespace jgap {
                 }
             }
             // Sort neighbours by distance
-            for (auto& pair : neighbours_i) {
-                std::sort(pair.second.begin(), pair.second.end(),
+            for (auto &val: neighbours_i | std::views::values) {
+                std::sort(val.begin(), val.end(),
                     [](const NeighbourData& a, const NeighbourData& b) {
                         return a.separation.magnitude < b.separation.magnitude;
                 });
@@ -70,7 +99,7 @@ namespace jgap {
         }
     }
 
-    std::vector<NeighbourList> NeighbourList::findAllNeighbours(const std::vector<Box>& boxes, double cutoff) {
+    std::vector<NeighbourList> NeighbourList::form(const std::vector<Atoms>& boxes, Real cutoff) {
         std::vector<NeighbourList> result(boxes.size());
 
         tbb::parallel_for(static_cast<size_t>(0), boxes.size(), [&](size_t i) {
@@ -83,7 +112,7 @@ namespace jgap {
     template<size_t N>
     requires(N > 1)
     std::vector<Separations<N>> NeighbourList::findAllSeparations(const SpeciesSet &species_set,
-                                                                  std::optional<double> max_distance) const {
+                                                                  std::optional<Real> max_distance) const {
 
         if constexpr (N > 3) {
             JGAP_LOG_AND_THROW("Inter-separations finding for N > 3 is not implemented");
@@ -106,7 +135,7 @@ namespace jgap {
             if (!required_species[i].has_value()) return {};
         }
 
-        const double effective_cutoff = max_distance.value_or(cutoff);
+        const Real effective_cutoff = max_distance.value_or(cutoff);
 
         if constexpr (N == 2) {
 
@@ -202,9 +231,9 @@ namespace jgap {
             JGAP_LOG_AND_THROW("SpeciesSet generation for N > 3 is not implemented");
         }
 
-        std::vector<Species> species_present;
-        for (const auto& pair : atoms_by_species) {
-            species_present.push_back(pair.first);
+        std::set<Species> species_present;
+        for (const auto &species: atoms_by_species | std::views::keys) {
+            species_present.insert(species);
         }
 
         std::set<SpeciesSet> result_set;
@@ -233,13 +262,13 @@ namespace jgap {
             }
         }
 
-        return std::vector(result_set.begin(), result_set.end());
+        return {result_set.begin(), result_set.end()};
     }
 
     template std::vector<Separations<2>> NeighbourList::findAllSeparations(const SpeciesSet& species_set,
-                                                                           std::optional<double> max_distance) const;
+                                                                           std::optional<Real> max_distance) const;
     template std::vector<Separations<3>> NeighbourList::findAllSeparations(const SpeciesSet& species_set,
-                                                                           std::optional<double> max_distance) const;
+                                                                           std::optional<Real> max_distance) const;
 
     template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<1>() const;
     template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<2>() const;

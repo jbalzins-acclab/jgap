@@ -3,16 +3,17 @@
 
 #include <vector>
 
-#include "../DataNode.hpp"
-
 namespace jgap {
 
-    template<size_t N_DIMENSIONS, size_t N_ATOMS>
+    // concept instead?
+
+    template<size_t Dim>
     class Sparsifier {
     public:
+        using Ptr = std::shared_ptr<Sparsifier>;
+
         virtual ~Sparsifier() = default;
-        virtual std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> selectSparsePoints(
-            const std::vector<Descriptor<N_DIMENSIONS, N_ATOMS>> &descriptors) = 0;
+        virtual std::vector<Descriptor<Dim>> selectSparsePoints(const std::vector<Descriptor<Dim>> &descriptors) = 0;
     };
 }
 
