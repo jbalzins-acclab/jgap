@@ -2,6 +2,7 @@
 #define JGAP_CUTOFFFUNCTION_HPP
 
 #include <string>
+#include <tuple>
 #include "core/Real.hpp"
 
 namespace jgap {
@@ -11,7 +12,7 @@ namespace jgap {
         virtual ~CutoffFunction() = default;
 
         virtual Real evaluate(Real r) const = 0;
-        virtual Real differentiate(Real r) const = 0;
+        virtual std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const = 0;
 
         virtual Real getCutoff() const = 0;
     };

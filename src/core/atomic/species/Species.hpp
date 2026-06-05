@@ -3,6 +3,7 @@
 
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -11,67 +12,72 @@
 #include "../../Real.hpp"
 #include "io/log/CurrentLogger.hpp"
 
-#define NUMBER_OF_ELEMENTS 118
 
 namespace jgap {
     class Species {
     public:
-        static std::map<std::string, int16_t> SYMBOL_TO_ATOMIC_NUMBER;
-        static std::array<std::string, NUMBER_OF_ELEMENTS+1> ATOMIC_NUMBER_TO_SYMBOL;
-        static std::array<Real, NUMBER_OF_ELEMENTS+1> MASSES;
+        static constexpr size_t NumberOfElements = 118;
+
+        static std::map<std::string, int16_t> SymbolToAtomicNumber;
+        static std::array<std::string, NumberOfElements+1> AtomicNumberToSymbol;
+        static std::array<Real, NumberOfElements+1> Masses;
 
         Species(const Species& other) = default;
 
         Species(const std::string &symbol) {
-            std::lock_guard lock(mtx_);
+            std::lock_guard lock(Mtx);
 
-            if (symbol_ids_.contains(symbol)) {
-                id_ = symbol_ids_[symbol];
+            if (SymbolIds.contains(symbol)) {
+                id = SymbolIds[symbol];
             } else {
-                id_ = static_cast<int16_t>(symbol_ids_.size());
-                symbol_ids_[symbol] = id_;
-                id_symbols_[id_] = symbol;
+                id = static_cast<int16_t>(SymbolIds.size());
+                SymbolIds[symbol] = id;
+                IdSymbols[id] = symbol;
 
-                JGAP_LOG_DEBUG("Internally mapped {} with id = {}", symbol, id_);
+                JGAP_LOG_DEBUG("Internally mapped {} with id = {}", symbol, id);
             }
+        }
+
+        Species(int16_t id) : id(id) {
+            assert(IdSymbols.contains(id) && "Unknown species ID");
         }
 
         std::string symbol() const {
-            return id_symbols_.at(id_);
+            return IdSymbols.at(id);
         }
 
-        int16_t id() const {
-            return id_;
+        int16_t getId() const {
+            return id;
         }
 
         std::optional<size_t> atomicNumber() const {
-            if (!SYMBOL_TO_ATOMIC_NUMBER.contains(symbol())) {
+            if (!SymbolToAtomicNumber.contains(symbol())) {
                 return std::nullopt;
             }
-            return SYMBOL_TO_ATOMIC_NUMBER.at(symbol());
+            return SymbolToAtomicNumber.at(symbol());
         }
 
         std::optional<Real> mass() const {
             return atomicNumber().transform(
-                [](const size_t Z) -> double { return MASSES[Z]; }
+                [](const size_t Z) -> double { return Masses[Z]; }
                 );
         }
 
         bool operator<(const Species& other) const {
-            return id_ < other.id_;
+            return id < other.id;
         }
 
         bool operator==(const Species& other) const {
-            return id_ == other.id_;
+            return id == other.id;
         }
 
     private:
-        inline static std::mutex mtx_{};
-        inline static std::map<std::string, int16_t> symbol_ids_ = {};
-        inline static std::map<int16_t, std::string> id_symbols_ = {};
+        inline static std::mutex Mtx{};
+        inline static std::map<std::string, int16_t> SymbolIds = {};
+        inline static std::map<int16_t, std::string> IdSymbols = {};
         // TODO: add properties per ID ??
 
-        int16_t id_;
+        int16_t id;
     };
 }
 

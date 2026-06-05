@@ -14,8 +14,8 @@ namespace jgap {
         Virials virials;
         std::vector<Vector3> forces;
 
-        AtomicQuantity() : value(0.0), virials(), forces() {}
-        AtomicQuantity(size_t n_atoms) : value(0.0), virials(), forces(n_atoms) {}
+        AtomicQuantity() : value(Real{}), virials({}), forces({}) {}
+        AtomicQuantity(size_t n_atoms) : value(Real{}), virials({}), forces(n_atoms, Vector3{}) {}
 
         bool empty() const {
             return value == 0.0 && forces.empty();

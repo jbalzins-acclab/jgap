@@ -6,7 +6,7 @@
 #include "../../Real.hpp"
 
 namespace jgap {
-    std::map<std::string, int16_t> Species::SYMBOL_TO_ATOMIC_NUMBER {
+    std::map<std::string, int16_t> Species::SymbolToAtomicNumber {
             {"H", 1},   {"He", 2},  {"Li", 3},  {"Be", 4},  {"B", 5},   {"C", 6},
             {"N", 7},   {"O", 8},   {"F", 9},   {"Ne", 10}, {"Na", 11}, {"Mg", 12},
             {"Al", 13}, {"Si", 14}, {"P", 15},  {"S", 16},  {"Cl", 17}, {"Ar", 18},
@@ -29,7 +29,7 @@ namespace jgap {
             {"Mc", 115},{"Lv", 116},{"Ts", 117},{"Og", 118}
     };
 
-    std::array<std::string, NUMBER_OF_ELEMENTS+1> Species::ATOMIC_NUMBER_TO_SYMBOL = {
+    std::array<std::string, Species::NumberOfElements+1> Species::AtomicNumberToSymbol = {
         "",
         "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
         "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
@@ -46,7 +46,7 @@ namespace jgap {
     };
 
     // From ASE: ase.data.atomic_masses
-    std::array<Real, NUMBER_OF_ELEMENTS+1> Species::MASSES = {
+    std::array<Real, Species::NumberOfElements+1> Species::Masses = {
         0.000,
         1.008     ,   4.002602  ,   6.94      ,
         9.0121831 ,  10.81      ,  12.011     ,  14.007     ,

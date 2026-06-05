@@ -8,7 +8,7 @@ namespace jgap {
     class RegularizationRules {
     public:
         virtual ~RegularizationRules() = default;
-        virtual void fillSigmas(Regularization& sigmas, const Atoms& atoms, const NeighbourList& neighbour_list) = 0;
+        virtual void fillSigmas(Regularization& sigmas, const Atoms& atoms) const = 0;
 
         /*
         static void fillSigmas(Atoms& atoms, NeighbourList ne,

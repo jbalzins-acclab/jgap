@@ -27,7 +27,7 @@ namespace jgap {
               max_point(max_point) {
         }
 
-        std::vector<Descriptor<Dim>> selectSparsePoints(const std::vector<Descriptor<Dim>> &descriptors) override;
+        std::vector<Descriptor<Dim>> selectSparsePoints(const std::vector<Descriptor<Dim>> &descriptors) const override;
 
     private:
         size_t seed;
@@ -39,7 +39,7 @@ namespace jgap {
 
     template<size_t Dim>
     std::vector<Descriptor<Dim>> HistogramUniformSparsifier<Dim>::selectSparsePoints(
-        const std::vector<Descriptor<Dim>> &descriptors) {
+        const std::vector<Descriptor<Dim>> &descriptors) const {
 
         if (descriptors.empty()) {
             return {};

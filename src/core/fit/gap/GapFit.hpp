@@ -16,9 +16,9 @@ namespace jgap {
 
         void fit(GapPotential& to_be_fit,
                  const std::vector<Atoms>& training_data,
+                 const RegularizationRules& regularization_rules,
                  const std::vector<NeighbourList>& neighbour_lists = {},
-                 const std::vector<Regularization>& sigmas = {},
-                 const std::shared_ptr<RegularizationRules> &regularization_rules = nullptr);
+                 const std::vector<Regularization>& sigmas = {});
 
     protected:
         struct EnergyData {
@@ -28,9 +28,10 @@ namespace jgap {
         };
 
         virtual std::vector<Real> mainFit(
-                 std::vector<IGapComponent::Ptr>& gap_components,
-                 std::vector<NeighbourList>& neighbour_lists,
-                 std::vector<EnergyData> energies_without_external,
+                 std::vector<GapComponent::Ptr>& gap_components,
+                 const std::vector<Atoms> &training_data,
+                 //std::vector<NeighbourList>& neighbour_lists,
+                 std::vector<EnergyData>& energies_without_external,
                  std::vector<Regularization>& sigmas_inverse
                  ) = 0;
     };

@@ -6,7 +6,7 @@
 #include <optional>
 #include <numeric>
 #include <stdexcept>
-#include "../geometry/Separations.hpp"
+#include "../geometry/Cluster.hpp"
 #include "../geometry/Vector3.hpp"
 
 namespace jgap {

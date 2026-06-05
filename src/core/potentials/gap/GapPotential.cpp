@@ -1,21 +1,13 @@
 #include "GapPotential.hpp"
 
 namespace jgap {
-    GapPotential::GapPotential(const std::vector<IGapComponent::Ptr> &components,
-        const std::shared_ptr<Potential> &external, const std::vector<Real> &coefficients): optional_external_potential(external), components(components), coefficients(coefficients) {
+    GapPotential::GapPotential(std::vector<GapComponent::Ptr> components,
+                               const std::shared_ptr<Potential> &external,
+                               const std::vector<Real> &coefficients)
+        : optional_external_potential(external), components(std::move(components)) {
+
         if (coefficients.empty()) return;
-
-        size_t n = std::transform_reduce(
-            components.begin(),
-            components.end(),
-            size_t{0},
-            std::plus(),
-            [](const auto& ptr) { return ptr->nSparsePoints(); }
-        );
-
-        if (n != coefficients.size()) {
-            JGAP_LOG_AND_THROW("{} sparse points, but {} coefficients", n, coefficients.size());
-        }
+        setCoefficients(coefficients);
     }
 
     void GapPotential::setCoefficients(const std::vector<Real> &new_coefficients) {
@@ -35,23 +27,23 @@ namespace jgap {
             JGAP_LOG_AND_THROW("{} sparse points, but {} coefficients", n, new_coefficients.size());
         }
 
-        coefficients = new_coefficients;
+        auto iter = new_coefficients.begin();
+        for (auto& component: components) {
+            component->setCoefficients(iter);
+        }
     }
 
-    AtomicQuantity GapPotential::energy(const Atoms &atoms) {
+    AtomicQuantity GapPotential::calculate(const Atoms &atoms) {
         AtomicQuantity result(atoms.nAtoms());
 
         const NeighbourList neighbour_list(atoms, getCutoffs().maxOverall());
 
         if (optional_external_potential != nullptr) {
-            result += optional_external_potential->energy(atoms);
+            result += optional_external_potential->calculate(atoms);
         }
 
-        auto coefficients_iterator = coefficients.begin();
         for (const auto& component: components) {
-            for (auto& covariance: component->covariate(neighbour_list)) {
-                result += covariance * (*coefficients_iterator++);
-            }
+            result += component->energy(neighbour_list);
         }
 
         return result;

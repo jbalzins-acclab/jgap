@@ -15,7 +15,7 @@ namespace jgap {
                                   Real liquid_multiplier = 5.0,
                                   Real short_range_multiplier = 5.0);
 
-        void fillSigmas(Regularization& sigmas, const Atoms& atoms, const NeighbourList& neighbour_list) override;
+        void fillSigmas(Regularization& sigmas, const Atoms& atoms) const override;
 
     private:
         Real default_energy_per_atom;

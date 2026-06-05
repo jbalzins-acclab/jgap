@@ -27,8 +27,7 @@ namespace jgap {
     }
 
     void SimpleRegularizationRules::fillSigmas(Regularization &sigmas,
-                                               const Atoms &atoms,
-                                               const NeighbourList &neighbour_list) {
+                                               const Atoms &atoms) const {
 
         Real multiplier = 1.0;
         const std::string ct = atoms.getConfigType().value_or("default");

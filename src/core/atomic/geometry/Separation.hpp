@@ -28,6 +28,19 @@ namespace jgap {
             };
         }
         Vector3 vec() const { return direction * magnitude; }
+
+        /*
+        Virials virials() const {
+            return Virials{
+                direction.x * direction.x,
+                direction.x * direction.y,
+                direction.x * direction.z,
+                direction.y * direction.y,
+                direction.y * direction.z,
+                direction.z * direction.z
+            } * magnitude;
+        }
+        */
     };
 }
 

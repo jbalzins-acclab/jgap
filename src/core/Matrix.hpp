@@ -1,5 +1,5 @@
-#ifndef MATRIXBLOCK_HPP
-#define MATRIXBLOCK_HPP
+#ifndef JGAP_MATRIXBLOCK_HPP
+#define JGAP_MATRIXBLOCK_HPP
 
 #include <vector>
 
@@ -11,9 +11,9 @@ namespace jgap {
     class Matrix {
     public:
         Matrix(const size_t rows, const size_t columns)
-            : _rows(rows), _columns(columns) {
+            : rows(rows), columns(columns) {
             try {
-                _data = std::vector<Real>(rows * columns);
+                data = std::vector(rows * columns, Real{});
             } catch (const std::bad_alloc&) {
                 JGAP_LOG_AND_THROW("Matrix memory allocation failed");
             }
@@ -21,19 +21,19 @@ namespace jgap {
         ~Matrix() = default;
 
         Real& operator()(const size_t i, const size_t j) {
-            return _data[i * _columns + j];
+            return data[i * columns + j];
         }
 
-        std::vector<Real>& rawData() {return _data;}
+        std::vector<Real>& rawData() { return data; }
 
-        size_t rows() const {return _rows;}
-        size_t columns() const {return _columns;}
-        std::pair<size_t, size_t> blockSize() const {return{_rows, _columns};}
+        size_t nRows() const { return rows; }
+        size_t nColumns() const { return columns; }
+        std::pair<size_t, size_t> blockSize() const { return{rows, columns}; }
 
     private:
-        size_t _rows;
-        size_t _columns;
-        std::vector<Real> _data;
+        size_t rows;
+        size_t columns;
+        std::vector<Real> data;
     };
 }
 

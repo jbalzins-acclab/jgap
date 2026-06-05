@@ -17,7 +17,7 @@ namespace jgap {
                                          const std::map<std::string, Real> &contains
         );
 
-        void fillSigmas(Regularization &sigmas, const Atoms &atoms, const NeighbourList &neighbour_list) override;
+        void fillSigmas(Regularization &sigmas, const Atoms &atoms) const override;
 
     private:
         Real default_energy_per_atom;

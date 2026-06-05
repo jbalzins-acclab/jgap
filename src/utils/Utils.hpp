@@ -4,7 +4,10 @@
 #include <string>
 #include <vector>
 #include <ranges>
+#include <cmath>
 #include <Eigen/Dense>
+
+#include "core/Real.hpp"
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
 
@@ -14,6 +17,18 @@
 
 namespace jgap {
     class Atoms;
+
+    // Portable sincos implementation
+    #if defined(__GNUC__) || defined(__clang__)
+        inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
+            __builtin_sincos(angle, sin_val, cos_val);
+        }
+    #else
+        inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
+            *sin_val = std::sin(angle);
+            *cos_val = std::cos(angle);
+        }
+    #endif
 
     std::vector<Atoms> readAtoms(const std::string& filename);
 
