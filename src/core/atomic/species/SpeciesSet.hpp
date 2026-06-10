@@ -34,6 +34,12 @@ namespace jgap {
         template<typename... Args>
         requires(sizeof...(Args) == NSpecies)
         explicit SpeciesSet(Args&&... args) : nodes{std::forward<Args>(args)...} {
+            if constexpr (NSpecies == 2) {
+                if (nodes[1] < nodes[0]) {
+                    std::swap(nodes[1], nodes[0]);
+                }
+                return;
+            }
             std::sort(nodes.begin(), nodes.end());
         }
 
@@ -73,6 +79,16 @@ namespace jgap {
         requires(sizeof...(Args) == NSpecies - 1)
         SpeciesSet(const Species& root, Args&&... args)
             : root(root), nodes{std::forward<Args>(args)...} {
+
+            if constexpr (NSpecies == 2) {
+                return;
+            }
+            if constexpr (NSpecies == 3) {
+                if (nodes[1] < nodes[0]) {
+                    std::swap(nodes[1], nodes[0]);
+                }
+                return;
+            }
             std::sort(nodes.begin(), nodes.end());
         }
 

@@ -272,7 +272,7 @@ namespace jgap {
         fin.close();
 
         return std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
-            species_set, std::move(trans), std::move(kernel), sparse_points, coeffs
+            species_set, std::move(trans), *kernel.release(), sparse_points, coeffs
         );
     }
 
@@ -291,7 +291,7 @@ namespace jgap {
 
         Species species2 = Species::fromAtomicNumber(std::stoi(param_map["Z2"]));
 
-        SpeciesSet<3, HasCentralAtom> speciesSet(root_species, species1, species2);
+        SpeciesSet<3, HasCentralAtom> species_set(root_species, species1, species2);
 
         auto trans = std::make_unique<Angle3bTransformation>(
             std::make_unique<CosCutoff>(mainData.cutoff, mainData.cutoff - r_min)
@@ -322,7 +322,7 @@ namespace jgap {
         fin.close();
 
         return std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom>>(
-            speciesSet, std::move(trans), std::move(kernel), sparse_points, coeffs
+            species_set, std::move(trans), *kernel.release(), sparse_points, coeffs
         );
     }
 

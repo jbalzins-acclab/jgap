@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
     return 0;*/
     JGAP_LOG_INFO("Start");
     auto training_data = readAtoms("/Users/jegorsbalzins/jgap/resources/xyz-samples/db_Fe.xyz");
+    //auto training_data = readAtoms("/Users/jegorsbalzins/jgap/resources/xyz-samples/feni-train.xyz");
 
     // ====================================================================================
     // ManyBodyGapComponent with FSGenPairFunction
@@ -143,17 +144,19 @@ int main(int argc, char** argv) {
     }
     auto sp2 = sparsifier2.selectSparsePoints(descs2);
 
-    auto component3 = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom>>(
+    auto component3 = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>>(
             SpeciesSet<3, HasCentralAtom>("Fe", "Fe", "Fe"),
             std::make_unique<Angle3bTransformation>(std::move(trans3)),
-            std::make_unique<SquaredExpKernel<3, 1>>(kernel3),
+            //std::make_unique<SquaredExpKernel<3, 1>>(kernel3),
+            kernel3,
             sp3
         );
 
-    auto component2 = std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
+    auto component2 = std::make_unique<NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>>(
             SpeciesSet<2, Symmetric>("Fe", "Fe"),
             std::make_unique<TwoBodyTransformation>(std::move(trans2)),
-            std::make_unique<SquaredExpKernel<1, 1>>(kernel2),
+            //std::make_unique<SquaredExpKernel<1, 1>>(kernel2),
+            kernel2,
             sp2
         );
 
@@ -162,8 +165,8 @@ int main(int argc, char** argv) {
     // ====================================================================================
     std::vector<GapComponent::Ptr> components;
     // Add all components
-    //components.push_back(std::move(component_eam));
-    //components.push_back(std::move(component2));
+    components.push_back(std::move(component_eam));
+    components.push_back(std::move(component2));
     components.push_back(std::move(component3));
 
     auto potential = GapPotential(std::move(components));

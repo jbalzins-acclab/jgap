@@ -198,22 +198,21 @@ namespace jgap {
 
             for (const size_t i: atoms_by_species.at(central_species)) {
 
-                const auto sep_list1 = neighbours_per_atom[i].find(species1);
-                if (sep_list1 == neighbours_per_atom[i].end()) continue;
+                const auto sep_list1_it = neighbours_per_atom[i].find(species1);
+                if (sep_list1_it == neighbours_per_atom[i].end()) continue;
 
-                const auto sep_list2 = neighbours_per_atom[i].find(species2);
-                if (sep_list2 == neighbours_per_atom[i].end()) continue;
+                const auto sep_list2_it = neighbours_per_atom[i].find(species2);
+                if (sep_list2_it == neighbours_per_atom[i].end()) continue;
 
-                // Note: unlike (N == 2 && !HaveCentral), here performance is quite critical,
-                // so duplicates are optimized out;
-                // this should be taken into consideration later on.
+                const auto& sep_list1 = sep_list1_it->second;
+                const auto& sep_list2 = sep_list2_it->second;
 
-                for (auto it1 = sep_list1->second.begin(); it1 != sep_list1->second.end(); ++it1) {
-                    auto it2_start = sep_list2->second.begin();
+                for (auto it1 = sep_list1.begin(); it1 != sep_list1.end(); ++it1) {
+                    auto it2_start = sep_list2.begin();
                     if (species1 == species2) {
-                        it2_start = it1 + 1;
+                        it2_start = std::next(it1);
                     }
-                    for (auto it2 = it2_start; it2 != sep_list2->second.end(); ++it2) {
+                    for (auto it2 = it2_start; it2 != sep_list2.end(); ++it2) {
                         Cluster<3> seps;
                         seps.atom_indexes[0] = i;
                         seps.atom_indexes[1] = it1->atom_index;
@@ -231,8 +230,6 @@ namespace jgap {
 
             return result;
         }
-        // TODO: N == 3 && !HaveCentral
-        // I'm not sure what problem periodicity might cause in such case.
 
         JGAP_LOG_AND_THROW("Should be unreachable");
     }
@@ -241,9 +238,9 @@ namespace jgap {
     requires (N > 1 && N <= 3)
     std::vector<SpeciesSet<N, ClusterType>> NeighbourList::getSpeciesSets() const {
 
-        std::set<Species> species_present;
+        std::vector<Species> species_present;
         for (const auto &species: atoms_by_species | std::views::keys) {
-            species_present.insert(species);
+            species_present.push_back(species);
         }
 
         std::set<SpeciesSet<N, ClusterType>> result_set;
@@ -251,23 +248,20 @@ namespace jgap {
         if constexpr (N == 2 && ClusterType == HasCentralAtom) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
-                    SpeciesSet<2, HasCentralAtom> ss(s0, s1);
-                    result_set.insert(ss);
+                    result_set.emplace(s0, s1);
                 }
             }
         } else if constexpr (N == 2 && ClusterType == Symmetric) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
-                    SpeciesSet<2, Symmetric> ss(s0, s1);
-                    result_set.insert(ss);
+                    result_set.emplace(s0, s1);
                 }
             }
         } else if constexpr (N == 3 && ClusterType == HasCentralAtom) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
                     for (const auto& s2 : species_present) {
-                        SpeciesSet<3, HasCentralAtom> ss(s0, s1, s2);
-                        result_set.insert(ss);
+                        result_set.emplace(s0, s1, s2);
                     }
                 }
             }
@@ -275,8 +269,7 @@ namespace jgap {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
                     for (const auto& s2 : species_present) {
-                        SpeciesSet<3, Symmetric> ss(s0, s1, s2);
-                        result_set.insert(ss);
+                        result_set.emplace(s0, s1, s2);
                     }
                 }
             }
@@ -292,13 +285,12 @@ namespace jgap {
             JGAP_LOG_AND_THROW("SpeciesSet generation for N > 3 is not implemented");
         }
 
-        std::set<Species> species_present;
+        std::vector<Species> species_present;
         for (const auto &species: atoms_by_species | std::views::keys) {
-            species_present.insert(species);
+            species_present.push_back(species);
         }
 
-        // If the central atom species is not present in the atoms, return an empty vector
-        if (!species_present.contains(central_atom_species)) {
+        if (std::find(species_present.begin(), species_present.end(), central_atom_species) == species_present.end()) {
             return {};
         }
 
@@ -306,14 +298,12 @@ namespace jgap {
 
         if constexpr (N == 2) {
             for (const auto& s1 : species_present) {
-                SpeciesSet<2, HasCentralAtom> ss(central_atom_species, s1);
-                result_set.insert(ss);
+                result_set.emplace(central_atom_species, s1);
             }
         } else if constexpr (N == 3) {
             for (const auto& s1 : species_present) {
                 for (const auto& s2 : species_present) {
-                    SpeciesSet<3, HasCentralAtom> ss(central_atom_species, s1, s2);
-                    result_set.insert(ss);
+                    result_set.emplace(central_atom_species, s1, s2);
                 }
             }
         }

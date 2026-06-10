@@ -9,20 +9,21 @@
 
 namespace jgap {
 
-    template<size_t Dim, size_t ClusterSize, ClusterTypes ClusterType>
+    template<size_t Dim, size_t ClusterSize, ClusterTypes ClusterType, typename TKernel = SquaredExpKernel<Dim-1, 1>>
     class NBodyGapComponent : public GapComponent {
     public:
         static constexpr size_t Dependencies = Cluster<ClusterSize>::NSeparations;
 
         NBodyGapComponent(const SpeciesSet<ClusterSize, ClusterType> species,
                           std::unique_ptr<ClusterTransformation<Dim, ClusterSize> > transformation,
-                          std::unique_ptr<Kernel<Dim> > kernel,
+                          //std::unique_ptr<Kernel<Dim> > kernel,
+                          TKernel kernel,
                           std::vector<Descriptor<Dim> > sparse_points,
                           const std::vector<Real> &optional_coeffs = {})
             : species(species),
               symmetry_factor(transformation->symmetryFactor()),
               transformation(std::move(transformation)),
-              kernel(std::move(kernel)),
+              kernel(kernel),
               sparse_points(std::move(sparse_points)) {
 
             if (!optional_coeffs.empty()) {
@@ -43,7 +44,7 @@ namespace jgap {
                 auto descriptor = transformation->evaluateAndDifferentiate(cluster);
 
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
-                    auto [K, gradK_wrt_q] = kernel->valueAndGradient(
+                    auto [K, gradK_wrt_q] = kernel.valueAndGradient(
                         sparse_points[sparse_idx].value, descriptor.value
                     );
 
@@ -81,7 +82,7 @@ namespace jgap {
             Matrix result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
-                    result(i, j) = kernel->value(sparse_points[i].value, sparse_points[j].value);
+                    result(i, j) = kernel.value(sparse_points[i].value, sparse_points[j].value);
                     result(j, i) = result(i, j);
                 }
             }
@@ -100,7 +101,8 @@ namespace jgap {
         SpeciesSet<ClusterSize, ClusterType> species;
         Real symmetry_factor;
         std::unique_ptr<ClusterTransformation<Dim, ClusterSize>> transformation;
-        std::unique_ptr<Kernel<Dim>> kernel;
+        //std::unique_ptr<Kernel<Dim>> kernel;
+        TKernel kernel;
         std::vector<Descriptor<Dim>> sparse_points;
     };
 }
