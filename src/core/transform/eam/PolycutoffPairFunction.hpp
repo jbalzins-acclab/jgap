@@ -24,9 +24,10 @@ namespace jgap {
             return {{prefactor * (1.0 - chi * chi * chi * (6.0 * chi * chi - 15.0 * chi + 10.0))}};
         }
 
-        DescriptorAndDerivatives<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
+        NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
             Real distance = pair.between(0, 1).magnitude;
-            if (distance >= cutoff || distance <= r_min) return {{{0.0}}, {}};
+            if (distance >= cutoff) return {{{0.0}}, {}};
+            if (distance <= r_min) return {{{prefactor}}, {}};
 
             const Real chi = (distance - r_min) * interval_inverse;
             const Real dchi_dr = interval_inverse;

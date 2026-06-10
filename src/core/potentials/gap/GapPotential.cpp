@@ -2,9 +2,9 @@
 
 namespace jgap {
     GapPotential::GapPotential(std::vector<GapComponent::Ptr> components,
-                               const std::shared_ptr<Potential> &external,
+                               std::unique_ptr<Potential> external,
                                const std::vector<Real> &coefficients)
-        : optional_external_potential(external), components(std::move(components)) {
+        : optional_external_potential(std::move(external)), components(std::move(components)) {
 
         if (coefficients.empty()) return;
         setCoefficients(coefficients);
@@ -33,13 +33,13 @@ namespace jgap {
         }
     }
 
-    AtomicQuantity GapPotential::calculate(const Atoms &atoms) {
+    AtomicQuantity GapPotential::calculateEnergy(const Atoms &atoms) {
         AtomicQuantity result(atoms.nAtoms());
 
         const NeighbourList neighbour_list(atoms, getCutoffs().maxOverall());
 
         if (optional_external_potential != nullptr) {
-            result += optional_external_potential->calculate(atoms);
+            result += optional_external_potential->calculateEnergy(atoms);
         }
 
         for (const auto& component: components) {
@@ -61,6 +61,10 @@ namespace jgap {
         }
 
         return result;
+    }
+
+    const std::vector<GapComponent::Ptr>& GapPotential::getComponents() const {
+        return components;
     }
 
     /*

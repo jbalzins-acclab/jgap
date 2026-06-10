@@ -53,7 +53,7 @@ namespace jgap {
 
         sigmas.forces = std::vector<Vector3>(atoms.nAtoms());
         for (int i = 0; i < atoms.nAtoms(); i++) {
-            (*sigmas.forces)[i] = default_force * multiplier * pow(atoms.nAtoms(), 0.5);
+            (*sigmas.forces)[i] = default_force * multiplier;
         }
     }
 }

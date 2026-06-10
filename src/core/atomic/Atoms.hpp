@@ -7,6 +7,7 @@
 #include <string>
 #include <variant>
 #include <array>
+#include <cmath>
 
 #include "geometry/Vector3.hpp"
 #include "species/Species.hpp"
@@ -18,10 +19,29 @@ namespace jgap {
 
     using AtomValue = std::variant<int, Real, Vector3, std::string, Species>;
 
+    struct AtomsPropertyNames {
+        std::string positions = "pos";
+        std::string species = "species";
+        std::string forces = "force";
+        std::string virials = "virial";
+        std::string energy = "energy";
+        std::string lattice = "Lattice";
+        std::string pbc = "pbc";
+        std::string config_type = "config_type";
+    };
+
     class Atoms : public XYZData {
     public:
-        Atoms(const std::vector<Vector3>& pos, const std::vector<Species>& spec, const std::optional<Lattice>& lat = std::nullopt, std::array<bool, 3> pbc = {false, false, false});
-        explicit Atoms(const XYZData& data);
+        Atoms(const std::vector<Vector3> &pos,
+              const std::vector<Species> &spec,
+              const std::optional<Lattice> &lat = std::nullopt,
+              std::array<bool, 3> pbc = {false, false, false},
+              const AtomsPropertyNames &names = {});
+
+        explicit Atoms(const XYZData& data, const AtomsPropertyNames& names = {});
+
+        Atoms(const Atoms& other);
+        Atoms& operator=(const Atoms& other);
 
         std::optional<Lattice> getLattice() const;
         void setLattice(const std::optional<Lattice>& lat);
@@ -29,10 +49,10 @@ namespace jgap {
         std::array<bool, 3> getPbc() const;
         void setPbc(const std::array<bool, 3>& pbc);
 
-        const std::vector<Vector3>& getPositions() const { return positions; }
-        const std::vector<Species>& getSpecies() const { return species; }
+        const std::vector<Vector3>& getPositions() const { return *positions_ptr; }
+        const std::vector<Species>& getSpecies() const { return *species_ptr; }
 
-        size_t nAtoms() const { return positions.size(); }
+        size_t nAtoms() const { return positions_ptr->size(); }
 
         void addAtom(const std::map<std::string, AtomValue>& atom_data);
         void removeAtom(size_t index);
@@ -50,11 +70,18 @@ namespace jgap {
         std::optional<std::string> getConfigType() const;
         void setConfigType(const std::string& config_type);
 
+        const AtomsPropertyNames& getMainPropertyNames() const { return main_property_names; }
+
     private:
-        std::vector<Vector3>& positions;
-        std::vector<Species>& species;
+        AtomsPropertyNames main_property_names;
+
+        // Use pointers internally to allow copy assignment,
+        // avoiding map lookups while maintaining safety.
+        std::vector<Vector3>* positions_ptr;
+        std::vector<Species>* species_ptr;
 
         void validateSizes() const;
+        void wrapPositions();
     };
 }
 

@@ -39,17 +39,18 @@ namespace jgap {
         NeighbourList() = default;
         NeighbourList(const Atoms& box, Real cutoff);
 
-        template<size_t AtomsConnected>
-        requires(AtomsConnected > 1)
-        std::vector<Cluster<AtomsConnected>> findAllClusters(const SpeciesSet& species_set) const;
+        template<size_t N, ClusterTypes ClusterType>
+        requires(N > 1 && N <= 3)
+        std::vector<Cluster<N>> findAllClusters(const SpeciesSet<N, ClusterType>& species_set)
+            const;
 
-        template<size_t ClusterSize>
-        requires(ClusterSize > 0)
-        std::vector<SpeciesSet> getSpeciesSets() const;
+        template<size_t N, ClusterTypes ClusterType>
+        requires(N > 1 && N <= 3)
+        std::vector<SpeciesSet<N, ClusterType>> getSpeciesSets() const;
 
-        template<size_t ClusterSize>
-        requires(ClusterSize > 0)
-        std::vector<SpeciesSet> getSpeciesSets(Species central_atom_species) const;
+        template<size_t N>
+        requires(N > 1 && N <= 3)
+        std::vector<SpeciesSet<N, HasCentralAtom>> getSpeciesSets(Species central_atom_species) const;
 
         size_t nAtoms() const {
             return neighbours_per_atom.size();

@@ -15,17 +15,18 @@ namespace jgap {
     QRGapFit::QRGapFit(const Real jitter) : jitter(jitter) {
     }
 
-    std::vector<Real> QRGapFit::mainFit(std::vector<GapComponent::Ptr>& gap_components,
-                     const std::vector<Atoms> &training_data,
-                                        //std::vector<NeighbourList>& neighbour_lists,
-                                        std::vector<EnergyData>& energies_without_external,
-                                        std::vector<Regularization>& sigmas_inverse) {
+    std::vector<Real> QRGapFit::mainFit(std::vector<GapComponent::Ptr> &gap_components,
+                                        const std::vector<Atoms> &training_data,
+                                        std::vector<EnergyData> &energies_without_external,
+                                        std::vector<Regularization> &sigmas_inverse) {
 
         JGAP_LOG_INFO("Forming matrix A");
-        auto A = formMatrixA(gap_components,
-            //neighbour_lists,
+        auto A = formMatrixA(
+            gap_components,
             training_data,
-            energies_without_external, sigmas_inverse);
+            energies_without_external,
+            sigmas_inverse
+            );
 
         JGAP_LOG_INFO("Forming feature vector b");
         auto b = formVectorB(gap_components, energies_without_external, sigmas_inverse);
@@ -56,9 +57,7 @@ namespace jgap {
     }
 
     EigenMatrix QRGapFit::formMatrixA(const std::vector<GapComponent::Ptr> &gap_components,
-
-    const std::vector<Atoms> &training_data,
-                                      //const std::vector<NeighbourList> &neighbour_lists,
+                                      const std::vector<Atoms> &training_data,
                                       const std::vector<EnergyData> &energy_data,
                                       const std::vector<Regularization> &sigmas_inverse) const {
 

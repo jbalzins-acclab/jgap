@@ -20,7 +20,7 @@ namespace jgap {
             return {{prefactor * std::pow(1.0 - distance * cutoff_inverse, degree)}};
         }
 
-        DescriptorAndDerivatives<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
+        NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
             Real distance = pair.between(0, 1).magnitude;
             if (distance >= cutoff) return {{{0.0}}, {}};
 
@@ -36,4 +36,4 @@ namespace jgap {
     };
 }
 
-#endif //FSGENPAIRFUNCTION_HPP
+#endif

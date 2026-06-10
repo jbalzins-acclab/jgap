@@ -10,54 +10,6 @@
 
 namespace jgap {
 
-    std::map<std::string, std::string> XYZData::parseHeaderLine(const std::string &line) {
-        std::map<std::string, std::string> header;
-
-        try {
-            size_t pos = 0;
-            while (pos < line.size()) {
-                if (isspace(line[pos])) {
-                    pos++;
-                    continue;
-                }
-
-                std::string property;
-                while (line[pos] != '=') {
-                    property += line[pos];
-                    pos++;
-
-                    if (pos >= line.size() || isspace(line[pos])) {
-                        throw std::runtime_error("'=' not found after " + property);
-                    }
-                }
-                pos++;
-
-                std::string value;
-                if (line[pos] == '"') {
-                    pos++;
-                    while (pos < line.size() && line[pos] != '"') {
-                        value += line[pos];
-                        pos++;
-                    }
-                    pos++;
-                } else {
-                    while (pos < line.size() && !isspace(line[pos])) {
-                        value += line[pos];
-                        pos++;
-                    }
-                }
-
-                header[property] = value;
-            }
-        } catch (std::exception& e) {
-            JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
-        } catch (...) {
-            JGAP_LOG_AND_THROW("Formatting error in: {}", line);
-        }
-
-        return header;
-    }
-
     bool XYZData::getLine(std::ifstream &file, std::string &line) {
         if (!getline(file, line)) return false;
         if (!line.empty() && line.back() == '\r') {

@@ -5,9 +5,15 @@
 #include <vector>
 #include <ranges>
 #include <cmath>
+#include <map>
 #include <Eigen/Dense>
 
 #include "core/Real.hpp"
+
+// Forward declaration of AtomsPropertyNames
+namespace jgap {
+    struct AtomsPropertyNames;
+}
 
 #define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
 
@@ -31,6 +37,9 @@ namespace jgap {
     #endif
 
     std::vector<Atoms> readAtoms(const std::string& filename);
+    std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names);
+
+    std::map<std::string, std::string> parseHeaderLine(const std::string &line);
 
     std::string uniqueStamp();
 

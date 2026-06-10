@@ -10,7 +10,7 @@
 namespace jgap {
     Species NeighbourList::speciesOf(size_t atom_index) const {
         for (const auto& [species, atom_indices] : atoms_by_species) {
-            for (size_t index: atom_indices) {
+            for (const size_t index: atom_indices) {
                 if (index == atom_index) {
                     return species;
                 }
@@ -89,15 +89,6 @@ namespace jgap {
                     }
                 }
             }
-
-            /*
-            // Sort neighbours by distance
-            for (auto &val: neighbours_i | std::views::values) {
-                std::sort(val.begin(), val.end(),
-                    [](const NeighbourData& a, const NeighbourData& b) {
-                        return a.separation.magnitude < b.separation.magnitude;
-                });
-            }*/
         }
     }
 
@@ -111,126 +102,180 @@ namespace jgap {
         return result;
     }
 
-    template<size_t N>
-    requires(N > 1)
-    std::vector<Cluster<N>> NeighbourList::findAllClusters(const SpeciesSet &species_set) const {
+    template<size_t N, ClusterTypes ClusterType>
+    requires(N > 1 && N <= 3)
+    std::vector<Cluster<N>> NeighbourList::findAllClusters(const SpeciesSet<N, ClusterType> &species_set) const {
         if constexpr (N > 3) {
             JGAP_LOG_AND_THROW("Inter-separations finding for N > 3 is not implemented");
         }
 
-        std::array<std::optional<Species>, N> required_species;
-        for (size_t i = 0; i < N; ++i) {
-            int16_t target_id = species_set[i];
-            if (target_id == -1) continue;
-            for (const auto& pair : atoms_by_species) {
-                if (pair.first.getId() == target_id) {
-                    required_species[i] = pair.first;
-                    break;
-                }
-            }
+        if constexpr (ClusterType == HasCentralAtom) {
+            if (!atoms_by_species.contains(species_set.getRoot())) return {};
+        }
+        for (auto& species: species_set.getNodes()) {
+            if (!atoms_by_species.contains(species)) return {};
         }
 
-        // For N=2 and N=3, check if we found the required species
-        for (size_t i = 0; i < N; ++i) {
-            if (!required_species[i].has_value()) return {};
-        }
-
-        if constexpr (N == 2) {
+        if constexpr (N == 2 && ClusterType == HasCentralAtom) {
 
             std::vector<Cluster<2>> result;
 
-            const auto& species0 = required_species[0].value();
-            const auto& species1 = required_species[1].value();
-            if (atoms_by_species.count(species0)) {
-                for (size_t i: atoms_by_species.at(species0)) {
-                    if (neighbours_per_atom[i].count(species1)) {
-                        for (auto sep: neighbours_per_atom[i].at(species1)) {
-                            Cluster<2> cluster;
-                            cluster.atom_indexes[0] = i;
-                            cluster.atom_indexes[1] = sep.atom_index;
-                            cluster.separations[0] = sep.separation;
-                            result.push_back(cluster);
-                        }
+            const auto& central_species = species_set.getRoot();
+            const auto& node_species = species_set.getNodes()[0];
+
+            for (size_t i: atoms_by_species.at(central_species)) {
+                auto atom_neighbours = neighbours_per_atom[i].find(node_species);
+
+                if (atom_neighbours == neighbours_per_atom[i].end()) continue;
+
+                for (auto sep: atom_neighbours->second) {
+                    Cluster<2> cluster;
+                    cluster.atom_indexes[0] = i;
+                    cluster.atom_indexes[1] = sep.atom_index;
+                    cluster.separations[0] = sep.separation;
+                    result.push_back(cluster);
+                }
+            }
+
+            return result;
+
+        } else if constexpr (N == 2 && ClusterType == Symmetric) {
+
+            std::vector<Cluster<2>> result;
+
+            const auto& species1 = species_set.getNodes()[0];
+            const auto& species2 = species_set.getNodes()[1];
+
+            // WARN!
+            // Do not try to optimize e.g. via ignoring j < i unless it's truly performance-critical
+            // (which I don't expect it to be for pair potential).
+            // This would require atoms that interact periodically with themselves
+            // to be treated separately down the line.
+
+            for (size_t i: atoms_by_species.at(species1)) {
+                auto atom_neighbours = neighbours_per_atom[i].find(species2);
+
+                if (atom_neighbours == neighbours_per_atom[i].end()) continue;
+
+                for (auto sep: atom_neighbours->second) {
+                    Cluster<2> cluster;
+                    cluster.atom_indexes[0] = i;
+                    cluster.atom_indexes[1] = sep.atom_index;
+                    cluster.separations[0] = sep.separation;
+                    result.push_back(cluster);
+                }
+            }
+
+            if (species1 != species2) {
+
+                // To enforce consistency with same-species iteration:
+                // two clusters formed per pair.
+
+                for (const size_t i: atoms_by_species.at(species2)) {
+                    auto atom_neighbours = neighbours_per_atom[i].find(species1);
+
+                    if (atom_neighbours == neighbours_per_atom[i].end()) continue;
+
+                    for (auto sep: atom_neighbours->second) {
+                        Cluster<2> cluster;
+                        cluster.atom_indexes[0] = i;
+                        cluster.atom_indexes[1] = sep.atom_index;
+                        cluster.separations[0] = sep.separation;
+                        result.push_back(cluster);
                     }
                 }
             }
 
             return result;
 
-        } else if constexpr (N == 3) {
+        } else if constexpr (N == 3 && ClusterType == HasCentralAtom) {
 
             std::vector<Cluster<3>> result;
 
-            const auto& species0 = required_species[0].value();
-            const auto& species1 = required_species[1].value();
-            const auto& species2 = required_species[2].value();
+            const auto& central_species = species_set.getRoot();
+            const auto& species1 = species_set.getNodes()[0];
+            const auto& species2 = species_set.getNodes()[1];
 
-            if (atoms_by_species.count(species0)) {
-                for (size_t i : atoms_by_species.at(species0)) {
-                    if (neighbours_per_atom[i].count(species1) && neighbours_per_atom[i].count(species2)) {
-                        const auto& sep_list1 = neighbours_per_atom[i].at(species1);
-                        const auto& sep_list2 = neighbours_per_atom[i].at(species2);
+            for (const size_t i: atoms_by_species.at(central_species)) {
 
-                        for (auto it1 = sep_list1.begin(); it1 != sep_list1.end(); ++it1) {
-                            auto it2_start = sep_list2.begin();
-                            if (species1 == species2) {
-                                it2_start = it1 + 1;
-                            }
-                            for (auto it2 = it2_start; it2 != sep_list2.end(); ++it2) {
-                                Cluster<3> seps;
-                                seps.atom_indexes[0] = i;
-                                seps.atom_indexes[1] = it1->atom_index;
-                                seps.atom_indexes[2] = it2->atom_index;
-                                seps.separations[0] = it1->separation; // 0-1
-                                seps.separations[1] = it2->separation; // 0-2
-                                seps.separations[2] = Separation(
-                                    it1->separation.vec(),
-                                    it2->separation.vec()
-                                    ); // 1-2
-                                result.push_back(seps);
-                            }
-                        }
+                const auto sep_list1 = neighbours_per_atom[i].find(species1);
+                if (sep_list1 == neighbours_per_atom[i].end()) continue;
+
+                const auto sep_list2 = neighbours_per_atom[i].find(species2);
+                if (sep_list2 == neighbours_per_atom[i].end()) continue;
+
+                // Note: unlike (N == 2 && !HaveCentral), here performance is quite critical,
+                // so duplicates are optimized out;
+                // this should be taken into consideration later on.
+
+                for (auto it1 = sep_list1->second.begin(); it1 != sep_list1->second.end(); ++it1) {
+                    auto it2_start = sep_list2->second.begin();
+                    if (species1 == species2) {
+                        it2_start = it1 + 1;
+                    }
+                    for (auto it2 = it2_start; it2 != sep_list2->second.end(); ++it2) {
+                        Cluster<3> seps;
+                        seps.atom_indexes[0] = i;
+                        seps.atom_indexes[1] = it1->atom_index;
+                        seps.atom_indexes[2] = it2->atom_index;
+                        seps.separations[0] = it1->separation; // 0-1
+                        seps.separations[1] = it2->separation; // 0-2
+                        seps.separations[2] = Separation(
+                            it1->separation.vec(),
+                            it2->separation.vec()
+                            ); // 1-2
+                        result.push_back(seps);
                     }
                 }
             }
 
             return result;
         }
-        return {};
+        // TODO: N == 3 && !HaveCentral
+        // I'm not sure what problem periodicity might cause in such case.
+
+        JGAP_LOG_AND_THROW("Should be unreachable");
     }
 
-    template<size_t N>
-    requires(N > 0)
-    std::vector<SpeciesSet> NeighbourList::getSpeciesSets() const {
-        if constexpr (N > 3) {
-            JGAP_LOG_AND_THROW("SpeciesSet generation for N > 3 is not implemented");
-        }
+    template<size_t N, ClusterTypes ClusterType>
+    requires (N > 1 && N <= 3)
+    std::vector<SpeciesSet<N, ClusterType>> NeighbourList::getSpeciesSets() const {
 
         std::set<Species> species_present;
         for (const auto &species: atoms_by_species | std::views::keys) {
             species_present.insert(species);
         }
 
-        std::set<SpeciesSet> result_set;
+        std::set<SpeciesSet<N, ClusterType>> result_set;
 
-        if constexpr (N == 1) {
-            for (const auto& s : species_present) {
-                result_set.insert(SpeciesSet(s));
-            }
-        } else if constexpr (N == 2) {
+        if constexpr (N == 2 && ClusterType == HasCentralAtom) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
-                    SpeciesSet ss(s0);
-                    ss.node(s1);
+                    SpeciesSet<2, HasCentralAtom> ss(s0, s1);
                     result_set.insert(ss);
                 }
             }
-        } else if constexpr (N == 3) {
+        } else if constexpr (N == 2 && ClusterType == Symmetric) {
+            for (const auto& s0 : species_present) {
+                for (const auto& s1 : species_present) {
+                    SpeciesSet<2, Symmetric> ss(s0, s1);
+                    result_set.insert(ss);
+                }
+            }
+        } else if constexpr (N == 3 && ClusterType == HasCentralAtom) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
                     for (const auto& s2 : species_present) {
-                        SpeciesSet ss(s0);
-                        ss.node(s1).node(s2);
+                        SpeciesSet<3, HasCentralAtom> ss(s0, s1, s2);
+                        result_set.insert(ss);
+                    }
+                }
+            }
+        } else if constexpr (N == 3 && ClusterType == Symmetric) {
+            for (const auto& s0 : species_present) {
+                for (const auto& s1 : species_present) {
+                    for (const auto& s2 : species_present) {
+                        SpeciesSet<3, Symmetric> ss(s0, s1, s2);
                         result_set.insert(ss);
                     }
                 }
@@ -241,8 +286,8 @@ namespace jgap {
     }
 
     template<size_t N>
-    requires (N > 0)
-    std::vector<SpeciesSet> NeighbourList::getSpeciesSets(Species central_atom_species) const {
+    requires(N > 1 && N <= 3)
+    std::vector<SpeciesSet<N, HasCentralAtom>> NeighbourList::getSpeciesSets(Species central_atom_species) const {
         if constexpr (N > 3) {
             JGAP_LOG_AND_THROW("SpeciesSet generation for N > 3 is not implemented");
         }
@@ -253,25 +298,21 @@ namespace jgap {
         }
 
         // If the central atom species is not present in the atoms, return an empty vector
-        if (species_present.find(central_atom_species) == species_present.end()) {
+        if (!species_present.contains(central_atom_species)) {
             return {};
         }
 
-        std::set<SpeciesSet> result_set;
+        std::set<SpeciesSet<N, HasCentralAtom>> result_set;
 
-        if constexpr (N == 1) {
-            result_set.insert(SpeciesSet(central_atom_species));
-        } else if constexpr (N == 2) {
+        if constexpr (N == 2) {
             for (const auto& s1 : species_present) {
-                SpeciesSet ss(central_atom_species);
-                ss.node(s1);
+                SpeciesSet<2, HasCentralAtom> ss(central_atom_species, s1);
                 result_set.insert(ss);
             }
         } else if constexpr (N == 3) {
             for (const auto& s1 : species_present) {
                 for (const auto& s2 : species_present) {
-                    SpeciesSet ss(central_atom_species);
-                    ss.node(s1).node(s2);
+                    SpeciesSet<3, HasCentralAtom> ss(central_atom_species, s1, s2);
                     result_set.insert(ss);
                 }
             }
@@ -280,14 +321,20 @@ namespace jgap {
         return {result_set.begin(), result_set.end()};
     }
 
-    template std::vector<Cluster<2>> NeighbourList::findAllClusters(const SpeciesSet& species_set) const;
-    template std::vector<Cluster<3>> NeighbourList::findAllClusters(const SpeciesSet& species_set) const;
+    template std::vector<Cluster<2>> NeighbourList::findAllClusters(
+        const SpeciesSet<2, HasCentralAtom>& species_set) const;
+    template std::vector<Cluster<2>> NeighbourList::findAllClusters(
+        const SpeciesSet<2, Symmetric>& species_set) const;
+    template std::vector<Cluster<3>> NeighbourList::findAllClusters(
+        const SpeciesSet<3, HasCentralAtom>& species_set) const;
 
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<1>() const;
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<2>() const;
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<3>() const;
+    template std::vector<SpeciesSet<2, HasCentralAtom>> NeighbourList::getSpeciesSets<2, HasCentralAtom>() const;
+    template std::vector<SpeciesSet<2, Symmetric>> NeighbourList::getSpeciesSets<2, Symmetric>() const;
+    template std::vector<SpeciesSet<3, HasCentralAtom>> NeighbourList::getSpeciesSets<3, HasCentralAtom>() const;
+    template std::vector<SpeciesSet<3, Symmetric>> NeighbourList::getSpeciesSets<3, Symmetric>() const;
 
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<1>(Species central_atom_species) const;
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<2>(Species central_atom_species) const;
-    template std::vector<SpeciesSet> NeighbourList::getSpeciesSets<3>(Species central_atom_species) const;
+    template std::vector<SpeciesSet<2, HasCentralAtom>> NeighbourList::getSpeciesSets<2>(
+        Species central_atom_species) const;
+    template std::vector<SpeciesSet<3, HasCentralAtom>> NeighbourList::getSpeciesSets<3>(
+        Species central_atom_species) const;
 }

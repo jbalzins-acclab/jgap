@@ -1,501 +1,243 @@
 #include <gtest/gtest.h>
 
-#include "core/fit/QRGapFit.hpp"
-#include "core/descriptors/eam/EamDescriptor.hpp"
-#include "core/neighbours/NeighbourFinder.hpp"
-#include "data/Vector3.hpp"
-#include "utils/Utils.hpp"
-#include "ParserRegistryAuto.hpp"
+#include "core/fit/gap/QRGapFit.hpp"
+#include "core/atomic/Atoms.hpp"
+#include "core/atomic/io/XYZData.hpp"
+#include "core/atomic/neighbours/NeighbourList.hpp"
+#include "core/potentials/gap/component/NBodyGapComponent.hpp"
+#include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "core/potentials/gap/GapPotential.hpp"
+#include "core/transform/2b/TwoBodyTransformation.hpp"
+#include "core/transform/3b/Angle3bTransformation.hpp"
+#include "core/transform/eam/PolycutoffPairFunction.hpp"
+#include "../../../src/core/transform/aggregated/TransformationAggregator.hpp"
+#include "core/kernels/SquaredExpKernel.hpp"
+#include "core/cutoff/CosCutoff.hpp"
+#include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
+#include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
 
 using namespace jgap;
 
-AtomicStructure equilateralTriangle;
-void setupEquilateralTriangle() {
-    equilateralTriangle = AtomicStructure{
-        .lattice = {
-            Vector3{100.0, 0.0, 0.0},
-            Vector3{0.0, 100.0, 0.0},
-            Vector3{0.0, 0.0, 100.0}
-        },
-        .positions = {
-            Vector3{0.0, 0.0, 0.0},
-            Vector3{3.0, 0.0, 0.0},
-            Vector3{1.5, 2.598, 0.0}
-        },
-        .species = {"Fe", "Fe", "Fe"}
-    };
+Atoms setupEquilateralTriangle() {
+    return Atoms(
+        { {0.0, 0.0, 0.0}, {3.0, 0.0, 0.0}, {1.5, 2.598, 0.0} },
+        { Species("Fe"), Species("Fe"), Species("Fe") },
+        Lattice{ {100.0, 0.0, 0.0}, {0.0, 100.0, 0.0}, {0.0, 0.0, 100.0} }
+    );
 }
 
 TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
-    setupEquilateralTriangle();
+    auto equilateralTriangle = setupEquilateralTriangle();
+    equilateralTriangle.setEnergy(1.0);
+    equilateralTriangle.setForces({{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
 
-    const auto params = DataNode::parse(R"(
-    {
-        "descriptors": {
-            "2b_test": {
-                "type": "2b",
-                "kernels": [
-                    {
-                        "species_pair": ["Fe", "Fe"],
-                        "type": "squared_exp",
-                        "length_scale": 1.0,
-                        "energy_scale": 1.0,
-                        "r": 3.0,
-                        "descriptor_prefactors": 1.0
-                    }
-                ],
-                "cutoff": {
-                    "type": "coscutoff",
-                    "r_min": 9.3,
-                    "cutoff": 10.0
-                }
-            }
-        },
-        "jitter": 1e-8,
-        "regularization_rules": {
-            "type": "simple",
-            "E_per_root_n_atoms": 3.0,
-            "F_component": 10.0,
-            "liquid": 5,
-            "short_range": 5
-        }
-    }
-    )");
+    auto trans = std::make_unique<TwoBodyTransformation>(std::make_unique<CosCutoff>(10.0, 0.7));
+    auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(1.0, std::array<Real, 1>{1.0});
+    std::vector<Descriptor<2>> sparse_points = { {{{3.0, 1.0}}} };
+    auto component = std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
+        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, std::move(trans), std::move(kernel), sparse_points
+        );
 
-    auto fit = QRGapFit(params);
+    std::vector<GapComponent::Ptr> components;
+    components.push_back(std::move(component));
+    auto potential = GapPotential(std::move(components));
+    auto regularization_rules = SimpleRegularizationRules(3.0, 10.0, 5.0, 5.0);
 
-    equilateralTriangle.energy = 1;
-    equilateralTriangle.forces = {
-        Vector3{0.0, 0.0, 0.0},
-        Vector3{0.0, 0.0, 0.0},
-        Vector3{0.0, 0.0, 0.0}
-        };
-    //NeighbourFinder::findNeighbours(equilateralTriangle, 10.0);
-    //auto a = desc2b.covariate(equilateralTriangle);
-    auto pot = fit.fit(std::vector{equilateralTriangle});
+    QRGapFit fitter;
+    fitter.fit(potential, {equilateralTriangle}, regularization_rules);
 
-    auto res = pot->serialize();
-    double c = res["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    /*
-     * if a - total covariance
-     * => a = 2(idk why - ?counted from both ends?) * 3 * (K(3, 3) = 1) = 6
-     * => c = a / (\sigma^2_{total-i.e. per all atoms} + a^2)
-     * => variance + a^2 = a/c
-     * => variance = a/c - a^2
-     * \sigma / "per atom" = 3 => total variance = 3^2 * 3(atoms)
-     */
+    const auto& fitted_coeffs = potential.getComponents()[0]->getCoefficients();
+    double c = fitted_coeffs[0];
     auto totalVariance = 6.0 / c - 36.0;
     ASSERT_NEAR(totalVariance, 27, 1e-6);
-    // GPWRITE=1 VERBOSE=1 gap_fit at_file=train.xyz e0=0.0 sparse_jitter=1e-8 do_copy_at_file=False gp_file=gap_out.xml rnd_seed=999 default_sigma="{4.0 1.0 0 0}" gap="{distance_2b cutoff=10.0 covariance_type=ard_se delta=1.0 theta_uniform=1.0 sparse_method=FILE sparse_file=mysparse.desc print_sparse_index=sparse_indices_2b.out}"
 }
 
-DataNode makeParams2bDesc(double theta, double delta, double rMin, double cutoff, std::vector<double> sparsePts) {
+GapPotential create2bPotential(const std::vector<Real>& sparsePts) {
+    auto trans = std::make_unique<TwoBodyTransformation>(std::make_unique<CosCutoff>(10.0, 0.7));
+    auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(1.0, std::array<Real, 1>{1.0});
 
-    DataNode kernels = DataNode::array();
-    for (auto r: sparsePts) {
-        kernels.push_back({
-            {"species_pair", {"Fe", "Fe"}},
-            {"type", "squared_exp"},
-            {"length_scale", theta},
-            {"energy_scale", delta},
-            {"r", r},
-            {"descriptor_prefactors", CosCutoff(cutoff, rMin).evaluate(r)}
-        });
+    std::vector<Descriptor<2>> sparse_points;
+    CosCutoff ref_cutoff(10.0, 0.7);
+    for (Real r : sparsePts) {
+        sparse_points.push_back({{{r, ref_cutoff.evaluate(r)}}});
     }
 
-    return DataNode{
-        {"type", "2b"},
-        {"kernels", kernels},
-        {"cutoff", {
-                {"type", "coscutoff"},
-                {"r_min", rMin},
-                {"cutoff", cutoff}
-                }
-            }
-    };
+    auto component = std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
+        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, std::move(trans), std::move(kernel), sparse_points);
+    std::vector<GapComponent::Ptr> components;
+    components.push_back(std::move(component));
+    return GapPotential{std::move(components)};
 }
 
-DataNode makeSimpleSigmaRules(double E, double F, double liquid, double shortRange) {
-    return DataNode{
-        {"type", "simple"},
-        {"E_per_root_n_atoms", E},
-        {"F_component", F},
-        {"liquid", liquid},
-        {"short_range", shortRange}
-    };
-}
-
-DataNode makeFitParams(DataNode desc, std::string descName, DataNode srules) {
-    return DataNode{
-        {"descriptors", {
-                {descName, desc}
-            }
-        },
-        {"jitter", 1e-8},
-        {"regularization_rules", srules}
-    };
-}
-
-AtomicStructure twoAtoms;
-void setupTwoAtoms() {
-    twoAtoms = AtomicStructure{
-        .lattice = {
-            Vector3{100.0, 0.0, 0.0},
-            Vector3{0.0, 100.0, 0.0},
-            Vector3{0.0, 0.0, 100.0}
-        },
-        .positions = {
-            Vector3{0.0, 0.0, 0.0},
-            Vector3{3.0, 0.0, 0.0},
-        },
-        .species = {"Fe", "Fe", "Fe"}
-    };
+Atoms setupTwoAtoms() {
+    return Atoms(
+        { {0.0, 0.0, 0.0}, {3.0, 0.0, 0.0} },
+        { Species("Fe"), Species("Fe") },
+        Lattice{ {100.0, 0.0, 0.0}, {0.0, 100.0, 0.0}, {0.0, 0.0, 100.0} }
+    );
 }
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
-    setupTwoAtoms();
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0, 4.0}),
-            "2b_test",
-            makeSimpleSigmaRules(1, 1, 5, 5)
-        );
-
-    auto fit = QRGapFit(params);
-
-    twoAtoms.energy = 1;
-    twoAtoms.forces = {
-        Vector3{0.0, 0.0, 0.0},
-        Vector3{0.0, 0.0, 0.0}
-    };
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
-    ASSERT_NEAR(c0, 0.23266775926220731, 1e-6);
-    ASSERT_NEAR(c1, 0.23266775926220731, 1e-6);
+    auto twoAtoms = setupTwoAtoms();
+    twoAtoms.setEnergy(1.0);
+    twoAtoms.setForces({{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
+    auto potential = create2bPotential({2.0, 4.0});
+    auto rules = SimpleRegularizationRules(1.0, 1.0, 5.0, 5.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], 0.23266775926220731, 1e-6);
+    ASSERT_NEAR(coeffs[1], 0.23266775926220731, 1e-6);
 }
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
-
-    setupTwoAtoms();
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
-            "2b_test",
-            makeSimpleSigmaRules(10000000, 1, 5, 5)
-        );
-
-    auto fit = QRGapFit(params);
-
-    twoAtoms.energy = 0;
-    twoAtoms.forces = {
-        Vector3{1.0, 0.0, 0.0},
-        Vector3{0.0, 0.0, 0.0}
-    };
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0, -0.30764655994411466, 1e-6);
+    auto twoAtoms = setupTwoAtoms();
+    twoAtoms.setEnergy(0.0);
+    twoAtoms.setForces({{1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
+    auto potential = create2bPotential({2.0});
+    auto rules = SimpleRegularizationRules(10000000.0, 1.0, 5.0, 5.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], -0.30764655994411466, 1e-6);
 }
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
-    setupTwoAtoms();
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
-            "2b_test",
-            makeSimpleSigmaRules(10000000, 1, 5, 5)
-        );
-
-    auto fit = QRGapFit(params);
-
-    twoAtoms.energy = 0;
-    twoAtoms.forces = {
-        Vector3{1.0, 0.0, 0.0},
-        Vector3{0.0, 0.0, 0.0}
-    };
-    twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    std::cout << coeffs.dump() << std::endl;
-
-    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0 , -.15382666452610533, 1e-6);
+    Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
+    twoAtoms.setEnergy(0.0);
+    twoAtoms.setForces({{1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
+    auto potential = create2bPotential({2.0});
+    auto rules = SimpleRegularizationRules(10000000.0, 1.0, 5.0, 5.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], -.15382666452610533, 1e-6);
 }
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
-    setupTwoAtoms();
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0}),
-            "2b_test",
-            makeSimpleSigmaRules(10000000, 2, 5, 5)
-        );
-
-    auto fit = QRGapFit(params);
-
-    twoAtoms.energy = 0;
-    twoAtoms.forces = {
-        Vector3{1.0, 1.0, 1.0},
-        Vector3{-1.0, -1.0, -1.0}
-    };
-    twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0, -.47733536744854282, 1e-6);
+    Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
+    twoAtoms.setEnergy(0.0);
+    twoAtoms.setForces({{1.0, 1.0, 1.0}, {-1.0, -1.0, -1.0}});
+    auto potential = create2bPotential({2.0});
+    auto rules = SimpleRegularizationRules(10000000.0, 2.0, 5.0, 5.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], -.47733536744854282, 1e-6);
 }
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
-    setupTwoAtoms();
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 1.0, 9.3, 10.0, std::vector{2.0, 2.5, 4.0}),
-            "2b_test",
-            makeSimpleSigmaRules(1, 2, 5, 5)
-        );
-
-    auto fit = QRGapFit(params);
-
-    twoAtoms.energy = 0;
-    twoAtoms.forces = {
-        Vector3{1.0, 1.0, 1.0},
-        Vector3{-1.0, -1.0, -1.0}
-    };
-    twoAtoms.positions[1] = Vector3{1.5, 2.598, 0.0};
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    double c0 = pot->serialize()["descriptors"]["2b_test"]["kernels"][0]["coefficient"];
-    double c1 = pot->serialize()["descriptors"]["2b_test"]["kernels"][1]["coefficient"];
-    double c2 = pot->serialize()["descriptors"]["2b_test"]["kernels"][2]["coefficient"];
-
-    ASSERT_NEAR(c0 , -.24567921601436607, 1e-6);
-    ASSERT_NEAR(c1 , -.10998748761736651, 1e-6);
-    ASSERT_NEAR(c2 , .38697171383300527, 1e-6);
+    Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
+    twoAtoms.setEnergy(0.0);
+    twoAtoms.setForces({{1.0, 1.0, 1.0}, {-1.0, -1.0, -1.0}});
+    auto potential = create2bPotential({2.0, 2.5, 4.0});
+    auto rules = SimpleRegularizationRules(1.0, 2.0, 5.0, 5.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], -.24567921601436607, 1e-6);
+    ASSERT_NEAR(coeffs[1], -.10998748761736651, 1e-6);
+    ASSERT_NEAR(coeffs[2], .38697171383300527, 1e-6);
 }
 
-/*
- * TODO: cutoff logic changed -> need to recalculate
-TEST(TestQRGapFit, twoBodyQuipCompatibilityRealBox) {
-    auto box = readXyz("test/resources/xyz-samples/fe-only.xyz")[0];
-    const auto params = makeFitParams(
-            makeParams2bDesc(1.0, 10.0, 4.0, 5.0, std::vector{2.0, 2.5, 4.0}),
-            "2b_test",
-            makeSimpleSigmaRules(0.001, 0.05, 1, 1)
-        );
+GapPotential createEamPotential(double theta, double delta, double r_min, double cutoff, const std::vector<Real>& sparse_pts) {
+    auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
-    auto fit = InRamJgapFit(params);
+    auto eam_aggregator = std::make_unique<TransformationAggregatorImpl<1, 2>>(Species("Fe"));
 
-    auto pot = fit.fit(std::vector{box});
-    auto coeffs = pot->serialize()["descriptors"]["2b_test"]["sparse_data"]["Fe,Fe"]["coefficients"];
-    std::cout << coeffs.dump() << std::endl;
-
-    ASSERT_NEAR(coeffs[0].get<double>() , -.91130660366840928E-002, 1e-6);
-    ASSERT_NEAR(coeffs[1].get<double>() , -.30763954226713420E-003, 1e-6);
-    ASSERT_NEAR(coeffs[2].get<double>() , .20225136010646777E-002, 1e-6);
-}
-*/
-
-DataNode makeParamsEamDesc(double theta, double delta, double rMin, double cutoff, std::vector<double> sparsePts) {
-
-    DataNode kernels = DataNode::array();
-    for (auto rho: sparsePts) {
-        kernels.pushBack({
-            {"species", "Fe"},
-            {"type", "squared_exp"},
-            {"length_scale", theta},
-            {"energy_scale", delta},
-            {"density", rho}
-        });
+    eam_aggregator->extend(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"}, std::make_unique<PolycutoffPairFunction>(trans));
+    auto kernel = std::make_unique<SquaredExpKernel<1, 0>>(delta, std::array<Real, 1>{theta});
+    std::vector<Descriptor<1>> sparse_points;
+    for (Real r : sparse_pts) {
+        sparse_points.push_back({{{r}}});
     }
-
-    return DataNode{
-        {"type", "eam"},
-        {"kernels", kernels},
-        {"pair_functions", {
-                {
-                    {"type", "polycutoff"},
-                    {"cutoff", cutoff},
-                    {"r_min", rMin}
-                }
-            }
-        }
-    };
+    auto component = std::make_unique<ManyBodyGapComponent<1>>(
+        std::move(eam_aggregator), std::move(kernel), sparse_points
+    );
+    std::vector<GapComponent::Ptr> components;
+    components.push_back(std::move(component));
+    return GapPotential(std::move(components));
 }
 
 TEST(TestQRGapFit, twoAtomsEamQuipCompatibility) {
-    setupTwoAtoms();
-
-    twoAtoms.energy = 1;
-    twoAtoms.forces = {
-        Vector3{1, 0, 0},
-        Vector3{-1, 0, 0},
-    };
-
-    const auto params = makeFitParams(
-            makeParamsEamDesc(1.0, 1.0, 0.0, 5.0, std::vector{1.0}),
-            "eam_test",
-            makeSimpleSigmaRules(1, 1, 1, 1)
-        );
-    auto fit = QRGapFit(params);
-
-    auto pot = fit.fit(std::vector{twoAtoms});
-
-    double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0, .17637586136984833E-001, 1e-6);
+    auto twoAtoms = setupTwoAtoms();
+    twoAtoms.setEnergy(1.0);
+    twoAtoms.setForces({{1.0, 0.0, 0.0}, {-1.0, 0.0, 0.0}});
+    auto potential = createEamPotential(1.0, 1.0, 0.0, 5.0, {1.0});
+    auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {twoAtoms}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], .17637586136984833E-001, 1e-6);
 }
 
 TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
-    auto box = readXyz("test/resources/xyz-samples/fe-only.xyz")[15];
-    box.virials.reset();
+    auto box = readAtoms("test/resources/xyz-samples/fe-only.xyz")[15];
+    box.properties.erase("virial"); // initial tests ignored virials unfortunately
+    auto potential = createEamPotential(3.0, 2.0, 0.0, 5.0, {1.0, 2.5, 4.0});
+    auto rules = SimpleRegularizationRules(0.001, 0.05, 1.0, 1.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {box}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
 
-    const auto params = makeFitParams(
-        makeParamsEamDesc(3.0, 2.0, 0.0, 5.0, std::vector{1.0, 2.5, 4.0}),
-        "eam_test",
-        makeSimpleSigmaRules(0.001, 0.05, 1, 1)
-    );
-    auto fit = QRGapFit(params);
+    /*
+        <sparseX i="1" alpha="-5.0619173053329485" sparseCutoff="1.0000000000000000"/>
+        <sparseX i="2" alpha="-4.4169841885357615" sparseCutoff="1.0000000000000000"/>
+        <sparseX i="3" alpha="-.16117464517539212" sparseCutoff="1.0000000000000000"/>
+    */
 
-    auto pot = fit.fit(std::vector{box});
-
-    double c0 = pot->serialize()["descriptors"]["eam_test"]["kernels"][0]["coefficient"];
-    double c1 = pot->serialize()["descriptors"]["eam_test"]["kernels"][1]["coefficient"];
-    double c2 = pot->serialize()["descriptors"]["eam_test"]["kernels"][2]["coefficient"];
-/*
-    <sparseX i="1" alpha="-5.0619173053329485" sparseCutoff="1.0000000000000000"/>
-    <sparseX i="2" alpha="-4.4169841885357615" sparseCutoff="1.0000000000000000"/>
-    <sparseX i="3" alpha="-.16117464517539212" sparseCutoff="1.0000000000000000"/>
-    </gpCoordinates>
-*/
-    ASSERT_NEAR(c0, -5.0619173053329485, 1e-6);
-    ASSERT_NEAR(c1, -4.4169841885357615, 1e-6);
-    ASSERT_NEAR(c2, -.16117464517539212, 1e-6);
+    ASSERT_NEAR(coeffs[0], -5.0619173053329485, 1e-6);
+    ASSERT_NEAR(coeffs[1], -4.4169841885357615, 1e-6);
+    ASSERT_NEAR(coeffs[2], -.16117464517539212, 1e-6);
 }
 
-DataNode makeParams3bDesc(double theta, double delta, double rMin, double cutoff, std::vector<Vector3> sparsePts) {
-
-    auto kernels = DataNode::array();
-    for (const auto &q: sparsePts) {
-
-        double rij = (sqrt(q.y) - q.x) / 2.0;
-        double rik = (q.x - sqrt(q.y)) / 2.0;
-
-        kernels.push_back({
-            {"type", "squared_exp"},
-            {"length_scale", theta},
-            {"energy_scale", delta},
-            {"species_triplet", {"Fe", "Fe", "Fe"}},
-            {"q", {q.x, q.y, q.z}},
-            {"descriptor_prefactors",
-                    CosCutoff(cutoff, rMin).evaluate(rij) * CosCutoff(cutoff, rMin).evaluate(rik)
-            }
-        });
+GapPotential create3bPotential(double theta, double delta, double cutoff_transition_width, double cutoff, const std::vector<Vector3>& sparsePts) {
+    auto trans = std::make_unique<Angle3bTransformation>(std::make_unique<CosCutoff>(cutoff, cutoff_transition_width));
+    auto kernel = std::make_unique<SquaredExpKernel<3, 1>>(delta, std::array<Real, 3>{theta, theta, theta});
+    std::vector<Descriptor<4>> sparse_points;
+    for (const auto& q : sparsePts) {
+        sparse_points.push_back({{{q.x, q.y, q.z, 1.0}}}); // Assume f_cut_prod=1 for sparse points
     }
-
-    return DataNode{
-        {"type", "3b"},
-        {"kernels", kernels},
-        {"cutoff", {
-                    {"type", "coscutoff"},
-                    {"r_min", rMin},
-                    {"cutoff", cutoff}
-            }
-        }
-    };
+    auto component = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom>>(
+        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Fe"},
+        std::move(trans),
+        std::move(kernel),
+        sparse_points
+        );
+    std::vector<GapComponent::Ptr> components;
+    components.push_back(std::move(component));
+    return GapPotential(std::move(components));
 }
 
 TEST(TestQRGapFit, equilateralTriangle3bQuipCompatibility) {
-    setupEquilateralTriangle();
-
-    equilateralTriangle.energy = 1.0;
-    equilateralTriangle.forces = {
-        Vector3{1, 0, 0},
-        Vector3{0, -1, 0},
-        Vector3{0.5, 0.5, 0}
-    };
-
-    const auto params = makeFitParams(
-            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, std::vector{Vector3{6.0, 0.0, 3.0}}),
-            "3b_test",
-            makeSimpleSigmaRules(1, 1, 1, 1)
-        );
-
-    auto fit = QRGapFit(params);
-
-    auto pot = fit.fit(std::vector{equilateralTriangle});
-
-    double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0, .15381640115291151, 1e-8);
+    auto equilateralTriangle = setupEquilateralTriangle();
+    equilateralTriangle.setEnergy(1.0);
+    equilateralTriangle.setForces({{1.0, 0.0, 0.0}, {0.0, -1.0, 0.0}, {0.5, 0.5, 0.0}});
+    auto potential = create3bPotential(1.0, 1.0, 0.6, 10.0, {{6.0, 0.0, 3.0}});
+    auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {equilateralTriangle}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], .15381640115291151, 1e-8);
 }
 
-AtomicStructure pythagorian;
-
-void initPythagorian() {
-    pythagorian = AtomicStructure{
-        .lattice = {
-            Vector3{20, 0, 0},
-            Vector3{0, 20, 0},
-            Vector3{0, 0, 20},
-        },
-        .positions = {
-            Vector3{0, 0, 0},
-            Vector3{4, 0, 0},
-            Vector3{0, 3, 0}
-        },
-        .species = {
-            "Fe", "Fe", "Fe"
-        }
-    };
-    NeighbourFinder::findNeighbours(pythagorian, 10.0);
+Atoms setupPythagorean() {
+    return Atoms(
+        { {0,0,0}, {4,0,0}, {0,3,0} },
+        { Species("Fe"), Species("Fe"), Species("Fe") },
+        Lattice{ {20,0,0}, {0,20,0}, {0,0,20} }
+    );
 }
 
 TEST(TestQRGapFit, pythagorian3bQuipCompatibility) {
-    initPythagorian();
-
-    pythagorian.energy = 1.0;
-    pythagorian.forces = {
-        Vector3{1, 0, 0},
-        Vector3{0, -1, 0},
-        Vector3{0.5, 0.5, 0}
-    };
-
-    const auto params = makeFitParams(
-            makeParams3bDesc(1.0, 1.0, 9.4, 10.0, std::vector{Vector3{6.0, 0.0, 3.0}}),
-            "3b_test",
-            makeSimpleSigmaRules(1, 1, 1, 1)
-        );
-
-    auto fit = QRGapFit(params);
-
-    auto pot = fit.fit(std::vector{pythagorian});
-
-    double c0 = pot->serialize()["descriptors"]["3b_test"]["kernels"][0]["coefficient"];
-    ASSERT_NEAR(c0, -.13044210897182607, 1e-8);
+    auto pythagorian = setupPythagorean();
+    pythagorian.setEnergy(1.0);
+    pythagorian.setForces({{1.0, 0.0, 0.0}, {0.0, -1.0, 0.0}, {0.5, 0.5, 0.0}});
+    auto potential = create3bPotential(1.0, 1.0, 0.6, 10.0, {{6.0, 0.0, 3.0}});
+    auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);
+    QRGapFit fitter;
+    fitter.fit(potential, {pythagorian}, rules);
+    const auto& coeffs = potential.getComponents()[0]->getCoefficients();
+    ASSERT_NEAR(coeffs[0], -.13044210897182607, 1e-8);
 }
 
-/*
- * TODO: cutoff logic changed -> need to recalculate
-TEST(TestQRGapFit, hard3bQuipCompatibility) {
-    auto box = readXyz("test/resources/xyz-samples/FeOnly.xyz")[15];
-
-    const auto params = makeFitParams(
-    makeParams3bDesc(0.5, 3.0, 3.9, 4.5, std::vector{
-                Vector3{6, 0, 3},
-                Vector3{8, 2, 1},
-                Vector3{5, 3, 8}
-            }),
-            "3b_test",
-            makeSimpleSigmaRules(0.001, 0.05, 1, 1)
-        );
-
-    auto fit = InRamJgapFit(params);
-
-    auto pot = fit.fit(std::vector{box});
-    // std::cout << pot->serialize();
-    auto coeffs = pot->serialize()["descriptors"]["3b_test"]["sparse_data"]["Fe,Fe,Fe"]["coefficients"];
-    std::cout << coeffs.dump() << std::endl;
-    /*      <sparseX i="1" alpha="-.63024066682173821E-001" sparseCutoff="1.0000000000000000"/>
-      <sparseX i="2" alpha="20.858471601167693" sparseCutoff="1.0000000000000000"/>
-      <sparseX i="3" alpha="-190.02399797873642" sparseCutoff="1.0000000000000000"/>/
-    ASSERT_NEAR(coeffs[0].get<double>(), -.63024066682173821E-001, 1e-8);
-    ASSERT_NEAR(coeffs[1].get<double>(), 20.858471601167693, 1e-8);
-    ASSERT_NEAR(coeffs[2].get<double>(), -190.02399797873642, 1e-8);
-}
-*/

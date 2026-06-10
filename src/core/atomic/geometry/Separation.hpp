@@ -26,6 +26,7 @@ namespace jgap {
                 separation.y * direction.z,
                 separation.z * direction.z
             };
+            virials *= -1.0;
         }
         Vector3 vec() const { return direction * magnitude; }
 

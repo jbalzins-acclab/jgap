@@ -4,8 +4,8 @@
 #include <utility>
 
 #include "../descriptors/2b/TwoBodyKernel.hpp"
-#include "../../../data/tabulation/Grid1d.hpp"
-#include "../../../data/tabulation/TabulationData.hpp"
+#include "../../../../src/core/splines/Grid1d.hpp"
+#include "../../../../src/core/tabulation/TabulationData.hpp"
 #include "utils/BSplineTools.hpp"
 #include "utils/Utils.hpp"
 

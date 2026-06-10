@@ -142,10 +142,19 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     enable_testing()
 
     set(TEST_SOURCES
-            #${PROJECT_SOURCE_DIR}/test/core/fit/TestIsolatedAtomFit.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/neighbours/TestNeighbourList.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestTwoBodyDescriptor.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/atomic/neighbours/TestNeighbourList.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/2b/TestTwoBodyTransformation.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/3b/TestAngle3bTransformation.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestFSGenPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestCoscutoffPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestPolycutoffPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/transform/TestTransformationAggregatorImpl.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/kernels/TestSquaredExpKernel.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/potentials/gap/component/TestNBodyGapComponent.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/potentials/gap/component/TestManyBodyGapComponent.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/cutoff/TestCosCutoff.cpp
+            ${PROJECT_SOURCE_DIR}/test/core/cutoff/TestPerriotPolynomialCutoff.cpp
             #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
             #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
             #${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp

@@ -27,6 +27,7 @@ namespace jgap {
         void setCoefficients(It& iter);
 
         void setCoefficients(const std::vector<Real>& new_coeff);
+        const std::vector<Real>& getCoefficients() const { return coefficients; }
 
         Real getCutoff() const { return getCutoffs().maxOverall(); }
 

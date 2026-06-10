@@ -6,6 +6,7 @@
 
 #include "core/atomic/energy/AtomicQuantity.hpp"
 #include "Cutoffs.hpp"
+#include "core/atomic/species/Species.hpp"
 #include "io/Serializable.hpp"
 
 namespace jgap {
@@ -13,7 +14,7 @@ namespace jgap {
     public:
         virtual ~Potential() = default;
 
-        virtual AtomicQuantity calculate(const Atoms &atoms) = 0;
+        virtual AtomicQuantity calculateEnergy(const Atoms &atoms) = 0;
 
         virtual Cutoffs getCutoffs() = 0;
         //virtual void tabulate(TabulationData& table) = 0;

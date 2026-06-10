@@ -21,6 +21,67 @@ namespace jgap {
         return mapVector(XYZData::read(filename), [](const XYZData& d) { return Atoms(d); });
     }
 
+    std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names) {
+        return mapVector(XYZData::read(filename), [&names](const XYZData& d) { return Atoms(d, names); });
+    }
+
+    std::map<std::string, std::string> parseHeaderLine(const std::string &line) {
+        std::map<std::string, std::string> header;
+
+        try {
+            size_t pos = 0;
+            while (pos < line.size()) {
+                if (isspace(line[pos])) {
+                    pos++;
+                    continue;
+                }
+
+                std::string property;
+                while (line[pos] != '=' && !isspace(line[pos])) {
+                    property += line[pos];
+                    pos++;
+
+                    if (pos >= line.size()) {
+                        throw std::runtime_error("'=' not found after " + property);
+                    }
+                }
+
+                if (header.contains(property)) {
+                    throw std::runtime_error("Duplicate property: " + property);
+                }
+
+                std::string value;
+
+                if (!isspace(line[pos])) {
+
+                    pos++;
+
+                    if (line[pos] == '"') {
+                        pos++;
+                        while (pos < line.size() && line[pos] != '"') {
+                            value += line[pos];
+                            pos++;
+                        }
+                        pos++;
+                    } else {
+                        while (pos < line.size() && !isspace(line[pos])) {
+                            value += line[pos];
+                            pos++;
+                        }
+                    }
+                }
+
+                header[property] = value;
+            }
+        } catch (std::exception& e) {
+            JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
+        } catch (...) {
+            JGAP_LOG_AND_THROW("Formatting error in: {}", line);
+        }
+
+        return header;
+    }
+
     std::string uniqueStamp() {
         using namespace std::chrono;
 
@@ -28,7 +89,7 @@ namespace jgap {
         auto tt = system_clock::to_time_t(now);
 
         std::tm local_tm{};
-#if defined(_WIN32)
+#ifdef _WIN32
         localtime_s(&local_tm, &tt);
 #else
         localtime_r(&tt, &local_tm);
@@ -41,7 +102,7 @@ namespace jgap {
         oss << std::put_time(&local_tm, "%Y-%m-%d_%H-%M-%S")
             << '_' << std::setw(3) << std::setfill('0') << ms.count();
 
-#if defined(_WIN32)
+#if _WIN32
         DWORD pid = GetCurrentProcessId();
         oss << "-p" << pid;
 #else

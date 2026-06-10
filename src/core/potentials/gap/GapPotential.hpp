@@ -6,30 +6,21 @@
 namespace jgap {
     class GapPotential : public Potential {
     public:
-        std::shared_ptr<Potential> optional_external_potential{};
+        std::unique_ptr<Potential> optional_external_potential{};
         std::vector<GapComponent::Ptr> components{};
         //GapPotential() = default; //deserialize
 
         GapPotential(std::vector<GapComponent::Ptr> components,
-                     const std::shared_ptr<Potential> &external = nullptr,
+                     std::unique_ptr<Potential> external = nullptr,
                      const std::vector<Real> &coefficients = {});
 
         void setCoefficients(const std::vector<Real>& new_coefficients);
 
-        AtomicQuantity calculate(const Atoms &atoms) override;
+        AtomicQuantity calculateEnergy(const Atoms &atoms) override;
 
         Cutoffs getCutoffs() override;
 
-        /*
-        std::string getTypeId() {
-            return "GapPotential";
-        }*/
-
-        /*
-    protected:
-        DataNode serializeWithoutType() override;
-        void deserializeNoTypeCheck(const DataNode &serialized) override;
-*/
+        const std::vector<GapComponent::Ptr>& getComponents() const;
     };
 }
 

@@ -17,7 +17,6 @@ namespace jgap {
         void fit(GapPotential& to_be_fit,
                  const std::vector<Atoms>& training_data,
                  const RegularizationRules& regularization_rules,
-                 const std::vector<NeighbourList>& neighbour_lists = {},
                  const std::vector<Regularization>& sigmas = {});
 
     protected:

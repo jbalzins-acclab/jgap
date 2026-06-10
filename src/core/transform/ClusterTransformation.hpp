@@ -21,10 +21,14 @@ namespace jgap {
         virtual ~ClusterTransformation() = default;
 
         virtual Descriptor<Dim> evaluate(const Cluster<ClusterSize>& cluster) const = 0;
-        virtual DescriptorAndDerivatives<Dim, ClusterSize> evaluateAndDifferentiate(const Cluster<ClusterSize>& cluster)
+        virtual NBodyDescriptor<Dim, ClusterSize> evaluateAndDifferentiate(const Cluster<ClusterSize>& cluster)
             const = 0;
 
         virtual Cutoffs getCutoffs() const = 0;
+
+        virtual Real symmetryFactor() const {
+            return 1.0;
+        }
     };
 
     template<typename T>

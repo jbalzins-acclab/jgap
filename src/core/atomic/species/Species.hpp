@@ -18,11 +18,21 @@ namespace jgap {
     public:
         static constexpr size_t NumberOfElements = 118;
 
-        static std::map<std::string, int16_t> SymbolToAtomicNumber;
+        static std::map<std::string, uint16_t> SymbolToAtomicNumber;
         static std::array<std::string, NumberOfElements+1> AtomicNumberToSymbol;
         static std::array<Real, NumberOfElements+1> Masses;
 
+        static Species Anon() {
+            static const Species anon("AnonymousSpecies");
+            return anon;
+        }
+
+        static Species fromAtomicNumber(size_t Z) {
+            return Species(AtomicNumberToSymbol[Z]);
+        }
+
         Species(const Species& other) = default;
+        Species& operator=(const Species& other) = default;
 
         Species(const std::string &symbol) {
             std::lock_guard lock(Mtx);
@@ -30,7 +40,7 @@ namespace jgap {
             if (SymbolIds.contains(symbol)) {
                 id = SymbolIds[symbol];
             } else {
-                id = static_cast<int16_t>(SymbolIds.size());
+                id = static_cast<uint16_t>(SymbolIds.size());
                 SymbolIds[symbol] = id;
                 IdSymbols[id] = symbol;
 
@@ -38,7 +48,9 @@ namespace jgap {
             }
         }
 
-        Species(int16_t id) : id(id) {
+        Species(const char* symbol) : Species(std::string(symbol)) {}
+
+        Species(uint16_t id) : id(id) {
             assert(IdSymbols.contains(id) && "Unknown species ID");
         }
 
@@ -46,7 +58,7 @@ namespace jgap {
             return IdSymbols.at(id);
         }
 
-        int16_t getId() const {
+        uint16_t getId() const {
             return id;
         }
 
@@ -73,11 +85,11 @@ namespace jgap {
 
     private:
         inline static std::mutex Mtx{};
-        inline static std::map<std::string, int16_t> SymbolIds = {};
-        inline static std::map<int16_t, std::string> IdSymbols = {};
+        inline static std::map<std::string, uint16_t> SymbolIds = {};
+        inline static std::map<uint16_t, std::string> IdSymbols = {};
         // TODO: add properties per ID ??
 
-        int16_t id;
+        uint16_t id;
     };
 }
 

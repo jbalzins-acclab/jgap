@@ -29,7 +29,7 @@ namespace jgap {
 
             const Real chi = (r - r_min) * cutoff_width_inverse;
             const Real chi_sq = chi * chi;
-            const Real chi_cube = chi * chi;
+            const Real chi_cube = chi_sq * chi ;
             Real val = 1.0 - chi_cube * (10.0 - 15.0 * chi + 6.0 * chi_sq);
             Real deriv = -30.0 * chi_sq * (1.0 - 2.0 * chi + chi_sq) * cutoff_width_inverse;
 

@@ -5,7 +5,6 @@ namespace jgap {
     void GapFit::fit(GapPotential &to_be_fit,
                      const std::vector<Atoms> &training_data,
                      const RegularizationRules& regularization_rules,
-                     const std::vector<NeighbourList> &neighbour_lists,
                      const std::vector<Regularization> &sigmas) {
 
         auto sigmas_inverse = sigmas;
@@ -21,7 +20,7 @@ namespace jgap {
             regularization_rules.fillSigmas(sigmas_inverse[i], training_data[i]);
 
             sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform(
-                [](Real val) -> Real {return 1.0 / val;}
+                [](Real val) -> Real { return 1.0 / val; }
                 );
             sigmas_inverse[i].virials = sigmas_inverse[i].virials.transform([](const Virials &val) -> Virials {
                 return Virials{
@@ -61,7 +60,7 @@ namespace jgap {
             };
 
             if (to_be_fit.optional_external_potential) {
-                AtomicQuantity ext_pred = to_be_fit.optional_external_potential->calculate(atoms);
+                AtomicQuantity ext_pred = to_be_fit.optional_external_potential->calculateEnergy(atoms);
 
                 if (energies_without_external[i].energy.has_value()) {
                     energies_without_external[i].energy.value() -= ext_pred.value;
@@ -82,11 +81,10 @@ namespace jgap {
 
         auto fit_coefficients = mainFit(
             to_be_fit.components,
-                     training_data,
-            //actual_neighbour_lists,
+            training_data,
             energies_without_external,
             sigmas_inverse
-            );
+        );
         to_be_fit.setCoefficients(fit_coefficients);
 
         for (Real coeff: fit_coefficients) {
