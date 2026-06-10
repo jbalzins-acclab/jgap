@@ -81,6 +81,11 @@ namespace jgap {
             };
         }
 
+        Real getPrefactor() const { return prefactor; }
+        const std::array<Real, ExpDimensions>& getInverseLengthScalesSquared() const {
+            return inverse_length_scales_squared;
+        }
+
     private:
         Real prefactor{};
         std::array<Real, ExpDimensions> inverse_length_scales_squared{};

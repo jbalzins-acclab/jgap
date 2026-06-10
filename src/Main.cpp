@@ -24,6 +24,7 @@
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "core/potentials/CompositePotential.hpp"
 #include "core/potentials/gap/component/NBodyGapComponent.hpp"
+#include "core/potentials/gap/component/BatchedNBodyGapComponent.hpp"
 #include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "core/transform/2b/TwoBodyTransformation.hpp"
 #include "core/transform/aggregated/TransformationAggregator.hpp"
@@ -144,10 +145,9 @@ int main(int argc, char** argv) {
     }
     auto sp2 = sparsifier2.selectSparsePoints(descs2);
 
-    auto component3 = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>>(
+    auto component3 = std::make_unique<BatchedNBodyGapComponent<4, 3, HasCentralAtom, 3, 1>>(
             SpeciesSet<3, HasCentralAtom>("Fe", "Fe", "Fe"),
             std::make_unique<Angle3bTransformation>(std::move(trans3)),
-            //std::make_unique<SquaredExpKernel<3, 1>>(kernel3),
             kernel3,
             sp3
         );
@@ -165,8 +165,8 @@ int main(int argc, char** argv) {
     // ====================================================================================
     std::vector<GapComponent::Ptr> components;
     // Add all components
-    components.push_back(std::move(component_eam));
-    components.push_back(std::move(component2));
+    //components.push_back(std::move(component_eam));
+    //components.push_back(std::move(component2));
     components.push_back(std::move(component3));
 
     auto potential = GapPotential(std::move(components));
