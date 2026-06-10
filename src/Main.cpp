@@ -36,10 +36,11 @@ using namespace jgap;
 using namespace std;
 
 int main(int argc, char** argv) {
-    tbb::global_control control(tbb::global_control::max_allowed_parallelism, 1);
+    //tbb::global_control control(tbb::global_control::max_allowed_parallelism, 1);
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
+    /*
     pugi::xml_document quipDocument;
     quipDocument.load_file("gap.xml");
     //quipDocument.load_file("/Users/jegorsbalzins/jgap/notes/etal/sample_baseline.xml");
@@ -70,7 +71,7 @@ int main(int argc, char** argv) {
     auto y = dynamic_cast<SquaredExpKernel<1, 0>*>(x->kernel.release());
     auto z = dynamic_cast<TransformationAggregatorImpl<1, 2>*>(x->aggregator.release());
 
-    return 0;
+    return 0;*/
     JGAP_LOG_INFO("Start");
     auto training_data = readAtoms("/Users/jegorsbalzins/jgap/resources/xyz-samples/db_Fe.xyz");
 
@@ -161,8 +162,8 @@ int main(int argc, char** argv) {
     // ====================================================================================
     std::vector<GapComponent::Ptr> components;
     // Add all components
-    components.push_back(std::move(component_eam));
-    components.push_back(std::move(component2));
+    //components.push_back(std::move(component_eam));
+    //components.push_back(std::move(component2));
     components.push_back(std::move(component3));
 
     auto potential = GapPotential(std::move(components));
