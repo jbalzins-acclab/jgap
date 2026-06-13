@@ -1,15 +1,16 @@
 #ifndef JGAP_TRANSFORMATIONAGGREGATORIMPL_HPP
 #define JGAP_TRANSFORMATIONAGGREGATORIMPL_HPP
 #include "TransformationAggregator.hpp"
+#include "core/tabulation/TabulationData.hpp"
 
 namespace jgap {
 
     template<size_t Dim, size_t ClusterSize>
     class TransformationAggregatorImpl final : public TransformationAggregator<Dim> {
     public:
-        using TransformationPtr = std::unique_ptr<ClusterTransformation<Dim, ClusterSize>>;
+        using TransformationPtr = ValuePtr<ClusterTransformation<Dim, ClusterSize>>;
 
-        TransformationAggregatorImpl(Species central_atom_species)
+        TransformationAggregatorImpl(const Species central_atom_species)
             : central_atom_species(central_atom_species) {
         }
 
@@ -20,7 +21,7 @@ namespace jgap {
                                    "whose root doesnt match central atom species");
             }
 
-            transformations.emplace_back(std::move(species_set), std::move(transformation));
+            transformations.insert({species_set, std::move(transformation)});
         }
 
         std::map<size_t, ManyBodyDescriptor<Dim>> aggregate(const NeighbourList& nl) const override {
@@ -38,7 +39,7 @@ namespace jgap {
 
             // Stage 1: Form full descriptors per central atom
             for (const auto& [species_set, transformation] : transformations) {
-                auto clusters = nl.findAllClusters<ClusterSize>(species_set);
+                auto clusters = nl.findAllClusters<WithDerivatives>(species_set);
                 for (const auto& cluster: clusters) {
                     size_t central_idx = cluster.atom_indexes[0];
 
@@ -53,8 +54,8 @@ namespace jgap {
                     // Accumulate forces and virials directly via chain rule wrt internal variables
                     for (size_t i = 0; i < ClusterSize; i++) {
                         for (size_t j = i + 1; j < ClusterSize; j++) {
-                            const auto sep_idx = flattened_index(i, j);
-                            const auto& separation = cluster.between(i, j);
+                            const auto sep_idx = flattenedIndex(i, j);
+                            const auto& separation = cluster.derivativesBetween(i, j);
                             const auto& derivs = contribution.derivatives[sep_idx];
 
                             for (size_t dim = 0; dim < Dim; dim++) {
@@ -81,9 +82,54 @@ namespace jgap {
             return combined;
         }
 
+        std::unique_ptr<TransformationAggregator<Dim>> clone() const override {
+            return std::make_unique<TransformationAggregatorImpl>(*this);
+        }
+
+        void tabulateNewManyBodyGrid(TabulationData &tables) const override {
+
+            if constexpr (Dim == 1 && ClusterSize == 2) {
+
+                ManyBodyGrids<2>& eam_grids = tables.newEamGrid(central_atom_species);
+
+                for (const auto& [species_set, transformation] : transformations) {
+                    auto& grid = eam_grids.aggregator_grids.getValueGrid(species_set);
+
+                    for (auto cell: grid) {
+                        Cluster<2> as_cluster{};
+                        as_cluster.between(0, 1) = cell.pos[0];
+                        cell.value += transformation->evaluate(as_cluster).value[0];
+                    }
+                }
+
+            } else {
+                JGAP_LOG_AND_THROW("Tabulation not implemented");
+            }
+        }
+
+        Species getCentralSpecies() const override {
+            return central_atom_species;
+        }
+
+        std::set<Species> getAllSpecies() const override {
+            std::set result{central_atom_species};
+
+            for (const auto& species_set: transformations | std::views::keys) {
+                for (Species species: species_set.getNodes()) {
+                    result.insert(species);
+                }
+            }
+
+            return result;
+        }
+
+        const auto& getTransformations() const {
+            return transformations;
+        }
+
     private:
         Species central_atom_species;
-        std::vector<std::pair<SpeciesSet<ClusterSize, HasCentralAtom>, TransformationPtr>> transformations;
+        std::multimap<SpeciesSet<ClusterSize, HasCentralAtom>, TransformationPtr> transformations;
     };
 }
 

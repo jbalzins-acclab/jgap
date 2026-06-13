@@ -60,15 +60,15 @@ namespace jgap {
         return coefficients;
     }
 
-    CubicBSpline::CubicBSpline(const Table<1>& coefficients) : coefficients(coefficients) {}
+    CubicBSpline::CubicBSpline(const Grid<1>& coefficients) : coefficients(coefficients) {}
 
-    CubicBSpline CubicBSpline::fit(const Table<1>& values) {
+    ValuePtr<Spline<1> > CubicBSpline::fit(const Grid<1> &values) {
         auto new_dims = values.dims;
         new_dims[0] += 2;
         auto new_origin = values.origin;
         new_origin[0] -= values.spacing[0];
 
-        Table<1> coeff_table(new_dims, values.spacing, new_origin);
+        Grid<1> coeff_table(new_dims, values.spacing, new_origin);
         coeff_table.data_flat = toSplineCoefficients(values.data_flat, values.spacing[0]);
         return CubicBSpline(coeff_table);
     }

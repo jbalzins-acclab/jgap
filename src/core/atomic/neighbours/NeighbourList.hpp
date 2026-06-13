@@ -18,9 +18,8 @@
 
 namespace jgap {
 
-    using AtomNeighbourLists = std::map<Species, std::vector<NeighbourData>>;
-
     struct NeighbourList {
+        using AtomNeighbourLists = std::map<Species, std::vector<NeighbourData>>;
 
         static std::vector<NeighbourList> form(const std::vector<Atoms>& boxes, Real cutoff);
 
@@ -39,14 +38,14 @@ namespace jgap {
         NeighbourList() = default;
         NeighbourList(const Atoms& box, Real cutoff);
 
-        template<size_t N, ClusterTypes ClusterType>
+        template<CalculationType CalcType = WithDerivatives, size_t N, ClusterSymmetry ClusterSym>
         requires(N > 1 && N <= 3)
-        std::vector<Cluster<N>> findAllClusters(const SpeciesSet<N, ClusterType>& species_set)
+        std::vector<Cluster<N, CalcType>> findAllClusters(const SpeciesSet<N, ClusterSym>& species_set)
             const;
 
-        template<size_t N, ClusterTypes ClusterType>
+        template<size_t N, ClusterSymmetry ClusterSym>
         requires(N > 1 && N <= 3)
-        std::vector<SpeciesSet<N, ClusterType>> getSpeciesSets() const;
+        std::vector<SpeciesSet<N, ClusterSym>> getSpeciesSets() const;
 
         template<size_t N>
         requires(N > 1 && N <= 3)

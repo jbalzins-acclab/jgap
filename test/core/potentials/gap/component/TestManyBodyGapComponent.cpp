@@ -13,17 +13,18 @@ using namespace jgap;
 TEST(TestManyBodyGapComponent, RealPolycutoff) {
     Atoms atoms({ {0,0,0}, {2,0,0} }, { Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 5.0);
-    auto trans = std::make_unique<PolycutoffPairFunction>(4.0, 1.0, 2.0);
+    auto trans = PolycutoffPairFunction(4.0, 1.0, 2.0);
 
-    auto eam_aggregator = std::make_unique<TransformationAggregatorImpl<1, 2>>("Fe");
-    eam_aggregator->extend({"Fe", "Ni"}, std::move(trans));
+    auto eam_aggregator = TransformationAggregatorImpl<1, 2>("Fe");
+    eam_aggregator.extend({"Fe", "Ni"}, trans);
 
-    auto kernel = std::make_unique<SquaredExpKernel<1, 0>>(1.0, std::array<Real, 1>{1.0});
+    auto kernel = SquaredExpKernel<1, 0>(1.0, std::array<Real, 1>{1.0});
     std::vector<Descriptor<1>> sparse_points = { {{{1.5}}} };
 
-    auto component = ManyBodyGapComponent<1>(
-        std::move(eam_aggregator),
-        std::move(kernel), sparse_points
+    auto component = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
+        eam_aggregator,
+        kernel,
+        sparse_points
     );
 
     auto result_opt = component.covariate(nl);

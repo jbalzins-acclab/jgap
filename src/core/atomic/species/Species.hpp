@@ -37,6 +37,16 @@ namespace jgap {
         Species(const std::string &symbol) {
             std::lock_guard lock(Mtx);
 
+            if (SymbolIds.empty()) {
+                IdSymbols[0] = "AnonymousSpecies";
+                SymbolIds["AnonymousSpecies"] = 0;
+
+                for (auto& [element_symbol, Z]: SymbolToAtomicNumber) {
+                    IdSymbols[Z] = element_symbol;
+                    SymbolIds[element_symbol] = Z;
+                }
+            }
+
             if (SymbolIds.contains(symbol)) {
                 id = SymbolIds[symbol];
             } else {

@@ -4,6 +4,7 @@
 #include <string>
 #include <tuple>
 #include "core/Real.hpp"
+#include "utils/ValuePtr.hpp"
 
 namespace jgap {
 
@@ -15,7 +16,11 @@ namespace jgap {
         virtual std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const = 0;
 
         virtual Real getCutoff() const = 0;
+
+        virtual std::unique_ptr<CutoffFunction> clone() const = 0;
     };
+
+    static_assert(Cloneable<CutoffFunction>);
 }
 
 #endif

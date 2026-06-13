@@ -36,6 +36,8 @@ namespace jgap {
         }
     #endif
 
+    bool getLine(std::ifstream &file, std::string &line);
+
     std::vector<Atoms> readAtoms(const std::string& filename);
     std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names);
 

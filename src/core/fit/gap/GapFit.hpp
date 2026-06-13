@@ -26,13 +26,10 @@ namespace jgap {
             std::optional<std::vector<Vector3>> forces;
         };
 
-        virtual std::vector<Real> mainFit(
-                 std::vector<GapComponent::Ptr>& gap_components,
-                 const std::vector<Atoms> &training_data,
-                 //std::vector<NeighbourList>& neighbour_lists,
-                 std::vector<EnergyData>& energies_without_external,
-                 std::vector<Regularization>& sigmas_inverse
-                 ) = 0;
+        virtual std::vector<Real> mainFit(std::vector<ValuePtr<GapComponent> > &gap_components,
+                                          const std::vector<Atoms> &training_data,
+                                          std::vector<EnergyData> &energies_without_external,
+                                          std::vector<Regularization> &sigmas_inverse) = 0;
     };
 }
 

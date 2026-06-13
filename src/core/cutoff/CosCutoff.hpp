@@ -38,6 +38,10 @@ namespace jgap {
             return {val, deriv};
         }
 
+        std::unique_ptr<CutoffFunction> clone() const override {
+            return std::make_unique<CosCutoff>(*this);
+        }
+
     private:
         const Real cutoff;
         const Real r_min;

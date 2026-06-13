@@ -10,15 +10,15 @@
 
 namespace jgap {
 
-    template<size_t Dim>
+    template<size_t Dim, CKernelOfDim<Dim> TKernel>
     class ManyBodyGapComponent final : public GapComponent {
     public:
-        ManyBodyGapComponent(std::unique_ptr<TransformationAggregator<Dim>> aggregator,
-                             std::unique_ptr<Kernel<Dim>> kernel,
+        ManyBodyGapComponent(const ValuePtr<TransformationAggregator<Dim>>& aggregator,
+                             const TKernel& kernel,
                              std::vector<Descriptor<Dim>> sparse_points,
                              const std::vector<Real>& optional_coeffs = {})
-            : aggregator(std::move(aggregator)),
-              kernel(std::move(kernel)),
+            : aggregator(aggregator),
+              kernel(kernel),
               sparse_points(std::move(sparse_points)) {
 
             if (!optional_coeffs.empty()) {
@@ -38,7 +38,7 @@ namespace jgap {
             for (const auto& [atom_idx, descriptor] : aggregated_descriptors) {
                 for (size_t sparse_idx = 0; sparse_idx < nSparsePoints(); sparse_idx++) {
                     const auto& sparse_desc = sparse_points[sparse_idx];
-                    const auto [K, gradK_wrt_q] = kernel->valueAndGradient(sparse_desc.value, descriptor.value);
+                    const auto [K, gradK_wrt_q] = kernel.valueAndGradient(sparse_desc.value, descriptor.value);
 
                     result.energy(sparse_idx) += K;
 
@@ -60,7 +60,7 @@ namespace jgap {
             Matrix result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
-                    result(i, j) = kernel->value(sparse_points[i].value, sparse_points[j].value);
+                    result(i, j) = kernel.value(sparse_points[i].value, sparse_points[j].value);
                     result(j, i) = result(i, j);
                 }
             }
@@ -75,9 +75,31 @@ namespace jgap {
             return aggregator->getCutoffs();
         }
 
-    public:
-        std::unique_ptr<TransformationAggregator<Dim>> aggregator;
-        std::unique_ptr<Kernel<Dim>> kernel;
+        std::unique_ptr<GapComponent> clone() const override {
+            return std::make_unique<ManyBodyGapComponent>(*this);
+        }
+
+        void tabulate(TabulationData &tables) const override {
+            if constexpr (Dim == 1) {
+
+                aggregator->tabulateNewManyBodyGrid(tables);
+                auto& eam_grids = tables.eam_grids_vec.back();
+
+                for (auto cell: eam_grids.value_grid) {
+                    for (const auto& sparse_point: sparse_points) {
+                        cell.value += kernel.value(sparse_point.value, cell.pos);
+                    }
+                }
+
+            } else {
+                JGAP_LOG_AND_THROW("Tabulation not implemented");
+            }
+        }
+
+    private:
+        ValuePtr<TransformationAggregator<Dim>> aggregator;
+        TKernel kernel;
+
         std::vector<Descriptor<Dim>> sparse_points;
     };
 }

@@ -16,7 +16,7 @@ namespace jgap {
         }
 
         Descriptor<1> evaluate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1).magnitude;
+            Real distance = pair.between(0, 1);
             if (distance >= cutoff) return {{0.0}};
             if (distance <= r_min) return {{prefactor}};
 
@@ -25,7 +25,7 @@ namespace jgap {
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1).magnitude;
+            Real distance = pair.between(0, 1);
             if (distance >= cutoff) return {{{0.0}}, {}};
             if (distance <= r_min) return {{{prefactor}}, {}};
 
@@ -36,6 +36,10 @@ namespace jgap {
             Real deriv = prefactor * (dchi_dr * chi * chi * ( -30.0 * chi * chi + 60.0 * chi - 30.0));
 
             return {{{val}}, {std::array{deriv}}};
+        }
+
+        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
+            return std::make_unique<PolycutoffPairFunction>(*this);
         }
 
     private:

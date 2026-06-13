@@ -48,15 +48,15 @@ TEST(TestNeighbourList, FindAllClusters) {
     // Each atom has 2 neighbors. Total pairs = 4 atoms * 2 neighbors = 8.
 
     // Fe-Fe pairs: Fe(0)-Fe(2) and Fe(2)-Fe(0)
-    auto fe_fe_pairs = nl.findAllClusters(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"});
+    auto fe_fe_pairs = nl.findAllClusters<ValueOnly>(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"});
     EXPECT_EQ(fe_fe_pairs.size(), 2);
 
     // Ni-Ni pairs: Ni(1)-Ni(3) and Ni(3)-Ni(1)
-    auto ni_ni_pairs = nl.findAllClusters(SpeciesSet<2, HasCentralAtom>{"Ni", "Ni"});
+    auto ni_ni_pairs = nl.findAllClusters<ValueOnly>(SpeciesSet<2, HasCentralAtom>{"Ni", "Ni"});
     EXPECT_EQ(ni_ni_pairs.size(), 2);
 
     // Fe-Ni pairs: Fe(0)-Ni(1) and Fe(2)-Ni(3)
-    auto fe_ni_pairs = nl.findAllClusters(SpeciesSet<2, HasCentralAtom>{"Fe", "Ni"});
+    auto fe_ni_pairs = nl.findAllClusters<ValueOnly>(SpeciesSet<2, HasCentralAtom>{"Fe", "Ni"});
     EXPECT_EQ(fe_ni_pairs.size(), 2);
 
     // Ni-Fe pairs: Ni(1)-Fe(0) and Ni(3)-Fe(2)
@@ -81,10 +81,10 @@ TEST(TestNeighbourList, FindAllClusters) {
     // {"Ni", "Ni", "Fe"}:
     // Centered on Ni(1), neighbors are Ni(3) and Fe(0). Forms triplet (1,3,0).
     // Centered on Ni(3), neighbors are Ni(1) and Fe(2). Forms triplet (3,1,2).
-    auto ni_ni_fe_triplets = nl.findAllClusters<3>(SpeciesSet<3, HasCentralAtom>{"Ni", "Ni", "Fe"});
+    auto ni_ni_fe_triplets = nl.findAllClusters(SpeciesSet<3, HasCentralAtom>{"Ni", "Ni", "Fe"});
     EXPECT_EQ(ni_ni_fe_triplets.size(), 2);
 
     // Other combinations like {"Fe", "Ni", "Ni"} are impossible as no Fe has two Ni neighbors.
-    auto fe_ni_ni_triplets = nl.findAllClusters<3>(SpeciesSet<3, HasCentralAtom>{"Fe", "Ni", "Ni"});
+    auto fe_ni_ni_triplets = nl.findAllClusters(SpeciesSet<3, HasCentralAtom>{"Fe", "Ni", "Ni"});
     EXPECT_EQ(fe_ni_ni_triplets.size(), 0);
 }

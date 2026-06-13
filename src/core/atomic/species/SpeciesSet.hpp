@@ -12,15 +12,15 @@
 
 namespace jgap {
 
-    enum class ClusterTypes {
+    enum class ClusterSymmetry {
         HasCentralAtom,
         Symmetric
     };
 
-    using ClusterTypes::HasCentralAtom;
-    using ClusterTypes::Symmetric;
+    using ClusterSymmetry::HasCentralAtom;
+    using ClusterSymmetry::Symmetric;
 
-    template<size_t NSpecies, ClusterTypes ClusterType>
+    template<size_t NSpecies, ClusterSymmetry ClusterSym>
     class SpeciesSet;
 
     template<size_t NSpecies>

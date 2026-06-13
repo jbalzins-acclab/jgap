@@ -8,7 +8,7 @@ using namespace jgap;
 TEST(TestCoscutoffPairFunction, BelowRange) {
     CoscutoffPairFunction func(5.0, 2.0, 1.5); // cutoff, r_min, prefactor
     Cluster<2> pair;
-    pair.between(0, 1).magnitude = 1.0;
+    pair.between(0, 1) = 1.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc.value[0], 1.5);
@@ -21,7 +21,7 @@ TEST(TestCoscutoffPairFunction, BelowRange) {
 TEST(TestCoscutoffPairFunction, AboveRange) {
     CoscutoffPairFunction func(5.0, 2.0, 1.5);
     Cluster<2> pair;
-    pair.between(0, 1).magnitude = 6.0;
+    pair.between(0, 1) = 6.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc.value[0], 0.0);
@@ -34,7 +34,7 @@ TEST(TestCoscutoffPairFunction, AboveRange) {
 TEST(TestCoscutoffPairFunction, InsideRange) {
     CoscutoffPairFunction func(5.0, 2.0, 1.5); // r_min=2, cutoff=5, width=3
     Cluster<2> pair;
-    pair.between(0, 1).magnitude = 3.5; // Midpoint, chi = 0.5, phase = pi/2
+    pair.between(0, 1) = 3.5; // Midpoint, chi = 0.5, phase = pi/2
 
     // val = prefactor * 0.5 * (1 + cos(pi/2)) = 1.5 * 0.5 * (1 + 0) = 0.75
     auto desc = func.evaluate(pair);

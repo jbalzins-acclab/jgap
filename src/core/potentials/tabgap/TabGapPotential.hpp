@@ -1,30 +1,38 @@
-#ifdef JGAP_TABGAPPOTENTIAL_HPP
+#ifndef JGAP_TABGAPPOTENTIAL_HPP
 #define JGAP_TABGAPPOTENTIAL_HPP
 
-#include <io/parse/ParserRegistry.hpp>
-
+#include "components/EamTGComponent.hpp"
+#include "components/TabGapComponent.hpp"
 #include "core/potentials/Potential.hpp"
 
 namespace jgap {
 
-    class TabGapPotential : public Potential, Serializable {
+    class TabGapPotential : public Potential {
     public:
+        friend class TabGapIO;
 
-        TabGapPotential(TabulationData spline_coefficients, const std::vector<std::string>& files);
+        TabGapPotential(TabulationData energy_tables);
 
-        Predictions predict(const AtomicStructure &structure) override;
+        AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
 
-        CutoffRanges getCutoff() override;
+        Cutoffs getCutoffs() const override;
+
+        void tabulate(TabulationData& table) const override;
+
+        std::unique_ptr<Potential> clone() const override {
+            return std::make_unique<TabGapPotential>(*this);
+        }
 
     private:
-        DataNode params_;
+        size_t n_2b_components{};
+        size_t n_3b_components{};
+        size_t n_eam_components{};
 
-        std::map<Species, double> isolated_energies_;
-        std::shared_ptr<TwoBodyDescriptor> two_body_;
-        std::shared_ptr<ThreeBodyDescriptorFinder> three_body_;
-        std::vector<std::shared_ptr<EamDescriptor>> eams_;
+        std::map<Species, Real> isolated_atom_energies;
+        std::vector<ValuePtr<TabGapComponent>> components;
 
-        void init(TabulationData& spline_coefficients);
+        TabGapPotential(const std::map<Species, Real>& isolated_atom_energies = {},
+                        const std::vector<ValuePtr<TabGapComponent>>& components = {});
     };
 }
 

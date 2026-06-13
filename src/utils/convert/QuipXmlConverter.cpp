@@ -11,7 +11,6 @@
 #include "core/transform/eam/PolycutoffPairFunction.hpp"
 #include "core/transform/eam/FSGenPairFunction.hpp"
 #include "core/transform/eam/CoscutoffPairFunction.hpp"
-#include "../../core/transform/aggregated/TransformationAggregator.hpp"
 #include "io/log/CurrentLogger.hpp"
 #include <fstream>
 #include <cmath>
@@ -21,7 +20,7 @@
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
 
 namespace jgap {
-    std::unique_ptr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded) {
+    ValuePtr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded) {
 
         if (quip_potential_encoded.name() == std::string("GAP_params")) {
             return transformGapParams(quip_potential_encoded);
@@ -31,33 +30,33 @@ namespace jgap {
             return transformPairpot(quip_potential_encoded);
         }
 
-        std::unique_ptr<Potential> gap_or_isolated = nullptr;
+        ValuePtr<Potential> gap_or_isolated = nullptr;
         if (quip_potential_encoded.child("GAP_params")) {
             gap_or_isolated = transformGapParams(quip_potential_encoded.child("GAP_params"));
         }
 
-        std::unique_ptr<Potential> pairpot = nullptr;
+        ValuePtr<Potential> pairpot = nullptr;
         if (quip_potential_encoded.child("pairpot")) {
             pairpot = transformPairpot(quip_potential_encoded.child("pairpot"));
         }
 
-        if (gap_or_isolated == nullptr && pairpot == nullptr) {
+        if (gap_or_isolated.get() == nullptr && pairpot.get() == nullptr) {
             JGAP_LOG_AND_THROW("No potential(s) found in XML node");
         }
 
-        if (gap_or_isolated == nullptr) {
+        if (gap_or_isolated.get() == nullptr) {
             return pairpot;
         }
 
-        if (pairpot == nullptr) {
+        if (pairpot.get() == nullptr) {
             return gap_or_isolated;
         }
 
         if (auto* gap = dynamic_cast<GapPotential*>(gap_or_isolated.get())) {
 
-            if (gap->optional_external_potential != nullptr) {
+            if (gap->optional_external_potential.get() != nullptr) {
 
-                gap->optional_external_potential = std::make_unique<CompositePotential>(
+                gap->optional_external_potential = CompositePotential(
                     std::move(gap->optional_external_potential),
                     std::move(pairpot)
                     );
@@ -69,10 +68,10 @@ namespace jgap {
             return gap_or_isolated;
         }
 
-        return std::make_unique<CompositePotential>(std::move(gap_or_isolated), std::move(pairpot));
+        return CompositePotential(std::move(gap_or_isolated), std::move(pairpot));
     }
 
-    std::unique_ptr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node& quip_pairpot) {
+    ValuePtr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node& quip_pairpot) {
 
         if (quip_pairpot.child("Potential").attribute("init_args").as_string() != std::string("IP Glue")) {
             JGAP_LOG_WARN("Strange 'init_args'");
@@ -89,7 +88,7 @@ namespace jgap {
             type_to_species.emplace(type_str, species);
         }
 
-        auto result = std::make_unique<SplinePairPotential>();
+        auto result = SplinePairPotential();
         for (pugi::xml_node perPairNode: quip_pairpot.child("Glue_params").children("per_pair_data")) {
             Species species1 = type_to_species.at(perPairNode.attribute("type1").as_string());
             Species species2 = type_to_species.at(perPairNode.attribute("type2").as_string());
@@ -100,14 +99,14 @@ namespace jgap {
                 E.push_back(pointNode.attribute("E").as_double());
             }
 
-            result->extend(species1, species2, r, E);
+            result.extend(species1, species2, r, E);
         }
 
         return result;
     }
 
-    std::unique_ptr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node& quip_gap_params) {
-        std::unique_ptr<Potential> isolated_atom_pot = nullptr;
+    ValuePtr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node& quip_gap_params) {
+        ValuePtr<Potential> isolated_atom_pot = nullptr;
         if (!quip_gap_params.child("GAP_data").empty()) {
             isolated_atom_pot = transformIsolatedAtomParams(quip_gap_params.child("GAP_data"));
         }
@@ -117,12 +116,12 @@ namespace jgap {
 
         auto gap_potential = transformSparseData(quip_gap_params.child("gpSparse"));
 
-        gap_potential->optional_external_potential = std::move(isolated_atom_pot);
+        gap_potential.optional_external_potential = std::move(isolated_atom_pot);
 
         return gap_potential;
     }
 
-    std::unique_ptr<IsolatedAtomPotential> QuipXmlConverter::transformIsolatedAtomParams(
+    IsolatedAtomPotential QuipXmlConverter::transformIsolatedAtomParams(
                                                         const pugi::xml_node& quip_isolated_atom_params) {
 
         std::map<Species, double> isolated_atom_energies;
@@ -135,12 +134,12 @@ namespace jgap {
             }
         }
 
-        return std::make_unique<IsolatedAtomPotential>(isolated_atom_energies, false);
+        return IsolatedAtomPotential(isolated_atom_energies, false);
     }
 
-    std::unique_ptr<GapPotential> QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data) {
+    GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data) {
 
-        std::vector<std::unique_ptr<GapComponent>> comps;
+        std::vector<ValuePtr<GapComponent>> comps;
 
         std::set<Species> species_encountered;
         for (pugi::xml_node sparse_node: quip_sparse_data.children("gpCoordinates")) {
@@ -216,7 +215,7 @@ namespace jgap {
                 .mode = mode,
             };
 
-            std::unique_ptr<GapComponent> new_comp;
+            ValuePtr<GapComponent> new_comp;
             if (main_data.type == "distance_2b") {
                 new_comp = transformDistance2b(main_data, sparse_node);
             } else if (main_data.type == "angle_3b") {
@@ -229,10 +228,10 @@ namespace jgap {
             comps.push_back(std::move(new_comp));
         }
 
-        return std::make_unique<GapPotential>(std::move(comps));
+        return GapPotential(std::move(comps));
     }
 
-    std::unique_ptr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
+    ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
                                                                         const pugi::xml_node &distance_2b_node) {
 
         double cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
@@ -247,10 +246,10 @@ namespace jgap {
 
         SpeciesSet<2, Symmetric> species_set(species1.symbol(), species2.symbol());
 
-        auto trans = std::make_unique<TwoBodyTransformation>(
-            std::make_unique<CosCutoff>(main_data.cutoff, cutoff_transition_width)
+        ValuePtr<ClusterTransformation<2, 2>> trans = TwoBodyTransformation(
+            CosCutoff(main_data.cutoff, cutoff_transition_width)
             );
-        auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(main_data.delta, std::array<Real, 1>{main_data.theta});
+        auto kernel = SquaredExpKernel<1, 1>(main_data.delta, std::array<Real, 1>{main_data.theta});
 
         std::vector<Descriptor<2>> sparse_points;
         std::vector<Real> coeffs;
@@ -266,17 +265,17 @@ namespace jgap {
             fin >> r;
             double coeff = pt.attribute("alpha").as_double();
             double sparse_cutoff = pt.attribute("sparseCutoff").as_double();
-            sparse_points.push_back({{{r, precalc_cutoff.evaluate(r)}}});
+            sparse_points.push_back({{{r, sparse_cutoff}}});
             coeffs.push_back(coeff);
         }
         fin.close();
 
-        return std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
-            species_set, std::move(trans), *kernel.release(), sparse_points, coeffs
+        return NBodyGapComponent(
+            species_set, trans, kernel, sparse_points, coeffs
         );
     }
 
-    std::unique_ptr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData &mainData,
+    ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData &mainData,
                                                                      const pugi::xml_node &angle3b_node) {
 
         double r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
@@ -293,11 +292,11 @@ namespace jgap {
 
         SpeciesSet<3, HasCentralAtom> species_set(root_species, species1, species2);
 
-        auto trans = std::make_unique<Angle3bTransformation>(
-            std::make_unique<CosCutoff>(mainData.cutoff, mainData.cutoff - r_min)
+        ValuePtr<ClusterTransformation<4, 3>> trans = Angle3bTransformation(
+            CosCutoff(mainData.cutoff, mainData.cutoff - r_min)
             );
-        auto kernel = std::make_unique<SquaredExpKernel<3, 1>>(
-            mainData.delta, std::array<Real, 3>{mainData.theta, mainData.theta, mainData.theta}
+        auto kernel = SquaredExpKernel<3, 1>(
+            mainData.delta, std::array{mainData.theta, mainData.theta, mainData.theta}
             );
 
         std::vector<Descriptor<4>> sparse_points;
@@ -321,12 +320,12 @@ namespace jgap {
         }
         fin.close();
 
-        return std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom>>(
-            species_set, std::move(trans), *kernel.release(), sparse_points, coeffs
+        return NBodyGapComponent(
+            species_set, trans, kernel, sparse_points, coeffs
         );
     }
 
-    std::unique_ptr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData &main_data,
+    ValuePtr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData &main_data,
                                                                  const pugi::xml_node &eam_node,
                                                                  const std::set<Species> &species_encountered) {
 
@@ -354,7 +353,7 @@ namespace jgap {
 
         Species central_species = Species::fromAtomicNumber(Z_center);
 
-        auto aggregator = std::make_unique<TransformationAggregatorImpl<1, 2>>(central_species);
+        auto aggregator = TransformationAggregatorImpl<1, 2>(central_species);
 
         for (Species contributor_species: species_encountered) {
 
@@ -370,10 +369,10 @@ namespace jgap {
             auto pf = selectPairFunction(main_data, rMin, prefactor);
 
             SpeciesSet<2, HasCentralAtom> sp(central_species, contributor_species);
-            aggregator->extend(sp, std::move(pf));
+            aggregator.extend(sp, pf);
         }
 
-        auto kernel = std::make_unique<SquaredExpKernel<1, 0>>(main_data.delta, std::array<Real, 1>{main_data.theta});
+        auto kernel = SquaredExpKernel<1, 0>(main_data.delta, std::array{main_data.theta});
 
         std::vector<Descriptor<1>> sparse_points;
         std::vector<Real> coeffs;
@@ -395,22 +394,22 @@ namespace jgap {
         }
         fin.close();
 
-        return std::make_unique<ManyBodyGapComponent<1>>(
-            std::move(aggregator), std::move(kernel), sparse_points, coeffs
+        return ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
+            aggregator, kernel, sparse_points, coeffs
             );
     }
 
-    std::unique_ptr<ClusterTransformation<1, 2>> QuipXmlConverter::selectPairFunction(
+    ValuePtr<ClusterTransformation<1, 2>> QuipXmlConverter::selectPairFunction(
         const QuipDescriptorData& main_data, std::optional<double> r_min, double prefactor) {
 
         if (main_data.pair_function.value() == "FSgen") {
-            return std::make_unique<FSGenPairFunction>(main_data.cutoff, main_data.order.value(), prefactor);
+            return FSGenPairFunction(main_data.cutoff, main_data.order.value(), prefactor);
         }
         if (main_data.pair_function.value() == "polycutoff") {
-            return std::make_unique<PolycutoffPairFunction>(main_data.cutoff, r_min.value(), prefactor);
+            return PolycutoffPairFunction(main_data.cutoff, r_min.value(), prefactor);
         }
         if (main_data.pair_function.value() == "coscutoff") {
-            return std::make_unique<CoscutoffPairFunction>(main_data.cutoff, r_min.value(), prefactor);
+            return CoscutoffPairFunction(main_data.cutoff, r_min.value(), prefactor);
         }
 
         JGAP_LOG_AND_THROW("Unknown pair_function: " + main_data.pair_function.value());

@@ -39,6 +39,10 @@ namespace {
 
         Real getCutoff() const override { return 10.0; }
 
+        std::unique_ptr<CutoffFunction> clone() const override {
+            return std::make_unique<MockCutoff>(*this);
+        }
+
     private:
         // Using a map is fine as long as the keys are precise and the header is included.
         std::map<Real, std::pair<Real, Real>> expected_calls;
@@ -47,7 +51,7 @@ namespace {
 
 TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     // 2. Setup
-    auto mock_cutoff = std::make_unique<MockCutoff>();
+    MockCutoff mock_cutoff{};
 
     // Define the properties of our test cluster
     Real r01 = 2.0, r02 = 3.0, r12 = 4.0;
@@ -55,15 +59,15 @@ TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     // Program the mock to return specific values for the distances it will be called with
     Real val01 = 0.8, deriv01 = -0.1;
     Real val02 = 0.6, deriv02 = -0.2;
-    mock_cutoff->add_expected_call(r01, val01, deriv01);
-    mock_cutoff->add_expected_call(r02, val02, deriv02);
+    mock_cutoff.add_expected_call(r01, val01, deriv01);
+    mock_cutoff.add_expected_call(r02, val02, deriv02);
 
-    Angle3bTransformation trans(std::move(mock_cutoff));
+    Angle3bTransformation trans(mock_cutoff);
 
     Cluster<3> triplet;
-    triplet.between(0, 1).magnitude = r01;
-    triplet.between(0, 2).magnitude = r02;
-    triplet.between(1, 2).magnitude = r12;
+    triplet.between(0, 1) = r01;
+    triplet.between(0, 2) = r02;
+    triplet.between(1, 2) = r12;
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(triplet);

@@ -8,13 +8,13 @@ namespace jgap {
 
     class Angle3bTransformation final : public ClusterTransformation<4, 3> {
     public:
-        Angle3bTransformation(std::unique_ptr<CutoffFunction> cutoff)
-            : cutoff(std::move(cutoff)) {}
+        Angle3bTransformation(const ValuePtr<CutoffFunction>& cutoff)
+            : cutoff(cutoff) {}
 
         Descriptor<4> evaluate(const Cluster<3>& triplet) const override {
-            Real r01 = triplet.between(0, 1).magnitude;
-            Real r02 = triplet.between(0, 2).magnitude;
-            Real r12 = triplet.between(1, 2).magnitude;
+            Real r01 = triplet.between(0, 1);
+            Real r02 = triplet.between(0, 2);
+            Real r12 = triplet.between(1, 2);
 
             Real f_cut_01 = cutoff->evaluate(r01);
             Real f_cut_02 = cutoff->evaluate(r02);
@@ -30,9 +30,9 @@ namespace jgap {
         }
 
         NBodyDescriptor<4, 3> evaluateAndDifferentiate(const Cluster<3>& triplet) const override {
-            Real r01 = triplet.between(0, 1).magnitude;
-            Real r02 = triplet.between(0, 2).magnitude;
-            Real r12 = triplet.between(1, 2).magnitude;
+            Real r01 = triplet.between(0, 1);
+            Real r02 = triplet.between(0, 2);
+            Real r12 = triplet.between(1, 2);
 
             auto [f_cut_01, df_cut_01] = cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = cutoff->evaluateAndDifferentiate(r02);
@@ -75,8 +75,12 @@ namespace jgap {
             return 2.0;
         }
 
+        std::unique_ptr<ClusterTransformation<4, 3>> clone() const override {
+            return std::make_unique<Angle3bTransformation>(*this);
+        }
+
     private:
-        std::unique_ptr<CutoffFunction> cutoff;
+        ValuePtr<CutoffFunction> cutoff;
     };
 }
 

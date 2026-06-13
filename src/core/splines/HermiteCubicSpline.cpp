@@ -6,7 +6,7 @@
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    HermiteCubicSpline::HermiteCubicSpline(const Table<1> &table) {
+    HermiteCubicSpline::HermiteCubicSpline(const Grid<1> &table) {
         init(table);
     }
 
@@ -32,7 +32,7 @@ namespace jgap {
         return {table.origin[0] + static_cast<Real>(table.dims[0] - 1) * table.spacing[0]};
     }
 
-    void HermiteCubicSpline::init(const Table<1> &table_in) {
+    void HermiteCubicSpline::init(const Grid<1> &table_in) {
         table = table_in;
         const size_t n = table.dims[0];
         const Real spacing = table.spacing[0];

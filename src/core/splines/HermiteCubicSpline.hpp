@@ -4,24 +4,30 @@
 #include <vector>
 #include "core/Real.hpp"
 #include "Spline.hpp"
-#include "Table.hpp"
+#include "Grid.hpp"
 
 namespace jgap {
     class HermiteCubicSpline : public Spline<1> {
     public:
-        explicit HermiteCubicSpline(const Table<1>& table);
+        explicit HermiteCubicSpline(const Grid<1>& table);
 
         InterpolationResults<1> interpolate(std::array<Real, 1> pos) const override;
         std::array<Real, 1> getCutoff() const override;
 
-    private:
-        void init(const Table<1>& table);
-        size_t findInterval(Real r) const;
+        std::unique_ptr<Spline<1>> clone() const override {
+            return std::make_unique<HermiteCubicSpline>(*this);
+        }
 
-        Table<1> table;
+        const Grid<1>& getTable() const { return table; }
+
+    private:
+        Grid<1> table;
         std::vector<Real> b;
         std::vector<Real> c;
         std::vector<Real> d;
+
+        void init(const Grid<1>& table);
+        size_t findInterval(Real r) const;
     };
 }
 

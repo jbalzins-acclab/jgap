@@ -1,32 +1,36 @@
-#ifdef JGAP_TABGAPIO_HPP
+#ifndef JGAP_TABGAPIO_HPP
 #define JGAP_TABGAPIO_HPP
 
+#include <memory>
 #include <optional>
 #include <vector>
+#include <highfive/H5File.hpp>
+
+#include "core/potentials/tabgap/TabGapPotential.hpp"
+#include "core/potentials/tabgap/components/TabGapComponent.hpp"
+#include "core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"
+#include "core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
+#include "utils/ValuePtr.hpp"
 
 namespace jgap {
 
-    using FileNames = std::vector<std::string>;
+    using Filenames = std::vector<std::string>;
 
     class TabGapIO {
     public:
-        static TabulationData read(const FileNames& fileNames);
-        static FileNames write(const TabulationData& valuesTables,
-                               const TabulationData& splineTables,
-                               std::optional<std::string> outputFileNamePrefix);
+        static TabGapPotential read(const Filenames& filenames);
+        static Filenames write(const TabGapPotential& potential, const std::string &output_filename_prefix);
 
     private:
-        static std::string generateFileNamePrefix(const TabulationData& coeffs);
+        static void write2b(HighFive::File& h5_file, const TwoBodyTGComponent& component);
+        static void write3b(HighFive::File& h5_file, const ThreeBodyTGComponent& component);
 
-        static std::string writeH5(const TabulationData &valuesTables,
-                              const TabulationData &splineTables,
-                              const std::string &outputFileNamePrefix);
+        static std::string useSomeComponentsAndGenerateEamFs(const std::vector<Species>& all_species,
+                                      std::map<SpeciesSet<2, Symmetric>, const TwoBodyTGComponent*>& pair_pots,
+                                      std::multimap<Species, const EamTGComponent*>& eam_components);
 
-        static std::string writeEamFs(const TabulationData& valueTables, size_t index,
-            const std::string &outputFileNamePrefix);
-
-        static void readH5(const std::string& fileName, TabulationData& splineCoefficients);
-        static void readEamFs(const std::string& fileName, TabulationData& splineCoefficients);
+        static void readH5(const std::string& filename, TabGapPotential& pot);
+        static void readEamFs(const std::string& filename, TabGapPotential& pot);
     };
 }
 

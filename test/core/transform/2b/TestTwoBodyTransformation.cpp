@@ -29,6 +29,10 @@ namespace {
 
         Real getCutoff() const override { return 10.0; }
 
+        std::unique_ptr<CutoffFunction> clone() const override {
+            return std::make_unique<MockCutoff>(*this);
+        }
+
     private:
         Real expected_r = 0.0;
         Real return_val = 0.0;
@@ -38,16 +42,16 @@ namespace {
 
 TEST(TestTwoBodyTransformation, CorrectlyUsesCutoff) {
     // 2. Setup
-    auto mock_cutoff = std::make_unique<MockCutoff>();
+    MockCutoff mock_cutoff{};
     Real test_dist = 2.5;
     Real test_val = 0.5;
     Real test_deriv = -0.25;
-    mock_cutoff->set_values(test_dist, test_val, test_deriv);
+    mock_cutoff.set_values(test_dist, test_val, test_deriv);
 
-    TwoBodyTransformation trans(std::move(mock_cutoff));
+    TwoBodyTransformation trans(mock_cutoff);
 
     Cluster<2> pair;
-    pair.between(0, 1).magnitude = test_dist;
+    pair.between(0, 1) = test_dist;
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(pair);

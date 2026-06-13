@@ -59,7 +59,7 @@ namespace jgap {
     }
 
     void FileLogger::logWithSrc(LogLevel level, std::string_view msg, const char* file, int line, const char* func) {
-        if (_metaVis == MetadataVisibility::NONE) {
+        if (_metaVis == MetadataVisibility::None) {
             log(level, msg);
             return;
         }

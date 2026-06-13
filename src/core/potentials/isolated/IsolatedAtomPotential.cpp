@@ -4,7 +4,7 @@
 #include "io/log/StdoutLogger.hpp"
 
 namespace jgap {
-    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, double> &isolated_atom_energies,
+    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, Real> &isolated_atom_energies,
                                                  bool error_on_unknown)
         : isolated_energies(isolated_atom_energies),
           error_on_unknown_species(error_on_unknown) {
@@ -15,7 +15,7 @@ namespace jgap {
 
         for (const auto &atoms: training_data) {
 
-            if (atoms.getConfigType().value_or("") != "isolated_atom") continue;
+            if (atoms.lookupConfigType().value_or("") != "isolated_atom") continue;
 
             if (atoms.nAtoms() != 1) {
                 JGAP_LOG_AND_THROW("isolated_atom box doesn't contain one atom exactly");
@@ -25,7 +25,7 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("isolated_atom box with no energy set");
             }
 
-            auto species = atoms.getSpecies()[0];
+            auto species = atoms.lookupSpecies()[0];
 
             if (isolated_energies.contains(species)) {
                 JGAP_LOG_WARN("Duplicate isolated_atom box of species {}", species.symbol());
@@ -39,13 +39,13 @@ namespace jgap {
         }
     }
 
-    AtomicQuantity IsolatedAtomPotential::calculateEnergy(const Atoms &atoms) {
+    AtomicQuantity IsolatedAtomPotential::calculateEnergy(const Atoms &atoms) const {
 
         AtomicQuantity result(atoms.nAtoms());
 
-        for (const auto &species: atoms.getSpecies()) {
+        for (const auto &species: atoms.lookupSpecies()) {
             if (isolated_energies.contains(species)) {
-                result.value += isolated_energies[species];
+                result.value += isolated_energies.at(species);
             } else {
                 if (error_on_unknown_species) {
                     JGAP_LOG_AND_THROW("Unknown isolated_atom energy for {}", species.symbol());

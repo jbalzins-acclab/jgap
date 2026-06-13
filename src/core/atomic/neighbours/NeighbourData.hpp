@@ -1,18 +1,12 @@
 #ifndef JGAP_NEIGHBOURDATA_HPP
 #define JGAP_NEIGHBOURDATA_HPP
 
-#include <array>
-#include <vector>
-#include <optional>
-#include <numeric>
-#include <stdexcept>
-#include "../geometry/Cluster.hpp"
-#include "../geometry/Vector3.hpp"
+#include "../geometry/Separation.hpp"
 
 namespace jgap {
     struct NeighbourData {
-        size_t atom_index;
-        Separation separation;
+        size_t atom_index{};
+        Separation separation{};
     };
 }
 

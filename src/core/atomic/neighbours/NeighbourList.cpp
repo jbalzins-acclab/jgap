@@ -8,8 +8,9 @@
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
+
     Species NeighbourList::speciesOf(size_t atom_index) const {
-        for (const auto& [species, atom_indices] : atoms_by_species) {
+        for (const auto& [species, atom_indices]: atoms_by_species) {
             for (const size_t index: atom_indices) {
                 if (index == atom_index) {
                     return species;
@@ -20,8 +21,8 @@ namespace jgap {
     }
 
     std::array<int, 3> NeighbourList::findMaxRep(const Atoms& structure, const Real cutoff) {
-        auto pbc = structure.getPbc();
-        auto lattice_opt = structure.getLattice();
+        auto pbc = structure.lookupPbc();
+        auto lattice_opt = structure.lookupLattice();
 
         if (!lattice_opt) {
             if (pbc[0] || pbc[1] || pbc[2]) {
@@ -53,12 +54,14 @@ namespace jgap {
 
     NeighbourList::NeighbourList(const Atoms& box, Real cutoff) : cutoff(cutoff) {
         const auto max_rep = findMaxRep(box, cutoff);
-        auto lattice_opt = box.getLattice();
+        auto lattice_opt = box.lookupLattice();
+        auto& species = box.lookupSpecies();
+        auto& positions = box.lookupPositions();
 
         neighbours_per_atom.resize(box.nAtoms());
 
         for (size_t i = 0; i < box.nAtoms(); i++) {
-            atoms_by_species[box.getSpecies()[i]].push_back(i);
+            atoms_by_species[species[i]].push_back(i);
         }
 
         for (size_t i = 0; i < box.nAtoms(); i++) {
@@ -79,11 +82,11 @@ namespace jgap {
 
                             if (i == j && rep0 == 0 && rep1 == 0 && rep2 == 0) continue;
 
-                            auto pos_j_plus_offset = box.getPositions()[j] + offset;
-                            auto separation_ij = Separation(box.getPositions()[i], pos_j_plus_offset);
+                            auto pos_j_plus_offset = positions[j] + offset;
+                            auto separation_ij = Separation(positions[i], pos_j_plus_offset);
 
                             if (separation_ij.magnitude <= cutoff) {
-                                neighbours_i[box.getSpecies()[j]].emplace_back(j, separation_ij);
+                                neighbours_i[species[j]].emplace_back(j, separation_ij);
                             }
                         }
                     }
@@ -102,9 +105,12 @@ namespace jgap {
         return result;
     }
 
-    template<size_t N, ClusterTypes ClusterType>
+    // CalcType first since template deduction works well for others
+    template<CalculationType CalcType, size_t N, ClusterSymmetry ClusterType>
     requires(N > 1 && N <= 3)
-    std::vector<Cluster<N>> NeighbourList::findAllClusters(const SpeciesSet<N, ClusterType> &species_set) const {
+    std::vector<Cluster<N, CalcType>> NeighbourList::findAllClusters(
+        const SpeciesSet<N, ClusterType> &species_set) const {
+
         if constexpr (N > 3) {
             JGAP_LOG_AND_THROW("Inter-separations finding for N > 3 is not implemented");
         }
@@ -118,7 +124,7 @@ namespace jgap {
 
         if constexpr (N == 2 && ClusterType == HasCentralAtom) {
 
-            std::vector<Cluster<2>> result;
+            std::vector<Cluster<2, CalcType>> result;
 
             const auto& central_species = species_set.getRoot();
             const auto& node_species = species_set.getNodes()[0];
@@ -128,12 +134,8 @@ namespace jgap {
 
                 if (atom_neighbours == neighbours_per_atom[i].end()) continue;
 
-                for (auto sep: atom_neighbours->second) {
-                    Cluster<2> cluster;
-                    cluster.atom_indexes[0] = i;
-                    cluster.atom_indexes[1] = sep.atom_index;
-                    cluster.separations[0] = sep.separation;
-                    result.push_back(cluster);
+                for (auto neigh_data: atom_neighbours->second) {
+                    result.emplace_back(i, std::array{neigh_data});
                 }
             }
 
@@ -141,7 +143,7 @@ namespace jgap {
 
         } else if constexpr (N == 2 && ClusterType == Symmetric) {
 
-            std::vector<Cluster<2>> result;
+            std::vector<Cluster<2, CalcType>> result;
 
             const auto& species1 = species_set.getNodes()[0];
             const auto& species2 = species_set.getNodes()[1];
@@ -157,12 +159,8 @@ namespace jgap {
 
                 if (atom_neighbours == neighbours_per_atom[i].end()) continue;
 
-                for (auto sep: atom_neighbours->second) {
-                    Cluster<2> cluster;
-                    cluster.atom_indexes[0] = i;
-                    cluster.atom_indexes[1] = sep.atom_index;
-                    cluster.separations[0] = sep.separation;
-                    result.push_back(cluster);
+                for (auto neigh_data: atom_neighbours->second) {
+                    result.emplace_back(i, std::array{neigh_data});
                 }
             }
 
@@ -176,12 +174,8 @@ namespace jgap {
 
                     if (atom_neighbours == neighbours_per_atom[i].end()) continue;
 
-                    for (auto sep: atom_neighbours->second) {
-                        Cluster<2> cluster;
-                        cluster.atom_indexes[0] = i;
-                        cluster.atom_indexes[1] = sep.atom_index;
-                        cluster.separations[0] = sep.separation;
-                        result.push_back(cluster);
+                    for (auto neigh_data: atom_neighbours->second) {
+                        result.emplace_back(i, std::array{neigh_data});
                     }
                 }
             }
@@ -190,7 +184,7 @@ namespace jgap {
 
         } else if constexpr (N == 3 && ClusterType == HasCentralAtom) {
 
-            std::vector<Cluster<3>> result;
+            std::vector<Cluster<3, CalcType>> result;
 
             const auto& central_species = species_set.getRoot();
             const auto& species1 = species_set.getNodes()[0];
@@ -213,17 +207,7 @@ namespace jgap {
                         it2_start = std::next(it1);
                     }
                     for (auto it2 = it2_start; it2 != sep_list2.end(); ++it2) {
-                        Cluster<3> seps;
-                        seps.atom_indexes[0] = i;
-                        seps.atom_indexes[1] = it1->atom_index;
-                        seps.atom_indexes[2] = it2->atom_index;
-                        seps.separations[0] = it1->separation; // 0-1
-                        seps.separations[1] = it2->separation; // 0-2
-                        seps.separations[2] = Separation(
-                            it1->separation.vec(),
-                            it2->separation.vec()
-                            ); // 1-2
-                        result.push_back(seps);
+                        result.emplace_back(i, std::array{*it1, *it2});
                     }
                 }
             }
@@ -234,7 +218,7 @@ namespace jgap {
         JGAP_LOG_AND_THROW("Should be unreachable");
     }
 
-    template<size_t N, ClusterTypes ClusterType>
+    template<size_t N, ClusterSymmetry ClusterType>
     requires (N > 1 && N <= 3)
     std::vector<SpeciesSet<N, ClusterType>> NeighbourList::getSpeciesSets() const {
 
@@ -280,7 +264,9 @@ namespace jgap {
 
     template<size_t N>
     requires(N > 1 && N <= 3)
-    std::vector<SpeciesSet<N, HasCentralAtom>> NeighbourList::getSpeciesSets(Species central_atom_species) const {
+    std::vector<SpeciesSet<N, HasCentralAtom>> NeighbourList::getSpeciesSets(Species central_atom_species)
+        const {
+
         if constexpr (N > 3) {
             JGAP_LOG_AND_THROW("SpeciesSet generation for N > 3 is not implemented");
         }
@@ -290,7 +276,7 @@ namespace jgap {
             species_present.push_back(species);
         }
 
-        if (std::find(species_present.begin(), species_present.end(), central_atom_species) == species_present.end()) {
+        if (std::ranges::find(species_present, central_atom_species) == species_present.end()) {
             return {};
         }
 
@@ -311,11 +297,18 @@ namespace jgap {
         return {result_set.begin(), result_set.end()};
     }
 
-    template std::vector<Cluster<2>> NeighbourList::findAllClusters(
+    template std::vector<Cluster<2, WithDerivatives>> NeighbourList
+        ::findAllClusters<WithDerivatives, 2, HasCentralAtom>(const SpeciesSet<2, HasCentralAtom>& species_set) const;
+    template std::vector<Cluster<2, WithDerivatives>> NeighbourList
+        ::findAllClusters<WithDerivatives, 2, Symmetric>(const SpeciesSet<2, Symmetric>& species_set) const;
+    template std::vector<Cluster<3, WithDerivatives>> NeighbourList
+        ::findAllClusters<WithDerivatives, 3, HasCentralAtom>(const SpeciesSet<3, HasCentralAtom>& species_set) const;
+
+    template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, HasCentralAtom>(
         const SpeciesSet<2, HasCentralAtom>& species_set) const;
-    template std::vector<Cluster<2>> NeighbourList::findAllClusters(
+    template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, Symmetric>(
         const SpeciesSet<2, Symmetric>& species_set) const;
-    template std::vector<Cluster<3>> NeighbourList::findAllClusters(
+    template std::vector<Cluster<3>> NeighbourList::findAllClusters<ValueOnly, 3, HasCentralAtom>(
         const SpeciesSet<3, HasCentralAtom>& species_set) const;
 
     template std::vector<SpeciesSet<2, HasCentralAtom>> NeighbourList::getSpeciesSets<2, HasCentralAtom>() const;

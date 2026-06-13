@@ -1,14 +1,8 @@
 #include "GapPotential.hpp"
 
-namespace jgap {
-    GapPotential::GapPotential(std::vector<GapComponent::Ptr> components,
-                               std::unique_ptr<Potential> external,
-                               const std::vector<Real> &coefficients)
-        : optional_external_potential(std::move(external)), components(std::move(components)) {
+#include <numeric>
 
-        if (coefficients.empty()) return;
-        setCoefficients(coefficients);
-    }
+namespace jgap {
 
     void GapPotential::setCoefficients(const std::vector<Real> &new_coefficients) {
         if (new_coefficients.empty()) {
@@ -33,12 +27,12 @@ namespace jgap {
         }
     }
 
-    AtomicQuantity GapPotential::calculateEnergy(const Atoms &atoms) {
+    AtomicQuantity GapPotential::calculateEnergy(const Atoms &atoms) const {
         AtomicQuantity result(atoms.nAtoms());
 
         const NeighbourList neighbour_list(atoms, getCutoffs().maxOverall());
 
-        if (optional_external_potential != nullptr) {
+        if (optional_external_potential.get() != nullptr) {
             result += optional_external_potential->calculateEnergy(atoms);
         }
 
@@ -49,10 +43,10 @@ namespace jgap {
         return result;
     }
 
-    Cutoffs GapPotential::getCutoffs() {
+    Cutoffs GapPotential::getCutoffs() const {
         Cutoffs result{};
 
-        if (optional_external_potential != nullptr) {
+        if (optional_external_potential.get() != nullptr) {
             result = optional_external_potential->getCutoffs();
         }
 
@@ -63,48 +57,23 @@ namespace jgap {
         return result;
     }
 
-    const std::vector<GapComponent::Ptr>& GapPotential::getComponents() const {
+    const std::vector<ValuePtr<GapComponent>>& GapPotential::getComponents() const {
         return components;
     }
 
-    /*
-    DataNode GapPotential::serializeWithoutType() {
-        DataNode result{
-            {"coefficients", coefficients}
-        };
+    void GapPotential::tabulate(TabulationData &table) const {
+        JGAP_LOG_INFO("Tabulating GAP");
 
-        if (optional_external_potential != nullptr) {
-            result["external_potential"] = optional_external_potential->serialize();
+        JGAP_LOG_DEBUG("Tabulating external potential");
+        if (optional_external_potential.get() != nullptr) {
+            optional_external_potential->tabulate(table);
         }
 
-        result["components"] = DataNode::array();
-        for (size_t i = 0; i < components.size(); i++) {
-            result["components"][i] = components[i]->serialize();
+        JGAP_LOG_DEBUG("Tabulating components");
+        for (const auto& component: components) {
+            component->tabulate(table);
         }
 
-        return result;
+        JGAP_LOG_INFO("Finished tabulating GAP");
     }
-
-    void GapPotential::deserializeNoTypeCheck(const DataNode &serialized) {
-        auto& unparsed_coeff = REQUIRE(serialized, "coefficients").asArray();
-        coefficients.resize(unparsed_coeff.size());
-
-        std::ranges::transform(unparsed_coeff, coefficients.begin(),
-                               [](const DataNode& v) -> Real {return v.asDouble();});
-
-        if (serialized.contains("external_potential")) {
-            if (optional_external_potential == nullptr) {
-                JGAP_LOG_AND_THROW("Found external potential in serialized data, "
-                                   "but optional_external_potential was not specified");
-            }
-            optional_external_potential->deserialize(serialized["external_potential"]);
-        } else {
-            if (optional_external_potential != nullptr) {
-                JGAP_LOG_AND_THROW("Found no external potential in serialized data, "
-                                   "but optional_external_potential of type={} was specified",
-                                   optional_external_potential->getTypeId());
-            }
-        }
-    }
-    */
 }

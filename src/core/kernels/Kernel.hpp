@@ -35,6 +35,9 @@ namespace jgap {
 
     template<typename T>
     concept CKernel = std::derived_from<T, Kernel<T::Dim>>;
+
+    template<typename T, size_t Dim>
+    concept CKernelOfDim = std::derived_from<T, Kernel<Dim>>;
 }
 
 #endif

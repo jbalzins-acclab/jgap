@@ -12,10 +12,7 @@
 
 namespace jgap {
 
-    QRGapFit::QRGapFit(const Real jitter) : jitter(jitter) {
-    }
-
-    std::vector<Real> QRGapFit::mainFit(std::vector<GapComponent::Ptr> &gap_components,
+    std::vector<Real> QRGapFit::mainFit(std::vector<ValuePtr<GapComponent>> &gap_components,
                                         const std::vector<Atoms> &training_data,
                                         std::vector<EnergyData> &energies_without_external,
                                         std::vector<Regularization> &sigmas_inverse) {
@@ -56,7 +53,7 @@ namespace jgap {
         return std::vector<Real>{c.data(), c.data() + c.size()};
     }
 
-    EigenMatrix QRGapFit::formMatrixA(const std::vector<GapComponent::Ptr> &gap_components,
+    EigenMatrix QRGapFit::formMatrixA(const std::vector<ValuePtr<GapComponent>> &gap_components,
                                       const std::vector<Atoms> &training_data,
                                       const std::vector<EnergyData> &energy_data,
                                       const std::vector<Regularization> &sigmas_inverse) const {
@@ -135,7 +132,7 @@ namespace jgap {
         return resulting_A;
     }
 
-    EigenVector QRGapFit::formVectorB(const std::vector<GapComponent::Ptr> &components,
+    EigenVector QRGapFit::formVectorB(const std::vector<ValuePtr<GapComponent>> &components,
                                       const std::vector<EnergyData> &energy_data,
                                       const std::vector<Regularization> &sigmas_inverse) {
 
@@ -178,16 +175,24 @@ namespace jgap {
         return Eigen::Map<EigenVector>(b.data(), b.size());
     }
 
-    void QRGapFit::fillInverseSigmaK_nm(const std::vector<GapComponent::Ptr> &gap_components,
+    void QRGapFit::fillInverseSigmaK_nm(const std::vector<ValuePtr<GapComponent>> &gap_components,
                                         const Atoms& atoms,
                                         const EnergyData& energy_data,
                                         const Regularization& sigmas_inverse,
                                         EigenMatrix &A,
                                         size_t starting_row) {
 
+        std::map<Real, NeighbourList> neighbour_lists;
+        for (const auto& gap_component: gap_components) {
+            Real cutoff = gap_component->getCutoff();
+            if (!neighbour_lists.contains(cutoff)) {
+                neighbour_lists[cutoff] = NeighbourList(atoms, cutoff);
+            }
+        }
+
         size_t contribution_column = 0;
         for (const auto& gap_component: gap_components) {
-            auto neighbour_list = NeighbourList(atoms, gap_component->getCutoff());
+            auto& neighbour_list = neighbour_lists[gap_component->getCutoff()];
             auto covariances_opt = gap_component->covariate(neighbour_list);
 
             if (!covariances_opt.has_value()) {
@@ -202,7 +207,8 @@ namespace jgap {
                 size_t currentRow = starting_row;
 
                 if (energy_data.energy.has_value()) {
-                    A(currentRow++, contribution_column) = covariances.energy(sparse_idx) * sigmas_inverse.energy.value();
+                    A(currentRow++, contribution_column) =
+                            covariances.energy(sparse_idx) * sigmas_inverse.energy.value();
                 }
 
                 if (energy_data.forces.has_value()) {
@@ -239,7 +245,7 @@ namespace jgap {
 
     void QRGapFit::fillU_mm(const size_t starting_row,
                             const size_t starting_col,
-                            const GapComponent::Ptr& gap_component,
+                            const ValuePtr<GapComponent>& gap_component,
                             EigenMatrix &A) const {
 
         auto K_mm_block = gap_component->sparseToSparseCovariance();

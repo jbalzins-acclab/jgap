@@ -23,7 +23,7 @@ namespace jgap {
             );
     }
 
-    AtomicQuantity SplinePairPotential::calculateEnergy(const Atoms &atoms) {
+    AtomicQuantity SplinePairPotential::calculateEnergy(const Atoms &atoms) const {
 
         AtomicQuantity result(atoms.nAtoms());
 
@@ -31,21 +31,22 @@ namespace jgap {
 
         for (const auto &[species_pair, interpolator]: per_species_interpolators) {
 
-            auto pair_clusters = nl.findAllClusters(species_pair);
+            auto pair_clusters = nl.findAllClusters<WithDerivatives>(species_pair);
 
             for (auto pair: pair_clusters) {
 
-                const Separation& separation = pair.between(0, 1);
+                const Real& separation_magnitude = pair.between(0, 1);
+                const SeparationDerivatives& separation_deriv = pair.derivativesBetween(0, 1);
 
-                InterpolationResults<1> spline_val = interpolator.interpolate({separation.magnitude});
+                InterpolationResults<1> spline_val = interpolator.interpolate({separation_magnitude});
 
                 result.value += spline_val.value * 0.5;
 
                 Real dE_dr = spline_val.gradient[0] * 0.5;
 
-                result.virials += separation.virials * dE_dr;
+                result.virials += separation_deriv.virials * dE_dr;
 
-                Vector3 f01 = separation.direction * dE_dr;
+                Vector3 f01 = separation_deriv.direction * dE_dr;
                 result.forces[pair.atom_indexes[1]] -= f01;
                 result.forces[pair.atom_indexes[0]] += f01;
             }
@@ -54,7 +55,17 @@ namespace jgap {
         return result;
     }
 
-    Cutoffs SplinePairPotential::getCutoffs() {
+    void SplinePairPotential::tabulate(TabulationData &tables) const {
+        for (const auto& [species_pair, interpolator]: per_species_interpolators) {
+
+            auto& table = tables.two_body_grids.getValueGrid(species_pair);
+            for (const auto cell: table) {
+                cell.value += interpolator.interpolate(cell.pos).value;
+            }
+        }
+    }
+
+    Cutoffs SplinePairPotential::getCutoffs() const {
         double cutoff = 0.0;
         for (const auto& interpolator: per_species_interpolators | std::views::values) {
             cutoff = std::max(cutoff, interpolator.getCutoff()[0]);

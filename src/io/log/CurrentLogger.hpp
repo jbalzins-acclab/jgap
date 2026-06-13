@@ -11,16 +11,16 @@ namespace jgap {
     class CurrentLogger {
     public:
         static std::shared_ptr<Logger> get() {
-            return _logger;
+            return logger;
         }
-        static void setLogger(const std::shared_ptr<Logger> &logger) {
-            _logger = logger;
+        static void setLogger(const std::shared_ptr<Logger> &new_logger) {
+            logger = new_logger;
         }
-        static void initDefault(const LogConfig& cfg = LogConfig{}, const std::string& filePath = {}) {
-            _logger = std::make_shared<RouterLogger>(cfg, filePath);
+        static void initDefault(const LogConfig& cfg = LogConfig{}, const std::string& file_path = {}) {
+            logger = std::make_shared<RouterLogger>(cfg, file_path);
         }
     private:
-        inline static std::shared_ptr<Logger> _logger = std::make_shared<RouterLogger>(LogConfig{});
+        inline static std::shared_ptr<Logger> logger = std::make_shared<RouterLogger>(LogConfig{});
     };
 }
 

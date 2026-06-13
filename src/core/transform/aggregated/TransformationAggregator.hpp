@@ -11,6 +11,8 @@
 #include <memory>
 #include <array>
 
+#include "core/tabulation/TabulationData.hpp"
+
 namespace jgap {
 
     template<size_t Dim>
@@ -19,7 +21,15 @@ namespace jgap {
         virtual ~TransformationAggregator() = default;
         virtual std::map<size_t, ManyBodyDescriptor<Dim>> aggregate(const NeighbourList& nl) const = 0;
         virtual Cutoffs getCutoffs() const = 0;
+        virtual std::unique_ptr<TransformationAggregator> clone() const = 0;
+        virtual Species getCentralSpecies() const = 0;
+        virtual std::set<Species> getAllSpecies() const = 0;
+        virtual void tabulateNewManyBodyGrid(TabulationData& tables) const = 0;
     };
+
+    static_assert(Cloneable<TransformationAggregator<1>>);
+    static_assert(Cloneable<TransformationAggregator<2>>);
+    static_assert(Cloneable<TransformationAggregator<3>>);
 }
 
 #endif

@@ -25,10 +25,12 @@
 #include "core/potentials/CompositePotential.hpp"
 #include "core/potentials/gap/component/NBodyGapComponent.hpp"
 #include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "core/potentials/tabgap/TabGapPotential.hpp"
 #include "core/transform/2b/TwoBodyTransformation.hpp"
 #include "core/transform/aggregated/TransformationAggregator.hpp"
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
 #include "core/transform/eam/FSGenPairFunction.hpp"
+#include "io/tabgap/TabGapIO.hpp"
 #include "utils/Utils.hpp"
 #include "utils/convert/QuipXmlConverter.hpp"
 
@@ -38,7 +40,10 @@ using namespace std;
 int main(int argc, char** argv) {
     //tbb::global_control control(tbb::global_control::max_allowed_parallelism, 1);
 
+    CurrentLogger::initDefault({.stdout_log_debug = true});
+
     auto start_time = std::chrono::high_resolution_clock::now();
+
 
     /*
     pugi::xml_document quipDocument;
@@ -85,7 +90,7 @@ int main(int argc, char** argv) {
     std::vector<Descriptor<1>> descs_eam{};
     for (auto &nl: neighbour_lists_eam) {
         std::map<size_t, Descriptor<1>> agg_descs;
-        auto raw = nl.findAllClusters(SpeciesSet<2, HasCentralAtom>("Fe", "Fe"));
+        auto raw = nl.findAllClusters<ValueOnly>(SpeciesSet<2, HasCentralAtom>("Fe", "Fe"));
         for (auto &cluster: raw) {
             auto val = eam_pf.evaluate(cluster);
             agg_descs[cluster.atom_indexes[0]].value[0] += val.value[0];
@@ -100,14 +105,12 @@ int main(int argc, char** argv) {
 
     auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
 
-    auto eam_aggregator = std::make_unique<TransformationAggregatorImpl<1, 2>>("Fe");
-    eam_aggregator->extend(SpeciesSet<2, HasCentralAtom>("Fe", "Fe"), std::make_unique<FSGenPairFunction>(eam_pf));
+    auto eam_aggregator = TransformationAggregatorImpl<1, 2>("Fe");
+    eam_aggregator.extend(SpeciesSet<2, HasCentralAtom>("Fe", "Fe"), eam_pf);
 
-    auto component_eam = std::make_unique<ManyBodyGapComponent<1>>(
-        std::move(eam_aggregator),
-        std::make_unique<SquaredExpKernel<1, 0>>(kernel_eam),
-        sp_eam
-    );
+    auto component_eam = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
+        eam_aggregator, kernel_eam, sp_eam
+        );
 
     // ====================================================================================
     // 3-Body and 2-Body Components
@@ -115,8 +118,8 @@ int main(int argc, char** argv) {
     auto cutoff3 = CosCutoff(3.7, 0.6);
     auto cutoff2 = CosCutoff(4.5, 1.0);
 
-    auto trans3 = Angle3bTransformation(std::make_unique<CosCutoff>(cutoff3));
-    auto trans2 = TwoBodyTransformation(std::make_unique<CosCutoff>(cutoff2));
+    auto trans3 = Angle3bTransformation(cutoff3);
+    auto trans2 = TwoBodyTransformation(cutoff2);
 
     auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
     auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
@@ -127,7 +130,7 @@ int main(int argc, char** argv) {
     auto neighbour_lists3 = NeighbourList::generateFor(training_data, trans3);
     std::vector<Descriptor<4>> descs{};
     for (auto &nl: neighbour_lists3) {
-        auto raw = nl.findAllClusters(SpeciesSet<3, HasCentralAtom>("Fe", "Fe", "Fe"));
+        auto raw = nl.findAllClusters<ValueOnly>(SpeciesSet<3, HasCentralAtom>("Fe", "Fe", "Fe"));
         for (auto &cluster: raw) {
             descs.push_back(trans3.evaluate(cluster));
         }
@@ -137,25 +140,23 @@ int main(int argc, char** argv) {
     auto neighbour_lists2 = NeighbourList::generateFor(training_data, trans2);
     std::vector<Descriptor<2>> descs2{};
     for (auto &nl: neighbour_lists2) {
-        auto raw = nl.findAllClusters(SpeciesSet<2, Symmetric>("Fe", "Fe"));
+        auto raw = nl.findAllClusters<ValueOnly>(SpeciesSet<2, Symmetric>("Fe", "Fe"));
         for (auto &cluster: raw) {
             descs2.push_back(trans2.evaluate(cluster));
         }
     }
     auto sp2 = sparsifier2.selectSparsePoints(descs2);
 
-    auto component3 = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>>(
+    auto component3 = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
             SpeciesSet<3, HasCentralAtom>("Fe", "Fe", "Fe"),
-            std::make_unique<Angle3bTransformation>(std::move(trans3)),
-            //std::make_unique<SquaredExpKernel<3, 1>>(kernel3),
+            trans3,
             kernel3,
             sp3
         );
 
-    auto component2 = std::make_unique<NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>>(
+    auto component2 = NBodyGapComponent(
             SpeciesSet<2, Symmetric>("Fe", "Fe"),
-            std::make_unique<TwoBodyTransformation>(std::move(trans2)),
-            //std::make_unique<SquaredExpKernel<1, 1>>(kernel2),
+            ValuePtr<ClusterTransformation<2, 2>>(trans2),
             kernel2,
             sp2
         );
@@ -163,11 +164,11 @@ int main(int argc, char** argv) {
     // ====================================================================================
     // Construct Potential
     // ====================================================================================
-    std::vector<GapComponent::Ptr> components;
+    std::vector<ValuePtr<GapComponent>> components;
     // Add all components
-    components.push_back(std::move(component_eam));
-    components.push_back(std::move(component2));
-    components.push_back(std::move(component3));
+    components.push_back(component_eam);
+    components.push_back(component2);
+    components.push_back(component3);
 
     auto potential = GapPotential(std::move(components));
 
@@ -176,6 +177,18 @@ int main(int argc, char** argv) {
     // Fit
     QRGapFit fitter;
     fitter.fit(potential, training_data, regularization_rules);
+
+    TabulationData tabulation_data{TabulationParams{
+        .max_cutoffs = potential.getCutoffs(),
+        .max_eam_density = 10.0,
+        .n_grid_2b = 5000,
+        .n_grid_3b = {80, 80, 80}
+    }};
+    potential.tabulate(tabulation_data);
+
+    TabGapPotential tabgap{tabulation_data};
+
+    TabGapIO::write(tabgap, "fe-test-1");
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);

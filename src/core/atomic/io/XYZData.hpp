@@ -32,38 +32,21 @@ namespace jgap {
         std::vector<Species>
     >;
 
-    struct XYZData {
+    class XYZData {
+    public:
+        static std::vector<XYZData> read(const std::string &filename);
+        static std::vector<XYZData> read(std::ifstream &in_stream);
+
         std::map<std::string, PropertyValue> properties;
         std::map<std::string, ArrayValue> arrays;
 
         XYZData() = default;
         XYZData(const XYZData& other) = default;
 
-        XYZData& operator=(const XYZData& other) {
-            if (this != &other) {
-                properties = other.properties;
-                arrays = other.arrays;
-            }
-            return *this;
-        }
+        XYZData& operator=(const XYZData& other);
 
-        static bool getLine(std::ifstream &file, std::string &line);
+        void write(const std::string &filename) const;
 
-        static std::vector<XYZData> read(const std::string &filename) {
-            std::ifstream in(filename);
-
-            if (!in.is_open()) {
-                JGAP_LOG_AND_THROW("Failed to open file: {}", filename);
-            }
-
-            return read(in);
-        }
-        static std::vector<XYZData> read(std::ifstream &in_stream);
-
-        void write(const std::string &filename) const {
-            std::ofstream out(filename);
-            write(out);
-        }
         void write(std::ofstream &out_stream) const;
     };
 }

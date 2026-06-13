@@ -5,17 +5,17 @@
 
 namespace jgap {
 
-    CompositePotential::CompositePotential(std::map<std::string, std::unique_ptr<Potential>> potentials_map)
+    CompositePotential::CompositePotential(std::map<std::string, ValuePtr<Potential>> potentials_map)
         : potentials(std::move(potentials_map)) {
     }
 
-    CompositePotential::CompositePotential(std::vector<std::unique_ptr<Potential>> potentials_list) {
+    CompositePotential::CompositePotential(std::vector<ValuePtr<Potential>> potentials_list) {
         for (size_t i = 0; i < potentials_list.size(); ++i) {
             potentials[std::to_string(i + 1)] = std::move(potentials_list[i]);
         }
     }
 
-    Cutoffs CompositePotential::getCutoffs() {
+    Cutoffs CompositePotential::getCutoffs() const {
         Cutoffs res{};
         for (const auto &potential: potentials | std::views::values) {
             res += potential->getCutoffs();
@@ -23,7 +23,7 @@ namespace jgap {
         return res;
     }
 
-    AtomicQuantity CompositePotential::calculateEnergy(const Atoms &atoms) {
+    AtomicQuantity CompositePotential::calculateEnergy(const Atoms &atoms) const {
         AtomicQuantity result(atoms.nAtoms());
         for (const auto &potential : potentials | std::views::values) {
             result += potential->calculateEnergy(atoms);
@@ -31,4 +31,9 @@ namespace jgap {
         return result;
     }
 
+    void CompositePotential::tabulate(TabulationData &table) const {
+        for (const auto &potential : potentials | std::views::values) {
+            potential->tabulate(table);
+        }
+    }
 }

@@ -1,6 +1,0 @@
-#ifndef JGAP_TABULATABLE_HPP
-#define JGAP_TABULATABLE_HPP
-
-
-
-#endif

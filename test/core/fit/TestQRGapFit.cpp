@@ -28,18 +28,18 @@ Atoms setupEquilateralTriangle() {
 
 TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     auto equilateralTriangle = setupEquilateralTriangle();
-    equilateralTriangle.setEnergy(1.0);
+    equilateralTriangle.lookupEnergy(1.0);
     equilateralTriangle.setForces({{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
 
-    auto trans = std::make_unique<TwoBodyTransformation>(std::make_unique<CosCutoff>(10.0, 0.7));
-    auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(1.0, std::array<Real, 1>{1.0});
+    auto trans = TwoBodyTransformation(CosCutoff(10.0, 0.7));
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
     std::vector<Descriptor<2>> sparse_points = { {{{3.0, 1.0}}} };
-    auto component = std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
-        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, std::move(trans), std::move(kernel), sparse_points
+    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
+        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, trans, kernel, sparse_points
         );
 
-    std::vector<GapComponent::Ptr> components;
-    components.push_back(std::move(component));
+    std::vector<ValuePtr<GapComponent>> components;
+    components.push_back(component);
     auto potential = GapPotential(std::move(components));
     auto regularization_rules = SimpleRegularizationRules(3.0, 10.0, 5.0, 5.0);
 
@@ -53,8 +53,8 @@ TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
 }
 
 GapPotential create2bPotential(const std::vector<Real>& sparsePts) {
-    auto trans = std::make_unique<TwoBodyTransformation>(std::make_unique<CosCutoff>(10.0, 0.7));
-    auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(1.0, std::array<Real, 1>{1.0});
+    auto trans = TwoBodyTransformation(CosCutoff(10.0, 0.7));
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
 
     std::vector<Descriptor<2>> sparse_points;
     CosCutoff ref_cutoff(10.0, 0.7);
@@ -62,9 +62,9 @@ GapPotential create2bPotential(const std::vector<Real>& sparsePts) {
         sparse_points.push_back({{{r, ref_cutoff.evaluate(r)}}});
     }
 
-    auto component = std::make_unique<NBodyGapComponent<2, 2, Symmetric>>(
+    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
         SpeciesSet<2, Symmetric>{"Fe", "Fe"}, std::move(trans), std::move(kernel), sparse_points);
-    std::vector<GapComponent::Ptr> components;
+    std::vector<ValuePtr<GapComponent>> components;
     components.push_back(std::move(component));
     return GapPotential{std::move(components)};
 }
@@ -79,7 +79,7 @@ Atoms setupTwoAtoms() {
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
     auto twoAtoms = setupTwoAtoms();
-    twoAtoms.setEnergy(1.0);
+    twoAtoms.lookupEnergy(1.0);
     twoAtoms.setForces({{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
     auto potential = create2bPotential({2.0, 4.0});
     auto rules = SimpleRegularizationRules(1.0, 1.0, 5.0, 5.0);
@@ -92,7 +92,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility1) {
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
     auto twoAtoms = setupTwoAtoms();
-    twoAtoms.setEnergy(0.0);
+    twoAtoms.lookupEnergy(0.0);
     twoAtoms.setForces({{1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
     auto potential = create2bPotential({2.0});
     auto rules = SimpleRegularizationRules(10000000.0, 1.0, 5.0, 5.0);
@@ -104,7 +104,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility2) {
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
     Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
-    twoAtoms.setEnergy(0.0);
+    twoAtoms.lookupEnergy(0.0);
     twoAtoms.setForces({{1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
     auto potential = create2bPotential({2.0});
     auto rules = SimpleRegularizationRules(10000000.0, 1.0, 5.0, 5.0);
@@ -116,7 +116,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility3) {
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
     Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
-    twoAtoms.setEnergy(0.0);
+    twoAtoms.lookupEnergy(0.0);
     twoAtoms.setForces({{1.0, 1.0, 1.0}, {-1.0, -1.0, -1.0}});
     auto potential = create2bPotential({2.0});
     auto rules = SimpleRegularizationRules(10000000.0, 2.0, 5.0, 5.0);
@@ -128,7 +128,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility4) {
 
 TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
     Atoms twoAtoms({ {0.0, 0.0, 0.0}, {1.5, 2.598, 0.0} }, { Species("Fe"), Species("Fe") }, Lattice{ {100,0,0}, {0,100,0}, {0,0,100} });
-    twoAtoms.setEnergy(0.0);
+    twoAtoms.lookupEnergy(0.0);
     twoAtoms.setForces({{1.0, 1.0, 1.0}, {-1.0, -1.0, -1.0}});
     auto potential = create2bPotential({2.0, 2.5, 4.0});
     auto rules = SimpleRegularizationRules(1.0, 2.0, 5.0, 5.0);
@@ -143,25 +143,28 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
 GapPotential createEamPotential(double theta, double delta, double r_min, double cutoff, const std::vector<Real>& sparse_pts) {
     auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
-    auto eam_aggregator = std::make_unique<TransformationAggregatorImpl<1, 2>>(Species("Fe"));
+    auto eam_aggregator = TransformationAggregatorImpl<1, 2>(Species("Fe"));
+    eam_aggregator.extend(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"}, PolycutoffPairFunction(trans));
 
-    eam_aggregator->extend(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"}, std::make_unique<PolycutoffPairFunction>(trans));
-    auto kernel = std::make_unique<SquaredExpKernel<1, 0>>(delta, std::array<Real, 1>{theta});
+    auto kernel = SquaredExpKernel<1, 0>(delta, std::array<Real, 1>{theta});
+
     std::vector<Descriptor<1>> sparse_points;
     for (Real r : sparse_pts) {
         sparse_points.push_back({{{r}}});
     }
-    auto component = std::make_unique<ManyBodyGapComponent<1>>(
-        std::move(eam_aggregator), std::move(kernel), sparse_points
+
+    auto component = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
+        eam_aggregator, std::move(kernel), sparse_points
     );
-    std::vector<GapComponent::Ptr> components;
-    components.push_back(std::move(component));
+    std::vector<ValuePtr<GapComponent>> components;
+    components.push_back(component);
+
     return GapPotential(std::move(components));
 }
 
 TEST(TestQRGapFit, twoAtomsEamQuipCompatibility) {
     auto twoAtoms = setupTwoAtoms();
-    twoAtoms.setEnergy(1.0);
+    twoAtoms.lookupEnergy(1.0);
     twoAtoms.setForces({{1.0, 0.0, 0.0}, {-1.0, 0.0, 0.0}});
     auto potential = createEamPotential(1.0, 1.0, 0.0, 5.0, {1.0});
     auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);
@@ -192,26 +195,26 @@ TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
 }
 
 GapPotential create3bPotential(double theta, double delta, double cutoff_transition_width, double cutoff, const std::vector<Vector3>& sparsePts) {
-    auto trans = std::make_unique<Angle3bTransformation>(std::make_unique<CosCutoff>(cutoff, cutoff_transition_width));
-    auto kernel = std::make_unique<SquaredExpKernel<3, 1>>(delta, std::array<Real, 3>{theta, theta, theta});
+    auto trans = Angle3bTransformation(CosCutoff(cutoff, cutoff_transition_width));
+    auto kernel = SquaredExpKernel<3, 1>(delta, std::array<Real, 3>{theta, theta, theta});
     std::vector<Descriptor<4>> sparse_points;
     for (const auto& q : sparsePts) {
         sparse_points.push_back({{{q.x, q.y, q.z, 1.0}}}); // Assume f_cut_prod=1 for sparse points
     }
-    auto component = std::make_unique<NBodyGapComponent<4, 3, HasCentralAtom>>(
+    auto component = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
         SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Fe"},
         std::move(trans),
         std::move(kernel),
         sparse_points
         );
-    std::vector<GapComponent::Ptr> components;
+    std::vector<ValuePtr<GapComponent>> components;
     components.push_back(std::move(component));
     return GapPotential(std::move(components));
 }
 
 TEST(TestQRGapFit, equilateralTriangle3bQuipCompatibility) {
     auto equilateralTriangle = setupEquilateralTriangle();
-    equilateralTriangle.setEnergy(1.0);
+    equilateralTriangle.lookupEnergy(1.0);
     equilateralTriangle.setForces({{1.0, 0.0, 0.0}, {0.0, -1.0, 0.0}, {0.5, 0.5, 0.0}});
     auto potential = create3bPotential(1.0, 1.0, 0.6, 10.0, {{6.0, 0.0, 3.0}});
     auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);
@@ -231,7 +234,7 @@ Atoms setupPythagorean() {
 
 TEST(TestQRGapFit, pythagorian3bQuipCompatibility) {
     auto pythagorian = setupPythagorean();
-    pythagorian.setEnergy(1.0);
+    pythagorian.lookupEnergy(1.0);
     pythagorian.setForces({{1.0, 0.0, 0.0}, {0.0, -1.0, 0.0}, {0.5, 0.5, 0.0}});
     auto potential = create3bPotential(1.0, 1.0, 0.6, 10.0, {{6.0, 0.0, 3.0}});
     auto rules = SimpleRegularizationRules(1.0, 1.0, 1.0, 1.0);

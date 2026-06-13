@@ -40,45 +40,43 @@ namespace jgap {
 
         explicit Atoms(const XYZData& data, const AtomsPropertyNames& names = {});
 
-        Atoms(const Atoms& other);
-        Atoms& operator=(const Atoms& other);
+        Atoms(const Atoms& other) = default;
+        Atoms& operator=(const Atoms& other) = default;
 
-        std::optional<Lattice> getLattice() const;
+        std::optional<Lattice> lookupLattice() const;
         void setLattice(const std::optional<Lattice>& lat);
 
-        std::array<bool, 3> getPbc() const;
+        std::array<bool, 3> lookupPbc() const;
         void setPbc(const std::array<bool, 3>& pbc);
 
-        const std::vector<Vector3>& getPositions() const { return *positions_ptr; }
-        const std::vector<Species>& getSpecies() const { return *species_ptr; }
+        const std::vector<Vector3>& lookupPositions() const;
+        std::vector<Vector3>& lookupPositions();
 
-        size_t nAtoms() const { return positions_ptr->size(); }
+        const std::vector<Species>& lookupSpecies() const;
+        std::vector<Species>& lookupSpecies();
+
+        size_t nAtoms() const { return lookupPositions().size(); }
 
         void addAtom(const std::map<std::string, AtomValue>& atom_data);
         void removeAtom(size_t index);
         void removeArray(const std::string& name);
 
         std::optional<Real> getEnergy() const;
-        void setEnergy(Real e);
+        void lookupEnergy(Real e);
 
-        std::optional<Virials> getVirials() const;
+        std::optional<Virials> lookupVirials() const;
         void setVirials(const Virials& v);
 
-        std::optional<std::vector<Vector3>> getForces() const;
+        std::optional<std::vector<Vector3>> lookupForces() const;
         void setForces(const std::vector<Vector3>& f);
 
-        std::optional<std::string> getConfigType() const;
+        std::optional<std::string> lookupConfigType() const;
         void setConfigType(const std::string& config_type);
 
         const AtomsPropertyNames& getMainPropertyNames() const { return main_property_names; }
 
     private:
         AtomsPropertyNames main_property_names;
-
-        // Use pointers internally to allow copy assignment,
-        // avoiding map lookups while maintaining safety.
-        std::vector<Vector3>* positions_ptr;
-        std::vector<Species>* species_ptr;
 
         void validateSizes() const;
         void wrapPositions();

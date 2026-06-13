@@ -31,6 +31,10 @@ namespace {
         Real symmetryFactor() const override {
             return ClusterSize == 3 ? 2.0 : 1.0;
         }
+
+        std::unique_ptr<ClusterTransformation<Dim, ClusterSize>> clone() const override {
+            return std::make_unique<MockClusterTransformation<Dim, ClusterSize>>();
+        }
     };
 
     template<size_t Dim>
@@ -54,10 +58,10 @@ TEST(TestNBodyGapComponent, MockTwoBody) {
         { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 11.0);
 
-    auto component = NBodyGapComponent<1, 2, HasCentralAtom>(
+    auto component = NBodyGapComponent<1, 2, HasCentralAtom, MockKernel<1>>(
         SpeciesSet<2, HasCentralAtom>{"Fe", "Ni"},
-        std::make_unique<MockClusterTransformation<1, 2>>(),
-        std::make_unique<MockKernel<1>>(),
+        MockClusterTransformation<1, 2>(),
+        MockKernel<1>(),
         { {{{1.0}}} }
     );
 
@@ -76,12 +80,12 @@ TEST(TestNBodyGapComponent, MockTwoBody) {
     // Pair (0,1): Fe-Ni. direction = (1,0,0)
     force0 += Vector3{1,0,0} * 0.05;
     force1 -= Vector3{1,0,0} * 0.05;
-    virials += Separation(atoms.getPositions()[0], atoms.getPositions()[1]).virials * 0.05;
+    virials += Separation(atoms.lookupPositions()[0], atoms.lookupPositions()[1]).derivatives.virials * 0.05;
 
     // Pair (2,3): Fe-Ni. direction = (1,0,0)
     force2 += Vector3{1,0,0} * 0.05;
     force3 -= Vector3{1,0,0} * 0.05;
-    virials += Separation(atoms.getPositions()[2], atoms.getPositions()[3]).virials * 0.05;
+    virials += Separation(atoms.lookupPositions()[2], atoms.lookupPositions()[3]).derivatives.virials * 0.05;
 
     EXPECT_NEAR(quantities.force(0, 0).x, force0.x, 1e-9);
     EXPECT_NEAR(quantities.force(0, 1).x, force1.x, 1e-9);
@@ -94,10 +98,10 @@ TEST(TestNBodyGapComponent, MockThreeBody) {
     Atoms atoms({ {0,0,0}, {10,0,0}, {0,10,0}, {10,10,0} }, { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 11.0);
 
-    auto component = NBodyGapComponent<1, 3, HasCentralAtom>(
+    auto component = NBodyGapComponent<1, 3, HasCentralAtom, MockKernel<1>>(
         SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Ni"},
-        std::make_unique<MockClusterTransformation<1, 3>>(),
-        std::make_unique<MockKernel<1>>(),
+        MockClusterTransformation<1, 3>(),
+        MockKernel<1>(),
         { {{{1.0}}} }
     );
 
@@ -113,20 +117,32 @@ TEST(TestNBodyGapComponent, MockThreeBody) {
     Virials virials{};
 
     // Triplet (0,2,1)
-    Separation sep02(atoms.getPositions()[0], atoms.getPositions()[2]);
-    force0 += sep02.direction * 0.1; force2 -= sep02.direction * 0.1; virials += sep02.virials * 0.1;
-    Separation sep01(atoms.getPositions()[0], atoms.getPositions()[1]);
-    force0 += sep01.direction * 0.1; force1 -= sep01.direction * 0.1; virials += sep01.virials * 0.1;
-    Separation sep21(atoms.getPositions()[2], atoms.getPositions()[1]);
-    force2 += sep21.direction * 0.1; force1 -= sep21.direction * 0.1; virials += sep21.virials * 0.1;
+    Separation sep02(atoms.lookupPositions()[0], atoms.lookupPositions()[2]);
+    force0 += sep02.derivatives.direction * 0.1;
+    force2 -= sep02.derivatives.direction * 0.1;
+    virials += sep02.derivatives.virials * 0.1;
+    Separation sep01(atoms.lookupPositions()[0], atoms.lookupPositions()[1]);
+    force0 += sep01.derivatives.direction * 0.1;
+    force1 -= sep01.derivatives.direction * 0.1;
+    virials += sep01.derivatives.virials * 0.1;
+    Separation sep21(atoms.lookupPositions()[2], atoms.lookupPositions()[1]);
+    force2 += sep21.derivatives.direction * 0.1;
+    force1 -= sep21.derivatives.direction * 0.1;
+    virials += sep21.derivatives.virials * 0.1;
 
     // Triplet (2,0,3)
-    Separation sep20(atoms.getPositions()[2], atoms.getPositions()[0]);
-    force2 += sep20.direction * 0.1; force0 -= sep20.direction * 0.1; virials += sep20.virials * 0.1;
-    Separation sep23(atoms.getPositions()[2], atoms.getPositions()[3]);
-    force2 += sep23.direction * 0.1; force3 -= sep23.direction * 0.1; virials += sep23.virials * 0.1;
-    Separation sep03(atoms.getPositions()[0], atoms.getPositions()[3]);
-    force0 += sep03.direction * 0.1; force3 -= sep03.direction * 0.1; virials += sep03.virials * 0.1;
+    Separation sep20(atoms.lookupPositions()[2], atoms.lookupPositions()[0]);
+    force2 += sep20.derivatives.direction * 0.1;
+    force0 -= sep20.derivatives.direction * 0.1;
+    virials += sep20.derivatives.virials * 0.1;
+    Separation sep23(atoms.lookupPositions()[2], atoms.lookupPositions()[3]);
+    force2 += sep23.derivatives.direction * 0.1;
+    force3 -= sep23.derivatives.direction * 0.1;
+    virials += sep23.derivatives.virials * 0.1;
+    Separation sep03(atoms.lookupPositions()[0], atoms.lookupPositions()[3]);
+    force0 += sep03.derivatives.direction * 0.1;
+    force3 -= sep03.derivatives.direction * 0.1;
+    virials += sep03.derivatives.virials * 0.1;
 
     EXPECT_NEAR(quantities.force(0, 0).x, force0.x, 1e-9);
     EXPECT_NEAR(quantities.force(0, 1).x, force1.x, 1e-9);
@@ -138,11 +154,11 @@ TEST(TestNBodyGapComponent, MockThreeBody) {
 TEST(TestNBodyGapComponent, RealTwoBody) {
     Atoms atoms({ {0,0,0}, {3,4,0} }, { Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 6.0);
-    auto trans = std::make_unique<TwoBodyTransformation>(std::make_unique<CosCutoff>(5.0, 2.0));
-    auto kernel = std::make_unique<SquaredExpKernel<1, 1>>(1.0, std::array{1.0});
+    auto trans = TwoBodyTransformation(CosCutoff(5.0, 2.0));
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0});
     std::vector<Descriptor<2>> sparse_points = { {{{4.0, 0.5}}} };
-    auto component = NBodyGapComponent<2, 2, Symmetric>(
-        SpeciesSet<2, Symmetric>{"Fe", "Ni"}, std::move(trans), std::move(kernel), sparse_points
+    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
+        SpeciesSet<2, Symmetric>{"Fe", "Ni"}, trans, kernel, sparse_points
         );
 
     auto result = component.covariate(nl);
@@ -159,11 +175,11 @@ TEST(TestNBodyGapComponent, RealTwoBody) {
 TEST(TestNBodyGapComponent, RealThreeBody) {
     Atoms atoms({ {0,0,0}, {3,0,0}, {0,4,0} }, { Species("Fe"), Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 6.0);
-    auto trans = std::make_unique<Angle3bTransformation>(std::make_unique<CosCutoff>(5.0, 2.0));
-    auto kernel = std::make_unique<SquaredExpKernel<3, 1>>(1.0, std::array{1.0, 1.0, 1.0});
+    auto trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
+    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> sparse_points = { {{{7.0, 1.0, 5.0, 0.25}}} };
-    auto component = NBodyGapComponent<4, 3, HasCentralAtom>(
-        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Ni"}, std::move(trans), std::move(kernel), sparse_points
+    auto component = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
+        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Ni"}, trans, kernel, sparse_points
         );
 
     auto result = component.covariate(nl);
@@ -177,11 +193,11 @@ TEST(TestNBodyGapComponent, RealThreeBody) {
     Vector3 force0{0,0,0}, force1{0,0,0}, force2{0,0,0};
     Virials virials{};
 
-    Separation sep02(atoms.getPositions()[0], atoms.getPositions()[2]);
+    Separation sep02(atoms.lookupPositions()[0], atoms.lookupPositions()[2]);
     Real dK_dr02 = -M_PI / 8.0;
-    force0 += sep02.direction * dK_dr02;
-    force2 -= sep02.direction * dK_dr02;
-    virials += sep02.virials * dK_dr02;
+    force0 += sep02.derivatives.direction * dK_dr02;
+    force2 -= sep02.derivatives.direction * dK_dr02;
+    virials += sep02.derivatives.virials * dK_dr02;
 
     EXPECT_NEAR(quantities.force(0, 0).norm(), force0.norm(), 1e-9);
     EXPECT_NEAR(quantities.force(0, 1).norm(), force1.norm(), 1e-9);

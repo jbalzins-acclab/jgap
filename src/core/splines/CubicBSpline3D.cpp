@@ -3,9 +3,9 @@
 
 namespace jgap {
 
-    CubicBSpline3D::CubicBSpline3D(const Table<3>& coefficients) : coefficients(coefficients) {}
+    CubicBSpline3D::CubicBSpline3D(const Grid<3>& coefficients) : coefficients(coefficients) {}
 
-    CubicBSpline3D CubicBSpline3D::fit(const Table<3>& values) {
+    CubicBSpline3D CubicBSpline3D::fit(const Grid<3>& values) {
         auto new_dims = values.dims;
         new_dims[0] += 2;
         new_dims[1] += 2;
@@ -16,7 +16,7 @@ namespace jgap {
         new_origin[1] -= values.spacing[1];
         new_origin[2] -= values.spacing[2];
 
-        Table<3> coeff_grid(new_dims, values.spacing, new_origin);
+        Grid<3> coeff_grid(new_dims, values.spacing, new_origin);
 
         for (size_t i = 0; i < values.dims[0]; i++) {
             for (size_t j = 0; j < values.dims[1]; j++) {

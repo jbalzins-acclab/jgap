@@ -5,30 +5,105 @@
 #include "Separation.hpp"
 #include <cassert>
 
+#include "core/atomic/neighbours/NeighbourData.hpp"
+
 namespace jgap {
 
-    static constexpr size_t flattened_index(size_t lower_index, size_t higher_index) {
+    static constexpr size_t flattenedIndex(size_t lower_index, size_t higher_index) {
 #ifdef DEBUG
         assert(lower_index < higher_index);
 #endif
-        // TODO: debug
-        return higher_index*(higher_index-1)/2 + lower_index;
+        return higher_index * (higher_index - 1) / 2 + lower_index;
     }
 
-    template<size_t NAtoms>
+    template<size_t NAtoms, CalculationType CalcType = ValueOnly>
     requires(NAtoms > 1)
-    struct Cluster {
+    struct Cluster;
+
+    template<size_t NAtoms>
+    struct Cluster<NAtoms, ValueOnly> {
         static constexpr size_t NSeparations = NAtoms * (NAtoms - 1) / 2;
 
         std::array<size_t, NAtoms> atom_indexes;
-        std::array<Separation, NSeparations> separations;
+        std::array<Real, NSeparations> separation_magnitudes;
 
-        const Separation& between(const size_t lower_index, const size_t higher_index) const {
-            return separations[flattened_index(lower_index, higher_index)];
+        Cluster() = default;
+        Cluster(const Cluster&) = default;
+
+        Cluster(size_t index0, const std::array<NeighbourData, NAtoms - 1>& atom_neigh) {
+
+            atom_indexes[0] = index0;
+
+            for (size_t i = 1; i < NAtoms; i++) {
+                atom_indexes[i] = atom_neigh[i - 1].atom_index;
+            }
+
+            for (size_t j = 1; j < NAtoms; j++) {
+                separation_magnitudes[flattenedIndex(0, j)] = atom_neigh[j - 1].separation.magnitude;
+            }
+
+            for (size_t i = 1; i < NAtoms; i++) {
+                for (size_t j = i + 1; j < NAtoms; j++) {
+                    separation_magnitudes[flattenedIndex(i, j)]
+                        = (atom_neigh[i - 1].separation.vec() - atom_neigh[j - 1].separation.vec()).norm();
+                }
+            }
         }
 
-        Separation& between(const size_t lower_index, const size_t higher_index) {
-            return separations[flattened_index(lower_index, higher_index)];
+        Real between(const size_t lower_index, const size_t higher_index) const {
+            return separation_magnitudes[flattenedIndex(lower_index, higher_index)];
+        }
+
+        Real& between(const size_t lower_index, const size_t higher_index) {
+            return separation_magnitudes[flattenedIndex(lower_index, higher_index)];
+        }
+    };
+
+    template<size_t NAtoms>
+    struct Cluster<NAtoms, WithDerivatives> : public Cluster<NAtoms, ValueOnly> {
+        using Base = Cluster<NAtoms, ValueOnly>;
+        using Base::NSeparations;
+        using Base::atom_indexes;
+        using Base::separation_magnitudes;
+
+        std::array<SeparationDerivatives, NSeparations> derivatives;
+
+        Cluster() = default;
+        Cluster(const Cluster&) = default;
+
+        Cluster(size_t index0, const std::array<NeighbourData, NAtoms - 1>& atom_neigh) {
+
+            atom_indexes[0] = index0;
+
+            for (size_t i = 1; i < NAtoms; i++) {
+                atom_indexes[i] = atom_neigh[i - 1].atom_index;
+            }
+
+            for (size_t j = 1; j < NAtoms; j++) {
+                separation_magnitudes[flattenedIndex(0, j)] = atom_neigh[j - 1].separation.magnitude;
+                derivatives[flattenedIndex(0, j)] = atom_neigh[j - 1].separation.derivatives;
+            }
+
+            for (size_t i = 1; i < NAtoms; i++) {
+                for (size_t j = i + 1; j < NAtoms; j++) {
+
+                    Vector3 relative_pos_i = atom_neigh[i - 1].separation.vec();
+                    Vector3 relative_pos_j = atom_neigh[j - 1].separation.vec();
+
+                    auto separation = Separation(relative_pos_i, relative_pos_j);
+
+                    separation_magnitudes[flattenedIndex(i, j)] = separation.magnitude;
+                    derivatives[flattenedIndex(i, j)] = separation.derivatives;
+                }
+            }
+        }
+
+        const SeparationDerivatives& derivativesBetween(const size_t lower_index, const size_t higher_index) const {
+            return derivatives[flattenedIndex(lower_index, higher_index)];
+        }
+
+        SeparationDerivatives& derivativesBetween(const size_t lower_index, const size_t higher_index) {
+            return derivatives[flattenedIndex(lower_index, higher_index)];
         }
     };
 }

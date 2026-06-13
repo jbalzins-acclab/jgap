@@ -1,30 +1,32 @@
 #ifndef JGAP_NBODYGAPCOMPONENT_HPP
 #define JGAP_NBODYGAPCOMPONENT_HPP
 
+#include <tbb/parallel_for.h>
 #include "core/atomic/energy/AtomicQuantities.hpp"
 #include "core/kernels/Kernel.hpp"
+#include "core/kernels/SquaredExpKernel.hpp"
 #include "core/transform/ClusterTransformation.hpp"
 #include "GapComponent.hpp"
 #include "core/Matrix.hpp"
 
 namespace jgap {
 
-    template<size_t Dim, size_t ClusterSize, ClusterTypes ClusterType, typename TKernel = SquaredExpKernel<Dim-1, 1>>
+    template<size_t Dim, size_t ClusterSize, ClusterSymmetry ClusterSym,
+            CKernelOfDim<Dim> TKernel>
     class NBodyGapComponent : public GapComponent {
     public:
         static constexpr size_t Dependencies = Cluster<ClusterSize>::NSeparations;
 
-        NBodyGapComponent(const SpeciesSet<ClusterSize, ClusterType> species,
-                          std::unique_ptr<ClusterTransformation<Dim, ClusterSize> > transformation,
-                          //std::unique_ptr<Kernel<Dim> > kernel,
-                          TKernel kernel,
-                          std::vector<Descriptor<Dim> > sparse_points,
-                          const std::vector<Real> &optional_coeffs = {})
+        NBodyGapComponent(const SpeciesSet<ClusterSize, ClusterSym> species,
+                          const ValuePtr<ClusterTransformation<Dim, ClusterSize> >& transformation,
+                          const TKernel& kernel,
+                          const std::vector<Descriptor<Dim> >& sparse_points,
+                          const std::vector<Real>& optional_coeffs = {})
             : species(species),
+              transformation(transformation),
               symmetry_factor(transformation->symmetryFactor()),
-              transformation(std::move(transformation)),
               kernel(kernel),
-              sparse_points(std::move(sparse_points)) {
+              sparse_points(sparse_points) {
 
             if (!optional_coeffs.empty()) {
                 setCoefficients(optional_coeffs);
@@ -33,7 +35,7 @@ namespace jgap {
 
         std::optional<AtomicQuantities> covariate(const NeighbourList& neighbour_list) const override {
 
-            auto clusters = neighbour_list.findAllClusters<ClusterSize, ClusterType>(species);
+            auto clusters = neighbour_list.findAllClusters<WithDerivatives>(species);
             if (clusters.empty()) {
                 return std::nullopt;
             }
@@ -49,7 +51,7 @@ namespace jgap {
                     );
 
                     K *= symmetry_factor;
-                    for(auto& grad_val : gradK_wrt_q) {
+                    for(auto& grad_val: gradK_wrt_q) {
                         grad_val *= symmetry_factor;
                     }
 
@@ -57,8 +59,8 @@ namespace jgap {
 
                     for (size_t i = 0; i < ClusterSize; i++) {
                         for (size_t j = i + 1; j < ClusterSize; j++) {
-                            const auto sep_idx = flattened_index(i, j);
-                            const auto& separation = cluster.between(i, j);
+                            const auto sep_idx = flattenedIndex(i, j);
+                            const auto& separation_deriv = cluster.derivativesBetween(i, j);
                             const auto& derivatives_wrt_r_norms = descriptor.derivatives[sep_idx];
 
                             Real dK_drij_norm = 0.0;
@@ -66,10 +68,10 @@ namespace jgap {
                                 dK_drij_norm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                             }
 
-                            result.force(sparse_idx, cluster.atom_indexes[i]) += separation.direction * dK_drij_norm;
-                            result.force(sparse_idx, cluster.atom_indexes[j]) -= separation.direction * dK_drij_norm;
+                            result.force(sparse_idx, cluster.atom_indexes[i]) += separation_deriv.direction * dK_drij_norm;
+                            result.force(sparse_idx, cluster.atom_indexes[j]) -= separation_deriv.direction * dK_drij_norm;
 
-                            result.virials(sparse_idx) += separation.virials * dK_drij_norm;
+                            result.virials(sparse_idx) += separation_deriv.virials * dK_drij_norm;
                         }
                     }
                 }
@@ -97,11 +99,42 @@ namespace jgap {
             return transformation->getCutoffs();
         }
 
-    public:
-        SpeciesSet<ClusterSize, ClusterType> species;
+        std::unique_ptr<GapComponent> clone() const override {
+            return std::make_unique<NBodyGapComponent>(*this);
+        }
+
+        void tabulate(TabulationData &tables) const override {
+
+            Grid<Dependencies>* table_ref = nullptr;
+
+            if constexpr (ClusterSize == 2 && ClusterSym == Symmetric) {
+                table_ref = &tables.two_body_grids.getValueGrid(species);
+            } else if constexpr (ClusterSize == 3 && ClusterSym == HasCentralAtom) {
+                table_ref = &tables.three_body_grids.getValueGrid(species);
+            } else if (table_ref == nullptr) {
+                JGAP_LOG_AND_THROW("Tabulation not implemented");
+            }
+
+            auto& table = *table_ref;
+
+            tbb::parallel_for(static_cast<size_t>(0), table.data_flat.size(), [&](size_t i) {
+                auto indices = table.getIndices(i);
+                auto pos = table.getCoord(indices);
+
+                auto cluster = TabulationData::gridPosAsCluster<ClusterSize>(pos);
+                auto transformed = transformation->evaluate(cluster);
+
+                Real& value = table.data_flat[i];
+                for (const auto& sparse_point : sparse_points) {
+                    value += kernel.value(sparse_point.value, transformed.value) * symmetry_factor;
+                }
+            });
+        }
+
+    private:
+        SpeciesSet<ClusterSize, ClusterSym> species;
+        ValuePtr<ClusterTransformation<Dim, ClusterSize>> transformation;
         Real symmetry_factor;
-        std::unique_ptr<ClusterTransformation<Dim, ClusterSize>> transformation;
-        //std::unique_ptr<Kernel<Dim>> kernel;
         TKernel kernel;
         std::vector<Descriptor<Dim>> sparse_points;
     };

@@ -15,19 +15,23 @@ namespace jgap {
         }
 
         Descriptor<1> evaluate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1).magnitude;
+            Real distance = pair.between(0, 1);
             if (distance >= cutoff) return {{0.0}};
             return {{prefactor * std::pow(1.0 - distance * cutoff_inverse, degree)}};
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1).magnitude;
+            Real distance = pair.between(0, 1);
             if (distance >= cutoff) return {{{0.0}}, {}};
 
             Real val = prefactor * std::pow(1.0 - distance * cutoff_inverse, degree);
             Real deriv = -prefactor * std::pow(1.0 - distance * cutoff_inverse, degree - 1.0) * degree * cutoff_inverse;
 
             return {{{val}}, {std::array{deriv}}};
+        }
+
+        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
+            return std::make_unique<FSGenPairFunction>(*this);
         }
 
     private:

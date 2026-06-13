@@ -17,6 +17,14 @@
 #include "core/atomic/Atoms.hpp"
 
 namespace jgap {
+    bool getLine(std::ifstream &file, std::string &line) {
+        if (!getline(file, line)) return false;
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back(); // remove Windows carriage return
+        }
+        return true;
+    }
+
     std::vector<Atoms> readAtoms(const std::string& filename) {
         return mapVector(XYZData::read(filename), [](const XYZData& d) { return Atoms(d); });
     }

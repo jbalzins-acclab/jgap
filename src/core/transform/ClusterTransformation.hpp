@@ -9,6 +9,7 @@
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "../potentials/Cutoffs.hpp"
 #include "io/Serializable.hpp"
+#include "utils/ValuePtr.hpp"
 
 namespace jgap {
 
@@ -29,10 +30,11 @@ namespace jgap {
         virtual Real symmetryFactor() const {
             return 1.0;
         }
+
+        virtual std::unique_ptr<ClusterTransformation> clone() const = 0;
     };
 
-    template<typename T>
-    concept CClusterTransformation = std::derived_from<T, ClusterTransformation<T::Dim, T::ClusterSize>>;
+    static_assert(Cloneable<ClusterTransformation<1, 2>>);
 }
 
 #endif

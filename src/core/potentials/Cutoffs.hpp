@@ -12,29 +12,37 @@
 
 namespace jgap {
     struct Cutoffs {
-        std::map<size_t, Real> per_n_dependencies;
+        std::map<size_t, Real> per_cluster_size;
 
         Cutoffs() = default;
 
-        Cutoffs(std::map<size_t, Real> per_n_dependencies) : per_n_dependencies(std::move(per_n_dependencies)) {}
-        Cutoffs(const std::initializer_list<std::pair<const size_t, Real>> list) : per_n_dependencies(list) {}
-        Cutoffs(const std::pair<const size_t, Real> list) : per_n_dependencies({list}) {}
+        Cutoffs(std::map<size_t, Real> per_n_dependencies) : per_cluster_size(std::move(per_n_dependencies)) {}
+        Cutoffs(const std::initializer_list<std::pair<const size_t, Real>> list) : per_cluster_size(list) {}
+        Cutoffs(const std::pair<const size_t, Real> list) : per_cluster_size({list}) {}
 
         Real maxOverall() const {
             Real result = 0.0;
-            for (const auto &cutoff: per_n_dependencies | std::views::values) {
+            for (const auto &cutoff: per_cluster_size | std::views::values) {
                 result = std::max(result, static_cast<Real>(cutoff));
             }
             return result;
         }
 
+        Real forDim(const size_t dim) const {
+            if (per_cluster_size.contains(dim)) {
+                return per_cluster_size.at(dim);
+            } else {
+                return 0.0;
+            }
+        }
+
         Cutoffs operator+(const Cutoffs& other) const {
             auto res = *this;
-            for (const auto& [deps, cutoff] : other.per_n_dependencies) {
-                if (res.per_n_dependencies.contains(deps)) {
-                    res.per_n_dependencies[deps] = std::max(res.per_n_dependencies[deps], cutoff);
+            for (const auto& [deps, cutoff] : other.per_cluster_size) {
+                if (res.per_cluster_size.contains(deps)) {
+                    res.per_cluster_size[deps] = std::max(res.per_cluster_size[deps], cutoff);
                 } else {
-                    res.per_n_dependencies[deps] = cutoff;
+                    res.per_cluster_size[deps] = cutoff;
                 }
             }
             return res;

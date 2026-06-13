@@ -8,12 +8,14 @@
 #include <string>
 #include <utility>
 
+#include "utils/ValuePtr.hpp"
+
 namespace jgap {
 
     class CompositePotential final : public Potential {
     public:
-        CompositePotential(std::map<std::string, std::unique_ptr<Potential>> potentials_map);
-        CompositePotential(std::vector<std::unique_ptr<Potential>> potentials_list);
+        CompositePotential(std::map<std::string, ValuePtr<Potential>> potentials_map);
+        CompositePotential(std::vector<ValuePtr<Potential>> potentials_list);
 
         template<typename... Potentials>
         CompositePotential(Potentials... pots) {
@@ -21,14 +23,21 @@ namespace jgap {
             ( (potentials[std::to_string(i++)] = std::move(pots)), ... );
         }
 
-        Cutoffs getCutoffs() override;
-        AtomicQuantity calculateEnergy(const Atoms &atoms) override;
+        Cutoffs getCutoffs() const override;
 
-        const std::map<std::string, std::unique_ptr<Potential>>& getPotentials() const { return potentials; }
-        std::map<std::string, std::unique_ptr<Potential>>& getPotentials() { return potentials; }
+        AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
+
+        const std::map<std::string, ValuePtr<Potential>>& getPotentials() const { return potentials; }
+        std::map<std::string, ValuePtr<Potential>>& getPotentials() { return potentials; }
+
+        void tabulate(TabulationData &table) const override;
+
+        std::unique_ptr<Potential> clone() const override {
+            return std::make_unique<CompositePotential>(*this);
+        }
 
     private:
-        std::map<std::string, std::unique_ptr<Potential>> potentials;
+        std::map<std::string, ValuePtr<Potential>> potentials;
     };
 }
 

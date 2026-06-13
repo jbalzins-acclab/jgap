@@ -5,23 +5,32 @@
 
 #include "InterpolationResults.hpp"
 #include "Spline.hpp"
-#include "Table.hpp"
+#include "Grid.hpp"
 #include "core/Real.hpp"
+#include "utils/ValuePtr.hpp"
 
 namespace jgap {
     class CubicBSpline : public Spline<1> {
     public:
         static std::vector<Real> toSplineCoefficients(const std::vector<Real>& original, Real spacing);
 
-        static CubicBSpline fit(const Table<1>& values);
+        static ValuePtr<Spline> fit(const Grid<1>& values);
 
-        explicit CubicBSpline(const Table<1>& coefficients);
+        explicit CubicBSpline(const Grid<1>& coefficients);
 
         InterpolationResults<1> interpolate(std::array<Real, 1> pos) const override;
         std::array<Real, 1> getCutoff() const override;
 
+        std::unique_ptr<Spline<1>> clone() const override {
+            return std::make_unique<CubicBSpline>(*this);
+        }
+
+        const Grid<1>& getCoefficients() const {
+            return coefficients;
+        }
+
     private:
-        Table<1> coefficients;
+        Grid<1> coefficients;
     };
 }
 

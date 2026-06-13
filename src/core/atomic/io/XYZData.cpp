@@ -10,12 +10,14 @@
 
 namespace jgap {
 
-    bool XYZData::getLine(std::ifstream &file, std::string &line) {
-        if (!getline(file, line)) return false;
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back(); // remove Windows carriage return
+    std::vector<XYZData> XYZData::read(const std::string &filename) {
+        std::ifstream in(filename);
+
+        if (!in.is_open()) {
+            JGAP_LOG_AND_THROW("Failed to open file: {}", filename);
         }
-        return true;
+
+        return read(in);
     }
 
     std::vector<XYZData> XYZData::read(std::ifstream &in_stream) {
@@ -170,6 +172,19 @@ namespace jgap {
         }
 
         return frames;
+    }
+
+    XYZData& XYZData::operator=(const XYZData &other) {
+        if (this != &other) {
+            properties = other.properties;
+            arrays = other.arrays;
+        }
+        return *this;
+    }
+
+    void XYZData::write(const std::string &filename) const {
+        std::ofstream out(filename);
+        write(out);
     }
 
     void XYZData::write(std::ofstream &out_stream) const {

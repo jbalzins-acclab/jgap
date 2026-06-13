@@ -55,8 +55,8 @@ namespace jgap {
 
             energies_without_external[i] = {
                 atoms.getEnergy(),
-                atoms.getVirials(),
-                atoms.getForces()
+                atoms.lookupVirials(),
+                atoms.lookupForces()
             };
 
             if (to_be_fit.optional_external_potential) {

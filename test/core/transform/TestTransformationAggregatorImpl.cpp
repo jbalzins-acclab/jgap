@@ -19,9 +19,14 @@ namespace {
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real deriv = pair.between(0, 1).magnitude * deriv_factor_;
+            Real deriv = pair.between(0, 1) * deriv_factor_;
             return {{{value_to_return_}}, {std::array<Real, 1>{deriv}}};
         }
+
+        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
+            return std::make_unique<MockEamPairFunction>(*this);
+        }
+
     private:
         Real value_to_return_;
         Real deriv_factor_;
@@ -36,7 +41,7 @@ TEST(TestTransformationAggregator, SingleTransformation) {
     auto nl = NeighbourList(atoms, 5.0);
 
     auto aggregator = TransformationAggregatorImpl<1, 2>("Fe");
-    aggregator.extend({"Fe", "Fe"}, std::make_unique<MockEamPairFunction>(1.0, 0.1));
+    aggregator.extend({"Fe", "Fe"}, MockEamPairFunction(1.0, 0.1));
 
     auto aggregated_descriptors = aggregator.aggregate(nl);
 
@@ -85,8 +90,8 @@ TEST(TestTransformationAggregator, MultipleTransformations) {
     auto nl = NeighbourList(atoms, 10.0);
 
     auto aggregator = TransformationAggregatorImpl<1, 2>("Fe");
-    aggregator.extend({"Fe", "Fe"}, std::make_unique<MockEamPairFunction>(1.0, 0.1));
-    aggregator.extend({"Fe", "Ni"}, std::make_unique<MockEamPairFunction>(10.0, 0.2));
+    aggregator.extend({"Fe", "Fe"}, MockEamPairFunction(1.0, 0.1));
+    aggregator.extend({"Fe", "Ni"}, MockEamPairFunction(10.0, 0.2));
 
     auto aggregated_descriptors = aggregator.aggregate(nl);
 
