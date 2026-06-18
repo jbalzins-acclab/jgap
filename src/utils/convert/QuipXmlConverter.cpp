@@ -134,7 +134,7 @@ namespace jgap {
             }
         }
 
-        return IsolatedAtomPotential(isolated_atom_energies, false);
+        return IsolatedAtomPotential(isolated_atom_energies);
     }
 
     GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data) {

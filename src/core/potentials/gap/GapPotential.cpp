@@ -61,12 +61,12 @@ namespace jgap {
         return components;
     }
 
-    void GapPotential::tabulate(const TabulationData &table) const {
+    void GapPotential::fillTables(TabulationData &table) const {
         JGAP_LOG_INFO("Tabulating GAP");
 
         JGAP_LOG_DEBUG("Tabulating external potential");
         if (optional_external_potential.get() != nullptr) {
-            optional_external_potential->tabulate(table);
+            optional_external_potential->fillTables(table);
         }
 
         JGAP_LOG_DEBUG("Tabulating components");

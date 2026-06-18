@@ -16,6 +16,7 @@
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "core/potentials/CompositePotential.hpp"
 #include "core/potentials/zbl/ZblPotential.hpp"
+#include "core/potentials/isolated/IsolatedAtomPotential.hpp"
 
 namespace jgap {
     inline GapPotential standardGapFit(const std::vector<Atoms>& training_data, const StandardGapParams& params) {
@@ -50,7 +51,7 @@ namespace jgap {
         potential.addComponents(components3);
         potential.addComponents(components2);
 
-        IsolatedAtomPotential isolated_atom_pot{training_data, false};
+        IsolatedAtomPotential isolated_atom_pot{training_data};
         ZblPotential zbp_pot{training_data};
 
         CompositePotential external{{

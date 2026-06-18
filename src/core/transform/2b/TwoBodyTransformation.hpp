@@ -9,6 +9,7 @@ namespace jgap {
 
     class TwoBodyTransformation final : public ClusterTransformation<2, 2> {
     public:
+        ~TwoBodyTransformation() override; // key function, see SerializationTypeAnchors.cpp
 
         TwoBodyTransformation(const ValuePtr<CutoffFunction>& cutoff) : cutoff(cutoff) {
         }

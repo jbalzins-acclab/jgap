@@ -10,7 +10,10 @@ namespace jgap {
 
     class CutoffFunction {
     public:
-        virtual ~CutoffFunction() = default;
+        // Out-of-line key function: forces a single externally-linked vtable/type_info so dynamic_cast
+        // works across the jgap_lib boundary (libc++abi compares type_info by address on Apple).
+        // Defined, together with the other serializable types' anchors, in SerializationTypeAnchors.cpp.
+        virtual ~CutoffFunction();
 
         virtual Real evaluate(Real r) const = 0;
         virtual std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const = 0;

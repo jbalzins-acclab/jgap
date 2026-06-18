@@ -14,6 +14,10 @@ namespace jgap {
             cutoff_inverse = 1.0 / cutoff;
         }
 
+        // Out-of-line key function: anchors a single external type_info (needed for dynamic_cast across
+        // the jgap_lib boundary). See ClusterTransformation.cpp for context.
+        ~FSGenPairFunction() override;
+
         Descriptor<1> evaluate(const Cluster<2>& pair) const override {
             Real distance = pair.between(0, 1);
             if (distance >= cutoff) return {{0.0}};

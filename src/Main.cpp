@@ -1,36 +1,33 @@
-#include <exception>
 #include <iostream>
-#include <ostream>
-#include <ranges>
-#include <memory>
 #include <chrono>
 #include <iomanip>
-#include <pugixml.hpp>
-#include <oneapi/tbb/parallel_for_each.h>
-#include <oneapi/tbb/global_control.h>
+#include <string>
 
 #include "core/atomic/io/XYZData.hpp"
 #include "core/atomic/Atoms.hpp"
 #include "io/tabgap/TabGapIO.hpp"
-#include "utils/Utils.hpp"
-#include "utils/convert/QuipXmlConverter.hpp"
 #include "utils/gap/StandardGapFit.hpp"
 #include "core/potentials/tabgap/TabGapPotential.hpp"
 #include "core/transform/eam/FSGenPairFunction.hpp"
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
+#include "core/potentials/Potential.hpp"
+#include "core/ValuePtr.hpp"
+#include "serialization/SerializationRegistry.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 using namespace jgap;
 using namespace std;
 
-int main(int argc, char** argv) {
-    //tbb::global_control control(tbb::global_control::max_allowed_parallelism, 1);
+namespace {
+    const std::string TrainingDataFile = "resources/xyz-samples/db_Fe.xyz";
+    const std::string PotentialFile = "fe-potential.jgap.h5";
+}
 
-    CurrentLogger::initDefault({.stdout_log_debug = true});
-
+void fit() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
     JGAP_LOG_INFO("Start");
-    auto training_data = readAtoms("resources/xyz-samples/db_Fe.xyz");
+    auto training_data = readAtoms(TrainingDataFile);
 
     StandardGapParams params{120};
     params.eam_pf = FSGenPairFunction(4.5, 3.0);
@@ -38,6 +35,11 @@ int main(int argc, char** argv) {
     params.regularization_rules = SimpleRegularizationRules();
 
     auto potential = standardGapFit(training_data, params);
+
+    // Serialize the fitted potential. The registry stamps the node with the concrete type, so it can be
+    // read back (see readAndTest) without the caller knowing what kind of potential it is.
+    SerializationRegistry<Potential>::serialize(ValuePtr<Potential>(potential), PotentialFile);
+    JGAP_LOG_INFO("Saved fitted potential to {}", PotentialFile);
 
     TabulationData tabulation_data = potential.tabulate({
             .max_cutoffs = potential.getCutoffs(),
@@ -73,6 +75,31 @@ int main(int argc, char** argv) {
     to_be_pred << tabgap.calculateEnergy(to_be_pred);
 
     to_be_pred.write("tabgap.xyz");
+}
+
+void readAndTest() {
+    JGAP_LOG_INFO("Reading potential from {} (type deduced from file)", PotentialFile);
+
+    // Deserialize without knowing the concrete type: the registry picks the right deserializer.
+    ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(PotentialFile);
+
+    auto structures = readAtoms(TrainingDataFile);
+    Atoms structure = structures[800];
+
+    AtomicQuantity prediction = potential->calculateEnergy(structure);
+
+    std::cout << "Loaded potential predicted energy on db_Fe.xyz structure #800 ("
+              << structure.nAtoms() << " atoms): " << prediction.value << " eV" << std::endl;
+
+    structure << prediction;
+    structure.write("loaded-prediction.xyz");
+}
+
+int main(int argc, char** argv) {
+    CurrentLogger::initDefault({.stdout_log_debug = true});
+
+    fit();
+    readAndTest();
 
     return 0;
 }

@@ -90,6 +90,10 @@ namespace jgap {
             return std::make_unique<ManyBodyGapComponent>(*this);
         }
 
+        const ValuePtr<TransformationAggregator<Dim>>& getAggregator() const { return aggregator; }
+        const TKernel& getKernel() const { return kernel; }
+        const std::vector<Descriptor<Dim>>& getSparsePoints() const { return sparse_points; }
+
         void tabulate(TabulationData &tables) const override {
             const auto& coeffs = this->getCoefficients();
             if (coeffs.empty()) {

@@ -18,22 +18,14 @@ namespace jgap {
     }
 
     ValuePtr<CutoffFunction> PerriotPolynomialCutoffSerialization::deserialize(const SerializationNode& node) const {
-        auto type = node.readAttribute<std::string>("type");
-        if (!type || *type != "PerriotPolynomialCutoff") {
+        if (node.readOptionalAttribute<std::string>("type") != "PerriotPolynomialCutoff") {
             return nullptr;
         }
 
         auto cutoff = node.readAttribute<Real>("cutoff");
         auto cutoff_transition_width = node.readAttribute<Real>("cutoff_transition_width");
 
-        if (!cutoff) {
-            JGAP_LOG_AND_THROW("cutoff for PerriotPolynomialCutoff is missing");
-        }
-        if (!cutoff_transition_width) {
-            JGAP_LOG_AND_THROW("cutoff for PerriotPolynomialCutoff is missing");
-        }
-
-        return PerriotPolynomialCutoff(*cutoff, *cutoff_transition_width);
+        return PerriotPolynomialCutoff(cutoff, cutoff_transition_width);
     }
 
 }

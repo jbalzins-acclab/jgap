@@ -52,27 +52,32 @@ namespace jgap {
     std::string vectorToString(const std::vector<std::string>&);
 
     template <typename T>
-    constexpr std::string_view typeName() {
-#ifdef __clang__
+    std::string typeName() {
+#if defined(__clang__) || defined(__GNUC__)
         std::string_view name = __PRETTY_FUNCTION__;
-        constexpr std::string_view prefix = "std::string type_name() [T = ";
-        constexpr std::string_view suffix = "]";
-#elif defined(__GNUC__)
-        std::string_view name = __PRETTY_FUNCTION__;
-        constexpr std::string_view prefix = "std::string type_name() [with T = ";
-        constexpr std::string_view suffix = "]";
+        // Extract the substring between "T = " and the closing ']'/';'.
+        const auto start = name.find("T = ");
+        if (start == std::string_view::npos) {
+            return std::string(name);
+        }
+        const auto value_start = start + 4;
+        const auto value_end = name.find_first_of(";]", value_start);
+        return std::string(name.substr(value_start,
+            value_end == std::string_view::npos ? std::string_view::npos : value_end - value_start));
 #elif defined(_MSC_VER)
         std::string_view name = __FUNCSIG__;
-        constexpr std::string_view prefix = "class std::basic_string __cdecl type_name<";
+        constexpr std::string_view prefix = "typeName<";
         constexpr std::string_view suffix = ">(void)";
+        const auto start = name.find(prefix);
+        if (start == std::string_view::npos) {
+            return std::string(name);
+        }
+        const auto value_start = start + prefix.size();
+        const auto value_end = name.rfind(suffix);
+        return std::string(name.substr(value_start, value_end - value_start));
+#else
+        return std::string(__func__);
 #endif
-
-        // Slice the view safely
-        name.remove_prefix(prefix.size());
-        name.remove_suffix(suffix.size());
-
-        // Construct and return a real std::string
-        return std::string(name);
     }
 
     template <typename Iterator>

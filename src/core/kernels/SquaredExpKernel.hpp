@@ -9,6 +9,8 @@ namespace jgap {
     template<size_t ExpDimensions, size_t CutoffDimensions>
     class SquaredExpKernel : public Kernel<ExpDimensions + CutoffDimensions> {
     public:
+        static constexpr size_t ExpDim = ExpDimensions;
+        static constexpr size_t CutoffDim = CutoffDimensions;
         static constexpr size_t TotalDimensions = ExpDimensions + CutoffDimensions;
 
         using KernelValueAndGradient = Kernel<TotalDimensions>::KernelValueAndGradient;
@@ -20,6 +22,20 @@ namespace jgap {
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
                 inverse_length_scales_squared[dim] = 1.0 / (length_scales[dim] * length_scales[dim]);
             }
+        }
+
+        // energy_scale and length_scales as passed to the constructor (prefactor = energy_scale^2,
+        // inverse_length_scales_squared[d] = 1 / length_scales[d]^2).
+        Real getEnergyScale() const {
+            return std::sqrt(prefactor);
+        }
+
+        std::array<Real, ExpDimensions> getLengthScales() const {
+            std::array<Real, ExpDimensions> length_scales{};
+            for (size_t dim = 0; dim < ExpDimensions; dim++) {
+                length_scales[dim] = 1.0 / std::sqrt(inverse_length_scales_squared[dim]);
+            }
+            return length_scales;
         }
 
         Real value(const std::array<Real, TotalDimensions> &q1,

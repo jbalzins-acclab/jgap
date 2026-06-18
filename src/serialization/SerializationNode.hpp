@@ -31,6 +31,14 @@ namespace jgap {
             group.createAttribute<T>(name, value);
         }
 
+        // String literals decay to const char[N], which HighFive would otherwise store as an N-element
+        // char array rather than a scalar string (so readAttribute<std::string> would fail). Route them
+        // through std::string so they round-trip.
+        template<size_t N>
+        void writeAttribute(const std::string& name, const char (&value)[N]) {
+            group.createAttribute<std::string>(name, std::string(value));
+        }
+
         template<typename T>
         std::optional<T> readOptionalAttribute(const std::string& name) const {
             if (!group.hasAttribute(name)) {

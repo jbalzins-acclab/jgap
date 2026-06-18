@@ -10,7 +10,6 @@
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "core/tabulation/TabulationData.hpp"
 #include "core/transform/ClusterTransformation.hpp"
-#include "io/Serializable.hpp"
 
 namespace jgap {
 

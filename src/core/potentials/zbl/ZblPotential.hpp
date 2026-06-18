@@ -54,6 +54,16 @@ namespace jgap {
                      Real cutoff = DefaultZblCutoff,
                      Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
+        // z1_z2 and a_inverse are deduced from the species in each pair.
+        ZblPotential(const std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>>& coefficients,
+                     Real cutoff = DefaultZblCutoff,
+                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+
+        std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> getCoefficients() const;
+
+        Real getCutoff() const { return cutoff; }
+        Real getCutoffTransitionWidth() const { return cutoff_transition_width; }
+
         AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
 
         std::array<Real, 2> energyAndDerivative(const SpeciesSet<2, Symmetric>& species_pair, Real r) const;
@@ -82,6 +92,9 @@ namespace jgap {
         PerriotPolynomialCutoff cutoff_function;
 
         void loadDataset(std::istream& dataset, const std::set<SpeciesSet<2, Symmetric>>* species_filter = nullptr);
+
+        // Builds the parameters for a pair, deducing z1_z2 and a_inverse from the species' atomic numbers.
+        static ZblParameters makeParameters(const SpeciesSet<2, Symmetric>& pair, const std::array<Real, 6>& coeffs);
 
         std::array<Real, 2> energyAndDerivative(const ZblParameters& params, Real r) const;
     };

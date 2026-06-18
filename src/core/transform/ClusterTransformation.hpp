@@ -8,7 +8,6 @@
 #include "core/atomic/geometry/Cluster.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "../potentials/Cutoffs.hpp"
-#include "io/Serializable.hpp"
 #include "../ValuePtr.hpp"
 
 namespace jgap {

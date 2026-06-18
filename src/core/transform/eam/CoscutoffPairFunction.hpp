@@ -9,6 +9,8 @@
 namespace jgap {
     class CoscutoffPairFunction final : public EamPairFunction {
     public:
+        ~CoscutoffPairFunction() override; // key function, see SerializationTypeAnchors.cpp
+
         CoscutoffPairFunction(const Real cutoff, const Real r_min, const Real prefactor = 1.0)
             : EamPairFunction(cutoff, prefactor), r_min(r_min) {
             interval_inverse = 1.0 / (cutoff - r_min);

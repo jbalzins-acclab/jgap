@@ -61,22 +61,30 @@ namespace jgap {
                 continue;
             }
 
-            if (!s1.atomicNumber().has_value()) {
-                JGAP_LOG_AND_THROW("Atomic number undefined for {}", s1.symbol());
-            }
-            if (!s2.atomicNumber().has_value()) {
-                JGAP_LOG_AND_THROW("Atomic number undefined for {}", s2.symbol());
-            }
-
-            Real z1 = s1.atomicNumber().value();
-            Real z2 = s2.atomicNumber().value();
-
-            zbl_parameters[pair] = {
-                coeffs,
-                z1 * z2,
-                (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848
-            };
+            zbl_parameters[pair] = makeParameters(pair, coeffs);
         }
+    }
+
+    ZblPotential::ZblParameters ZblPotential::makeParameters(const SpeciesSet<2, Symmetric>& pair,
+                                                             const std::array<Real, 6>& coeffs) {
+        const Species& s1 = pair.getNodes()[0];
+        const Species& s2 = pair.getNodes()[1];
+
+        if (!s1.atomicNumber().has_value()) {
+            JGAP_LOG_AND_THROW("Atomic number undefined for {}", s1.symbol());
+        }
+        if (!s2.atomicNumber().has_value()) {
+            JGAP_LOG_AND_THROW("Atomic number undefined for {}", s2.symbol());
+        }
+
+        Real z1 = s1.atomicNumber().value();
+        Real z2 = s2.atomicNumber().value();
+
+        return {
+            coeffs,
+            z1 * z2,
+            (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848
+        };
     }
 
 #if defined(__has_embed)
@@ -119,6 +127,24 @@ namespace jgap {
           cutoff_function(cutoff, cutoff_transition_width) {
         std::set<SpeciesSet<2, Symmetric>> pairs = deducePairs(training_data);
         loadDataset(custom_dataset, &pairs);
+    }
+
+    ZblPotential::ZblPotential(const std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>>& coefficients,
+                               Real cutoff,
+                               Real cutoff_transition_width)
+        : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
+          cutoff_function(cutoff, cutoff_transition_width) {
+        for (const auto& [pair, coeffs] : coefficients) {
+            zbl_parameters[pair] = makeParameters(pair, coeffs);
+        }
+    }
+
+    std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> ZblPotential::getCoefficients() const {
+        std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> coefficients;
+        for (const auto& [pair, params] : zbl_parameters) {
+            coefficients[pair] = params.coeffs;
+        }
+        return coefficients;
     }
 
 

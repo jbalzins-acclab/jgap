@@ -140,6 +140,11 @@ namespace jgap {
             return std::make_unique<NBodyGapComponent>(*this);
         }
 
+        const SpeciesSet<ClusterSize, ClusterSym>& getSpecies() const { return species; }
+        const ValuePtr<ClusterTransformation<Dim, ClusterSize>>& getTransformation() const { return transformation; }
+        const TKernel& getKernel() const { return kernel; }
+        const std::vector<Descriptor<Dim>>& getSparsePoints() const { return sparse_points; }
+
         void tabulate(TabulationData &tables) const override {
             const auto& coeffs = this->getCoefficients();
             if (coeffs.empty()) {

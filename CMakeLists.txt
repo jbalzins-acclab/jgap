@@ -85,7 +85,13 @@ file(GLOB_RECURSE ALL_SRC_C "${PROJECT_SOURCE_DIR}/src/*.c")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/Main\\.cpp")
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
-add_library(jgap_lib STATIC ${LIBRARY_SOURCE_FILES})
+# Shared so that every serializer's REGISTER_SERIALIZATION static initializer is linked into the library
+# and runs on load (a static archive would drop the unreferenced translation units), and so type_info is
+# exported once and dynamic_cast (ValuePtr::as<>) works across the library boundary.
+add_library(jgap_lib SHARED ${LIBRARY_SOURCE_FILES})
+# Emit the library as libjgap.dylib (clients link -ljgap); the CMake target stays jgap_lib to avoid
+# clashing with the jgap executable target.
+set_target_properties(jgap_lib PROPERTIES OUTPUT_NAME jgap)
 
 # Generate parser registry header
 generate_parser_registry_header()

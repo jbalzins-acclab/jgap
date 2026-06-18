@@ -8,6 +8,8 @@
 namespace jgap {
     class SplinePairTransformation : public ClusterTransformation<1, 2> {
     public:
+        ~SplinePairTransformation() override; // key function, see SerializationTypeAnchors.cpp
+
         SplinePairTransformation(const SplinePairTransformation& other) = default;
         SplinePairTransformation(HermiteCubicSpline spline) : spline(std::move(spline)) {}
 
