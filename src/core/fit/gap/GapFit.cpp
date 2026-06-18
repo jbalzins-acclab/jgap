@@ -86,9 +86,5 @@ namespace jgap {
             sigmas_inverse
         );
         to_be_fit.setCoefficients(fit_coefficients);
-
-        for (Real coeff: fit_coefficients) {
-            JGAP_LOG_INFO("Coefficient: {}", coeff);
-        }
     }
 }

@@ -227,6 +227,8 @@ namespace jgap {
             }
             result.addComponent(std::move(new_comp));
         }
+
+        return result;
     }
 
     ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
