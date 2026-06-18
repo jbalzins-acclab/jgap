@@ -17,7 +17,7 @@
 #include "core/atomic/Atoms.hpp"
 
 namespace jgap {
-    bool getLine(std::ifstream &file, std::string &line) {
+    bool getLine(std::istream &file, std::string &line) {
         if (!getline(file, line)) return false;
         if (!line.empty() && line.back() == '\r') {
             line.pop_back(); // remove Windows carriage return

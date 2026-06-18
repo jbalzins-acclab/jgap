@@ -1,7 +1,7 @@
 #ifndef JGAP_ATOMICQUANTITY_HPP
 #define JGAP_ATOMICQUANTITY_HPP
 
-#include "../geometry/Vector3.hpp"
+#include "../../Vector3.hpp"
 #include <vector>
 
 #include "Virials.hpp"

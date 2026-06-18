@@ -15,13 +15,21 @@
             "version>=": "3.0.0"
         },
         {
-            "name": "pugixml",
-            "version>=": "1.15#0"
-        },
-        {
             "name": "openblas",
             "version>=": "0.3.29#0",
             "features": ["threads"]
         }
-    ]
+    ],
+    "features": {
+        "xml": {
+            "description": "QUIP XML conversion support (pugixml); enables QuipXmlConverter and the jgap_convert app",
+            "dependencies": [
+                {
+                    "name": "pugixml",
+                    "version>=": "1.15#0"
+                }
+            ]
+        }
+    },
+    "default-features": ["xml"]
 }

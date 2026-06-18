@@ -40,6 +40,22 @@ namespace jgap {
                                      const std::vector<ValuePtr<TabGapComponent> > &components)
         : isolated_atom_energies(isolated_atom_energies),
           components(components) {
+        recomputeComponentCounts();
+    }
+
+    void TabGapPotential::recomputeComponentCounts() {
+        n_2b_components = 0;
+        n_3b_components = 0;
+        n_eam_components = 0;
+        for (const auto& component: components) {
+            if (dynamic_cast<const TwoBodyTGComponent*>(component.get())) {
+                ++n_2b_components;
+            } else if (dynamic_cast<const ThreeBodyTGComponent*>(component.get())) {
+                ++n_3b_components;
+            } else if (dynamic_cast<const EamTGComponent*>(component.get())) {
+                ++n_eam_components;
+            }
+        }
     }
 
     AtomicQuantity TabGapPotential::calculateEnergy(const Atoms &atoms) const {

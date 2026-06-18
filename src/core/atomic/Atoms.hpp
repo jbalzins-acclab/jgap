@@ -9,7 +9,7 @@
 #include <array>
 #include <cmath>
 
-#include "geometry/Vector3.hpp"
+#include "../Vector3.hpp"
 #include "species/Species.hpp"
 #include "geometry/Lattice.hpp"
 #include "core/Real.hpp"

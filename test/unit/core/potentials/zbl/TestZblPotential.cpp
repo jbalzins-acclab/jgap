@@ -20,7 +20,7 @@ TEST(ZblPotentialTest, FeNiInteractionFromEmbedded) {
 
     // Test at a specific distance
     Real r = 0.5; // Angstroms
-    auto [energy, derivative] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{fe, ni}, r);
+    auto [energy, derivative] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{fe, ni}, r);
 
     // The coefficients for Fe-Ni from dmol.dat are:
     // 0.32818750683529224 1.2763590338471473 0.5319935400634741 0.4920242580140316 0.13562223656825356 2.9359601944688674
@@ -63,7 +63,7 @@ TEST(ZblPotentialTest, MockInteraction) {
     ZblPotential zbl(mock_stream, species, 10.0);
 
     Real r = 1.0;
-    auto [energy, derivative] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, r);
+    auto [energy, derivative] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, r);
 
     // --- Manual Calculation ---
     // Z(H) = 1, Z(He) = 2
@@ -95,7 +95,7 @@ TEST(ZblPotentialTest, Mock2AtomSystem) {
     Atoms atoms({ {0, 0, 0}, {1.0, 0, 0} }, {h, he});
     AtomicQuantity quantity = zbl.calculateEnergy(atoms);
 
-    auto [expected_energy, expected_deriv] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, 1.0);
+    auto [expected_energy, expected_deriv] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, 1.0);
 
     // Check energy
     EXPECT_NEAR(quantity.value, expected_energy, 1e-6);
@@ -129,10 +129,10 @@ TEST(ZblPotentialTest, Mock3AtomSystem) {
 
     AtomicQuantity quantity = zbl.calculateEnergy(atoms);
 
-    auto [e_h_he, dE_h_he] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, 1.0);
-    auto [e_h_li, dE_h_li] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{h, li}, 1.0);
+    auto [e_h_he, dE_h_he] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{h, he}, 1.0);
+    auto [e_h_li, dE_h_li] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{h, li}, 1.0);
     Real r_he_li = std::sqrt(2.0);
-    auto [e_he_li, dE_he_li] = zbl.zblEnergyAndDerivative(SpeciesSet<2, Symmetric>{he, li}, r_he_li);
+    auto [e_he_li, dE_he_li] = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{he, li}, r_he_li);
 
     // Check total energy
     Real expected_total_energy = e_h_he + e_h_li + e_he_li;

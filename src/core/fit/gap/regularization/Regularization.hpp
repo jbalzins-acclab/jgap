@@ -6,7 +6,7 @@
 #include "core/Real.hpp"
 #include "core/atomic/energy/Virials.hpp"
 
-#include "core/atomic/geometry/Vector3.hpp"
+#include "../../../Vector3.hpp"
 
 namespace jgap {
     struct Regularization {

@@ -33,6 +33,10 @@ namespace jgap {
 
         TabGapPotential(const std::map<Species, Real>& isolated_atom_energies = {},
                         const std::vector<ValuePtr<TabGapComponent>>& components = {});
+
+        // Recomputes n_2b/n_3b/n_eam from the current components (the reading paths build `components`
+        // directly, so the counts that the writer relies on must be derived afterwards).
+        void recomputeComponentCounts();
     };
 }
 

@@ -8,7 +8,6 @@ namespace jgap {
 
     class Angle3bTransformation final : public ClusterTransformation<4, 3> {
     public:
-        ~Angle3bTransformation() override; // key function, see SerializationTypeAnchors.cpp
 
         Angle3bTransformation(const ValuePtr<CutoffFunction>& cutoff)
             : cutoff(cutoff) {}

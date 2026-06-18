@@ -8,7 +8,6 @@
 namespace jgap {
     class PerriotPolynomialCutoff final : public CutoffFunction {
     public:
-        ~PerriotPolynomialCutoff() override; // key function, see SerializationTypeAnchors.cpp
 
         PerriotPolynomialCutoff(Real cutoff, Real cutoff_transition_width)
             : cutoff(cutoff),

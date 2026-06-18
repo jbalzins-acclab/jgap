@@ -1,5 +1,5 @@
-#ifndef BASIC_DATA_TYPES_HPP
-#define BASIC_DATA_TYPES_HPP
+#ifndef JGAP_VECTOR3_HPP
+#define JGAP_VECTOR3_HPP
 
 #include <string>
 #include <optional>
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <map>
 
-#include "../../Real.hpp"
+#include "Real.hpp"
 
 namespace jgap {
 

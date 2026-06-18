@@ -14,10 +14,14 @@ namespace jgap {
 
     TabGapPotential TabGapIO::read(const Filenames& filenames) {
         size_t found_h5{};
+        bool eam_fs_provided = false;
         for (auto& filename: filenames) {
             if (filename.ends_with(".h5") && found_h5++ > 1) {
                 JGAP_LOG_AND_THROW("Multiple .h5 files detected when reading single tabulation data: {}",
                                     vectorToString(filenames));
+            }
+            if (filename.ends_with(".eam.fs")) {
+                eam_fs_provided = true;
             }
         }
 
@@ -25,14 +29,28 @@ namespace jgap {
         for (const auto& filename: filenames) {
             JGAP_LOG_DEBUG("Reading file {}", filename);
             if (filename.ends_with(".h5")) {
-                readH5(filename, potential);
+                HighFive::File h5_file(filename, HighFive::File::ReadOnly);
+                HighFive::Group root = h5_file.getGroup("/");
+
+                // Only fall back to the EAM data embedded in the .h5 if no .eam.fs files were supplied
+                // and the file was written by jgap (jgap=true).
+                bool jgap_marked = false;
+                if (root.hasAttribute("jgap")) {
+                    root.getAttribute("jgap").read(jgap_marked);
+                }
+                readFromGroup(root, potential, !eam_fs_provided && jgap_marked);
             } else if (filename.ends_with(".eam.fs")) {
-                readEamFs(filename, potential);
+                std::ifstream eam_fs_file(filename);
+                if (!eam_fs_file.is_open()) {
+                    JGAP_LOG_AND_THROW("Could not open {} as .eam.fs", filename);
+                }
+                parseEamFs(eam_fs_file, potential);
             } else {
                 JGAP_LOG_AND_THROW("File format not supported to read as a tabGAP: {}", filename);
             }
         }
 
+        potential.recomputeComponentCounts();
         return potential;
     }
 
@@ -41,22 +59,55 @@ namespace jgap {
         JGAP_LOG_INFO("Writing {} tabGAP files", output_filename_prefix);
         Filenames resulting_filenames{output_filename_prefix + ".tabgap.h5"};
         HighFive::File h5_file(resulting_filenames.back(), HighFive::File::Overwrite);
+        HighFive::Group root = h5_file.getGroup("/");
+
+        const std::vector<std::string> eam_fs_contents = writeToGroup(root, potential);
+        h5_file.flush();
+
+        if (eam_fs_contents.empty()) {
+            return resulting_filenames;
+        }
+
+        JGAP_LOG_DEBUG("Writing {} .eam.fs file(s)", output_filename_prefix);
+        for (size_t index{}; index < eam_fs_contents.size(); index++) {
+            const std::string filename = output_filename_prefix
+                + (index != 0 ? "#" + std::to_string(index) : "")
+                + ".eam.fs";
+
+            std::ofstream eam_fs_file(filename);
+            if (!eam_fs_file.is_open()) {
+                JGAP_LOG_ERROR("Could not open {}, saving to H5 only", filename);
+                continue;
+            }
+            eam_fs_file << eam_fs_contents[index];
+            eam_fs_file.flush();
+
+            resulting_filenames.push_back(filename);
+        }
+
+        return resulting_filenames;
+    }
+
+    std::vector<std::string> TabGapIO::writeToGroup(HighFive::Group& root, const TabGapPotential& potential) {
+
+        // Marks the group/file as jgap-written so readers know the embedded EAM data can be trusted.
+        root.createAttribute("jgap", true);
 
         const std::string comment1 = "UNITS: metal";
-        h5_file.createDataSet<std::string>("comment1", comment1);
+        root.createDataSet<std::string>("comment1", comment1);
         const std::string comment2 = "pair_style tabgap";
-        h5_file.createDataSet<std::string>("comment2", comment2);
+        root.createDataSet<std::string>("comment2", comment2);
 
-        auto e0Group = h5_file.createGroup("e0");
+        auto e0Group = root.createGroup("e0");
         e0Group.createAttribute("Nelements", potential.isolated_atom_energies.size());
         for (const auto& [element, value]: potential.isolated_atom_energies) {
             e0Group.createAttribute(element.symbol(), value);
         }
 
         if (potential.n_eam_components == 0) {
-            h5_file.createDataSet("npots", std::array{potential.n_2b_components, potential.n_3b_components});
+            root.createDataSet("npots", std::array{potential.n_2b_components, potential.n_3b_components});
         } else {
-            h5_file.createDataSet("npots", std::array{size_t{0}, potential.n_3b_components});
+            root.createDataSet("npots", std::array{size_t{0}, potential.n_3b_components});
         }
 
         std::set<Species> species_2b_and_eam;
@@ -68,7 +119,7 @@ namespace jgap {
                 casted2b != nullptr) {
 
                 if (potential.n_eam_components == 0) {
-                    write2b(h5_file, *casted2b);
+                    write2b(root, *casted2b);
                 } else {
                     pair_pots.insert({casted2b->getSpeciesPair(), casted2b});
                     species_2b_and_eam.insert(casted2b->getSpeciesPair().getNodes()[0]);
@@ -78,7 +129,7 @@ namespace jgap {
             } else if (const auto* casted3b = dynamic_cast<const ThreeBodyTGComponent*>(component.get());
                        casted3b != nullptr) {
 
-                write3b(h5_file, *casted3b);
+                write3b(root, *casted3b);
 
             } else if (const auto* casted_eam = dynamic_cast<const EamTGComponent*>(component.get());
                       casted_eam != nullptr) {
@@ -96,48 +147,49 @@ namespace jgap {
             }
         }
 
-        h5_file.flush();
-        if (!potential.n_eam_components) {
-            return resulting_filenames;
-        }
+        std::vector<std::string> eam_fs_contents;
+        if (potential.n_eam_components) {
+            std::vector species_2b_and_eam_vec(species_2b_and_eam.begin(), species_2b_and_eam.end());
 
-        JGAP_LOG_DEBUG("Writing {} .eam.fs file(s)", output_filename_prefix);
-        std::vector species_2b_and_eam_vec(species_2b_and_eam.begin(), species_2b_and_eam.end());
-
-        for (size_t index{}; !pair_pots.empty() || !eam_components.empty(); index++) {
-            const std::string filename = output_filename_prefix
-                + (index != 0 ? "#" + std::to_string(index) : "")
-                + ".eam.fs";
-
-            const std::string file_content = useSomeComponentsAndGenerateEamFs(
-                species_2b_and_eam_vec, pair_pots, eam_components
-                );
-
-            h5_file.createDataSet("/eam_files/" + filename, file_content);
-
-            std::ofstream eam_fs_file(filename);
-            if (!eam_fs_file.is_open()) {
-                JGAP_LOG_ERROR("Could not open {}, saving to H5 only", filename);
-                continue;
+            while (!pair_pots.empty() || !eam_components.empty()) {
+                eam_fs_contents.push_back(useSomeComponentsAndGenerateEamFs(
+                    species_2b_and_eam_vec, pair_pots, eam_components));
             }
-            eam_fs_file << file_content;
-            eam_fs_file.flush();
 
-            resulting_filenames.push_back(filename);
+            // Embed the .eam.fs contents in the group so the potential is self-contained in the .h5.
+            auto eam_files_group = root.createGroup("eam_files");
+            for (size_t index{}; index < eam_fs_contents.size(); index++) {
+                eam_files_group.createDataSet(std::to_string(index), eam_fs_contents[index]);
+            }
         }
 
-        h5_file.flush();
-
-        return resulting_filenames;
+        return eam_fs_contents;
     }
 
-    void TabGapIO::write2b(HighFive::File& h5_file, const TwoBodyTGComponent &component) {
-
-        // REMEMBER(!): Spline grid written, but with original grid specifications
+    /**
+     * Writes one 2-body group into {@code root}.
+     *
+     * On-disk convention (a quirk of the external tabGAP format): the group describes the *original*
+     * tabulation grid but stores the cubic B-spline *coefficients* as its values:
+     * <ul>
+     *   <li>{@code N}: original grid point count (= coefficient count - 2; CubicBSpline::fit pads one
+     *       ghost coefficient on each side).</li>
+     *   <li>{@code grid_limits}: [lower, upper]. {@code lower} is the original-grid origin
+     *       (coeff origin + spacing); {@code upper} is the coefficient grid's cutoff, which sits ONE
+     *       spacing past the last original point (origin + (coeff_dims - 1) * spacing).</li>
+     *   <li>{@code energies}: the raw B-spline coefficients (N + 2 values).</li>
+     * </ul>
+     * Because of the one-extra-spacing {@code upper}, the reader recovers spacing as (upper - lower) / N
+     * (see {@link #readFromGroup}), not / (N - 1).
+     *
+     * @param root the HDF5 group to add the pair group to.
+     * @param component the 2-body component to write (its spline must be a CubicBSpline).
+     */
+    void TabGapIO::write2b(HighFive::Group& root, const TwoBodyTGComponent &component) {
 
         auto species = component.getSpeciesPair().getNodes();
 
-        auto pair_group = h5_file.createGroup(std::format("{}-{}", species[0].symbol(), species[1].symbol()));
+        auto pair_group = root.createGroup(std::format("{}-{}", species[0].symbol(), species[1].symbol()));
 
         pair_group.createAttribute("element_i", species[0].symbol());
         pair_group.createAttribute("element_j", species[1].symbol());
@@ -156,14 +208,22 @@ namespace jgap {
         pair_group.createDataSet("energies", coeff_grid.data_flat);
     }
 
-    void TabGapIO::write3b(HighFive::File& h5_file, const ThreeBodyTGComponent &component) {
-
-        // REMEMBER(!): Spline grid written, but with original grid specifications
+    /**
+     * Writes one 3-body group, following the same on-disk convention as {@link #write2b} (see its doc):
+     * per axis, {@code N} is the original grid point count (= coeff dims - 2) and {@code grid_limits}
+     * stores the original-grid extent [origin, cutoff] derived from the coefficient grid; {@code energies}
+     * holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
+     * "&lt;i&gt;-&lt;j&gt;-&lt;k&gt;" so readers can tell 2b (one '-') from 3b (two '-') groups.
+     *
+     * @param root the HDF5 group to add the triplet group to.
+     * @param component the 3-body component to write.
+     */
+    void TabGapIO::write3b(HighFive::Group& root, const ThreeBodyTGComponent &component) {
 
         auto root_species = component.getSpeciesTriplet().getRoot();
         auto node_species = component.getSpeciesTriplet().getNodes();
 
-        auto triplet_group = h5_file.createGroup(
+        auto triplet_group = root.createGroup(
             std::format("{}-{}-{}", root_species.symbol(), node_species[0].symbol(), node_species[1].symbol())
             );
 
@@ -173,22 +233,40 @@ namespace jgap {
 
         const auto& coeff_grid = component.getSpline().getCoefficients();
 
+        // Original-grid lower limit = coeff origin + spacing; upper limit = coeff-grid cutoff
+        // (origin + (dims - 1) * spacing). See readFromGroup for the matching reconstruction.
         triplet_group.createDataSet("grid_limits", std::array{
-            coeff_grid.origin[0] - coeff_grid.spacing[0],
-            coeff_grid.origin[1] - coeff_grid.spacing[1],
-            coeff_grid.origin[2] - coeff_grid.spacing[2],
+            coeff_grid.origin[0] + coeff_grid.spacing[0],
+            coeff_grid.origin[1] + coeff_grid.spacing[1],
+            coeff_grid.origin[2] + coeff_grid.spacing[2],
             coeff_grid.getCutoff()[0],
             coeff_grid.getCutoff()[1],
             coeff_grid.getCutoff()[2]
         });
 
-        triplet_group.createDataSet("N", std::array{
-            coeff_grid.dims[0], coeff_grid.dims[1], coeff_grid.dims[2]
+        triplet_group.createDataSet("N", std::array{ // original grid point counts, not coeff counts
+            coeff_grid.dims[0] - 2, coeff_grid.dims[1] - 2, coeff_grid.dims[2] - 2
         });
 
         triplet_group.createDataSet("energies", coeff_grid.data_flat);
     }
 
+    /**
+     * Builds the contents of one LAMMPS .eam.fs file from (some of) the supplied components, and
+     * CONSUMES the ones it used: it takes at most one EAM component per element plus the pair potentials,
+     * erasing them from {@code eam_components}/{@code pair_pots}. Callers loop until both are empty,
+     * producing one .eam.fs per round (a single .eam.fs cannot hold two embedding functions for the same
+     * element).
+     *
+     * .eam.fs structure: 3 comment lines; an elements line; a (Nrho, drho, Nr, dr, cutoff) line; then per
+     * element an embedding function F(rho) and one density function rho(r) per element; finally the
+     * pair-potential tables phi(r) for i &gt;= j (stored as r * phi(r), as the format requires).
+     *
+     * @param all_species the element ordering shared by every emitted file.
+     * @param pair_pots pair potentials still to write; consumed (cleared) by this call.
+     * @param eam_components EAM components still to write; the ones used are erased.
+     * @return the text of one .eam.fs file.
+     */
     std::string TabGapIO::useSomeComponentsAndGenerateEamFs(
         const std::vector<Species> &all_species,
         std::map<SpeciesSet<2, Symmetric>, const TwoBodyTGComponent* >& pair_pots,
@@ -335,12 +413,18 @@ namespace jgap {
         return eam_fs_content.str();
     }
 
-    void TabGapIO::readH5(const std::string &filename, TabGapPotential &pot) {
-        HighFive::File tabgap_file(filename, HighFive::File::ReadOnly);
+    TabGapPotential TabGapIO::fromGroup(const HighFive::Group &root, bool read_embedded_eam_fs) {
+        TabGapPotential pot{};
+        readFromGroup(root, pot, read_embedded_eam_fs);
+        pot.recomputeComponentCounts();
+        return pot;
+    }
+
+    void TabGapIO::readFromGroup(const HighFive::Group &root, TabGapPotential &pot, bool read_embedded_eam_fs) {
 
         // Read isolated atom energies
-        if (tabgap_file.exist("e0")) {
-            auto e0_group = tabgap_file.getGroup("e0");
+        if (root.exist("e0")) {
+            auto e0_group = root.getGroup("e0");
             // Read all attributes except Nelements
             for (const auto &attr_name : e0_group.listAttributeNames()) {
                 if (attr_name == "Nelements") continue;
@@ -350,13 +434,15 @@ namespace jgap {
             }
         }
 
-        // Read npots to know counts; but we will iterate groups by name
-        std::vector<std::string> object_names = tabgap_file.listObjectNames();
-        for (const auto &name : object_names) {
-            if (name == "e0" || name == "npots" || name == "comment1" || name == "comment2") continue;
+        // Iterate groups by name to find 2b/3b components.
+        for (const auto &name : root.listObjectNames()) {
+            if (name == "e0" || name == "npots" || name == "comment1" || name == "comment2"
+                || name == "eam_files") {
+                continue;
+            }
             // Count number of '-' to distinguish 2b vs 3b
             size_t dash_count = static_cast<size_t>(std::ranges::count(name, '-'));
-            auto group = tabgap_file.getGroup(name);
+            auto group = root.getGroup(name);
 
             if (dash_count == 1) {
                 // Pair group: element_i, element_j
@@ -366,18 +452,19 @@ namespace jgap {
                 SpeciesSet<2, Symmetric> pair{species_i, species_j};
 
                 std::array<double, 2> limits{}; // origin, cutoff
-                tabgap_file.getDataSet(name + std::string("/grid_limits")).read(limits);
+                group.getDataSet("grid_limits").read(limits);
 
                 size_t n_original_grid;
                 group.getAttribute("N").read(n_original_grid);
 
-                double original_grid_origin = limits.at(0);
-                double original_grid_cutoff = limits.at(1);
-                double spacing = (original_grid_cutoff - original_grid_origin)
-                    / static_cast<double>(n_original_grid - 1);
-                Grid<1> spline_grid{{n_original_grid + 2}, {spacing}, {original_grid_origin - spacing}};
+                // Exact inverse of write2b: it stored N = dims - 2, lower = origin + spacing,
+                // upper = origin + (dims - 1) * spacing, so spacing = (upper - lower) / N.
+                double lower = limits.at(0);
+                double upper = limits.at(1);
+                double spacing = (upper - lower) / static_cast<double>(n_original_grid);
+                Grid<1> spline_grid{{n_original_grid + 2}, {spacing}, {lower - spacing}};
 
-                tabgap_file.getDataSet(name + std::string("/energies")).read(spline_grid.data_flat);
+                group.getDataSet("energies").read(spline_grid.data_flat);
                 if (spline_grid.data_flat.size() != n_original_grid + 2) {
                     JGAP_LOG_AND_THROW("Invalid H5 pair data size for {}-{}", species_i, species_j);
                 }
@@ -393,50 +480,66 @@ namespace jgap {
 
                 SpeciesSet<3, HasCentralAtom> triplet{species_i, species_j, species_k};
 
-                std::array<size_t, 3> n_orig_grid{};
-                tabgap_file.getDataSet(name + std::string("/N")).read(n_orig_grid);
+                std::array<size_t, 3> n_original{}; // original grid point counts (see write3b)
+                group.getDataSet("N").read(n_original);
 
-                std::array<double, 6> grid_limits{}; // rmin,rmin,-1, rmax,rmax,1
-                tabgap_file.getDataSet(name + std::string("/grid_limits")).read(grid_limits);
+                std::array<double, 6> grid_limits{}; // lower xyz, then upper xyz
+                group.getDataSet("grid_limits").read(grid_limits);
 
-                std::array original_origin{grid_limits[0], grid_limits[1], grid_limits[2]};
-                std::array original_limit{grid_limits[3], grid_limits[4], grid_limits[5]};
+                // Inverse of write3b (mirrors the 2b reconstruction per axis): the stored upper limit is
+                // the coefficient grid's cutoff (one spacing past the last original point), so
+                // spacing = (upper - lower) / N, the coeff grid has N + 2 points and starts one spacing
+                // below the original origin.
+                std::array lower{grid_limits[0], grid_limits[1], grid_limits[2]};
+                std::array upper{grid_limits[3], grid_limits[4], grid_limits[5]};
                 std::array spacing{
-                    (original_limit[0] - original_origin[0]) / static_cast<double>(n_orig_grid[0] - 1),
-                    (original_limit[1] - original_origin[1]) / static_cast<double>(n_orig_grid[1] - 1),
-                    (original_limit[2] - original_origin[2]) / static_cast<double>(n_orig_grid[2] - 1)
+                    (upper[0] - lower[0]) / static_cast<double>(n_original[0]),
+                    (upper[1] - lower[1]) / static_cast<double>(n_original[1]),
+                    (upper[2] - lower[2]) / static_cast<double>(n_original[2])
                 };
-
+                std::array<size_t, 3> spline_dims{
+                    n_original[0] + 2, n_original[1] + 2, n_original[2] + 2
+                };
                 std::array spline_grid_origin{
-                    original_origin[0] - spacing[0],
-                    original_origin[1] - spacing[1],
-                    original_origin[2] - spacing[2]
+                    lower[0] - spacing[0],
+                    lower[1] - spacing[1],
+                    lower[2] - spacing[2]
                 };
 
                 std::vector<double> spline_coeffs{};
-                tabgap_file.getDataSet(name + std::string("/energies")).read(spline_coeffs);
+                group.getDataSet("energies").read(spline_coeffs);
 
-                assert(spline_coeffs.size() == (n_orig_grid[0] + 2) * (n_orig_grid[1] + 2) * (n_orig_grid[2] + 2)
+                assert(spline_coeffs.size() == spline_dims[0] * spline_dims[1] * spline_dims[2]
                         && "Number of coefficients mis-matches grid size");
 
-                Grid spline_grid{
-                        {n_orig_grid[0] + 2, n_orig_grid[1] + 2, n_orig_grid[2] + 2},
-                        spacing,
-                        spline_grid_origin,
-                        spline_coeffs
-                    };
+                Grid spline_grid{spline_dims, spacing, spline_grid_origin, spline_coeffs};
 
                 pot.components.emplace_back(ThreeBodyTGComponent(triplet, CubicBSpline3D(spline_grid)));
             }
         }
+
+        // EAM part: take it from the embedded .eam.fs datasets when asked to.
+        if (read_embedded_eam_fs && root.exist("eam_files")) {
+            auto eam_files_group = root.getGroup("eam_files");
+            for (const auto& eam_fs_name : eam_files_group.listObjectNames()) {
+                std::string eam_fs_content;
+                eam_files_group.getDataSet(eam_fs_name).read(eam_fs_content);
+                std::istringstream eam_fs_stream(eam_fs_content);
+                parseEamFs(eam_fs_stream, pot);
+            }
+        }
     }
 
-    void TabGapIO::readEamFs(const std::string &filename, TabGapPotential &pot) {
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            JGAP_LOG_AND_THROW("Could not open {} as .eam.fs", filename);
-        }
-
+    /**
+     * Parses one LAMMPS .eam.fs stream (a file or an embedded "eam_files" dataset) and appends the
+     * resulting EAM components (one per element) and pair-potential 2-body components to {@code pot}.
+     * Inverse of {@link #useSomeComponentsAndGenerateEamFs}; pair tables stored as r * phi(r) are divided
+     * back by r.
+     *
+     * @param file the .eam.fs text stream to parse.
+     * @param pot the potential to append the parsed components to.
+     */
+    void TabGapIO::parseEamFs(std::istream &file, TabGapPotential &pot) {
         std::string line;
         for (size_t i = 0; i < 3; i++) {
             if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing comment #{}", i);
@@ -494,10 +597,10 @@ namespace jgap {
             }
             embedding_energies.insert({central_atom_species, std::move(energies)});
 
-            // Density functions: for each receiver alpha, Nr points
+            // Density functions: for each receiver alpha, Nr points (over the distance grid, not rho)
             for (const auto& receiver_species: elements) {
 
-                Grid<1> rho_per_r_grid{{n_rho}, {drho}, {0.0}};
+                Grid<1> rho_per_r_grid{{n_r}, {dr}, {0.0}};
 
                 for (size_t i = 0; i < n_r; i++) {
                     if (!getLine(file, line)) {

@@ -1,7 +1,7 @@
 #ifndef JGAP_KERNEL_HPP
 #define JGAP_KERNEL_HPP
 
-#include "../atomic/geometry/Vector3.hpp"
+#include "../Vector3.hpp"
 #include <optional>
 #include <string>
 #include <memory>

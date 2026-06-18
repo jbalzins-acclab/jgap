@@ -4,7 +4,7 @@
 using namespace jgap;
 
 TEST(TestPerriotPolynomialCutoff, BelowCutoffRange) {
-    PerriotPolynomialCutoff cutoff(2.0, 5.0);
+    PerriotPolynomialCutoff cutoff(5.0, 3.0);
 
     // r < r_min
     EXPECT_DOUBLE_EQ(cutoff.evaluate(1.0), 1.0);
@@ -15,7 +15,7 @@ TEST(TestPerriotPolynomialCutoff, BelowCutoffRange) {
 }
 
 TEST(TestPerriotPolynomialCutoff, AboveCutoffRange) {
-    PerriotPolynomialCutoff cutoff(2.0, 5.0);
+    PerriotPolynomialCutoff cutoff(5.0, 3.0);
 
     // r > cutoff
     EXPECT_DOUBLE_EQ(cutoff.evaluate(6.0), 0.0);
@@ -26,7 +26,7 @@ TEST(TestPerriotPolynomialCutoff, AboveCutoffRange) {
 }
 
 TEST(TestPerriotPolynomialCutoff, InsideCutoffRange) {
-    PerriotPolynomialCutoff cutoff(2.0, 5.0); // r_min = 2.0, cutoff = 5.0, width = 3.0
+    PerriotPolynomialCutoff cutoff(5.0, 3.0); // r_min = 2.0, cutoff = 5.0, width = 3.0
 
     // r = 3.5 (midpoint) -> chi = (3.5 - 2.0) / 3.0 = 0.5
     // val = 1.0 - 0.5^3 * (6(0.25) - 15(0.5) + 10) = 1.0 - 0.125 * (1.5 - 7.5 + 10) = 1.0 - 0.125 * 4 = 1.0 - 0.5 = 0.5

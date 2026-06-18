@@ -10,7 +10,6 @@
 namespace jgap {
     class CosCutoff final : public CutoffFunction {
     public:
-        ~CosCutoff() override; // key function, see SerializationTypeAnchors.cpp
 
         CosCutoff(Real cutoff, Real cutoff_transition_width)
             : cutoff(cutoff),

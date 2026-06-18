@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../../src/core/transform/aggregated/TransformationAggregator.hpp"
+#include "core/transform/aggregated/TransformationAggregator.hpp"
 #include "core/atomic/Atoms.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"

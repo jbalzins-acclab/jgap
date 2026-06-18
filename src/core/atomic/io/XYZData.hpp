@@ -9,7 +9,7 @@
 #include <array>
 
 #include "core/Real.hpp"
-#include "core/atomic/geometry/Vector3.hpp"
+#include "../../Vector3.hpp"
 #include "core/atomic/energy/Virials.hpp"
 #include "core/atomic/geometry/Lattice.hpp"
 #include "core/atomic/species/Species.hpp"

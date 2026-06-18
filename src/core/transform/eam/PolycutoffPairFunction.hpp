@@ -9,7 +9,6 @@
 namespace jgap {
     class PolycutoffPairFunction final : public EamPairFunction {
     public:
-        ~PolycutoffPairFunction() override; // key function, see SerializationTypeAnchors.cpp
 
         PolycutoffPairFunction(const Real cutoff, const Real r_min, const Real prefactor = 1.0)
             : EamPairFunction(cutoff, prefactor), r_min(r_min)

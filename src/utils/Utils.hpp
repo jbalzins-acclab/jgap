@@ -6,6 +6,7 @@
 #include <ranges>
 #include <cmath>
 #include <map>
+#include <iosfwd>
 #include <Eigen/Dense>
 #include <string_view>
 
@@ -27,7 +28,7 @@ namespace jgap {
         }
     #endif
 
-    bool getLine(std::ifstream &file, std::string &line);
+    bool getLine(std::istream &file, std::string &line);
 
     std::vector<Atoms> readAtoms(const std::string& filename);
     std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names);

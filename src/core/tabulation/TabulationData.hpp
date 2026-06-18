@@ -27,7 +27,7 @@ namespace jgap {
               two_body_grids({0.0},
                              {params.max_cutoffs.forDim(2) / static_cast<Real>(params.n_grid_2b)},
                              {params.n_grid_2b}),
-              three_body_grids({0.0, 0.0, -1.0},
+              three_body_grids({params.r_min_3b, params.r_min_3b, -1.0},
                                {
                                    params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[0]),
                                     params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[1]),

@@ -3,7 +3,7 @@
 
 #include <array>
 
-#include "Vector3.hpp"
+#include "../../Vector3.hpp"
 
 namespace jgap {
     struct Lattice {

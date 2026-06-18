@@ -19,9 +19,6 @@ namespace jgap {
 
     class EamPairFunction : public ClusterTransformation<1, 2> {
     public:
-        // Out-of-line key function: anchors a single external type_info. See ClusterTransformation.cpp.
-        ~EamPairFunction() override;
-
         static std::map<Species, ValuePtr<TransformationAggregator<1>>> createAggregators(
             const ValuePtr<ClusterTransformation<1, 2>>& base_pf,
             const std::vector<Atoms>& training_data,

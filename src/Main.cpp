@@ -32,6 +32,7 @@ void fit() {
     StandardGapParams params{120};
     params.eam_pf = FSGenPairFunction(4.5, 3.0);
     params.eam_mode = EamMode::Blind;
+    params.n_sparse3 = 50; // fewer 3-body kernels to keep the fit quick
     params.regularization_rules = SimpleRegularizationRules();
 
     auto potential = standardGapFit(training_data, params);

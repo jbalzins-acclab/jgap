@@ -1,7 +1,7 @@
 #ifndef JGAP_CLUSTER_HPP
 #define JGAP_CLUSTER_HPP
 
-#include "Vector3.hpp"
+#include "../../Vector3.hpp"
 #include "Separation.hpp"
 #include <cassert>
 

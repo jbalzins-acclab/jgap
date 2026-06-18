@@ -5,7 +5,7 @@
 #include "Spline.hpp"
 #include "Grid.hpp"
 #include "core/Real.hpp"
-#include "core/atomic/geometry/Vector3.hpp"
+#include "../Vector3.hpp"
 
 namespace jgap {
     class CubicBSpline3D : public Spline<3> {

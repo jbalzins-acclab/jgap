@@ -10,7 +10,7 @@
 #include "core/transform/2b/TwoBodyTransformation.hpp"
 #include "core/transform/3b/Angle3bTransformation.hpp"
 #include "core/transform/eam/PolycutoffPairFunction.hpp"
-#include "../../../src/core/transform/aggregated/TransformationAggregator.hpp"
+#include "core/transform/aggregated/TransformationAggregator.hpp"
 #include "core/kernels/SquaredExpKernel.hpp"
 #include "core/cutoff/CosCutoff.hpp"
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"

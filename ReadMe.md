@@ -1,4 +1,4 @@
-# $\vec{ȷ}GAP$
+# JGAP
 ## Overview
 ### Fit 2b+3b+EAM GAP fit
 - On small databases fit coefficients exactly match QUIP output(without virial fit; see /test)
@@ -29,7 +29,7 @@
 conda create -n myenv
 conda activate myenv
 conda install -c conda-forge gcc
-conda install -c conda-forge gxx_linux-64 # ask ChatGPT what version is suitable for you
+conda install -c conda-forge gxx_linux-64 # ask AI what version is suitable for you
 # if you want cmake to auto detect new compilers, add to .bashrc/.zshrc:
 export CC=$CONDA_PREFIX/bin/gcc
 export CXX=$CONDA_PREFIX/bin/g++
@@ -46,6 +46,21 @@ export PATH=$VCPKG_ROOT:$PATH
 vcpkg install
 # vcpkg integrate to see what -DCMAKE_TOOLCHAIN_FILE= to add to "cmake -B build" params
  ```
+### Optional: XML (QUIP) support
+QUIP `.xml` conversion depends on `pugixml`, which is an **optional** vcpkg feature (`xml`). It is enabled
+by **default**, so a normal `vcpkg install` / build includes it.
+
+To build **without** XML support (no `pugixml`), disable default features:
+```bash
+# classic/manual install:
+vcpkg install --no-default-features
+# or, in CMake manifest mode, at configure time:
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+      -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+```
+When `pugixml` is not found, CMake automatically drops the `QuipXmlConverter` sources and the
+`jgap_convert` app from the build (a status line reports which way it went); everything else builds
+unchanged.
 ### Compile
 - Run something like: 
 ```bash

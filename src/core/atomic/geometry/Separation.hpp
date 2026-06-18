@@ -1,7 +1,7 @@
 #ifndef JGAP_SEPARATION_HPP
 #define JGAP_SEPARATION_HPP
 
-#include "Vector3.hpp"
+#include "../../Vector3.hpp"
 #include "core/Real.hpp"
 #include "core/atomic/energy/Virials.hpp"
 
