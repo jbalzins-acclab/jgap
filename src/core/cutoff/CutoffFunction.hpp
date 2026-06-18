@@ -4,7 +4,7 @@
 #include <string>
 #include <tuple>
 #include "core/Real.hpp"
-#include "utils/ValuePtr.hpp"
+#include "../ValuePtr.hpp"
 
 namespace jgap {
 

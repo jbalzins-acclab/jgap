@@ -39,7 +39,7 @@ namespace jgap {
 
             // Stage 1: Form full descriptors per central atom
             for (const auto& [species_set, transformation] : transformations) {
-                auto clusters = nl.findAllClusters<WithDerivatives>(species_set);
+                auto clusters = nl.findAllClusters<WithGradients>(species_set);
                 for (const auto& cluster: clusters) {
                     size_t central_idx = cluster.atom_indexes[0];
 

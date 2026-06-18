@@ -1,22 +1,22 @@
-#ifndef ISOLATEDATOMPOTENTIAL_HPP
-#define ISOLATEDATOMPOTENTIAL_HPP
+#ifndef JGAP_ISOLATEDATOMPOTENTIAL_HPP
+#define JGAP_ISOLATEDATOMPOTENTIAL_HPP
 
 #include <map>
 #include "../Potential.hpp"
 #include "core/atomic/species/Species.hpp"
-#include "io/parse/ParserRegistry.hpp"
+#include "../../../serialization/SerializationRegistry.hpp"
 
 namespace jgap {
     class IsolatedAtomPotential : public Potential {
     public:
-        IsolatedAtomPotential(const std::map<Species, Real>& isolated_atom_energies, bool error_on_unknown);
-        IsolatedAtomPotential(const std::vector<Atoms>& training_data, bool error_on_unknown);
+        IsolatedAtomPotential(const std::map<Species, Real>& isolated_atom_energies);
+        IsolatedAtomPotential(const std::vector<Atoms>& training_data);
 
         AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
 
         Cutoffs getCutoffs() const override { return {}; }
 
-        void tabulate(TabulationData &table) const override {
+        void fillTables(TabulationData &table) const override {
             for (auto& [species, energy]: isolated_energies) {
                 table.isolated_energies[species] += energy;
             }
@@ -26,8 +26,11 @@ namespace jgap {
             return std::make_unique<IsolatedAtomPotential>(*this);
         }
 
+        const std::map<Species, Real>& getIsolatedEnergies() const {
+            return isolated_energies;
+        }
+
     private:
-        bool error_on_unknown_species;
         std::map<Species, Real> isolated_energies;
     };
 }

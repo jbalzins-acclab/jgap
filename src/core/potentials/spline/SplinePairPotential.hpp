@@ -4,8 +4,7 @@
 #include "../../splines/NaturalCubicSpline.hpp"
 #include "core/atomic/species/SpeciesSet.hpp"
 #include "core/potentials/Potential.hpp"
-#include "io/Serializable.hpp"
-#include "io/parse/ParserRegistry.hpp"
+#include "../../../serialization/SerializationRegistry.hpp"
 
 namespace jgap {
     class SplinePairPotential : public Potential {
@@ -19,10 +18,14 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override;
 
-        void tabulate(TabulationData &tables) const override;
+        void fillTables(TabulationData &tables) const override;
 
         std::unique_ptr<Potential> clone() const override {
             return std::make_unique<SplinePairPotential>(*this);
+        }
+
+        const auto& getInterpolators() const {
+            return per_species_interpolators;
         }
 
     private:

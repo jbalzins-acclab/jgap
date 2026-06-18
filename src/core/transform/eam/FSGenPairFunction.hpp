@@ -34,6 +34,10 @@ namespace jgap {
             return std::make_unique<FSGenPairFunction>(*this);
         }
 
+        Real getDegree() const {
+            return degree;
+        }
+
     private:
         Real cutoff_inverse;
         Real degree;

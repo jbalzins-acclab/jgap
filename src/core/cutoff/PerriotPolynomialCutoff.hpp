@@ -8,12 +8,13 @@
 namespace jgap {
     class PerriotPolynomialCutoff final : public CutoffFunction {
     public:
-        PerriotPolynomialCutoff(Real r_min, Real cutoff)
+        PerriotPolynomialCutoff(Real cutoff, Real cutoff_transition_width)
             : cutoff(cutoff),
-              r_min(r_min),
-              cutoff_width_inverse(1.0 / (cutoff - r_min)) {}
+              r_min(cutoff - cutoff_transition_width),
+              cutoff_width_inverse(1.0 / cutoff_transition_width) {}
 
         Real getCutoff() const override { return cutoff; }
+        Real getCutoffTransitionWidth() const { return cutoff - r_min; }
 
         Real evaluate(Real r) const override {
             if (r <= r_min) return 1.0;

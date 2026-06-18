@@ -9,11 +9,29 @@ namespace jgap {
         ValuePtr<Potential> optional_external_potential{};
         std::vector<ValuePtr<GapComponent>> components{};
 
-        template<typename GapComponentPtr>
-        requires (std::convertible_to<GapComponentPtr, ValuePtr<GapComponent>>)
-        GapPotential(std::vector<GapComponentPtr> components,
+        GapPotential() = default;
+
+        template<typename GapComponentT>
+        requires (std::convertible_to<GapComponentT, ValuePtr<GapComponent>>)
+        GapPotential(std::initializer_list<GapComponentT> components,
                      ValuePtr<Potential> external = nullptr,
-                     const std::vector<Real> &coefficients = {});
+                     const std::vector<Real> &coefficients = {})
+            : optional_external_potential(std::move(external)),
+              components(components.begin(), components.end()) {
+            if (!coefficients.empty()) setCoefficients(coefficients);
+        }
+
+        void addComponent(ValuePtr<GapComponent> component) {
+            components.push_back(std::move(component));
+        }
+
+        template<typename GapComponentT>
+        requires (std::convertible_to<GapComponentT, ValuePtr<GapComponent>>)
+        void addComponents(std::vector<GapComponentT> new_components) {
+            for (auto& comp : new_components) {
+                components.push_back(std::move(comp));
+            }
+        }
 
         void setCoefficients(const std::vector<Real>& new_coefficients);
 
@@ -23,23 +41,12 @@ namespace jgap {
 
         const std::vector<ValuePtr<GapComponent>>& getComponents() const;
 
-        void tabulate(TabulationData &table) const override;
+        void fillTables(TabulationData &table) const override;
 
         std::unique_ptr<Potential> clone() const override {
             return std::make_unique<GapPotential>(*this);
         }
     };
-
-    template<typename GapComponentPtr> requires (std::convertible_to<GapComponentPtr, ValuePtr<GapComponent>>)
-    GapPotential::GapPotential(std::vector<GapComponentPtr> components,
-                               ValuePtr<Potential> external,
-                               const std::vector<Real> &coefficients)
-        : optional_external_potential(std::move(external)),
-          components(std::move(components)) {
-
-        if (coefficients.empty()) return;
-        setCoefficients(coefficients);
-    }
 }
 
 #endif

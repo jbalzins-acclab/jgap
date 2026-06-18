@@ -1,6 +1,9 @@
 #include "PerConfigTypeRegularizationRules.hpp"
 #include "core/atomic/Atoms.hpp"
 #include <cmath>
+#include <sstream>
+#include <vector>
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
     PerConfigTypeRegularizationRules::PerConfigTypeRegularizationRules(Real energy_sigma_per_atom,
@@ -9,33 +12,87 @@ namespace jgap {
                                                                        Real virials_aniso_sigmas_per_atom,
                                                                        const std::map<std::string, Real> &exact,
                                                                        const std::map<std::string, Real> &contains)
-        : default_energy_per_atom(energy_sigma_per_atom),
-          exact(exact),
-          contains(contains) {
+        : defaults(energy_sigma_per_atom, force_component_sigma, virials_iso_sigma_per_atom, virials_aniso_sigmas_per_atom),
+          exact_multiplier(exact),
+          contains_multiplier(contains) {
+    }
 
-        default_force = Vector3{force_component_sigma, force_component_sigma, force_component_sigma};
+    PerConfigTypeRegularizationRules::PerConfigTypeRegularizationRules(const ConfigSigmas &default_sigmas,
+        const std::map<std::string, ConfigSigmas> &exact_config_type_sigmas,
+        const std::map<std::string, ConfigSigmas> &contains_config_type_sigmas)
+        : defaults(default_sigmas),
+          exact_config_type_sigmas(exact_config_type_sigmas),
+          contains_config_type_sigmas(contains_config_type_sigmas) {
+    }
 
-        default_virials_per_atom = Virials{
-            .xx = virials_iso_sigma_per_atom,
-            .xy = virials_aniso_sigmas_per_atom,
-            .xz = virials_aniso_sigmas_per_atom,
+    PerConfigTypeRegularizationRules::PerConfigTypeRegularizationRules(ConfigSigmas default_sigmas,
+                                                                       const std::string& config_string)
+        : defaults(default_sigmas) {
 
-            .yy = virials_iso_sigma_per_atom,
-            .yz = virials_aniso_sigmas_per_atom,
+        std::stringstream ss(config_string);
+        std::string segment;
+        std::vector<std::string> segments;
+        while(std::getline(ss, segment, ':')) {
+            segments.push_back(segment);
+        }
 
-            .zz = virials_iso_sigma_per_atom,
-        };
+        if (segments.size() % 5 != 0) {
+            JGAP_LOG_AND_THROW("Invalid config string format: {}", config_string);
+        }
+
+        for (size_t i = 0; i < segments.size(); i += 5) {
+            std::string config_type = segments[i];
+            try {
+                Real e = std::stod(segments[i+1]);
+                Real f = std::stod(segments[i+2]);
+                Real v = std::stod(segments[i+3]);
+                Real h = std::stod(segments[i+4]);
+                if (h != 0.0) {
+                    JGAP_LOG_WARN("Hessian regularization is not supported, "
+                                  "but a non-zero value was provided for config_type {}", config_type);
+                }
+                exact_config_type_sigmas.insert({config_type, ConfigSigmas(e, f, v)});
+            } catch (const std::invalid_argument& e) {
+                JGAP_LOG_AND_THROW("Invalid number in config string: {}", config_string);
+            }
+        }
     }
 
     void PerConfigTypeRegularizationRules::fillSigmas(Regularization& sigmas, const Atoms& atoms) const {
-        Real multiplier = 1.0;
-        const std::string ct = atoms.lookupConfigType().value_or("default");
+        const std::string ct = atoms.lookupConfigType().value_or("");
 
-        if (exact.contains(ct)) {
-            multiplier = exact.at(ct);
+        if (exact_config_type_sigmas.contains(ct)) {
+            const auto& s = exact_config_type_sigmas.at(ct);
+            sigmas.energy = s.energy;
+            sigmas.forces = std::vector<Vector3>(atoms.nAtoms(), s.force);
+            sigmas.virials = s.virials;
+            return;
+        }
+
+        if (!contains_config_type_sigmas.empty()) {
+            std::string longest_match_key;
+            for (const auto& [key, value] : contains_config_type_sigmas) {
+                if (ct.find(key) != std::string::npos) {
+                    if (key.length() > longest_match_key.length()) {
+                        longest_match_key = key;
+                    }
+                }
+            }
+            if (!longest_match_key.empty()) {
+                const auto& s = contains_config_type_sigmas.at(longest_match_key);
+                sigmas.energy = s.energy;
+                sigmas.forces = std::vector<Vector3>(atoms.nAtoms(), s.force);
+                sigmas.virials = s.virials;
+                return;
+            }
+        }
+
+        Real multiplier = 1.0;
+        if (exact_multiplier.contains(ct)) {
+            multiplier = exact_multiplier.at(ct);
         } else {
             std::string longest_match_key;
-            for (const auto& [key, value] : contains) {
+            for (const auto& [key, value] : contains_multiplier) {
                 if (ct.find(key) != std::string::npos) {
                     if (key.length() > longest_match_key.length()) {
                         longest_match_key = key;
@@ -44,16 +101,16 @@ namespace jgap {
             }
 
             if (!longest_match_key.empty()) {
-                multiplier = contains.at(longest_match_key);
+                multiplier = contains_multiplier.at(longest_match_key);
             }
         }
 
-        sigmas.energy = default_energy_per_atom * multiplier * pow(atoms.nAtoms(), 0.5);
-        sigmas.virials = default_virials_per_atom * multiplier * pow(atoms.nAtoms(), 0.5);
+        sigmas.energy = defaults.energy * multiplier * pow(atoms.nAtoms(), 0.5);
+        sigmas.virials = defaults.virials * multiplier * pow(atoms.nAtoms(), 0.5);
 
         sigmas.forces = std::vector<Vector3>(atoms.nAtoms());
         for (int i = 0; i < atoms.nAtoms(); i++) {
-            (*sigmas.forces)[i] = default_force * multiplier;
+            (*sigmas.forces)[i] = defaults.force * multiplier;
         }
     }
 }

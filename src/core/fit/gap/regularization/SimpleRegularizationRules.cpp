@@ -8,22 +8,9 @@ namespace jgap {
                                                          Real virials_aniso_sigmas_per_atom,
                                                          Real liquid_multiplier,
                                                          Real short_range_multiplier)
-        : default_energy_per_atom(energy_sigma_per_atom),
+        : defaults(energy_sigma_per_atom, force_component_sigma, virials_iso_sigma_per_atom, virials_aniso_sigmas_per_atom),
           liquid_multiplier(liquid_multiplier),
           short_range_multiplier(short_range_multiplier) {
-
-        default_force = Vector3{force_component_sigma, force_component_sigma, force_component_sigma};
-
-        default_virials_per_atom = Virials{
-            .xx = virials_iso_sigma_per_atom,
-            .xy = virials_aniso_sigmas_per_atom,
-            .xz = virials_aniso_sigmas_per_atom,
-
-            .yy = virials_iso_sigma_per_atom,
-            .yz = virials_aniso_sigmas_per_atom,
-
-            .zz = virials_iso_sigma_per_atom,
-        };
     }
 
     void SimpleRegularizationRules::fillSigmas(Regularization &sigmas,
@@ -45,12 +32,12 @@ namespace jgap {
             multiplier = short_range_multiplier;
         }
 
-        sigmas.energy = default_energy_per_atom * multiplier * pow(atoms.nAtoms(), 0.5);
-        sigmas.virials = default_virials_per_atom * multiplier * pow(atoms.nAtoms(), 0.5);
+        sigmas.energy = defaults.energy * multiplier * pow(atoms.nAtoms(), 0.5);
+        sigmas.virials = defaults.virials * multiplier * pow(atoms.nAtoms(), 0.5);
 
         sigmas.forces = std::vector<Vector3>(atoms.nAtoms());
         for (int i = 0; i < atoms.nAtoms(); i++) {
-            (*sigmas.forces)[i] = default_force * multiplier;
+            (*sigmas.forces)[i] = defaults.force * multiplier;
         }
     }
 }

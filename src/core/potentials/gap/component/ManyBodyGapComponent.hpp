@@ -4,6 +4,7 @@
 #include "core/atomic/energy/AtomicQuantities.hpp"
 #include "core/kernels/Kernel.hpp"
 #include "../../../transform/aggregated/TransformationAggregator.hpp"
+#include "core/sparsification/Sparsifier.hpp"
 #include "GapComponent.hpp"
 #include "core/Matrix.hpp"
 #include <memory>
@@ -22,8 +23,18 @@ namespace jgap {
               sparse_points(std::move(sparse_points)) {
 
             if (!optional_coeffs.empty()) {
-                setCoefficients(optional_coeffs);
+                this->setCoefficients(optional_coeffs);
             }
+        }
+
+        ManyBodyGapComponent(const ValuePtr<TransformationAggregator<Dim>>& aggregator,
+                             const TKernel& kernel,
+                             const Sparsifier<Dim>& sparsifier,
+                             const std::vector<Atoms>& training_data,
+                             const std::vector<Real>& optional_coeffs = {})
+            : ManyBodyGapComponent(aggregator, kernel,
+                                   sparsifier.selectSparsePoints(getAllDescriptors(training_data, aggregator)),
+                                   optional_coeffs) {
         }
 
         std::optional<AtomicQuantities> covariate(const NeighbourList& nl) const override {
@@ -80,14 +91,19 @@ namespace jgap {
         }
 
         void tabulate(TabulationData &tables) const override {
+            const auto& coeffs = this->getCoefficients();
+            if (coeffs.empty()) {
+                JGAP_LOG_AND_THROW("Coefficients must be set before tabulation");
+            }
+
             if constexpr (Dim == 1) {
 
                 aggregator->tabulateNewManyBodyGrid(tables);
                 auto& eam_grids = tables.eam_grids_vec.back();
 
                 for (auto cell: eam_grids.value_grid) {
-                    for (const auto& sparse_point: sparse_points) {
-                        cell.value += kernel.value(sparse_point.value, cell.pos);
+                    for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); ++sparse_idx) {
+                        cell.value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx].value, cell.pos);
                     }
                 }
 
@@ -97,6 +113,20 @@ namespace jgap {
         }
 
     private:
+        static std::vector<Descriptor<Dim>> getAllDescriptors(const std::vector<Atoms>& training_data,
+                                                              const ValuePtr<TransformationAggregator<Dim>>& aggregator) {
+            std::vector<Descriptor<Dim>> all_descriptors;
+            Real cutoff = aggregator->getCutoffs().maxOverall();
+            for (const auto& atoms : training_data) {
+                NeighbourList nl(atoms, cutoff);
+                auto aggregated = aggregator->aggregate(nl);
+                for (const auto& [idx, desc] : aggregated) {
+                    all_descriptors.push_back({desc.value});
+                }
+            }
+            return all_descriptors;
+        }
+
         ValuePtr<TransformationAggregator<Dim>> aggregator;
         TKernel kernel;
 

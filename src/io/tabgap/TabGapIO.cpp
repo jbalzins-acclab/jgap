@@ -7,7 +7,7 @@
 
 #include "core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"
 #include "core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
-#include "core/transform/2b/SplinePairTransformation.hpp"
+#include "../../core/transform/eam/SplinePairTransformation.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -83,7 +83,9 @@ namespace jgap {
             } else if (const auto* casted_eam = dynamic_cast<const EamTGComponent*>(component.get());
                       casted_eam != nullptr) {
 
-                eam_components.insert({casted_eam->getSplineTransformationAggregator().getCentralSpecies(), casted_eam});
+                eam_components.insert(
+                    {casted_eam->getSplineTransformationAggregator().getCentralSpecies(), casted_eam}
+                    );
 
                 for (Species s: casted_eam->getSplineTransformationAggregator().getAllSpecies()) {
                     species_2b_and_eam.insert(s);

@@ -2,9 +2,7 @@
 
 #include "components/ThreeBodyTGComponent.hpp"
 #include "components/TwoBodyTGComponent.hpp"
-#include "core/transform/2b/SplinePairTransformation.hpp"
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
-
 
 namespace jgap {
     TabGapPotential::TabGapPotential(TabulationData energy_tables) {
@@ -49,7 +47,7 @@ namespace jgap {
         AtomicQuantity result(atoms.nAtoms());
 
         for (const Species& species: atoms.lookupSpecies()) {
-            if (!isolated_atom_energies.contains(species)) {
+            if (isolated_atom_energies.contains(species)) {
                 result.value += isolated_atom_energies.at(species);
             } else {
                 JGAP_LOG_WARN("Unknown species {} for a tabGAP potential;"
@@ -75,7 +73,7 @@ namespace jgap {
         return result;
     }
 
-    void TabGapPotential::tabulate(TabulationData &table) const {
+    void TabGapPotential::fillTables(TabulationData &table) const {
 
         for (auto& [species, energy]: isolated_atom_energies) {
             table.isolated_energies[species] += energy;

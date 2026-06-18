@@ -1,8 +1,8 @@
 #ifndef JGAP_SIMPLEREGULARIZATIONRULES_HPP
 #define JGAP_SIMPLEREGULARIZATIONRULES_HPP
 
-#include "Regularization.hpp"
 #include "RegularizationRules.hpp"
+#include "ConfigSigmas.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
 
 namespace jgap {
@@ -17,10 +17,12 @@ namespace jgap {
 
         void fillSigmas(Regularization& sigmas, const Atoms& atoms) const override;
 
+        std::unique_ptr<RegularizationRules> clone() const override {
+            return std::make_unique<SimpleRegularizationRules>(*this);
+        }
+
     private:
-        Real default_energy_per_atom;
-        Vector3 default_force;
-        Virials default_virials_per_atom;
+        ConfigSigmas defaults;
 
         Real liquid_multiplier;
         Real short_range_multiplier;

@@ -31,9 +31,9 @@ namespace jgap {
         return result;
     }
 
-    void CompositePotential::tabulate(TabulationData &table) const {
+    void CompositePotential::fillTables(TabulationData &table) const {
         for (const auto &potential : potentials | std::views::values) {
-            potential->tabulate(table);
+            potential->fillTables(table);
         }
     }
 }

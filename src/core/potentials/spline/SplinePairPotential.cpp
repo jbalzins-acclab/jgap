@@ -31,7 +31,7 @@ namespace jgap {
 
         for (const auto &[species_pair, interpolator]: per_species_interpolators) {
 
-            auto pair_clusters = nl.findAllClusters<WithDerivatives>(species_pair);
+            auto pair_clusters = nl.findAllClusters<WithGradients>(species_pair);
 
             for (auto pair: pair_clusters) {
 
@@ -40,9 +40,9 @@ namespace jgap {
 
                 InterpolationResults<1> spline_val = interpolator.interpolate({separation_magnitude});
 
-                result.value += spline_val.value * 0.5;
+                result.value += spline_val.value;
 
-                Real dE_dr = spline_val.gradient[0] * 0.5;
+                Real dE_dr = spline_val.gradient[0];
 
                 result.virials += separation_deriv.virials * dE_dr;
 
@@ -55,7 +55,7 @@ namespace jgap {
         return result;
     }
 
-    void SplinePairPotential::tabulate(TabulationData &tables) const {
+    void SplinePairPotential::fillTables(TabulationData &tables) const {
         for (const auto& [species_pair, interpolator]: per_species_interpolators) {
 
             auto& table = tables.two_body_grids.getValueGrid(species_pair);

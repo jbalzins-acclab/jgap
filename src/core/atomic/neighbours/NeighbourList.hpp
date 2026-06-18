@@ -38,7 +38,7 @@ namespace jgap {
         NeighbourList() = default;
         NeighbourList(const Atoms& box, Real cutoff);
 
-        template<CalculationType CalcType = WithDerivatives, size_t N, ClusterSymmetry ClusterSym>
+        template<CalculationType CalcType = WithGradients, size_t N, ClusterSymmetry ClusterSym>
         requires(N > 1 && N <= 3)
         std::vector<Cluster<N, CalcType>> findAllClusters(const SpeciesSet<N, ClusterSym>& species_set)
             const;

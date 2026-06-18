@@ -8,13 +8,13 @@ namespace jgap {
     AtomicQuantity TwoBodyTGComponent::energy(const NeighbourList &nl) const {
         AtomicQuantity result(nl.nAtoms());
 
-        for (const auto& cluster: nl.findAllClusters<WithDerivatives>(species_pair)) {
+        for (const auto& cluster: nl.findAllClusters<WithGradients>(species_pair)) {
 
             auto [val, deriv] = spline->interpolate({cluster.between(0, 1)});
 
-            result.value += val * SymmetryFactor;
+            result.value += val;
 
-            result.virials += cluster.derivatives[0].virials * deriv[0] * SymmetryFactor;
+            result.virials += cluster.derivatives[0].virials * deriv[0];
 
             Vector3 f10 = cluster.derivatives[0].direction * deriv[0];
             result.forces[cluster.atom_indexes[0]] += f10;

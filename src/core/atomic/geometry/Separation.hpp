@@ -7,14 +7,6 @@
 
 namespace jgap {
 
-    enum class CalculationType {
-        ValueOnly,
-        WithDerivatives
-    };
-
-    using CalculationType::ValueOnly;
-    using CalculationType::WithDerivatives;
-
     struct SeparationDerivatives {
         Vector3 direction{};
         Virials virials{};

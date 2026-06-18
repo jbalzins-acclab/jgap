@@ -7,7 +7,7 @@
 #include "Spline.hpp"
 #include "Grid.hpp"
 #include "core/Real.hpp"
-#include "utils/ValuePtr.hpp"
+#include "../ValuePtr.hpp"
 
 namespace jgap {
     class CubicBSpline : public Spline<1> {

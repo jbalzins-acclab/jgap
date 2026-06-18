@@ -2,20 +2,44 @@
 #define JGAP_NBODYGAPCOMPONENT_HPP
 
 #include <tbb/parallel_for.h>
+#include <set>
 #include "core/atomic/energy/AtomicQuantities.hpp"
 #include "core/kernels/Kernel.hpp"
 #include "core/kernels/SquaredExpKernel.hpp"
 #include "core/transform/ClusterTransformation.hpp"
+#include "core/sparsification/Sparsifier.hpp"
 #include "GapComponent.hpp"
 #include "core/Matrix.hpp"
 
 namespace jgap {
 
-    template<size_t Dim, size_t ClusterSize, ClusterSymmetry ClusterSym,
-            CKernelOfDim<Dim> TKernel>
+    template<size_t Dim, size_t ClusterSize, ClusterSymmetry ClusterSym, CKernelOfDim<Dim> TKernel>
     class NBodyGapComponent : public GapComponent {
     public:
         static constexpr size_t Dependencies = Cluster<ClusterSize>::NSeparations;
+
+        static std::vector<NBodyGapComponent> createComponents(
+            const std::vector<Atoms>& training_data,
+            const ValuePtr<ClusterTransformation<Dim, ClusterSize>>& transformation,
+            const TKernel& kernel,
+            const Sparsifier<Dim>& sparsifier) {
+
+            std::set<SpeciesSet<ClusterSize, ClusterSym>> all_species_sets;
+            Real cutoff = transformation->getCutoffs().maxOverall();
+
+            for (const auto& atoms : training_data) {
+                NeighbourList nl(atoms, cutoff);
+                auto sets = nl.getSpeciesSets<ClusterSize, ClusterSym>();
+                all_species_sets.insert(sets.begin(), sets.end());
+            }
+
+            std::vector<NBodyGapComponent> components;
+            for (const auto& species_set : all_species_sets) {
+                components.emplace_back(species_set, transformation, kernel, sparsifier, training_data);
+            }
+
+            return components;
+        }
 
         NBodyGapComponent(const SpeciesSet<ClusterSize, ClusterSym> species,
                           const ValuePtr<ClusterTransformation<Dim, ClusterSize> >& transformation,
@@ -29,13 +53,24 @@ namespace jgap {
               sparse_points(sparse_points) {
 
             if (!optional_coeffs.empty()) {
-                setCoefficients(optional_coeffs);
+                this->setCoefficients(optional_coeffs);
             }
+        }
+
+        NBodyGapComponent(const SpeciesSet<ClusterSize, ClusterSym> species,
+                          const ValuePtr<ClusterTransformation<Dim, ClusterSize> >& transformation,
+                          const TKernel& kernel,
+                          const Sparsifier<Dim>& sparsifier,
+                          const std::vector<Atoms>& training_data,
+                          const std::vector<Real>& optional_coeffs = {})
+            : NBodyGapComponent(species, transformation, kernel,
+                            sparsifier.selectSparsePoints(getAllDescriptors(training_data, species, transformation)),
+                            optional_coeffs) {
         }
 
         std::optional<AtomicQuantities> covariate(const NeighbourList& neighbour_list) const override {
 
-            auto clusters = neighbour_list.findAllClusters<WithDerivatives>(species);
+            auto clusters = neighbour_list.findAllClusters<WithGradients>(species);
             if (clusters.empty()) {
                 return std::nullopt;
             }
@@ -68,8 +103,10 @@ namespace jgap {
                                 dK_drij_norm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                             }
 
-                            result.force(sparse_idx, cluster.atom_indexes[i]) += separation_deriv.direction * dK_drij_norm;
-                            result.force(sparse_idx, cluster.atom_indexes[j]) -= separation_deriv.direction * dK_drij_norm;
+                            result.force(sparse_idx, cluster.atom_indexes[i])
+                                += separation_deriv.direction * dK_drij_norm;
+                            result.force(sparse_idx, cluster.atom_indexes[j])
+                                -= separation_deriv.direction * dK_drij_norm;
 
                             result.virials(sparse_idx) += separation_deriv.virials * dK_drij_norm;
                         }
@@ -104,6 +141,10 @@ namespace jgap {
         }
 
         void tabulate(TabulationData &tables) const override {
+            const auto& coeffs = this->getCoefficients();
+            if (coeffs.empty()) {
+                JGAP_LOG_AND_THROW("Coefficients must be set before tabulation");
+            }
 
             Grid<Dependencies>* table_ref = nullptr;
 
@@ -125,13 +166,31 @@ namespace jgap {
                 auto transformed = transformation->evaluate(cluster);
 
                 Real& value = table.data_flat[i];
-                for (const auto& sparse_point : sparse_points) {
-                    value += kernel.value(sparse_point.value, transformed.value) * symmetry_factor;
+                for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); ++sparse_idx) {
+                    value += coeffs[sparse_idx]
+                                * kernel.value(sparse_points[sparse_idx].value, transformed.value)
+                                * symmetry_factor;
                 }
             });
         }
 
     private:
+        static std::vector<Descriptor<Dim>> getAllDescriptors(
+            const std::vector<Atoms>& training_data,
+            const SpeciesSet<ClusterSize, ClusterSym>& species,
+            const ValuePtr<ClusterTransformation<Dim, ClusterSize>>& transformation)
+        {
+            std::vector<Descriptor<Dim>> all_descriptors;
+            for (const auto& atoms : training_data) {
+                NeighbourList nl(atoms, transformation->getCutoffs().maxOverall());
+                auto clusters = nl.findAllClusters<ValueOnly>(species);
+                for (const auto& cluster : clusters) {
+                    all_descriptors.push_back(transformation->evaluate(cluster));
+                }
+            }
+            return all_descriptors;
+        }
+
         SpeciesSet<ClusterSize, ClusterSym> species;
         ValuePtr<ClusterTransformation<Dim, ClusterSize>> transformation;
         Real symmetry_factor;

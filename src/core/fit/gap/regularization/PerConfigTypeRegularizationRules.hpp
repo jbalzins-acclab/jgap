@@ -1,10 +1,10 @@
 #ifndef JGAP_PERCONFIGTYPEREGULARIZATIONRULES_HPP
 #define JGAP_PERCONFIGTYPEREGULARIZATIONRULES_HPP
 
+#include <optional>
 #include "RegularizationRules.hpp"
-#include "core/atomic/energy/Virials.hpp"
-#include "core/atomic/geometry/Vector3.hpp"
-#include "io/parse/ParserRegistry.hpp"
+#include "ConfigSigmas.hpp"
+#include "../../../../serialization/SerializationRegistry.hpp"
 
 namespace jgap {
     class PerConfigTypeRegularizationRules : public RegularizationRules {
@@ -17,15 +17,26 @@ namespace jgap {
                                          const std::map<std::string, Real> &contains
         );
 
+        PerConfigTypeRegularizationRules(const ConfigSigmas &default_sigmas,
+                                         const std::map<std::string, ConfigSigmas>& exact_config_type_sigmas,
+                                         const std::map<std::string, ConfigSigmas>& contains_config_type_sigmas);
+
+        PerConfigTypeRegularizationRules(ConfigSigmas default_sigmas,
+                                         const std::string& config_string);
+
         void fillSigmas(Regularization &sigmas, const Atoms &atoms) const override;
 
-    private:
-        Real default_energy_per_atom;
-        Vector3 default_force;
-        Virials default_virials_per_atom;
+        std::unique_ptr<RegularizationRules> clone() const override {
+            return std::make_unique<PerConfigTypeRegularizationRules>(*this);
+        }
 
-        std::map<std::string, Real> exact;
-        std::map<std::string, Real> contains; // order-sensitive
+    private:
+        ConfigSigmas defaults;
+
+        std::map<std::string, Real> exact_multiplier;
+        std::map<std::string, Real> contains_multiplier; // order-sensitive
+        std::map<std::string, ConfigSigmas> exact_config_type_sigmas;
+        std::map<std::string, ConfigSigmas> contains_config_type_sigmas;
     };
 }
 

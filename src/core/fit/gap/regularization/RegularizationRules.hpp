@@ -3,12 +3,14 @@
 
 #include "Regularization.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
+#include <memory>
 
 namespace jgap {
     class RegularizationRules {
     public:
         virtual ~RegularizationRules() = default;
         virtual void fillSigmas(Regularization& sigmas, const Atoms& atoms) const = 0;
+        virtual std::unique_ptr<RegularizationRules> clone() const = 0;
     };
 }
 

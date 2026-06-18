@@ -4,12 +4,12 @@ project(jgap)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED OFF)
 
-set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(yaml-cpp CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
@@ -80,11 +80,11 @@ function(generate_parser_registry_header)
 endfunction()
 
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE ALL_SRC_C "${PROJECT_SOURCE_DIR}/src/*.c")
 
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/app/.*")
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/Main\\.cpp")
 
-set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
+set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
 add_library(jgap_lib STATIC ${LIBRARY_SOURCE_FILES})
 
 # Generate parser registry header
@@ -104,7 +104,6 @@ target_link_libraries(jgap_lib PRIVATE
 
 target_link_libraries(jgap_lib PUBLIC
         pugixml::static pugixml::pugixml
-        yaml-cpp::yaml-cpp
         TBB::tbb TBB::tbbmalloc
         HighFive
 )
@@ -142,22 +141,21 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     enable_testing()
 
     set(TEST_SOURCES
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/atomic/neighbours/TestNeighbourList.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/2b/TestTwoBodyTransformation.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/3b/TestAngle3bTransformation.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestFSGenPairFunction.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestCoscutoffPairFunction.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/eam/TestPolycutoffPairFunction.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/transform/TestTransformationAggregatorImpl.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/kernels/TestSquaredExpKernel.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/potentials/gap/component/TestNBodyGapComponent.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/potentials/gap/component/TestManyBodyGapComponent.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/cutoff/TestCosCutoff.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/cutoff/TestPerriotPolynomialCutoff.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/fit/TestQRGapFit.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/atomic/neighbours/TestNeighbourList.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/2b/TestTwoBodyTransformation.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/3b/TestAngle3bTransformation.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/eam/TestFSGenPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/eam/TestCoscutoffPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/eam/TestPolycutoffPairFunction.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/transform/TestTransformationAggregatorImpl.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/kernels/TestSquaredExpKernel.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/potentials/gap/component/TestNBodyGapComponent.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/potentials/gap/component/TestManyBodyGapComponent.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/cutoff/TestCosCutoff.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/cutoff/TestPerriotPolynomialCutoff.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/potentials/zbl/TestZblPotential.cpp
+            ${PROJECT_SOURCE_DIR}/test/unit/core/splines/TestSplines.cpp
     )
 
     add_executable(jgap_tests ${TEST_SOURCES})

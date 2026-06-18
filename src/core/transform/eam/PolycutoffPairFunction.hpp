@@ -42,6 +42,10 @@ namespace jgap {
             return std::make_unique<PolycutoffPairFunction>(*this);
         }
 
+        Real getRMin() const {
+            return r_min;
+        }
+
     private:
         Real r_min;
         Real interval_inverse;

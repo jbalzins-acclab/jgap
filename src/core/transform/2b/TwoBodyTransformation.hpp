@@ -29,8 +29,16 @@ namespace jgap {
             return Cutoffs{{2, cutoff->getCutoff()}};
         }
 
+        ValuePtr<CutoffFunction> getCutoff() const {
+            return cutoff;
+        }
+
         std::unique_ptr<ClusterTransformation> clone() const override {
             return std::make_unique<TwoBodyTransformation>(*this);
+        }
+
+        Real symmetryFactor() const override {
+            return 2.0;
         }
 
     private:

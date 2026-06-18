@@ -1,9 +1,10 @@
-#ifndef HISTOGRAMUNIFORMSPARSIFIER_HPP
-#define HISTOGRAMUNIFORMSPARSIFIER_HPP
+#ifndef JGAP_HISTOGRAMUNIFORMSPARSIFIER_HPP
+#define JGAP_HISTOGRAMUNIFORMSPARSIFIER_HPP
 
 #include <cmath>
 #include <random>
 #include <set>
+#include <map>
 
 #include "Sparsifier.hpp"
 #include "utils/Utils.hpp"
@@ -17,11 +18,13 @@ namespace jgap {
     public:
         HistogramUniformSparsifier(size_t seed,
                                    size_t n_sparse_points,
+                                   std::optional<std::array<bool, Dim>> is_dim_active = std::nullopt,
                                    std::optional<std::array<size_t, Dim>> grid_dimensions = std::nullopt,
                                    std::optional<std::array<Real, Dim>> min_point = std::nullopt,
                                    std::optional<std::array<Real, Dim>> max_point = std::nullopt)
             : seed(seed),
               n_sparse_points(n_sparse_points),
+              is_dim_active(is_dim_active),
               grid_dimensions(grid_dimensions),
               min_point(min_point),
               max_point(max_point) {
@@ -32,6 +35,7 @@ namespace jgap {
     private:
         size_t seed;
         size_t n_sparse_points;
+        std::optional<std::array<bool, Dim>> is_dim_active;
         std::optional<std::array<size_t, Dim>> grid_dimensions;
         std::optional<std::array<Real, Dim>> min_point;
         std::optional<std::array<Real, Dim>> max_point;
@@ -49,7 +53,23 @@ namespace jgap {
         if (grid_dimensions.has_value()) {
             grid_dimensions_ = grid_dimensions.value();
         } else {
-            grid_dimensions_.fill(ceil(pow(n_sparse_points, 1.0 / static_cast<Real>(Dim))));
+            size_t active_dims = 0;
+            if (is_dim_active.has_value()) {
+                for (bool active : is_dim_active.value()) {
+                    if (active) active_dims++;
+                }
+            } else {
+                active_dims = Dim;
+            }
+
+            size_t active_grid_dim = active_dims > 0 ?
+                static_cast<size_t>(std::ceil(std::pow(n_sparse_points, 1.0 / static_cast<Real>(active_dims))))
+                : 1;
+
+            for (size_t d = 0; d < Dim; d++) {
+                bool active = is_dim_active.has_value() ? is_dim_active.value()[d] : true;
+                grid_dimensions_[d] = active ? active_grid_dim : 1;
+            }
         }
 
         std::array<Real, Dim> min_point_{};
@@ -70,7 +90,7 @@ namespace jgap {
             } else {
                 max_point_[d] = std::numeric_limits<Real>::lowest();
                 for (const auto &p : descriptors) {
-                    max_point_[d] = std::max(max_point_[d], p.value[d] + static_cast<Real>(0.0001)/*keep all points in bounds*/);
+                    max_point_[d] = std::max(max_point_[d], p.value[d] + 0.0001/*keep all points in bounds*/);
                 }
             }
             step[d] = (max_point_[d] - min_point_[d]) / static_cast<Real>(grid_dimensions_[d]);

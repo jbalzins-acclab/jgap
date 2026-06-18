@@ -1,5 +1,5 @@
-#ifndef COSCUTOFFPAIRFUNCTION_HPP
-#define COSCUTOFFPAIRFUNCTION_HPP
+#ifndef JGAP_COSCUTOFFPAIRFUNCTION_HPP
+#define JGAP_COSCUTOFFPAIRFUNCTION_HPP
 
 #include <cmath>
 #include <tuple>
@@ -41,10 +41,14 @@ namespace jgap {
             return std::make_unique<CoscutoffPairFunction>(*this);
         }
 
+        Real getRMin() const {
+            return r_min;
+        }
+
     private:
         Real r_min;
         Real interval_inverse;
     };
 }
 
-#endif //COSCUTOFFPAIRFUNCTION_HPP
+#endif

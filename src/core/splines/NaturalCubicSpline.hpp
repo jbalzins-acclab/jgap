@@ -17,6 +17,9 @@ namespace jgap {
             return std::make_unique<NaturalCubicSpline>(*this);
         }
 
+        const std::vector<Real>& getRVec() const { return r_vec; }
+        const std::vector<Real>& getEnergies() const { return energies; }
+
     private:
         std::vector<Real> r_vec;
         std::vector<Real> energies;

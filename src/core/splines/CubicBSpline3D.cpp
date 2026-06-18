@@ -1,137 +1,154 @@
 #include "CubicBSpline3D.hpp"
-#include "CubicBSpline.hpp"
+#include "CubicBSpline.hpp" // For toSplineCoefficients
+
+#include <cmath>
+#include <algorithm>
 
 namespace jgap {
 
     CubicBSpline3D::CubicBSpline3D(const Grid<3>& coefficients) : coefficients(coefficients) {}
 
-    CubicBSpline3D CubicBSpline3D::fit(const Grid<3>& values) {
-        auto new_dims = values.dims;
-        new_dims[0] += 2;
-        new_dims[1] += 2;
-        new_dims[2] += 2;
+    CubicBSpline3D CubicBSpline3D::fit(const Grid<3> &values) {
+        const size_t Mx = values.dims[0];
+        const size_t My = values.dims[1];
+        const size_t Mz = values.dims[2];
 
-        auto new_origin = values.origin;
-        new_origin[0] -= values.spacing[0];
-        new_origin[1] -= values.spacing[1];
-        new_origin[2] -= values.spacing[2];
+        const size_t Nx = Mx + 2;
+        const size_t Ny = My + 2;
+        const size_t Nz = Mz + 2;
 
-        Grid<3> coeff_grid(new_dims, values.spacing, new_origin);
+        std::array<Real, 3> new_origin = values.origin;
+        for (int i = 0; i < 3; ++i) {
+            new_origin[i] -= values.spacing[i];
+        }
 
-        for (size_t i = 0; i < values.dims[0]; i++) {
-            for (size_t j = 0; j < values.dims[1]; j++) {
-                std::vector<Real> slice(values.dims[2]);
-                for(size_t k = 0; k < values.dims[2]; ++k) {
-                    slice[k] = values({i, j, k});
+        // Pass 1: Filter along X
+        Grid<3> temp1({Nx, My, Mz}, values.spacing, new_origin);
+        for (size_t iy = 0; iy < My; ++iy) {
+            for (size_t iz = 0; iz < Mz; ++iz) {
+                std::vector<Real> slice(Mx);
+                for (size_t ix = 0; ix < Mx; ++ix) {
+                    slice[ix] = values({ix, iy, iz});
                 }
-                const auto c = CubicBSpline::toSplineCoefficients(slice, values.spacing[2]);
-                for (size_t k = 0; k < c.size(); k++) {
-                    coeff_grid({i + 1, j + 1, k}) = c[k];
+                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[0]);
+                for (size_t ix = 0; ix < Nx; ++ix) {
+                    temp1({ix, iy, iz}) = coeffs[ix];
                 }
             }
         }
 
-        for (size_t i = 0; i < values.dims[0]; i++) {
-            for (size_t k = 0; k < new_dims[2]; k++) {
-                std::vector<Real> slice(values.dims[1]);
-                for(size_t j = 0; j < values.dims[1]; ++j) {
-                    slice[j] = coeff_grid({i + 1, j + 1, k});
+        // Pass 2: Filter along Y
+        Grid<3> temp2({Nx, Ny, Mz}, values.spacing, new_origin);
+        for (size_t ix = 0; ix < Nx; ++ix) {
+            for (size_t iz = 0; iz < Mz; ++iz) {
+                std::vector<Real> slice(My);
+                for (size_t iy = 0; iy < My; ++iy) {
+                    slice[iy] = temp1({ix, iy, iz});
                 }
-                const auto c = CubicBSpline::toSplineCoefficients(slice, values.spacing[1]);
-                for (size_t j = 0; j < c.size(); j++) {
-                    coeff_grid({i + 1, j, k}) = c[j];
-                }
-            }
-        }
-        for (size_t j = 0; j < new_dims[1]; j++) {
-            for (size_t k = 0; k < new_dims[2]; k++) {
-                std::vector<Real> slice(values.dims[0]);
-                for(size_t i = 0; i < values.dims[0]; ++i) {
-                    slice[i] = coeff_grid({i + 1, j, k});
-                }
-                const auto c = CubicBSpline::toSplineCoefficients(slice, values.spacing[0]);
-                for (size_t i = 0; i < c.size(); i++) {
-                    coeff_grid({i, j, k}) = c[i];
+                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[1]);
+                for (size_t iy = 0; iy < Ny; ++iy) {
+                    temp2({ix, iy, iz}) = coeffs[iy];
                 }
             }
         }
 
-        return CubicBSpline3D(coeff_grid);
+        // Pass 3: Filter along Z
+        Grid<3> final_coeff({Nx, Ny, Nz}, values.spacing, new_origin);
+        for (size_t ix = 0; ix < Nx; ++ix) {
+            for (size_t iy = 0; iy < Ny; ++iy) {
+                std::vector<Real> slice(Mz);
+                for (size_t iz = 0; iz < Mz; ++iz) {
+                    slice[iz] = temp2({ix, iy, iz});
+                }
+                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[2]);
+                for (size_t iz = 0; iz < Nz; ++iz) {
+                    final_coeff({ix, iy, iz}) = coeffs[iz];
+                }
+            }
+        }
+
+        return CubicBSpline3D(final_coeff);
     }
 
     InterpolationResults<3> CubicBSpline3D::interpolate(std::array<Real, 3> pos) const {
-        const Real hx = coefficients.spacing[0];
-        const Real hy = coefficients.spacing[1];
-        const Real hz = coefficients.spacing[2];
+        const auto &coeffs = coefficients.data_flat;
+        const auto &dims = coefficients.dims;
+        const auto &spacing = coefficients.spacing;
+        const auto &origin = coefficients.origin;
+        const auto cutoff = getCutoff();
 
-        // Normalized coordinates
-        const Real x = (pos[0] - coefficients.origin[0]) / hx;
-        const Real y = (pos[1] - coefficients.origin[1]) / hy;
-        const Real z = (pos[2] - coefficients.origin[2]) / hz;
-
-        const size_t ix = static_cast<int>(floor(x));
-        const size_t iy = static_cast<int>(floor(y));
-        const size_t iz = static_cast<int>(floor(z));
-
-        const Real tx = x - ix;
-        const Real ty = y - iy;
-        const Real tz = z - iz;
-
-        // Compute cubic B-spline basis and derivatives
-        auto compute_weights = [](Real t, Real w[4], Real dw[4]) {
-            const Real t2 = t * t;
-            const Real t3 = t2 * t;
-
-            // Basis (B3)
-            w[0] = (1.0 - 3.0*t + 3.0*t2 - t3) / 6.0;
-            w[1] = (4.0 - 6.0*t2 + 3.0*t3) / 6.0;
-            w[2] = (1.0 + 3.0*t + 3.0*t2 - 3.0*t3) / 6.0;
-            w[3] = t3 / 6.0;
-
-            // Derivative of basis (dB3/dt)
-            dw[0] = (-3.0 + 6.0*t - 3.0*t2) / 6.0;
-            dw[1] = (-12.0*t + 9.0*t2) / 6.0;
-            dw[2] = (3.0 + 6.0*t - 9.0*t2) / 6.0;
-            dw[3] = (3.0*t2) / 6.0;
-        };
-
-        Real wx[4], wy[4], wz[4];
-        Real dwx[4], dwy[4], dwz[4];
-        compute_weights(tx, wx, dwx);
-        compute_weights(ty, wy, dwy);
-        compute_weights(tz, wz, dwz);
-
-        // Accumulators
-        Real value = 0.0;
-        std::array<Real, 3> grad = {0.0, 0.0, 0.0};
-
-        // Tensor-product evaluation
-        for (size_t a = 0; a < 4; ++a) {
-            for (size_t b = 0; b < 4; ++b) {
-                for (size_t c = 0; c < 4; ++c) {
-                    const Real coeff = coefficients({(ix + a - 1), (iy + b - 1), (iz + c - 1)});
-
-                    const Real wabc = wx[a] * wy[b] * wz[c];
-                    value += coeff * wabc;
-
-                    grad[0] += coeff * dwx[a] * wy[b] * wz[c];
-                    grad[1] += coeff * wx[a] * dwy[b] * wz[c];
-                    grad[2] += coeff * wx[a] * wy[b] * dwz[c];
-                }
+        for (int d = 0; d < 3; ++d) {
+            if (pos[d] < (origin[d] + spacing[d]) || pos[d] >= cutoff[d]) {
+                return {0.0, {0.0, 0.0, 0.0}};
             }
         }
 
-        // Scale derivatives by grid spacing
-        grad[0] /= hx;
-        grad[1] /= hy;
-        grad[2] /= hz;
+        Real u[3], t[3];
+        int ii[3];
 
-        return { value, grad };
+        for (int d = 0; d < 3; ++d) {
+            u[d] = (pos[d] - (origin[d] + spacing[d])) / spacing[d];
+            ii[d] = static_cast<int>(std::floor(u[d]));
+            t[d] = u[d] - ii[d];
+        }
+
+        Real Phi[3][4], dPhi[3][4];
+        for (int d = 0; d < 3; ++d) {
+            const Real t2 = t[d] * t[d];
+            const Real t3 = t2 * t[d];
+            const Real dinv = 1.0 / spacing[d];
+
+            Phi[d][0] = (1 - 3*t[d] + 3*t2 - t3) / 6.0;
+            Phi[d][1] = (4 - 6*t2 + 3*t3) / 6.0;
+            Phi[d][2] = (1 + 3*t[d] + 3*t2 - 3*t3) / 6.0;
+            Phi[d][3] = t3 / 6.0;
+
+            dPhi[d][0] = (-3 + 6*t[d] - 3*t2) * dinv / 6.0;
+            dPhi[d][1] = (-12*t[d] + 9*t2) * dinv / 6.0;
+            dPhi[d][2] = (3 + 6*t[d] - 9*t2) * dinv / 6.0;
+            dPhi[d][3] = (3*t2) * dinv / 6.0;
+        }
+
+        const int N1 = dims[1];
+        const int N2 = dims[2];
+
+        Real value = 0.0;
+        Real dval[3] = {0.0, 0.0, 0.0};
+
+        for (int i = 0; i < 4; ++i) {
+            const int base_i = ((ii[0] + i) * N1 + ii[1]) * N2 + ii[2];
+
+            Real ppc  = 0.0;
+            Real dpp1 = 0.0;
+            Real dpp2 = 0.0;
+
+            for (int j = 0; j < 4; ++j) {
+                const Real *cptr = &coeffs[base_i + j * N2];
+
+                const Real pc  = Phi[2][0]*cptr[0] + Phi[2][1]*cptr[1] + Phi[2][2]*cptr[2] + Phi[2][3]*cptr[3];
+                const Real dpc = dPhi[2][0]*cptr[0] + dPhi[2][1]*cptr[1] + dPhi[2][2]*cptr[2] + dPhi[2][3]*cptr[3];
+
+                ppc  += Phi[1][j]  * pc;
+                dpp1 += dPhi[1][j] * pc;
+                dpp2 += Phi[1][j]  * dpc;
+            }
+
+            value    += Phi[0][i]  * ppc;
+            dval[0]  += dPhi[0][i] * ppc;
+            dval[1]  += Phi[0][i]  * dpp1;
+            dval[2]  += Phi[0][i]  * dpp2;
+        }
+
+        return { value, {dval[0], dval[1], dval[2]} };
     }
 
     std::array<Real, 3> CubicBSpline3D::getCutoff() const {
-        return {coefficients.origin[0] + static_cast<Real>(coefficients.dims[0] - 2) * coefficients.spacing[0],
-                coefficients.origin[1] + static_cast<Real>(coefficients.dims[1] - 2) * coefficients.spacing[1],
-                coefficients.origin[2] + static_cast<Real>(coefficients.dims[2] - 2) * coefficients.spacing[2]};
+        std::array<Real, 3> cutoff;
+        for (int d = 0; d < 3; ++d) {
+            const Real data_points = static_cast<Real>(coefficients.dims[d] - 2);
+            const Real data_origin = coefficients.origin[d] + coefficients.spacing[d];
+            cutoff[d] = data_origin + (data_points - 1) * coefficients.spacing[d];
+        }
+        return cutoff;
     }
 }

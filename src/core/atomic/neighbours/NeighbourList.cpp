@@ -148,33 +148,28 @@ namespace jgap {
             const auto& species1 = species_set.getNodes()[0];
             const auto& species2 = species_set.getNodes()[1];
 
-            // WARN!
-            // Do not try to optimize e.g. via ignoring j < i unless it's truly performance-critical
-            // (which I don't expect it to be for pair potential).
-            // This would require atoms that interact periodically with themselves
-            // to be treated separately down the line.
-
             for (size_t i: atoms_by_species.at(species1)) {
                 auto atom_neighbours = neighbours_per_atom[i].find(species2);
 
                 if (atom_neighbours == neighbours_per_atom[i].end()) continue;
 
                 for (auto neigh_data: atom_neighbours->second) {
-                    result.emplace_back(i, std::array{neigh_data});
-                }
-            }
+                    if (neigh_data.atom_index > i) {
+                        result.emplace_back(i, std::array{neigh_data});
+                    }
 
-            if (species1 != species2) {
-
-                // To enforce consistency with same-species iteration:
-                // two clusters formed per pair.
-
-                for (const size_t i: atoms_by_species.at(species2)) {
-                    auto atom_neighbours = neighbours_per_atom[i].find(species1);
-
-                    if (atom_neighbours == neighbours_per_atom[i].end()) continue;
-
-                    for (auto neigh_data: atom_neighbours->second) {
+                    if (neigh_data.atom_index == i) {
+                        if (neigh_data.separation.derivatives.direction.x < 0.0) continue;
+                        if (neigh_data.separation.derivatives.direction.x > 0.0) {
+                            result.emplace_back(i, std::array{neigh_data});
+                            continue;
+                        }
+                        if (neigh_data.separation.derivatives.direction.y < 0.0) continue;
+                        if (neigh_data.separation.derivatives.direction.y > 0.0) {
+                            result.emplace_back(i, std::array{neigh_data});
+                            continue;
+                        }
+                        if (neigh_data.separation.derivatives.direction.z < 0.0) continue;
                         result.emplace_back(i, std::array{neigh_data});
                     }
                 }
@@ -297,12 +292,12 @@ namespace jgap {
         return {result_set.begin(), result_set.end()};
     }
 
-    template std::vector<Cluster<2, WithDerivatives>> NeighbourList
-        ::findAllClusters<WithDerivatives, 2, HasCentralAtom>(const SpeciesSet<2, HasCentralAtom>& species_set) const;
-    template std::vector<Cluster<2, WithDerivatives>> NeighbourList
-        ::findAllClusters<WithDerivatives, 2, Symmetric>(const SpeciesSet<2, Symmetric>& species_set) const;
-    template std::vector<Cluster<3, WithDerivatives>> NeighbourList
-        ::findAllClusters<WithDerivatives, 3, HasCentralAtom>(const SpeciesSet<3, HasCentralAtom>& species_set) const;
+    template std::vector<Cluster<2, WithGradients>> NeighbourList
+        ::findAllClusters<WithGradients, 2, HasCentralAtom>(const SpeciesSet<2, HasCentralAtom>& species_set) const;
+    template std::vector<Cluster<2, WithGradients>> NeighbourList
+        ::findAllClusters<WithGradients, 2, Symmetric>(const SpeciesSet<2, Symmetric>& species_set) const;
+    template std::vector<Cluster<3, WithGradients>> NeighbourList
+        ::findAllClusters<WithGradients, 3, HasCentralAtom>(const SpeciesSet<3, HasCentralAtom>& species_set) const;
 
     template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, HasCentralAtom>(
         const SpeciesSet<2, HasCentralAtom>& species_set) const;

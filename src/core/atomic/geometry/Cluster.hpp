@@ -5,6 +5,7 @@
 #include "Separation.hpp"
 #include <cassert>
 
+#include "core/CalculationType.hpp"
 #include "core/atomic/neighbours/NeighbourData.hpp"
 
 namespace jgap {
@@ -60,7 +61,7 @@ namespace jgap {
     };
 
     template<size_t NAtoms>
-    struct Cluster<NAtoms, WithDerivatives> : public Cluster<NAtoms, ValueOnly> {
+    struct Cluster<NAtoms, WithGradients> : public Cluster<NAtoms, ValueOnly> {
         using Base = Cluster<NAtoms, ValueOnly>;
         using Base::NSeparations;
         using Base::atom_indexes;

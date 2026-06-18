@@ -7,21 +7,12 @@
 #include <cmath>
 #include <map>
 #include <Eigen/Dense>
+#include <string_view>
 
 #include "core/Real.hpp"
 
-// Forward declaration of AtomsPropertyNames
 namespace jgap {
     struct AtomsPropertyNames;
-}
-
-#define GET_OR_DEFAULT(from, key, defaultValue) !from.contains(key) ? defaultValue : from[key]
-
-#define REQUIRE(node, key) requireFull((node), (key), __FILE__, __LINE__, __func__)
-#define REQUIRE_ARRAY(node) requireArrayFull((node), __FILE__, __LINE__, __func__)
-#define OPTIONALLY_SET(val, node, key) if (node.contains(key)) { val = node[key]; }
-
-namespace jgap {
     class Atoms;
 
     // Portable sincos implementation
@@ -60,18 +51,28 @@ namespace jgap {
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
 
-    /*
-    DataNode& requireFull(DataNode& n, const std::string& key, const char* file, int line, const char* function);
-    const DataNode& requireFull(const DataNode& n, const std::string& key, const char* file,
-                                int line, const char* function);
+    template <typename T>
+    constexpr std::string_view typeName() {
+#ifdef __clang__
+        std::string_view name = __PRETTY_FUNCTION__;
+        constexpr std::string_view prefix = "std::string type_name() [T = ";
+        constexpr std::string_view suffix = "]";
+#elif defined(__GNUC__)
+        std::string_view name = __PRETTY_FUNCTION__;
+        constexpr std::string_view prefix = "std::string type_name() [with T = ";
+        constexpr std::string_view suffix = "]";
+#elif defined(_MSC_VER)
+        std::string_view name = __FUNCSIG__;
+        constexpr std::string_view prefix = "class std::basic_string __cdecl type_name<";
+        constexpr std::string_view suffix = ">(void)";
+#endif
 
-    DataNode requireArrayFull(DataNode &n, const char* file, int line, const char* function);
-    const DataNode& requireArrayFull(const DataNode& n, const char* file, int line, const char* function);
-    */
-    template<typename Map, typename Key, typename Value>
-    auto getOrDefault(const Map& m, const Key& k, const Value& default_value) -> decltype(m.at(k)) {
-        auto it = m.find(k);
-        return it != m.end() ? it->second : default_value;
+        // Slice the view safely
+        name.remove_prefix(prefix.size());
+        name.remove_suffix(suffix.size());
+
+        // Construct and return a real std::string
+        return std::string(name);
     }
 
     template <typename Iterator>

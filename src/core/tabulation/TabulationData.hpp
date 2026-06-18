@@ -62,7 +62,7 @@ namespace jgap {
         template<size_t N>
         static Cluster<N> gridPosAsCluster(std::array<Real, Cluster<N>::NSeparations> grid_pos);
 
-        TabulationData(const TabulationParams& params) : TabGapData(params) {}
+        explicit TabulationData(const TabulationParams& params) : TabGapData(params) {}
     };
 
     template<size_t N>
@@ -87,7 +87,7 @@ namespace jgap {
             return res;
         }
 
-        // not static error, to prevent in-progress N>3 descriptors from not compiling
+        // not static error to prevent in-progress N>3 descriptors from not compiling
         JGAP_LOG_AND_THROW("{}-Body tabulation not implemented");
     }
 }

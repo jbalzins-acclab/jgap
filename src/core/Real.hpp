@@ -4,11 +4,7 @@
 #include <type_traits>
 
 namespace jgap {
-    #ifndef FPTYPE
-        using Real = double;
-    #else
-        using Real = FPTYPE;
-    #endif
+    using Real = double;
 }
 
 // Just in case

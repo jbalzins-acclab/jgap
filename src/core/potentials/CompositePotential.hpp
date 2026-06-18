@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "utils/ValuePtr.hpp"
+#include "../ValuePtr.hpp"
 
 namespace jgap {
 
@@ -30,7 +30,7 @@ namespace jgap {
         const std::map<std::string, ValuePtr<Potential>>& getPotentials() const { return potentials; }
         std::map<std::string, ValuePtr<Potential>>& getPotentials() { return potentials; }
 
-        void tabulate(TabulationData &table) const override;
+        void fillTables(TabulationData &table) const override;
 
         std::unique_ptr<Potential> clone() const override {
             return std::make_unique<CompositePotential>(*this);

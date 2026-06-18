@@ -10,7 +10,7 @@
 #include "core/potentials/tabgap/components/TabGapComponent.hpp"
 #include "core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"
 #include "core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
-#include "utils/ValuePtr.hpp"
+#include "../../core/ValuePtr.hpp"
 
 namespace jgap {
 

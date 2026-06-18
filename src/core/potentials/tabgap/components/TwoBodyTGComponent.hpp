@@ -8,8 +8,6 @@
 namespace jgap {
     class TwoBodyTGComponent : public TabGapComponent {
     public:
-        static constexpr Real SymmetryFactor = 0.5;
-
         TwoBodyTGComponent(SpeciesSet<2, Symmetric> species_pair, ValuePtr<Spline<1>> spline);
 
         AtomicQuantity energy(const NeighbourList &nl) const override;

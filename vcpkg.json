@@ -3,10 +3,6 @@
     "version" : "6.0.0",
     "dependencies" : [
         {
-            "name" : "yaml-cpp",
-            "version>=" : "0.8.0#3"
-        },
-        {
             "name": "tbb",
             "version>=": "2022.1.0#0"
         },

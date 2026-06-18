@@ -9,7 +9,7 @@ namespace jgap {
     AtomicQuantity ThreeBodyTGComponent::energy(const NeighbourList &nl) const {
         AtomicQuantity result(nl.nAtoms());
 
-        for (const auto& cluster: nl.findAllClusters<WithDerivatives>(species)) {
+        for (const auto& cluster: nl.findAllClusters<WithGradients>(species)) {
             auto [q, dq_dr] = transformation.evaluateAndDifferentiate(cluster);
             auto [E, dE_dq] = spline.interpolate(q);
 

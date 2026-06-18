@@ -50,42 +50,6 @@ namespace jgap {
     }
 
     static_assert(Cloneable<GapComponent>);
-
-    /*
-    template<size_t Dim, size_t Dependencies>
-    class GapComponent : public GapComponent {
-    public:
-        //static constexpr size_t DescriptorDim = 4;
-        //static constexpr size_t DescriptorDependencies = 3;
-        using TTransformerGroup = TransformerGroup<Dim, Dependencies>;
-        using TKernelGroup = SparseGroup<Dim, Dependencies>;
-
-        GapComponent(TTransformerGroup transformation, TKernelGroup kernel_group)
-            : transformation(transformation), kernel_group(kernel_group) {
-        }
-
-        size_t nSparsePoints() const override {
-            return kernel_group.nSparsePoints();
-        }
-
-        std::vector<Matrix> sparseToSparseCovariance() const override {
-            return kernel_group.sparseToSparseCovariance();
-        }
-
-        Cutoffs getCutoffs() const override {
-            return transformation.getCutoffs();
-        }
-
-        std::vector<AtomicQuantity> covariate(const NeighbourList& neighbour_list) const override {
-            auto descriptors = transformation.template transform<CalculationType::WithGradients>(neighbour_list);
-            return kernel_group->covariate(neighbour_list.nAtoms(), descriptors);
-        }
-
-    private:
-        TTransformerGroup transformation;
-        std::shared_ptr<TKernelGroup> kernel_group;
-    };
-    */
 }
 
 #endif

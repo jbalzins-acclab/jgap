@@ -139,7 +139,7 @@ namespace jgap {
 
     GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data) {
 
-        std::vector<ValuePtr<GapComponent>> comps;
+        GapPotential result;
 
         std::set<Species> species_encountered;
         for (pugi::xml_node sparse_node: quip_sparse_data.children("gpCoordinates")) {
@@ -225,14 +225,12 @@ namespace jgap {
             } else {
                 JGAP_LOG_AND_THROW("Unknown descriptor type");
             }
-            comps.push_back(std::move(new_comp));
+            result.addComponent(std::move(new_comp));
         }
-
-        return GapPotential(std::move(comps));
     }
 
     ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
-                                                                        const pugi::xml_node &distance_2b_node) {
+                                                                 const pugi::xml_node &distance_2b_node) {
 
         double cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();

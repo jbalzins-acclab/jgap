@@ -95,7 +95,7 @@ namespace jgap {
         std::array<Real, N> getCutoff() const {
             std::array<Real, N> res{};
             for (size_t i = 0; i < N; i++) {
-                res[i] = origin[i] + static_cast<Real>(dims[i]) * spacing[i];
+                res[i] = origin[i] + static_cast<Real>(dims[i] - 1) * spacing[i];
             }
             return res;
         }

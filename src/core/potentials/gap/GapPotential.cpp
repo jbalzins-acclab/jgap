@@ -61,7 +61,7 @@ namespace jgap {
         return components;
     }
 
-    void GapPotential::tabulate(TabulationData &table) const {
+    void GapPotential::tabulate(const TabulationData &table) const {
         JGAP_LOG_INFO("Tabulating GAP");
 
         JGAP_LOG_DEBUG("Tabulating external potential");

@@ -6,6 +6,7 @@ vcpkg_installed/*
 *.DS_Store
 .DS_Store
 .idea*
+.vscode*
 /include/ParserRegistryAuto.hpp
 /test-local/*
 build*/*

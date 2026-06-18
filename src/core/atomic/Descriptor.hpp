@@ -11,31 +11,20 @@ namespace jgap {
     requires (Dim > 0)
     struct Descriptor {
         std::array<Real, Dim> value{};
-
-        Descriptor operator+(const Descriptor& other) const {
-            Descriptor result;
-            for (size_t i = 0; i < Dim; i++) {
-                result.value[i] = value[i] + other.value[i];
-            }
-            return result;
-        }
-
-        Descriptor& operator+=(const Descriptor& other) {
-            *this = *this + other;
-            return *this;
-        }
     };
 
     template<size_t Dim, size_t ClusterSize>
     using DescriptorDerivatives = std::array<std::array<Real, Dim>, Cluster<ClusterSize>::NSeparations>;
 
     template<size_t Dim, size_t ClusterSize>
+    requires (Dim > 0 && ClusterSize > 0)
     struct NBodyDescriptor {
         std::array<Real, Dim> value{};
         DescriptorDerivatives<Dim, ClusterSize> derivatives{};
     };
 
     template<size_t Dim>
+    requires (Dim > 0)
     struct ManyBodyDescriptor {
         std::array<Real, Dim> value{};
         std::array<Virials, Dim> virials{};

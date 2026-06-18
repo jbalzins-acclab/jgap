@@ -6,6 +6,9 @@ namespace jgap {
         ValueOnly,
         WithGradients
     };
+
+    using CalculationType::ValueOnly;
+    using CalculationType::WithGradients;
 }
 
 #endif

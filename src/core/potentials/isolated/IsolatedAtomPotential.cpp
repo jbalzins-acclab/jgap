@@ -4,14 +4,11 @@
 #include "io/log/StdoutLogger.hpp"
 
 namespace jgap {
-    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, Real> &isolated_atom_energies,
-                                                 bool error_on_unknown)
-        : isolated_energies(isolated_atom_energies),
-          error_on_unknown_species(error_on_unknown) {
+    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, Real> &isolated_atom_energies)
+        : isolated_energies(isolated_atom_energies) {
     }
 
-    IsolatedAtomPotential::IsolatedAtomPotential(const std::vector<Atoms> &training_data, bool error_on_unknown)
-        : error_on_unknown_species(error_on_unknown) {
+    IsolatedAtomPotential::IsolatedAtomPotential(const std::vector<Atoms> &training_data) {
 
         for (const auto &atoms: training_data) {
 
@@ -21,7 +18,7 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("isolated_atom box doesn't contain one atom exactly");
             }
 
-            if (!atoms.getEnergy().has_value()) {
+            if (!atoms.lookupEnergy().has_value()) {
                 JGAP_LOG_AND_THROW("isolated_atom box with no energy set");
             }
 
@@ -29,13 +26,13 @@ namespace jgap {
 
             if (isolated_energies.contains(species)) {
                 JGAP_LOG_WARN("Duplicate isolated_atom box of species {}", species.symbol());
-                if (abs(isolated_energies[species] - atoms.getEnergy().value()) > 1e-6) {
+                if (abs(isolated_energies[species] - atoms.lookupEnergy().value()) > 1e-6) {
                     JGAP_LOG_AND_THROW("Energies in duplicate isolated_atom boxes of species {} vary significantly",
                                        species.symbol());
                 }
             }
 
-            isolated_energies[species] = atoms.getEnergy().value();
+            isolated_energies[species] = atoms.lookupEnergy().value();
         }
     }
 
@@ -46,10 +43,6 @@ namespace jgap {
         for (const auto &species: atoms.lookupSpecies()) {
             if (isolated_energies.contains(species)) {
                 result.value += isolated_energies.at(species);
-            } else {
-                if (error_on_unknown_species) {
-                    JGAP_LOG_AND_THROW("Unknown isolated_atom energy for {}", species.symbol());
-                }
             }
         }
 

@@ -18,9 +18,17 @@ namespace jgap {
 
         virtual Cutoffs getCutoffs() const = 0;
 
-        virtual void tabulate(TabulationData& table) const = 0;
-
         virtual std::unique_ptr<Potential> clone() const = 0;
+
+        virtual void fillTables(TabulationData& table) const = 0;
+
+        virtual TabulationData tabulate(TabulationParams tabulation_params) const {
+            TabulationData tabulation_data{tabulation_params};
+
+            fillTables(tabulation_data);
+
+            return tabulation_data;
+        }
     };
 }
 

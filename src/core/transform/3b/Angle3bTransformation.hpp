@@ -71,6 +71,10 @@ namespace jgap {
             return Cutoffs{ {3, cutoff->getCutoff()} };
         }
 
+        ValuePtr<CutoffFunction> getCutoff() const {
+            return cutoff;
+        }
+
         Real symmetryFactor() const override {
             return 2.0;
         }

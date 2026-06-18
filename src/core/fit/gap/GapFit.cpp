@@ -54,7 +54,7 @@ namespace jgap {
             const auto& atoms = training_data[i];
 
             energies_without_external[i] = {
-                atoms.getEnergy(),
+                atoms.lookupEnergy(),
                 atoms.lookupVirials(),
                 atoms.lookupForces()
             };

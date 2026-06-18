@@ -48,6 +48,13 @@ namespace jgap {
         wrapPositions();
     }
 
+    Atoms& Atoms::operator<<(const AtomicQuantity& quantity) {
+        setEnergy(quantity.value);
+        setVirials(quantity.virials);
+        setForces(quantity.forces);
+        return *this;
+    }
+
     std::optional<Lattice> Atoms::lookupLattice() const {
         if (properties.contains(main_property_names.lattice) && std::holds_alternative<Lattice>(properties.at(main_property_names.lattice))) {
             return std::get<Lattice>(properties.at(main_property_names.lattice));
@@ -143,14 +150,14 @@ namespace jgap {
         arrays.erase(name);
     }
 
-    std::optional<Real> Atoms::getEnergy() const {
+    std::optional<Real> Atoms::lookupEnergy() const {
         if (properties.contains(main_property_names.energy)) {
             return std::get<Real>(properties.at(main_property_names.energy));
         }
         return std::nullopt;
     }
 
-    void Atoms::lookupEnergy(Real e) {
+    void Atoms::setEnergy(Real e) {
         properties[main_property_names.energy] = e;
     }
 

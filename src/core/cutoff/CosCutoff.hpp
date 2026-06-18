@@ -17,6 +17,7 @@ namespace jgap {
               deriv_coeff(-0.5 * pi_over_w) {}
 
         Real getCutoff() const override { return cutoff; }
+        Real getCutoffTransitionWidth() const { return cutoff - r_min; }
 
         Real evaluate(Real r) const override {
             if (r <= r_min) return 1.0;

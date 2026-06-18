@@ -1,6 +1,7 @@
 #include "CubicBSpline.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 namespace jgap {
 
@@ -75,45 +76,49 @@ namespace jgap {
 
     InterpolationResults<1> CubicBSpline::interpolate(std::array<Real, 1> pos) const {
         const Real r = pos[0];
-        const auto &coeffs = coefficients.data_flat;
         const Real h = coefficients.spacing[0];
-        const Real origin = coefficients.origin[0];
+        const Real data_origin = coefficients.origin[0] + h;
+        const Real cutoff = getCutoff()[0];
 
-        // Find normalized coordinate
-        const Real x = (r - origin) / h;
-        const int i = static_cast<int>(std::floor(x));
-        const Real t = x - i;
+        if (r < data_origin || r >= cutoff) {
+            return {0.0, {0.0}};
+        }
 
-        // Precompute basis weights
-        Real w[4];
+        const Real u = (r - data_origin) / h;
+        const int i = static_cast<int>(std::floor(u));
+        const Real t = u - i;
+
         const Real t2 = t * t;
         const Real t3 = t2 * t;
+
+        Real w[4];
         w[0] = (1 - 3*t + 3*t2 - t3) / 6.0;
         w[1] = (4 - 6*t2 + 3*t3) / 6.0;
         w[2] = (1 + 3*t + 3*t2 - 3*t3) / 6.0;
         w[3] = t3 / 6.0;
 
-        // Interpolate value
-        Real value = 0.0;
-        for (int k = 0; k < 4; ++k)
-            value += coeffs[i + k - 1] * w[k];
-
-        // Optional derivative (for gradient info)
         Real dw[4];
-        dw[0] = (-3 + 6*t - 3*t2) / 6.0;
-        dw[1] = (-12*t + 9*t2) / 6.0;
-        dw[2] = (3 + 6*t - 9*t2) / 6.0;
-        dw[3] = (3*t2) / 6.0;
+        const Real dinv = 1.0 / h;
+        dw[0] = (-3 + 6*t - 3*t2) * dinv / 6.0;
+        dw[1] = (-12*t + 9*t2) * dinv / 6.0;
+        dw[2] = (3 + 6*t - 9*t2) * dinv / 6.0;
+        dw[3] = (3*t2) * dinv / 6.0;
 
+        Real value = 0.0;
         Real derivative = 0.0;
-        for (int k = 0; k < 4; ++k)
-            derivative += coeffs[i + k - 1] * dw[k];
-        derivative /= h;
+        for (int k = 0; k < 4; ++k) {
+            value += coefficients.data_flat[i + k] * w[k];
+            derivative += coefficients.data_flat[i + k] * dw[k];
+        }
 
         return { value, {derivative} };
     }
 
     std::array<Real, 1> CubicBSpline::getCutoff() const {
-        return {coefficients.origin[0] + static_cast<Real>(coefficients.dims[0] - 2) * coefficients.spacing[0]};
+        // The valid data range is from the original grid's origin to its last point.
+        // The coefficient grid has 2 extra points.
+        const Real data_points = static_cast<Real>(coefficients.dims[0] - 2);
+        const Real data_origin = coefficients.origin[0] + coefficients.spacing[0];
+        return {data_origin + (data_points - 1) * coefficients.spacing[0]};
     }
 }

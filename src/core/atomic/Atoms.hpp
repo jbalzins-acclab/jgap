@@ -14,6 +14,7 @@
 #include "geometry/Lattice.hpp"
 #include "core/Real.hpp"
 #include "io/XYZData.hpp"
+#include "energy/AtomicQuantity.hpp"
 
 namespace jgap {
 
@@ -43,6 +44,8 @@ namespace jgap {
         Atoms(const Atoms& other) = default;
         Atoms& operator=(const Atoms& other) = default;
 
+        Atoms& operator<<(const AtomicQuantity& quantity);
+
         std::optional<Lattice> lookupLattice() const;
         void setLattice(const std::optional<Lattice>& lat);
 
@@ -61,8 +64,8 @@ namespace jgap {
         void removeAtom(size_t index);
         void removeArray(const std::string& name);
 
-        std::optional<Real> getEnergy() const;
-        void lookupEnergy(Real e);
+        std::optional<Real> lookupEnergy() const;
+        void setEnergy(Real e);
 
         std::optional<Virials> lookupVirials() const;
         void setVirials(const Virials& v);

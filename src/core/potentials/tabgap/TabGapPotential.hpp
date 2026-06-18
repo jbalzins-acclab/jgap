@@ -17,7 +17,7 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override;
 
-        void tabulate(TabulationData& table) const override;
+        void fillTables(TabulationData& table) const override;
 
         std::unique_ptr<Potential> clone() const override {
             return std::make_unique<TabGapPotential>(*this);

@@ -1,6 +1,6 @@
 #include "EamTGComponent.hpp"
 
-#include "core/transform/2b/SplinePairTransformation.hpp"
+#include "../../../transform/eam/SplinePairTransformation.hpp"
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
 
 namespace jgap {
