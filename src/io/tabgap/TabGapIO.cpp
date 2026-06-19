@@ -180,7 +180,7 @@ namespace jgap {
      *   <li>{@code energies}: the raw B-spline coefficients (N + 2 values).</li>
      * </ul>
      * Because of the one-extra-spacing {@code upper}, the reader recovers spacing as (upper - lower) / N
-     * (see {@link #readFromGroup}), not / (N - 1).
+     * (see {@link TabGapIO#readFromGroup}), not / (N - 1).
      *
      * @param root the HDF5 group to add the pair group to.
      * @param component the 2-body component to write (its spline must be a CubicBSpline).
@@ -209,7 +209,7 @@ namespace jgap {
     }
 
     /**
-     * Writes one 3-body group, following the same on-disk convention as {@link #write2b} (see its doc):
+     * Writes one 3-body group, following the same on-disk convention as {@link TabGapIO#write2b} (see its doc):
      * per axis, {@code N} is the original grid point count (= coeff dims - 2) and {@code grid_limits}
      * stores the original-grid extent [origin, cutoff] derived from the coefficient grid; {@code energies}
      * holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
@@ -597,7 +597,10 @@ namespace jgap {
             }
             embedding_energies.insert({central_atom_species, std::move(energies)});
 
-            // Density functions: for each receiver alpha, Nr points (over the distance grid, not rho)
+            // eam/fs convention (LAMMPS): in element β's section the N listed densities are rho_{αβ}(r),
+            // the density contributed BY a β neighbour at an α atom (β = central_atom_species here, the
+            // section element; α = receiver_species, the inner index). Such a density belongs to the EAM
+            // component for CENTRAL atom α with NEIGHBOUR β, i.e. SpeciesSet{root=α, node=β}.
             for (const auto& receiver_species: elements) {
 
                 Grid<1> rho_per_r_grid{{n_r}, {dr}, {0.0}};
@@ -609,7 +612,7 @@ namespace jgap {
                     rho_per_r_grid.data_flat[i] = std::stod(line);
                 }
 
-                density_grids.at(receiver_species).getValueGrid({central_atom_species, receiver_species})
+                density_grids.at(receiver_species).getValueGrid({receiver_species, central_atom_species})
                     = std::move(rho_per_r_grid);
             }
         }

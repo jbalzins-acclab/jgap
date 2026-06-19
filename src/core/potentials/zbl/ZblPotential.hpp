@@ -4,6 +4,7 @@
 #include <set>
 #include <array>
 #include <map>
+#include <string>
 #include <istream>
 
 #include "core/cutoff/CutoffFunction.hpp"
@@ -16,13 +17,13 @@
 
 namespace jgap {
 
-#if defined(__has_embed)
+    // The built-in screening datasets. When the compiler supports #embed they are baked into the binary;
+    // otherwise they are read at runtime from resources/dmol-screening-fit/<dataset>.dat (see the .cpp).
     enum class EmbeddedZBLCoeffDataset {
         DMOL,
         NLH,
         MP2
     };
-#endif
 
     class ZblPotential : public Potential {
     public:
@@ -32,7 +33,8 @@ namespace jgap {
         static constexpr Real ElectronCharge_C = 1.60217657e-19;
         static constexpr Real CoulombConstant_eV_Ang = ElectronCharge_C / (4.0 * M_PI * Epsilon0_F_per_m * 1e-10);
 
-#if defined(__has_embed)
+        // Built-in dataset (embedded via #embed, or read from resources/ at runtime when #embed is
+        // unavailable; see the .cpp), restricted to the given pairs / to the elements in the training data.
         ZblPotential(const std::set<SpeciesSet<2, Symmetric>>& species,
                      EmbeddedZBLCoeffDataset embedded_dataset = EmbeddedZBLCoeffDataset::DMOL,
                      Real cutoff = DefaultZblCutoff,
@@ -42,7 +44,6 @@ namespace jgap {
                      EmbeddedZBLCoeffDataset embedded_dataset = EmbeddedZBLCoeffDataset::DMOL,
                      Real cutoff = DefaultZblCutoff,
                      Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
-#endif
 
         ZblPotential(std::istream& custom_dataset,
                      const std::set<SpeciesSet<2, Symmetric>>& species,
@@ -50,6 +51,13 @@ namespace jgap {
                      Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
         ZblPotential(std::istream& custom_dataset,
+                     const std::vector<Atoms>& training_data,
+                     Real cutoff = DefaultZblCutoff,
+                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+
+        // Reads coefficients from a dataset file, keeping only the element pairs present in the training
+        // data.
+        ZblPotential(const std::string& dataset_filename,
                      const std::vector<Atoms>& training_data,
                      Real cutoff = DefaultZblCutoff,
                      Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);

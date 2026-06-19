@@ -27,4 +27,5 @@ namespace jgap {
         return CosCutoff(cutoff, cutoff_transition_width);
     }
 
+    REGISTER_SERIALIZATION(CosCutoffSerialization, CutoffFunction)
 }

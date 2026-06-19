@@ -1,84 +1,124 @@
 # JGAP
 ## Overview
-### Fit 2b+3b+EAM GAP fit
-- On small databases fit coefficients exactly match QUIP output(without virial fit; see /test)
-- Slightly different "uniform" sparsification is available
-- Screened coulomb pre-fit for all element pairs(see resources/dmol-screening-fit & */core/potentials/ZblPotential.cpp)
-- Significant speedup in kernel matrix formation & RAM usage improvement compared to QUIP with basic compilation:
-  - ~20 sec(on my laptop) for Iron potential | ~500Mb
-  - ~1 std::min(on my laptop) for FeNi potential | ~6Gb RAM
-  - ~3 std::min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
-  - more to be tested.
-  - RAM usage can be estimated from logs(look for matrix size).
-  - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
-- Output in the json format not compatible with QUIP - separate app is compiled to use it.
-  - quip.xml can be converted into it
-- Per config-type regularization not implemented yet, but $\sigma$'s can be specified per structure in ext-xyz(see Utils.cpp)
-### Tabulate 2b+3b+EAM 
-- Very fast(around a minute on my laptop to tabulate CrMnFeNi)
-- Output in .tabgap+.eam.fs (I'm not sure if non-2b+3b+EAM works correctly)
-- Works with quip.xml
+
 
 ## Compilation/Run guide
-### Prerequisites 
+### Prerequisites
 - CMake 3.11+
-- c++ complier supporting c++23
-  - do "module load gcc/14.2" on Puhti
-  - if you don't have sudo rights but "conda" is available, do something like:
-```bash
-conda create -n myenv
-conda activate myenv
-conda install -c conda-forge gcc
-conda install -c conda-forge gxx_linux-64 # ask AI what version is suitable for you
-# if you want cmake to auto detect new compilers, add to .bashrc/.zshrc:
-export CC=$CONDA_PREFIX/bin/gcc
-export CXX=$CONDA_PREFIX/bin/g++
-```
-- VCPKG:
-  - (Follow instructions: https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash))
+- A C++23 compiler. **GCC 15+ is recommended**: jgap uses `#embed` (GCC 15 / Clang ≥ 19) to bake the
+  built-in ZBL screening datasets into the binary. Older C++23 compilers (GCC 14, AppleClang) still build
+  and fit — without `#embed` those datasets are instead read at runtime from
+  `resources/dmol-screening-fit/`, so you must run with the `resources/` folder present (or pass an
+  explicit ZBL dataset file; see `standard_fit`'s optional argument and `StandardGapParams::zbl_dataset_file`).
+  Get a suitable compiler if needed:
+  - Puhti / HPC modules: `module load gcc/15` (or the newest available)
+  - Homebrew: `brew install gcc` then `export CC=gcc-15 CXX=g++-15` (the default `c++` on macOS is
+    AppleClang, so you must point CMake at the Homebrew GCC — via these vars or
+    `-DCMAKE_CXX_COMPILER=g++-15`)
+  - conda (no sudo): `conda install -c conda-forge 'gxx>=15'` then
+    `export CC=$CONDA_PREFIX/bin/gcc CXX=$CONDA_PREFIX/bin/g++`
+  - Spack: `spack install gcc@15` (then `spack load gcc@15`)
+
+### Dependencies
+- **Required:** Eigen3 (header-only), oneTBB, HighFive (+ HDF5).
+- **Optional:** pugixml (QUIP `.xml` conversion — see below); a BLAS such as OpenBLAS.
+  - A BLAS is **strongly recommended** — it does the heavy linear algebra and is a large speedup for
+    fitting. Without one, jgap falls back to Eigen's own routines and enables Eigen's OpenMP
+    multi-threading (if OpenMP is available) so they at least run in parallel; a BLAS is still faster.
+
+Install them with **any one** of the package managers below, then point CMake at them:
+- vcpkg → pass its toolchain file (`-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`)
+- everything else → pass the install prefix(es) via `-DCMAKE_PREFIX_PATH=...`
+
+CMake finds each dependency through its CMake config package, so any source that installs those works.
+A missing optional dependency is detected automatically (a `-- ...` status line reports it).
+
+#### vcpkg (manifest in `vcpkg.json`)
+> Recommended on personal machines (laptops/desktops), where it gives a clean, reproducible build.
+> On HPC clusters it works but use it with care: vcpkg builds every dependency from source and keeps
+> large build trees and caches, creating a great many files — which can strain quota- or inode-limited
+> shared filesystems. There, prefer the cluster's environment modules, Spack, or conda.
+
 ```bash
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg && ./bootstrap-vcpkg.sh
-nano ~/.bashrc or ~/.zshrc
-export VCPKG_ROOT=/path/to/vcpkg
-export PATH=$VCPKG_ROOT:$PATH
-# in root project dir: 
+export VCPKG_ROOT=$PWD && export PATH=$VCPKG_ROOT:$PATH
+cd <jgap>   # vcpkg install reads vcpkg.json
 vcpkg install
-# vcpkg integrate to see what -DCMAKE_TOOLCHAIN_FILE= to add to "cmake -B build" params
- ```
-### Optional: XML (QUIP) support
-QUIP `.xml` conversion depends on `pugixml`, which is an **optional** vcpkg feature (`xml`). It is enabled
-by **default**, so a normal `vcpkg install` / build includes it.
+# then configure jgap with -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+```
 
-To build **without** XML support (no `pugixml`), disable default features:
+#### Homebrew (macOS / Linux)
 ```bash
-# classic/manual install:
-vcpkg install --no-default-features
-# or, in CMake manifest mode, at configure time:
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-      -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+brew install cmake eigen tbb hdf5 openblas pugixml
+# HighFive is not in homebrew-core — install it via conda/spack or from git (below).
+# configure with: -DCMAKE_PREFIX_PATH="$(brew --prefix)"
 ```
-When `pugixml` is not found, CMake automatically drops the `QuipXmlConverter` sources and the
-`jgap_convert` app from the build (a status line reports which way it went); everything else builds
-unchanged.
+
+#### conda (conda-forge)
+```bash
+conda install -c conda-forge eigen tbb-devel highfive hdf5 openblas pugixml
+# configure with: -DCMAKE_PREFIX_PATH="$CONDA_PREFIX"
+```
+
+#### Spack
+```bash
+spack install eigen intel-tbb highfive openblas pugixml
+spack load eigen intel-tbb highfive openblas pugixml   # sets CMAKE_PREFIX_PATH
+```
+
+#### From git (build/install from source)
+Useful for header-only or unpackaged deps. Each ships a CMake install; install to a common `<prefix>`
+and add it to `CMAKE_PREFIX_PATH`. Example (HighFive, which needs HDF5):
+```bash
+git clone --depth 1 https://github.com/BlueBrain/HighFive
+cmake -S HighFive -B HighFive/build -DHIGHFIVE_UNIT_TESTS=OFF -DHIGHFIVE_EXAMPLES=OFF \
+      -DCMAKE_INSTALL_PREFIX=<prefix>
+cmake --build HighFive/build --target install
+```
+Eigen (https://gitlab.com/libeigen/eigen) and pugixml (https://github.com/zeux/pugixml) install the same
+way; oneTBB is at https://github.com/uxlfoundation/oneTBB.
+
+### Optional: XML (QUIP) support
+QUIP `.xml` conversion needs `pugixml`. If `pugixml` is not found, CMake automatically drops the
+`QuipXmlConverter` sources and the `jgap_convert` app (a status line reports which way it went);
+everything else builds unchanged.
+- Other package managers: simply install (or don't install) `pugixml`.
+- vcpkg: `pugixml` is the default-on `xml` feature; build without it via
+  `vcpkg install --no-default-features` or, at configure time,
+  `-DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON`.
 ### Compile
-- Run something like: 
+Configure with whichever dependency source you used (see Dependencies), then build:
 ```bash
-# on local device
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
-# on Puhti: 
-cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-std::vector-width=512" 
-cmake --build build -j ...
+# with vcpkg:
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+      -DCMAKE_BUILD_TYPE=Release
+
+# without vcpkg (Homebrew / conda / Spack / from-source) — point at the install prefix(es) instead:
+cmake -B build -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DCMAKE_BUILD_TYPE=Release   # e.g. Homebrew
+# (conda: $CONDA_PREFIX; Spack: usually set by `spack load`; multiple prefixes: ";"-separated)
+
+cmake --build build -j
 ```
-- This should produce 3 executables:
-  - jgap_fit_app - GAP fitting
-  - jgap_predict_app - to use the GAP potential
-  - jgap_tabulate_app - tabulate GAP potential
-  - jgap_convert_quip_xml_app - convert from quip.xyz
+Add `-DCMAKE_CXX_COMPILER=g++-15` (or your C++23 compiler) if it isn't the default.
+### Install (to use jgap as a library)
+To consume jgap from another CMake project (see `examples/`), install it to a prefix:
+```bash
+cmake --install build --prefix <prefix>
+```
+A downstream project then only needs `find_package(jgap CONFIG REQUIRED)` and
+`target_link_libraries(<target> PRIVATE jgap::jgap)` — that pulls in jgap's headers and its public
+dependencies. (The dependency CMake configs must be on `CMAKE_PREFIX_PATH`; when jgap is built with
+vcpkg they live in `<build>/vcpkg_installed/<triplet>`.)
+This produces:
+- `libjgap` — the library (link it as `jgap::jgap`; see "Install" above and `examples/`).
+- `jgap` — CLI for using a serialized potential.
+- `jgap_convert` — QUIP `.xml` → `.h5` converter (only when `pugixml` is available).
 ### Run
-(see param samples in /resources)
-- jgap_fit_app fit_param_file.json => outputs potential.json
-- jgap_predict_app potential.json input.xyz output.xyz
-- jgap_tabulate_app tabulation_params.json
-- jgap_convert_quip_xml_app quip.xml
-  - warn: sensitive to format changes in quip.xml - check the code upon error
+- `jgap --predict <pot.h5> <in.xyz> <out.xyz>` — predict energy/forces for every frame in `in.xyz`.
+- `jgap --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..] [n_grid_2b=..] [n_grid_3b=a,b,c]` —
+  writes `<pot>.tabgap.h5` plus the EAM `<pot>.eam.fs` file(s).
+- `jgap_convert <quip.xml> [out.h5]` — convert a QUIP potential to a serialized `.h5`.
+  - warn: sensitive to format changes in quip.xml — check the code upon error.
+
+Fitting a potential is done through the library API (no dedicated CLI yet) — see `examples/Main.cpp`.

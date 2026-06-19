@@ -17,33 +17,55 @@ namespace jgap {
     /**
      * A node in a serialized tree, backed by an HDF5 group: scalar/array values are stored as attributes
      * or datasets, and nested objects as child groups. This is the storage abstraction that
-     * {@link Serialization} works against; a node is either the root of a file (see {@link #create} /
-     * {@link #open}) or a child group of another node ({@link #createGroup} / {@link #getGroup}).
+     * {@link Serialization} works against; a node is either the root of a file (see {@link SerializationNode#create} /
+     * {@link SerializationNode#open}) or a child group of another node ({@link SerializationNode#createGroup}
+     * / {@link SerializationNode#getGroup}).
      *
-     * Conventions: small fixed values go in attributes ({@link #writeAttribute}/{@link #readAttribute}),
-     * bulk arrays in datasets ({@link #writeDataSet}/{@link #readDataSet}); the {@code readOptional*}
+     * Conventions: small fixed values go in attributes ({@link SerializationNode#writeAttribute}/
+     * {@link SerializationNode#readAttribute}),
+     * bulk arrays in datasets ({@link SerializationNode#writeDataSet}/{@link SerializationNode#readDataSet});
+     * the {@code readOptional*}
      * variants return {@code std::nullopt} when absent, which serializers use to detect "not my node".
      */
     class SerializationNode {
     public:
+        /// Bumped when the on-disk serialization layout changes incompatibly. Stamped on the file root by
+        /// create() and checked by open().
+        static constexpr int FormatVersion = 1;
+        static constexpr const char* FormatVersionAttribute = "jgap_format_version";
+
         /**
-         * Opens a file for writing (overwriting any existing file) and returns its root node.
+         * Opens a file for writing (overwriting any existing file) and returns its root node, stamped
+         * with the current serialization format version.
          * @param filename the file to create/overwrite.
          * @return the root node of the new file.
          */
         static SerializationNode create(const std::string& filename) {
             auto file = std::make_unique<HighFive::File>(filename, HighFive::File::Overwrite);
-            return SerializationNode(std::move(file));
+            SerializationNode node(std::move(file));
+            node.writeAttribute(FormatVersionAttribute, FormatVersion);
+            return node;
         }
 
         /**
-         * Opens an existing file read-only and returns its root node.
+         * Opens an existing file read-only and returns its root node, warning if its serialization format
+         * version is missing or differs from the current one.
          * @param filename the file to open.
          * @return the root node of the file.
          */
         static SerializationNode open(const std::string& filename) {
             auto file = std::make_unique<HighFive::File>(filename, HighFive::File::ReadOnly);
-            return SerializationNode(std::move(file));
+            SerializationNode node(std::move(file));
+            if (const auto version = node.readOptionalAttribute<int>(FormatVersionAttribute)) {
+                if (*version != FormatVersion) {
+                    JGAP_LOG_WARN("'{}' was written with jgap serialization format v{}, but this build "
+                                  "uses v{}; deserialization may be incorrect.", filename, *version, FormatVersion);
+                }
+            } else {
+                JGAP_LOG_WARN("'{}' has no jgap serialization format version stamp (pre-versioning file, "
+                              "or not a jgap serialization file).", filename);
+            }
+            return node;
         }
 
         /**
@@ -161,7 +183,7 @@ namespace jgap {
         }
 
         /**
-         * Loads descriptors previously written by {@link #saveSparsePoints}.
+         * Loads descriptors previously written by {@link SerializationNode#saveSparsePoints}.
          * @tparam Dim descriptor dimension.
          * @return the stored descriptors.
          */

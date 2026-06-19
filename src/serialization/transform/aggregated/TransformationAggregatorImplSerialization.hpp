@@ -85,6 +85,12 @@ namespace jgap {
     // Explicit instantiations
     extern template class TransformationAggregatorImplSerialization<1, 2>;
     extern template class TransformationAggregatorImplSerialization<1, 3>;
+    extern template class TransformationAggregatorImplSerialization<2, 2>;
+    extern template class TransformationAggregatorImplSerialization<2, 3>;
+    extern template class TransformationAggregatorImplSerialization<3, 2>;
+    extern template class TransformationAggregatorImplSerialization<3, 3>;
+    extern template class TransformationAggregatorImplSerialization<4, 2>;
+    extern template class TransformationAggregatorImplSerialization<4, 3>;
 }
 
 #endif

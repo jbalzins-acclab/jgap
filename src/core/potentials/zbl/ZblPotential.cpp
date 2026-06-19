@@ -12,8 +12,11 @@
 namespace jgap {
 
     namespace {
-#if defined(__has_embed)
+        // Returns the contents of a built-in screening dataset. With #embed it is baked into the binary;
+        // without it, the data is read at runtime from resources/dmol-screening-fit/<dataset>.dat, with a
+        // clear error (and how to fix it) when that file can't be found.
         std::string getEmbeddedDataset(EmbeddedZBLCoeffDataset type) {
+#if defined(__has_embed)
             switch (type) {
                 case EmbeddedZBLCoeffDataset::NLH:
                     return std::string(reinterpret_cast<const char*>(nlh_dat), nlh_dat_len);
@@ -23,8 +26,33 @@ namespace jgap {
                     return std::string(reinterpret_cast<const char*>(mp2_dat), mp2_dat_len);
             }
             return "";
-        }
+#else
+            std::string dataset_name;
+            switch (type) {
+                case EmbeddedZBLCoeffDataset::NLH:  dataset_name = "nlh.dat";  break;
+                case EmbeddedZBLCoeffDataset::DMOL: dataset_name = "dmol.dat"; break;
+                case EmbeddedZBLCoeffDataset::MP2:  dataset_name = "mp2.dat";  break;
+            }
+            const std::string path = "resources/dmol-screening-fit/" + dataset_name;
+
+            std::ifstream file(path, std::ios::binary);
+            if (!file.is_open()) {
+                JGAP_LOG_AND_THROW(
+                    "This build was compiled without #embed (needs GCC 15+ or Clang 19+), so the built-in "
+                    "ZBL screening dataset is loaded from '{}' at runtime, but that file was not found. "
+                    "Fix it by one of:\n"
+                    "  - run from a directory that contains the project's 'resources/' folder (e.g. copy "
+                    "resources/ next to the executable),\n"
+                    "  - rebuild jgap with a #embed-capable compiler (GCC 15+ / Clang 19+), or\n"
+                    "  - pass an explicit ZBL dataset file (ZblPotential(filename, training_data), or the "
+                    "fit's zbl_dataset_file option).",
+                    path);
+            }
+            std::ostringstream contents;
+            contents << file.rdbuf();
+            return contents.str();
 #endif
+        }
 
         std::set<SpeciesSet<2, Symmetric>> deducePairs(const std::vector<Atoms>& training_data) {
             std::set<SpeciesSet<2, Symmetric>> species_pairs;
@@ -87,7 +115,6 @@ namespace jgap {
         };
     }
 
-#if defined(__has_embed)
     ZblPotential::ZblPotential(const std::set<SpeciesSet<2, Symmetric>>& species,
                                EmbeddedZBLCoeffDataset embedded_dataset,
                                Real cutoff,
@@ -108,7 +135,20 @@ namespace jgap {
         std::istringstream dataset_stream(getEmbeddedDataset(embedded_dataset));
         loadDataset(dataset_stream, &pairs);
     }
-#endif
+
+    ZblPotential::ZblPotential(const std::string& dataset_filename,
+                               const std::vector<Atoms>& training_data,
+                               Real cutoff,
+                               Real cutoff_transition_width)
+        : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
+          cutoff_function(cutoff, cutoff_transition_width) {
+        std::ifstream dataset_file(dataset_filename);
+        if (!dataset_file.is_open()) {
+            JGAP_LOG_AND_THROW("Could not open ZBL dataset file '{}'", dataset_filename);
+        }
+        std::set<SpeciesSet<2, Symmetric>> pairs = deducePairs(training_data);
+        loadDataset(dataset_file, &pairs);
+    }
 
     ZblPotential::ZblPotential(std::istream& custom_dataset,
                                const std::set<SpeciesSet<2, Symmetric>>& species,

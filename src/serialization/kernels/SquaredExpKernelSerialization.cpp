@@ -37,5 +37,10 @@ namespace jgap {
 
     template class SquaredExpKernelSerialization<1, 0>;
     template class SquaredExpKernelSerialization<1, 1>;
+    template class SquaredExpKernelSerialization<2, 0>;
+    template class SquaredExpKernelSerialization<2, 1>;
+    template class SquaredExpKernelSerialization<3, 0>;
     template class SquaredExpKernelSerialization<3, 1>;
+    template class SquaredExpKernelSerialization<4, 0>;
+    template class SquaredExpKernelSerialization<4, 1>;
 }

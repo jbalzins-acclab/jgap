@@ -11,8 +11,6 @@ namespace jgap {
         bool serialize(const ValuePtr<CutoffFunction>& obj, SerializationNode& node) const override;
         ValuePtr<CutoffFunction> deserialize(const SerializationNode& node) const override;
     };
-
-    REGISTER_SERIALIZATION(CosCutoffSerialization, CutoffFunction)
 }
 
 #endif

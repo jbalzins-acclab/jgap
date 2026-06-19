@@ -28,4 +28,5 @@ namespace jgap {
         return PerriotPolynomialCutoff(cutoff, cutoff_transition_width);
     }
 
+    REGISTER_SERIALIZATION(PerriotPolynomialCutoffSerialization, CutoffFunction)
 }

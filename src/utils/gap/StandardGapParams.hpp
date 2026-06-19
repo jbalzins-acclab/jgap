@@ -2,6 +2,8 @@
 #define JGAP_STANDARDGAPPARAMS_HPP
 
 #include <array>
+#include <optional>
+#include <string>
 #include "core/transform/eam/EamPairFunction.hpp"
 #include "core/transform/eam/FSGenPairFunction.hpp"
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
@@ -9,6 +11,8 @@
 namespace jgap {
     struct StandardGapParams {
         size_t seed;
+        // External ZBL: read its coefficients from this file if set, otherwise use the built-in dataset.
+        std::optional<std::string> zbl_dataset_file{};
         // EAM params
         ValuePtr<ClusterTransformation<1, 2>> eam_pf = FSGenPairFunction(4.5, 3.0);
         size_t eam_n_sparse = 20;

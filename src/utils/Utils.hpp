@@ -5,6 +5,7 @@
 #include <vector>
 #include <ranges>
 #include <cmath>
+#include <chrono>
 #include <map>
 #include <iosfwd>
 #include <Eigen/Dense>
@@ -29,6 +30,12 @@ namespace jgap {
     #endif
 
     bool getLine(std::istream &file, std::string &line);
+
+    /// Milliseconds elapsed since `start` (capture the start with std::chrono::steady_clock::now()).
+    std::chrono::milliseconds elapsedMillisSince(std::chrono::steady_clock::time_point start);
+
+    /// Formats a duration as zero-padded "mm:ss:ms", e.g. 65300ms -> "01:05:300".
+    std::string formatDuration(std::chrono::milliseconds duration);
 
     std::vector<Atoms> readAtoms(const std::string& filename);
     std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names);

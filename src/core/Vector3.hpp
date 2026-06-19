@@ -99,7 +99,7 @@ namespace jgap {
             return *this * (1.0 / norm());
         }
 
-        Real min() const {
+        Real minComponent() const {
             const Real t = abs(x) < abs(y) ? x : y;
             return abs(t) < abs(z) ? abs(t) : abs(z);
         }

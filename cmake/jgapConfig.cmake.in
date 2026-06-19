@@ -1,0 +1,15 @@
+@PACKAGE_INIT@
+
+# Re-find the public dependencies that the jgap::jgap target's interface refers to, so that linking
+# jgap::jgap is all a consumer needs.
+include(CMakeFindDependencyMacro)
+find_dependency(Eigen3 CONFIG)
+find_dependency(TBB CONFIG)
+find_dependency(HighFive CONFIG)
+if (@pugixml_FOUND@)
+    find_dependency(pugixml CONFIG)
+endif ()
+
+include("${CMAKE_CURRENT_LIST_DIR}/jgapTargets.cmake")
+
+check_required_components(jgap)
