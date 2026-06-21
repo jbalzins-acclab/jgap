@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "core/Matrix.hpp"
+#include "core/RowMajorMatrix.hpp"
 #include "core/atomic/Atoms.hpp"
 #include "core/atomic/energy/AtomicQuantities.hpp"
 #include "core/atomic/energy/AtomicQuantity.hpp"
@@ -17,11 +17,11 @@ namespace jgap {
     public:
         virtual ~GapComponent() = default;
         virtual std::optional<AtomicQuantities> covariate(const NeighbourList& neighbour_list) const = 0;
-        virtual Matrix sparseToSparseCovariance() const = 0;
+        virtual RowMajorMatrix sparseToSparseCovariance() const = 0;
         virtual size_t nSparsePoints() const = 0;
         virtual Cutoffs getCutoffs() const = 0;
 
-        virtual std::unique_ptr<GapComponent> clone() const = 0;
+        virtual GapComponent* clone() const = 0;
 
         template <std::forward_iterator It>
         void setCoefficients(It& iter);

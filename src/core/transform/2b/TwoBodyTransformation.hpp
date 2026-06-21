@@ -33,8 +33,8 @@ namespace jgap {
             return cutoff;
         }
 
-        std::unique_ptr<ClusterTransformation> clone() const override {
-            return std::make_unique<TwoBodyTransformation>(*this);
+        TwoBodyTransformation* clone() const override {
+            return new TwoBodyTransformation(*this);
         }
 
         Real symmetryFactor() const override {

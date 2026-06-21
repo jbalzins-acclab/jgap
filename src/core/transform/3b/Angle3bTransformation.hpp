@@ -80,8 +80,8 @@ namespace jgap {
             return 2.0;
         }
 
-        std::unique_ptr<ClusterTransformation<4, 3>> clone() const override {
-            return std::make_unique<Angle3bTransformation>(*this);
+        Angle3bTransformation* clone() const override {
+            return new Angle3bTransformation(*this);
         }
 
     private:

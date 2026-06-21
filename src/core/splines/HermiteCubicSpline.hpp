@@ -14,8 +14,8 @@ namespace jgap {
         InterpolationResults<1> interpolate(std::array<Real, 1> pos) const override;
         std::array<Real, 1> getCutoff() const override;
 
-        std::unique_ptr<Spline<1>> clone() const override {
-            return std::make_unique<HermiteCubicSpline>(*this);
+        HermiteCubicSpline* clone() const override {
+            return new HermiteCubicSpline(*this);
         }
 
         const Grid<1>& getTable() const { return table; }

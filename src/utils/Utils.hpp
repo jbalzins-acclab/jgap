@@ -14,7 +14,7 @@
 #include "core/Real.hpp"
 
 namespace jgap {
-    struct AtomsPropertyNames;
+    struct MainXYZPropertyNames;
     class Atoms;
 
     // Portable sincos implementation
@@ -30,15 +30,6 @@ namespace jgap {
     #endif
 
     bool getLine(std::istream &file, std::string &line);
-
-    /// Milliseconds elapsed since `start` (capture the start with std::chrono::steady_clock::now()).
-    std::chrono::milliseconds elapsedMillisSince(std::chrono::steady_clock::time_point start);
-
-    /// Formats a duration as zero-padded "mm:ss:ms", e.g. 65300ms -> "01:05:300".
-    std::string formatDuration(std::chrono::milliseconds duration);
-
-    std::vector<Atoms> readAtoms(const std::string& filename);
-    std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names);
 
     std::map<std::string, std::string> parseHeaderLine(const std::string &line);
 

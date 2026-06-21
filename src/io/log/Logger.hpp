@@ -71,7 +71,7 @@ namespace jgap {
         }
 
         template <typename... Args>
-        [[noreturn]] void logAndThrow(const std::string_view fmt, Args&&... args) {
+        void logAndThrow(const std::string_view fmt, Args&&... args) {
             const std::string msg = std::vformat(fmt, std::make_format_args(args...));
             log(LogLevel::Error, msg);
             throw std::runtime_error(msg);
@@ -79,7 +79,7 @@ namespace jgap {
 
         // Same as logAndThrow but also passes source location metadata
         template <typename... Args>
-        [[noreturn]] void logAndThrowSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
+        void logAndThrowSrc(const char* file, int line, const char* func, const std::string_view fmt, Args&&... args) {
             const std::string msg = std::vformat(fmt, std::make_format_args(args...));
             logWithSrc(LogLevel::Error, msg, file, line, func);
             throw std::runtime_error(msg);

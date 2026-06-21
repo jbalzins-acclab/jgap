@@ -14,16 +14,28 @@
 #include "io/log/CurrentLogger.hpp"
 #include <fstream>
 #include <cmath>
+#include <filesystem>
 #include <set>
 
 #include "core/potentials/spline/SplinePairPotential.hpp"
 #include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
 
 namespace jgap {
-    ValuePtr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded) {
+    ValuePtr<Potential> QuipXmlConverter::transform(const std::filesystem::path& xml_filename) {
+        pugi::xml_document doc;
+        const pugi::xml_parse_result parsed = doc.load_file(xml_filename.c_str());
+        if (!parsed) {
+            JGAP_LOG_AND_THROW("Failed to parse '{}': {}", xml_filename.string(), parsed.description());
+        }
+        // sparseX filenames in the .xml are relative to the .xml's own directory.
+        return transform(doc.document_element(), xml_filename.parent_path());
+    }
+
+    ValuePtr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded,
+                                                    const std::filesystem::path& base_dir) {
 
         if (quip_potential_encoded.name() == std::string("GAP_params")) {
-            return transformGapParams(quip_potential_encoded);
+            return transformGapParams(quip_potential_encoded, base_dir);
         }
 
         if (quip_potential_encoded.name() == std::string("pairpot")) {
@@ -32,7 +44,7 @@ namespace jgap {
 
         ValuePtr<Potential> gap_or_isolated = nullptr;
         if (quip_potential_encoded.child("GAP_params")) {
-            gap_or_isolated = transformGapParams(quip_potential_encoded.child("GAP_params"));
+            gap_or_isolated = transformGapParams(quip_potential_encoded.child("GAP_params"), base_dir);
         }
 
         ValuePtr<Potential> pairpot = nullptr;
@@ -105,7 +117,8 @@ namespace jgap {
         return result;
     }
 
-    ValuePtr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node& quip_gap_params) {
+    ValuePtr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node& quip_gap_params,
+                                                             const std::filesystem::path& base_dir) {
         ValuePtr<Potential> isolated_atom_pot = nullptr;
         if (!quip_gap_params.child("GAP_data").empty()) {
             isolated_atom_pot = transformIsolatedAtomParams(quip_gap_params.child("GAP_data"));
@@ -114,7 +127,7 @@ namespace jgap {
             return isolated_atom_pot;
         }
 
-        auto gap_potential = transformSparseData(quip_gap_params.child("gpSparse"));
+        auto gap_potential = transformSparseData(quip_gap_params.child("gpSparse"), base_dir);
 
         gap_potential.optional_external_potential = std::move(isolated_atom_pot);
 
@@ -137,7 +150,8 @@ namespace jgap {
         return IsolatedAtomPotential(isolated_atom_energies);
     }
 
-    GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data) {
+    GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data,
+                                                       const std::filesystem::path& base_dir) {
 
         GapPotential result;
 
@@ -217,11 +231,11 @@ namespace jgap {
 
             ValuePtr<GapComponent> new_comp;
             if (main_data.type == "distance_2b") {
-                new_comp = transformDistance2b(main_data, sparse_node);
+                new_comp = transformDistance2b(main_data, sparse_node, base_dir);
             } else if (main_data.type == "angle_3b") {
-                new_comp = transformAngle3b(main_data, sparse_node);
+                new_comp = transformAngle3b(main_data, sparse_node, base_dir);
             } else if (main_data.type == "eam_density") {
-                new_comp = transformEam(main_data, sparse_node, species_encountered);
+                new_comp = transformEam(main_data, sparse_node, species_encountered, base_dir);
             } else {
                 JGAP_LOG_AND_THROW("Unknown descriptor type");
             }
@@ -231,8 +245,18 @@ namespace jgap {
         return result;
     }
 
+    std::string QuipXmlConverter::resolveSparseX(const std::filesystem::path& base_dir,
+                                                 const std::string& filename) {
+        const std::filesystem::path p(filename);
+        if (p.is_absolute() || base_dir.empty()) {
+            return filename;
+        }
+        return (base_dir / p).string();
+    }
+
     ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
-                                                                 const pugi::xml_node &distance_2b_node) {
+                                                                 const pugi::xml_node &distance_2b_node,
+                                                                 const std::filesystem::path& base_dir) {
 
         double cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();
@@ -244,7 +268,7 @@ namespace jgap {
 
         Species species2 = Species::fromAtomicNumber(std::stoi(param_map["Z2"]));
 
-        SpeciesSet<2, Symmetric> species_set(species1.symbol(), species2.symbol());
+        SpeciesSet<2, FullSymmetry> species_set(species1.symbol(), species2.symbol());
 
         ValuePtr<ClusterTransformation<2, 2>> trans = TwoBodyTransformation(
             CosCutoff(main_data.cutoff, cutoff_transition_width)
@@ -255,7 +279,7 @@ namespace jgap {
         std::vector<Real> coeffs;
 
         double r;
-        std::string points_filename = distance_2b_node.attribute("sparseX_filename").as_string();
+        std::string points_filename = resolveSparseX(base_dir, distance_2b_node.attribute("sparseX_filename").as_string());
         std::ifstream fin(points_filename);
         if (!fin.is_open()) {
             JGAP_LOG_AND_THROW("Could not open file {}", points_filename);
@@ -276,7 +300,8 @@ namespace jgap {
     }
 
     ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData &mainData,
-                                                                     const pugi::xml_node &angle3b_node) {
+                                                                     const pugi::xml_node &angle3b_node,
+                                                                     const std::filesystem::path& base_dir) {
 
         double r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
         if (mainData.r_min.has_value()) r_min = mainData.r_min.value();
@@ -303,7 +328,7 @@ namespace jgap {
         std::vector<Real> coeffs;
 
         Vector3 q{};
-        std::string pointsFilename = angle3b_node.attribute("sparseX_filename").as_string();
+        std::string pointsFilename = resolveSparseX(base_dir, angle3b_node.attribute("sparseX_filename").as_string());
         std::ifstream fin(pointsFilename);
         if (!fin.is_open()) {
             JGAP_LOG_AND_THROW("Could not open file {}", pointsFilename);
@@ -327,7 +352,8 @@ namespace jgap {
 
     ValuePtr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData &main_data,
                                                                  const pugi::xml_node &eam_node,
-                                                                 const std::set<Species> &species_encountered) {
+                                                                 const std::set<Species> &species_encountered,
+                                                                 const std::filesystem::path& base_dir) {
 
         std::optional<double> rMin = main_data.cutoff_transition_width.transform([&](double val) -> double {
             return main_data.cutoff - val;
@@ -377,7 +403,7 @@ namespace jgap {
         std::vector<Descriptor<1>> sparse_points;
         std::vector<Real> coeffs;
 
-        std::string points_filename = eam_node.attribute("sparseX_filename").as_string();
+        std::string points_filename = resolveSparseX(base_dir, eam_node.attribute("sparseX_filename").as_string());
         std::ifstream fin(points_filename);
         if (!fin.is_open()) {
             JGAP_LOG_AND_THROW("Could not open file " + points_filename);
@@ -399,7 +425,7 @@ namespace jgap {
             );
     }
 
-    ValuePtr<ClusterTransformation<1, 2>> QuipXmlConverter::selectPairFunction(
+    ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(
         const QuipDescriptorData& main_data, std::optional<double> r_min, double prefactor) {
 
         if (main_data.pair_function.value() == "FSgen") {

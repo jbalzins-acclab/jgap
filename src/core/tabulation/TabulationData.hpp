@@ -17,7 +17,7 @@ namespace jgap {
 
         std::map<Species, Real> isolated_energies{};
 
-        NBodyGrids<2, Symmetric> two_body_grids;
+        NBodyGrids<2, FullSymmetry> two_body_grids;
         NBodyGrids<3, HasCentralAtom> three_body_grids;
 
         std::vector<ManyBodyGrids<2>> eam_grids_vec{};

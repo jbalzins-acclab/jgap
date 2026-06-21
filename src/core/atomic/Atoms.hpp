@@ -15,36 +15,68 @@
 #include "core/Real.hpp"
 #include "io/XYZData.hpp"
 #include "energy/AtomicQuantity.hpp"
+#include "utils/Utils.hpp"
 
 namespace jgap {
 
+    /**
+     * Types underlying {@link XYZArrayType} vector types.
+     */
     using AtomValue = std::variant<int, Real, Vector3, std::string, Species>;
 
-    struct AtomsPropertyNames {
-        std::string positions = "pos";
-        std::string species = "species";
-        std::string forces = "force";
-        std::string virials = "virial";
-        std::string energy = "energy";
-        std::string lattice = "Lattice";
-        std::string pbc = "pbc";
-        std::string config_type = "config_type";
-    };
 
+    /**
+     * Stores the positions and species of atoms in a structure,
+     * as well as information on periodicity, and may optionally store
+     * lattice vectors (will provide if the system is periodic)
+     * and energy/virials/forces,
+     * and the "config type" of the structure.
+     *
+     * Positions are guaranteed to be wrapped within the box (i.e. fractional coords \in [0; 1) )
+     * in periodic dimensions.
+     *
+     * Derived from {@link XYZData} to avoid losing any relevant data from the input files.
+     * To avoid duplication and errors that would come with it,
+     * all quantities are found by searching them in the {@link XYZData}'s maps,
+     * looking up by property names defined in {@link MainXYZPropertyNames} upon construction.
+     * This comes at the cost of repeated access being inefficient,
+     * so the getters use the prefix "lookup" instead of "get"
+     * to indicate that finding property requires a map lookup.
+     *
+     * @note Inspired by Atoms from ASE.
+     */
     class Atoms : public XYZData {
     public:
+
+        static std::vector<Atoms> readAtoms(const std::string& filename, const MainXYZPropertyNames& prop_names = {}) {
+            return mapVector(read(filename, prop_names), [&prop_names](const XYZData& d) { return Atoms(d); });
+        }
+
         Atoms(const std::vector<Vector3> &pos,
               const std::vector<Species> &spec,
               const std::optional<Lattice> &lat = std::nullopt,
               std::array<bool, 3> pbc = {false, false, false},
-              const AtomsPropertyNames &names = {});
+              const MainXYZPropertyNames &names = {});
 
-        explicit Atoms(const XYZData& data, const AtomsPropertyNames& names = {});
+        /**
+         * Construct by coping {@link XYZData}.
+         * @throws {@link std::runtime_error} if {@link XYZData} doesn't contain
+         * position/species arrays disguised by array name defined in {@link MainXYZPropertyNames},
+         * or PBC info from there is inconsistent.
+         */
+        explicit Atoms(const XYZData& data);
+        explicit Atoms(XYZData&& data);
 
         Atoms(const Atoms& other) = default;
+        Atoms(Atoms&& other) = default;
         Atoms& operator=(const Atoms& other) = default;
+        Atoms& operator=(Atoms&& other) = default;
 
-        Atoms& operator<<(const AtomicQuantity& quantity);
+        /**
+         * Set energy, forces and virials.
+         * @note essentially to simplify updating energies with the result of {@link Potential#calculateEnergy}.
+         */
+        Atoms& operator<<(const AtomicQuantity& energy_and_derivatives);
 
         std::optional<Lattice> lookupLattice() const;
         void setLattice(const std::optional<Lattice>& lat);
@@ -76,11 +108,7 @@ namespace jgap {
         std::optional<std::string> lookupConfigType() const;
         void setConfigType(const std::string& config_type);
 
-        const AtomsPropertyNames& getMainPropertyNames() const { return main_property_names; }
-
-    private:
-        AtomsPropertyNames main_property_names;
-
+        void validateXYZ();
         void validateSizes() const;
         void wrapPositions();
     };

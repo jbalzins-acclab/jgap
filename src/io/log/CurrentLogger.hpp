@@ -6,6 +6,7 @@
 #include "LogConfig.hpp"
 #include <memory>
 #include <string>
+#include <exception>
 
 namespace jgap {
     class CurrentLogger {
@@ -31,6 +32,8 @@ namespace jgap {
 #define JGAP_LOG_INFO(fmt, ...)  jgap::CurrentLogger::get()->infoSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 #define JGAP_LOG_WARN(fmt, ...)  jgap::CurrentLogger::get()->warnSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 #define JGAP_LOG_ERROR(fmt, ...) jgap::CurrentLogger::get()->errorSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
-#define JGAP_LOG_AND_THROW(fmt, ...) jgap::CurrentLogger::get()->logAndThrowSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define JGAP_LOG_AND_THROW(fmt, ...) \
+    {jgap::CurrentLogger::get()->logAndThrowSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__); \
+    throw std::runtime_error("Log and throw did't throw - CHECK YOUR LOGGER!");}
 
 #endif

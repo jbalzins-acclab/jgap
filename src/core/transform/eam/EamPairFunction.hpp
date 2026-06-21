@@ -101,10 +101,14 @@ namespace jgap {
             return cutoff;
         }
 
+        // Allow ValuePtr<EamPairFunction>
+        EamPairFunction* clone() const override = 0;
+
     protected:
         EamPairFunction(Real cutoff = 0.0, Real prefactor = 1.0)
             : cutoff(cutoff), prefactor(prefactor) {}
 
+    protected:
         Real cutoff;
         Real prefactor;
     };

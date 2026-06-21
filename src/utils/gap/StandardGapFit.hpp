@@ -20,8 +20,6 @@
 
 namespace jgap {
     inline GapPotential standardGapFit(const std::vector<Atoms>& training_data, const StandardGapParams& params) {
-        // A descriptor is included only when its sparse-point count is non-zero; setting eam_n_sparse /
-        // n_sparse2 / n_sparse3 to 0 drops the EAM / 2-body / 3-body part entirely.
         GapPotential potential;
 
         // ====================================================================================
@@ -40,7 +38,9 @@ namespace jgap {
         if (params.n_sparse3 > 0) {
             auto trans3 = Angle3bTransformation(CosCutoff(params.cutoff3, params.cutoff3_width));
             auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
-            auto sparsifier3 = HistogramUniformSparsifier<4>(params.seed, params.n_sparse3, params.active3);
+            auto sparsifier3 = HistogramUniformSparsifier<4>(
+                params.seed, params.n_sparse3, std::array{true, true, true, false}
+                );
             potential.addComponents(NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>::createComponents(
                 training_data, trans3, kernel3, sparsifier3));
         }
@@ -51,7 +51,7 @@ namespace jgap {
         if (params.n_sparse2 > 0) {
             auto trans2 = TwoBodyTransformation(CosCutoff(params.cutoff2, params.cutoff2_width));
             auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
-            auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, params.active2);
+            auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
             potential.addComponents(NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>::createComponents(
                 training_data, trans2, kernel2, sparsifier2));
         }

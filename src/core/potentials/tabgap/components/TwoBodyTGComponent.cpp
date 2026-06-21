@@ -1,7 +1,7 @@
 #include "TwoBodyTGComponent.hpp"
 
 namespace jgap {
-    TwoBodyTGComponent::TwoBodyTGComponent(SpeciesSet<2, Symmetric> species_pair, ValuePtr<Spline<1>> spline)
+    TwoBodyTGComponent::TwoBodyTGComponent(SpeciesSet<2, FullSymmetry> species_pair, ValuePtr<Spline<1>> spline)
         : species_pair(species_pair), spline(std::move(spline)) {
     }
 

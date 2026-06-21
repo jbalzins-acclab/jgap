@@ -13,7 +13,7 @@ namespace jgap {
         virtual void tabulate(TabulationData& tables) const = 0;
         virtual std::set<Species> getAllSpecies() const = 0;
 
-        virtual std::unique_ptr<TabGapComponent> clone() const = 0;
+        virtual TabGapComponent* clone() const = 0;
     };
 }
 

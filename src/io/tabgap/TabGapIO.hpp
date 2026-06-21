@@ -102,7 +102,7 @@ namespace jgap {
         static void write3b(HighFive::Group& root, const ThreeBodyTGComponent& component);
 
         static std::string useSomeComponentsAndGenerateEamFs(const std::vector<Species>& all_species,
-                                      std::map<SpeciesSet<2, Symmetric>, const TwoBodyTGComponent*>& pair_pots,
+                                      std::map<SpeciesSet<2, FullSymmetry>, const TwoBodyTGComponent*>& pair_pots,
                                       std::multimap<Species, const EamTGComponent*>& eam_components);
 
         static void parseEamFs(std::istream& in, TabGapPotential& pot);

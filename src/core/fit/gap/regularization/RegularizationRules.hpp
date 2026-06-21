@@ -10,7 +10,7 @@ namespace jgap {
     public:
         virtual ~RegularizationRules() = default;
         virtual void fillSigmas(Regularization& sigmas, const Atoms& atoms) const = 0;
-        virtual std::unique_ptr<RegularizationRules> clone() const = 0;
+        virtual RegularizationRules* clone() const = 0;
     };
 }
 

@@ -19,8 +19,8 @@ namespace jgap {
 
         void fillTables(TabulationData& table) const override;
 
-        std::unique_ptr<Potential> clone() const override {
-            return std::make_unique<TabGapPotential>(*this);
+        TabGapPotential* clone() const override {
+            return new TabGapPotential(*this);
         }
 
     private:

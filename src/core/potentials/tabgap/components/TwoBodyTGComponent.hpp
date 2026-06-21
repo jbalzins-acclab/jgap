@@ -8,7 +8,7 @@
 namespace jgap {
     class TwoBodyTGComponent : public TabGapComponent {
     public:
-        TwoBodyTGComponent(SpeciesSet<2, Symmetric> species_pair, ValuePtr<Spline<1>> spline);
+        TwoBodyTGComponent(SpeciesSet<2, FullSymmetry> species_pair, ValuePtr<Spline<1>> spline);
 
         AtomicQuantity energy(const NeighbourList &nl) const override;
 
@@ -20,8 +20,8 @@ namespace jgap {
             return {species_pair.getNodes()[0], species_pair.getNodes()[1]};
         }
 
-        std::unique_ptr<TabGapComponent> clone() const override {
-            return std::make_unique<TwoBodyTGComponent>(*this);
+        TwoBodyTGComponent* clone() const override {
+            return new TwoBodyTGComponent(*this);
         }
 
         const auto& getSpeciesPair() const {
@@ -33,7 +33,7 @@ namespace jgap {
         }
 
     private:
-        SpeciesSet<2, Symmetric> species_pair;
+        SpeciesSet<2, FullSymmetry> species_pair;
         ValuePtr<Spline<1>> spline;
     };
 }

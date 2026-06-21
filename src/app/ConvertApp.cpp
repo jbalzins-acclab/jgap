@@ -9,8 +9,6 @@
 #include <iostream>
 #include <string>
 
-#include <pugixml.hpp>
-
 #include "io/convert/QuipXmlConverter.hpp"
 #include "core/potentials/Potential.hpp"
 #include "core/ValuePtr.hpp"
@@ -42,14 +40,7 @@ int main(int argc, char** argv) {
     const std::string input = argv[1];
     const std::string output = (argc == 3) ? std::string(argv[2]) : defaultOutput(input);
 
-    pugi::xml_document doc;
-    const pugi::xml_parse_result parsed = doc.load_file(input.c_str());
-    if (!parsed) {
-        std::cerr << "Failed to parse '" << input << "': " << parsed.description() << "\n";
-        return 1;
-    }
-
-    const ValuePtr<Potential> potential = QuipXmlConverter::transform(doc.document_element());
+    const ValuePtr<Potential> potential = QuipXmlConverter::transform(input);
 
     SerializationRegistry<Potential>::serialize(potential, output);
     JGAP_LOG_INFO("Converted {} -> {}", input, output);

@@ -14,7 +14,7 @@ using namespace jgap;
 
 TEST(SplineTest, OneDimensionalSplines) {
     Species si("Si");
-    ZblPotential zbl({SpeciesSet<2, Symmetric>{si, si}});
+    ZblPotential zbl({SpeciesSet<2, FullSymmetry>{si, si}});
 
     std::vector<Real> r_vec;
     std::vector<Real> e_vec;
@@ -24,7 +24,7 @@ TEST(SplineTest, OneDimensionalSplines) {
     Real spacing = 0.001;
     for (Real r = 0.1; r <= cutoff + 1e-9; r += spacing) {
         r_vec.push_back(r);
-        auto ed = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{si, si}, r);
+        auto ed = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{si, si}, r);
         e_vec.push_back(ed[0]);
         de_vec.push_back(ed[1]);
     }
@@ -56,7 +56,7 @@ TEST(SplineTest, OneDimensionalSplines) {
     }
 
     for (Real r = 0.1005; r < cutoff; r += spacing) {
-        auto ed = zbl.energyAndDerivative(SpeciesSet<2, Symmetric>{si, si}, r);
+        auto ed = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{si, si}, r);
         Real zbl_e = ed[0];
         Real zbl_de = ed[1];
 

@@ -17,7 +17,7 @@ namespace jgap {
 
         virtual Real getCutoff() const = 0;
 
-        virtual std::unique_ptr<CutoffFunction> clone() const = 0;
+        virtual CutoffFunction* clone() const = 0;
     };
 
     static_assert(Cloneable<CutoffFunction>);

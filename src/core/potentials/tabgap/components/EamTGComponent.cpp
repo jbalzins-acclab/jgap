@@ -7,10 +7,10 @@ namespace jgap {
 
     EamTGComponent::EamTGComponent(ManyBodyGrids<2> grids_for_element)
         : energy_spline(HermiteCubicSpline{std::move(grids_for_element.value_grid)}),
-          spline_transformation_aggregator{grids_for_element.central_atom_species} {
+          spline_density_aggregator{grids_for_element.central_atom_species} {
 
         for (auto &[species_pair, eam_pf_grid]: grids_for_element.aggregator_grids.value_grids) {
-            spline_transformation_aggregator.extend(
+            spline_density_aggregator.extend(
                 species_pair,
                 SplinePairTransformation(HermiteCubicSpline(std::move(eam_pf_grid)))
             );
@@ -21,7 +21,7 @@ namespace jgap {
         size_t n = nl.nAtoms();
         AtomicQuantity result(n);
 
-        auto descriptors = spline_transformation_aggregator.aggregate(nl);
+        auto descriptors = spline_density_aggregator.aggregate(nl);
         for (const auto& [atom_idx, atom_descriptor]: descriptors) {
             auto [E, dE_dq] = energy_spline.interpolate(atom_descriptor.value);
 
@@ -37,12 +37,12 @@ namespace jgap {
     }
 
     Cutoffs EamTGComponent::getCutoffs() const {
-        return spline_transformation_aggregator.getCutoffs();
+        return spline_density_aggregator.getCutoffs();
     }
 
     void EamTGComponent::tabulate(TabulationData &tables) const {
 
-        spline_transformation_aggregator.tabulateNewManyBodyGrid(tables);
+        spline_density_aggregator.tabulateNewManyBodyGrid(tables);
         auto& value_grid = tables.eam_grids_vec.back().value_grid;
 
         for (auto cell: value_grid) {
@@ -51,6 +51,6 @@ namespace jgap {
     }
 
     std::set<Species> EamTGComponent::getAllSpecies() const {
-        return spline_transformation_aggregator.getAllSpecies();
+        return spline_density_aggregator.getAllSpecies();
     }
 }

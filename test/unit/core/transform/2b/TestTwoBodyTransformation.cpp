@@ -29,8 +29,8 @@ namespace {
 
         Real getCutoff() const override { return 10.0; }
 
-        std::unique_ptr<CutoffFunction> clone() const override {
-            return std::make_unique<MockCutoff>(*this);
+        MockCutoff* clone() const override {
+            return new MockCutoff(*this);
         }
 
     private:

@@ -6,7 +6,7 @@
 #include "../../../transform/aggregated/TransformationAggregator.hpp"
 #include "core/sparsification/Sparsifier.hpp"
 #include "GapComponent.hpp"
-#include "core/Matrix.hpp"
+#include "core/RowMajorMatrix.hpp"
 #include <memory>
 
 namespace jgap {
@@ -67,8 +67,8 @@ namespace jgap {
             return result;
         }
 
-        Matrix sparseToSparseCovariance() const override {
-            Matrix result(nSparsePoints(), nSparsePoints());
+        RowMajorMatrix sparseToSparseCovariance() const override {
+            RowMajorMatrix result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
                     result(i, j) = kernel.value(sparse_points[i].value, sparse_points[j].value);
@@ -86,8 +86,8 @@ namespace jgap {
             return aggregator->getCutoffs();
         }
 
-        std::unique_ptr<GapComponent> clone() const override {
-            return std::make_unique<ManyBodyGapComponent>(*this);
+        ManyBodyGapComponent* clone() const override {
+            return new ManyBodyGapComponent(*this);
         }
 
         const ValuePtr<TransformationAggregator<Dim>>& getAggregator() const { return aggregator; }

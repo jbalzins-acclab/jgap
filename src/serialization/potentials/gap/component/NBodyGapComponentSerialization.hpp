@@ -93,9 +93,9 @@ namespace jgap {
         }
 
         static SpeciesSet<ClusterSize, ClusterSym> makeSpeciesSet(const std::vector<std::string>& symbols) {
-            if constexpr (ClusterSym == Symmetric && ClusterSize == 2) {
+            if constexpr (ClusterSym == FullSymmetry && ClusterSize == 2) {
                 if (symbols.size() != 2) JGAP_LOG_AND_THROW("Expected 2 species for NBodyGapComponent<*,2,Symmetric>");
-                return SpeciesSet<2, Symmetric>(Species(symbols[0]), Species(symbols[1]));
+                return SpeciesSet<2, FullSymmetry>(Species(symbols[0]), Species(symbols[1]));
             } else if constexpr (ClusterSym == HasCentralAtom && ClusterSize == 3) {
                 if (symbols.size() != 3) JGAP_LOG_AND_THROW("Expected 3 species for NBodyGapComponent<*,3,HasCentralAtom>");
                 return SpeciesSet<3, HasCentralAtom>(Species(symbols[0]), Species(symbols[1]), Species(symbols[2]));

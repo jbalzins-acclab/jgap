@@ -63,10 +63,10 @@ TEST(TestNeighbourList, FindAllClusters) {
     auto ni_fe_pairs = nl.findAllClusters(SpeciesSet<2, HasCentralAtom>{"Ni", "Fe"});
     EXPECT_EQ(ni_fe_pairs.size(), 2);
 
-    auto fe_ni_pairs_symm = nl.findAllClusters(SpeciesSet<2, Symmetric>{"Fe", "Ni"});
+    auto fe_ni_pairs_symm = nl.findAllClusters(SpeciesSet<2, FullSymmetry>{"Fe", "Ni"});
     EXPECT_EQ(fe_ni_pairs_symm.size(), 2);
 
-    auto ni_fe_pairs_symm = nl.findAllClusters(SpeciesSet<2, Symmetric>{"Ni", "Fe"});
+    auto ni_fe_pairs_symm = nl.findAllClusters(SpeciesSet<2, FullSymmetry>{"Ni", "Fe"});
     EXPECT_EQ(ni_fe_pairs_symm.size(), 2);
 
     // --- Test findAllClusters<3> ---

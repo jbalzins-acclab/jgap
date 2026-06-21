@@ -19,12 +19,12 @@ namespace jgap {
 
         std::set<Species> getAllSpecies() const override;
 
-        std::unique_ptr<TabGapComponent> clone() const override {
-            return std::make_unique<EamTGComponent>(*this);
+        EamTGComponent* clone() const override {
+            return new EamTGComponent(*this);
         }
 
         auto getSplineTransformationAggregator() const {
-            return spline_transformation_aggregator;
+            return spline_density_aggregator;
         }
 
         auto getEnergySpline() const {
@@ -32,7 +32,7 @@ namespace jgap {
         }
 
     private:
-        TransformationAggregatorImpl<1, 2> spline_transformation_aggregator;
+        TransformationAggregatorImpl<1, 2> spline_density_aggregator;
         HermiteCubicSpline energy_spline;
     };
 }

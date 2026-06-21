@@ -69,11 +69,11 @@ file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE ALL_SRC_C "${PROJECT_SOURCE_DIR}/src/*.c")
 
 # The src/app/* executables are not part of the library.
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/src/app/.*")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/app/.*")
 
 # The XML converter depends on pugixml; drop it from the library when pugixml is unavailable.
 if (NOT pugixml_FOUND)
-    list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/io/convert/.*")
+    list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/io/convert/Quip.*")
 endif ()
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
@@ -209,8 +209,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     FetchContent_MakeAvailable(googletest)
     enable_testing()
 
-    # All test sources are auto-discovered: any test/unit/**/Test*.cpp is picked up. CONFIGURE_DEPENDS
-    # makes the build re-glob when files are added/removed, so no edit here is needed for a new test.
     file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS
             ${PROJECT_SOURCE_DIR}/test/unit/*.cpp)
 

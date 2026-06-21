@@ -17,8 +17,8 @@ namespace jgap {
         InterpolationResults<3> interpolate(std::array<Real, 3> pos) const override;
         std::array<Real, 3> getCutoff() const override;
 
-        std::unique_ptr<Spline<3>> clone() const override {
-            return std::make_unique<CubicBSpline3D>(*this);
+        CubicBSpline3D* clone() const override {
+            return new CubicBSpline3D(*this);
         }
 
         const Grid<3>& getCoefficients() const {

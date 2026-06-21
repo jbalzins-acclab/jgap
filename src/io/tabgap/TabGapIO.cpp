@@ -9,6 +9,7 @@
 #include "core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
 #include "../../core/transform/eam/SplinePairTransformation.hpp"
 #include "io/log/CurrentLogger.hpp"
+#include "serialization/SerializationNode.hpp"
 
 namespace jgap {
 
@@ -61,6 +62,11 @@ namespace jgap {
         HighFive::File h5_file(resulting_filenames.back(), HighFive::File::Overwrite);
         HighFive::Group root = h5_file.getGroup("/");
 
+        // Stamp the format version on the root, matching what SerializationNode::create() writes for the
+        // registry path, so a standalone tabGAP .h5 read back through the registry isn't flagged as
+        // unversioned.
+        root.createAttribute<int>(SerializationNode::FormatVersionAttribute, SerializationNode::FormatVersion);
+
         const std::vector<std::string> eam_fs_contents = writeToGroup(root, potential);
         h5_file.flush();
 
@@ -111,7 +117,7 @@ namespace jgap {
         }
 
         std::set<Species> species_2b_and_eam;
-        std::map<SpeciesSet<2, Symmetric>, const TwoBodyTGComponent*> pair_pots;
+        std::map<SpeciesSet<2, FullSymmetry>, const TwoBodyTGComponent*> pair_pots;
         std::multimap<Species, const EamTGComponent*> eam_components;
         for (auto& component: potential.components) {
 
@@ -269,7 +275,7 @@ namespace jgap {
      */
     std::string TabGapIO::useSomeComponentsAndGenerateEamFs(
         const std::vector<Species> &all_species,
-        std::map<SpeciesSet<2, Symmetric>, const TwoBodyTGComponent* >& pair_pots,
+        std::map<SpeciesSet<2, FullSymmetry>, const TwoBodyTGComponent* >& pair_pots,
         std::multimap<Species, const EamTGComponent* >& eam_components
         )
     {
@@ -309,7 +315,7 @@ namespace jgap {
         }
 
         // not a ref:
-        std::map<SpeciesSet<2, Symmetric>, Grid<1>> pair_pot_grids{};
+        std::map<SpeciesSet<2, FullSymmetry>, Grid<1>> pair_pot_grids{};
 
         for (const auto& [species_pair, pair_pot]: pair_pots) {
 
@@ -396,7 +402,7 @@ namespace jgap {
                     continue;
                 }
 
-                SpeciesSet<2, Symmetric> species_pair{all_species[i], all_species[j]};
+                SpeciesSet<2, FullSymmetry> species_pair{all_species[i], all_species[j]};
 
                 if (pair_pot_grids.contains(species_pair)) {
                     for (auto cell: pair_pot_grids.at(species_pair)) {
@@ -449,7 +455,7 @@ namespace jgap {
                 std::string species_i, species_j;
                 group.getAttribute("element_i").read(species_i);
                 group.getAttribute("element_j").read(species_j);
-                SpeciesSet<2, Symmetric> pair{species_i, species_j};
+                SpeciesSet<2, FullSymmetry> pair{species_i, species_j};
 
                 std::array<double, 2> limits{}; // origin, cutoff
                 group.getDataSet("grid_limits").read(limits);
@@ -630,7 +636,7 @@ namespace jgap {
             for (size_t j = 0; j < N; j++) {
                 if (i < j) continue;
 
-                SpeciesSet<2, Symmetric> species_pair{elements[i], elements[j]};
+                SpeciesSet<2, FullSymmetry> species_pair{elements[i], elements[j]};
                 Grid<1> energy_grid({n_r}, {dr}, {0.0});
 
                 double r{};

@@ -141,7 +141,7 @@ namespace jgap {
 
             return result;
 
-        } else if constexpr (N == 2 && ClusterType == Symmetric) {
+        } else if constexpr (N == 2 && ClusterType == FullSymmetry) {
 
             std::vector<Cluster<2, CalcType>> result;
 
@@ -230,7 +230,7 @@ namespace jgap {
                     result_set.emplace(s0, s1);
                 }
             }
-        } else if constexpr (N == 2 && ClusterType == Symmetric) {
+        } else if constexpr (N == 2 && ClusterType == FullSymmetry) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
                     result_set.emplace(s0, s1);
@@ -244,7 +244,7 @@ namespace jgap {
                     }
                 }
             }
-        } else if constexpr (N == 3 && ClusterType == Symmetric) {
+        } else if constexpr (N == 3 && ClusterType == FullSymmetry) {
             for (const auto& s0 : species_present) {
                 for (const auto& s1 : species_present) {
                     for (const auto& s2 : species_present) {
@@ -295,21 +295,21 @@ namespace jgap {
     template std::vector<Cluster<2, WithGradients>> NeighbourList
         ::findAllClusters<WithGradients, 2, HasCentralAtom>(const SpeciesSet<2, HasCentralAtom>& species_set) const;
     template std::vector<Cluster<2, WithGradients>> NeighbourList
-        ::findAllClusters<WithGradients, 2, Symmetric>(const SpeciesSet<2, Symmetric>& species_set) const;
+        ::findAllClusters<WithGradients, 2, FullSymmetry>(const SpeciesSet<2, FullSymmetry>& species_set) const;
     template std::vector<Cluster<3, WithGradients>> NeighbourList
         ::findAllClusters<WithGradients, 3, HasCentralAtom>(const SpeciesSet<3, HasCentralAtom>& species_set) const;
 
     template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, HasCentralAtom>(
         const SpeciesSet<2, HasCentralAtom>& species_set) const;
-    template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, Symmetric>(
-        const SpeciesSet<2, Symmetric>& species_set) const;
+    template std::vector<Cluster<2>> NeighbourList::findAllClusters<ValueOnly, 2, FullSymmetry>(
+        const SpeciesSet<2, FullSymmetry>& species_set) const;
     template std::vector<Cluster<3>> NeighbourList::findAllClusters<ValueOnly, 3, HasCentralAtom>(
         const SpeciesSet<3, HasCentralAtom>& species_set) const;
 
     template std::vector<SpeciesSet<2, HasCentralAtom>> NeighbourList::getSpeciesSets<2, HasCentralAtom>() const;
-    template std::vector<SpeciesSet<2, Symmetric>> NeighbourList::getSpeciesSets<2, Symmetric>() const;
+    template std::vector<SpeciesSet<2, FullSymmetry>> NeighbourList::getSpeciesSets<2, FullSymmetry>() const;
     template std::vector<SpeciesSet<3, HasCentralAtom>> NeighbourList::getSpeciesSets<3, HasCentralAtom>() const;
-    template std::vector<SpeciesSet<3, Symmetric>> NeighbourList::getSpeciesSets<3, Symmetric>() const;
+    template std::vector<SpeciesSet<3, FullSymmetry>> NeighbourList::getSpeciesSets<3, FullSymmetry>() const;
 
     template std::vector<SpeciesSet<2, HasCentralAtom>> NeighbourList::getSpeciesSets<2>(
         Species central_atom_species) const;

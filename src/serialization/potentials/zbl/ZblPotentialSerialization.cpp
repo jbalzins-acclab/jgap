@@ -43,7 +43,7 @@ namespace jgap {
         }
         const auto& coefficients_group = coefficients_group_opt.value();
 
-        std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> coefficients;
+        std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> coefficients;
         for (const auto& group_name : coefficients_group.getChildNames()) {
             auto pair_group_opt = coefficients_group.getGroup(group_name);
             if (!pair_group_opt) {
@@ -55,7 +55,7 @@ namespace jgap {
             if (species_symbols.size() != 2) {
                 JGAP_LOG_AND_THROW("Expected 2 species in species_set for ZblPotential");
             }
-            SpeciesSet<2, Symmetric> pair{Species(species_symbols[0]), Species(species_symbols[1])};
+            SpeciesSet<2, FullSymmetry> pair{Species(species_symbols[0]), Species(species_symbols[1])};
 
             coefficients[pair] = pair_group.readDataSet<std::array<Real, 6>>("coeffs");
         }

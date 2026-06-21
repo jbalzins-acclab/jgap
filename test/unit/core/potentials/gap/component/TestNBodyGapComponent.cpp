@@ -33,8 +33,8 @@ namespace {
             return ClusterSize == 3 ? 2.0 : 1.0;
         }
 
-        std::unique_ptr<ClusterTransformation<Dim, ClusterSize>> clone() const override {
-            return std::make_unique<MockClusterTransformation<Dim, ClusterSize>>();
+        MockClusterTransformation* clone() const override {
+            return new MockClusterTransformation();
         }
     };
 
@@ -158,8 +158,8 @@ TEST(TestNBodyGapComponent, RealTwoBody) {
     auto trans = TwoBodyTransformation(CosCutoff(5.0, 2.0));
     auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0});
     std::vector<Descriptor<2>> sparse_points = { {{{4.0, 1.0}}} };
-    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
-        SpeciesSet<2, Symmetric>{"Fe", "Ni"}, trans, kernel, sparse_points
+    auto component = NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
+        SpeciesSet<2, FullSymmetry>{"Fe", "Ni"}, trans, kernel, sparse_points
     );
 
     auto result = component.covariate(nl);
@@ -222,8 +222,8 @@ TEST(TestNBodyGapComponent, TabulationTwoBody) {
     auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0});
     std::vector<Descriptor<2>> sparse_points = { {{{4.0, 1.0}}}, {{{3.5, 0.5}}} };
     std::vector<Real> coeffs = {2.0, -1.0};
-    SpeciesSet<2, Symmetric> species{"Fe", "Ni"};
-    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
+    SpeciesSet<2, FullSymmetry> species{"Fe", "Ni"};
+    auto component = NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
         species, trans, kernel, sparse_points
     );
 

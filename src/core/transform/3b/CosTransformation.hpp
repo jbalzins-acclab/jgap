@@ -60,8 +60,8 @@ namespace jgap {
             return {};
         }
 
-        std::unique_ptr<ClusterTransformation> clone() const override {
-            return std::make_unique<CosTransformation>(*this);
+        CosTransformation* clone() const override {
+            return new CosTransformation(*this);
         }
     };
 }

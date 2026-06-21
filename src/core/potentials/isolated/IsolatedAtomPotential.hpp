@@ -22,8 +22,8 @@ namespace jgap {
             }
         }
 
-        std::unique_ptr<Potential> clone() const override {
-            return std::make_unique<IsolatedAtomPotential>(*this);
+        IsolatedAtomPotential* clone() const override {
+            return new IsolatedAtomPotential(*this);
         }
 
         const std::map<Species, Real>& getIsolatedEnergies() const {

@@ -30,7 +30,7 @@ namespace jgap {
             return 1.0;
         }
 
-        virtual std::unique_ptr<ClusterTransformation> clone() const = 0;
+        virtual ClusterTransformation* clone() const = 0;
     };
 
     static_assert(Cloneable<ClusterTransformation<1, 2>>);

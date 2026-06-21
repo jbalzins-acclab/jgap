@@ -41,8 +41,8 @@ namespace jgap {
             return {{2u, spline.getCutoff()[0]}};
         }
 
-        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
-            return std::make_unique<SplinePairTransformation>(*this);
+        SplinePairTransformation* clone() const override {
+            return new SplinePairTransformation(*this);
         }
 
         const auto& getSpline() const {

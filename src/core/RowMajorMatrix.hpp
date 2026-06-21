@@ -8,9 +8,14 @@
 
 namespace jgap {
 
-    class Matrix {
+    /**
+     * Simple wrapper for a matrix stored in a single memory block, in a row-major order.
+     * Intended to be used outside the code blocks directly doing the linear algebra
+     * (essentially for @link GapComponent to provide Sparse-Sparse K_MM matrix blocks).
+     */
+    class RowMajorMatrix {
     public:
-        Matrix(const size_t rows, const size_t columns)
+        RowMajorMatrix(const size_t rows, const size_t columns)
             : rows(rows), columns(columns) {
             try {
                 data = std::vector(rows * columns, Real{});
@@ -18,7 +23,7 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("Matrix memory allocation failed");
             }
         }
-        ~Matrix() = default;
+        ~RowMajorMatrix() = default;
 
         Real& operator()(const size_t i, const size_t j) {
             return data[i * columns + j];

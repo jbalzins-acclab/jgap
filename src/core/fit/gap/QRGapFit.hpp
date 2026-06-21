@@ -57,7 +57,7 @@ namespace jgap {
                                          size_t starting_row);
 
         static EigenMatrix choleskyDecomposition(EigenMatrix& matrix_block);
-        static EigenMatrix convertToEigen(Matrix& matrix_block);
+        static EigenMatrix convertToEigen(RowMajorMatrix& matrix_block);
     };
 }
 

@@ -31,8 +31,8 @@ namespace jgap {
             return {{{val}}, {std::array{deriv}}};
         }
 
-        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
-            return std::make_unique<FSGenPairFunction>(*this);
+        FSGenPairFunction* clone() const override {
+            return new FSGenPairFunction(*this);
         }
 
         Real getDegree() const {

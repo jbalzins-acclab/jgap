@@ -32,8 +32,8 @@ namespace jgap {
 
         void fillTables(TabulationData &table) const override;
 
-        std::unique_ptr<Potential> clone() const override {
-            return std::make_unique<CompositePotential>(*this);
+        CompositePotential* clone() const override {
+            return new CompositePotential(*this);
         }
 
     private:

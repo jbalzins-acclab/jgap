@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 #include "AtomicQuantity.hpp"
-#include "core/Matrix.hpp"
+#include "core/RowMajorMatrix.hpp"
 
 namespace jgap {
     class AtomicQuantities {

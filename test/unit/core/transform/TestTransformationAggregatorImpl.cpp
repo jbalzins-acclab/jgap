@@ -25,8 +25,8 @@ namespace {
             return {{{value_to_return_}}, {std::array<Real, 1>{deriv}}};
         }
 
-        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
-            return std::make_unique<MockEamPairFunction>(*this);
+        MockEamPairFunction* clone() const override {
+            return new MockEamPairFunction(*this);
         }
 
     private:

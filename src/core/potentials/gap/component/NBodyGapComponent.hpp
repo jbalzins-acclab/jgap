@@ -9,7 +9,7 @@
 #include "core/transform/ClusterTransformation.hpp"
 #include "core/sparsification/Sparsifier.hpp"
 #include "GapComponent.hpp"
-#include "core/Matrix.hpp"
+#include "core/RowMajorMatrix.hpp"
 
 namespace jgap {
 
@@ -117,8 +117,8 @@ namespace jgap {
             return result;
         }
 
-        Matrix sparseToSparseCovariance() const override {
-            Matrix result(nSparsePoints(), nSparsePoints());
+        RowMajorMatrix sparseToSparseCovariance() const override {
+            RowMajorMatrix result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
                     result(i, j) = kernel.value(sparse_points[i].value, sparse_points[j].value);
@@ -136,8 +136,8 @@ namespace jgap {
             return transformation->getCutoffs();
         }
 
-        std::unique_ptr<GapComponent> clone() const override {
-            return std::make_unique<NBodyGapComponent>(*this);
+        NBodyGapComponent* clone() const override {
+            return new NBodyGapComponent(*this);
         }
 
         const SpeciesSet<ClusterSize, ClusterSym>& getSpecies() const { return species; }
@@ -153,7 +153,7 @@ namespace jgap {
 
             Grid<Dependencies>* table_ref = nullptr;
 
-            if constexpr (ClusterSize == 2 && ClusterSym == Symmetric) {
+            if constexpr (ClusterSize == 2 && ClusterSym == FullSymmetry) {
                 table_ref = &tables.two_body_grids.getValueGrid(species);
             } else if constexpr (ClusterSize == 3 && ClusterSym == HasCentralAtom) {
                 table_ref = &tables.three_body_grids.getValueGrid(species);

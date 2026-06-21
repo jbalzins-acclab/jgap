@@ -12,20 +12,46 @@
 
 namespace jgap {
 
+    /**
+     * Indicates whether an atomic cluster({@link Cluster} @ index=0) has a special "root" atom
+     * that is not compliant with PERMUTATION symmetry.
+     *
+     * If yes, this also indicates that the {@link NBodyDescriptor} derived from this cluster
+     * is exclusively "owned" by this "root" atom.
+     */
     enum class ClusterSymmetry {
         HasCentralAtom,
-        Symmetric
+        FullSymmetry
     };
 
     using ClusterSymmetry::HasCentralAtom;
-    using ClusterSymmetry::Symmetric;
+    using ClusterSymmetry::FullSymmetry;
 
+    /**
+     * Cluster's species stored as [root if present] + set of nodes.
+     * Nodes are sorted upon construction and are immutable afterward,
+     * so given atoms in different relative indexing,
+     * the same cluster would correspond to the same instance of SpeciesSet.
+     *
+     * @note Ordering uses internal ids, so order-sensitive data, like coefficients,
+     * should be stored within a node when species sets are used as,
+     * e.g., map keys for these nodes.
+     *
+     * @note Intended workflow is:
+     * define species set of interest -> find all clusters with atom[index].species = set[index]
+     * (where set[0] = root, if root is present), as in {@link NeighbourList}.
+     * Finding a cluster first and determining its species set after
+     * requires special care when dealing with indices.
+     *
+     * @tparam NSpecies size of the associated cluster
+     * @tparam ClusterSym permutation symmetry of the cluster
+     */
     template<size_t NSpecies, ClusterSymmetry ClusterSym>
     class SpeciesSet;
 
     template<size_t NSpecies>
     requires(NSpecies > 1)
-    class SpeciesSet<NSpecies, Symmetric> {
+    class SpeciesSet<NSpecies, FullSymmetry> {
     public:
         static constexpr size_t N = NSpecies;
 

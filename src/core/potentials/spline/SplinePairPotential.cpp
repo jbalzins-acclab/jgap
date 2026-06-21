@@ -14,12 +14,12 @@ namespace jgap {
                                      const std::vector<Real> &r,
                                      const std::vector<Real> &energies) {
 
-        if (per_species_interpolators.contains(SpeciesSet<2, Symmetric>{species1, species2})) {
+        if (per_species_interpolators.contains(SpeciesSet<2, FullSymmetry>{species1, species2})) {
             JGAP_LOG_AND_THROW("Trying to re-write interpolators for {}-{} pair", species1.symbol(), species2.symbol());
         }
 
         per_species_interpolators.emplace(
-            SpeciesSet<2, Symmetric>{species1, species2}, NaturalCubicSpline(r, energies)
+            SpeciesSet<2, FullSymmetry>{species1, species2}, NaturalCubicSpline(r, energies)
             );
     }
 

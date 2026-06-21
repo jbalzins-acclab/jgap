@@ -272,7 +272,7 @@ namespace jgap {
         return llt.matrixU();
     }
 
-    EigenMatrix QRGapFit::convertToEigen(Matrix &matrix_block) {
+    EigenMatrix QRGapFit::convertToEigen(RowMajorMatrix &matrix_block) {
         return Eigen::Map<Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
             matrix_block.rawData().data(), matrix_block.nRows(), matrix_block.nColumns()
             );

@@ -34,8 +34,8 @@ TEST(TestQRGapFit, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) {
     auto trans = TwoBodyTransformation(CosCutoff(10.0, 0.7));
     auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
     std::vector<Descriptor<2>> sparse_points = { {{{3.0, 1.0}}} };
-    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
-        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, trans, kernel, sparse_points
+    auto component = NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
+        SpeciesSet<2, FullSymmetry>{"Fe", "Fe"}, trans, kernel, sparse_points
         );
 
     auto potential = GapPotential({component});
@@ -60,8 +60,8 @@ GapPotential create2bPotential(const std::vector<Real>& sparsePts) {
         sparse_points.push_back({{{r, ref_cutoff.evaluate(r)}}});
     }
 
-    auto component = NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
-        SpeciesSet<2, Symmetric>{"Fe", "Fe"}, std::move(trans), kernel, sparse_points);
+    auto component = NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
+        SpeciesSet<2, FullSymmetry>{"Fe", "Fe"}, std::move(trans), kernel, sparse_points);
 
     return GapPotential{{component}};
 }

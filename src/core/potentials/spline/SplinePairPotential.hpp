@@ -20,8 +20,8 @@ namespace jgap {
 
         void fillTables(TabulationData &tables) const override;
 
-        std::unique_ptr<Potential> clone() const override {
-            return std::make_unique<SplinePairPotential>(*this);
+        SplinePairPotential* clone() const override {
+            return new SplinePairPotential(*this);
         }
 
         const auto& getInterpolators() const {
@@ -29,7 +29,7 @@ namespace jgap {
         }
 
     private:
-        std::map<SpeciesSet<2, Symmetric>, NaturalCubicSpline> per_species_interpolators;
+        std::map<SpeciesSet<2, FullSymmetry>, NaturalCubicSpline> per_species_interpolators;
     };
 }
 

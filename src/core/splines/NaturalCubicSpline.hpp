@@ -13,8 +13,8 @@ namespace jgap {
         InterpolationResults<1> interpolate(std::array<Real, 1> pos) const override;
         std::array<Real, 1> getCutoff() const override { return {r_vec.back()}; };
 
-        std::unique_ptr<Spline<1>> clone() const override {
-            return std::make_unique<NaturalCubicSpline>(*this);
+        NaturalCubicSpline* clone() const override {
+            return new NaturalCubicSpline(*this);
         }
 
         const std::vector<Real>& getRVec() const { return r_vec; }

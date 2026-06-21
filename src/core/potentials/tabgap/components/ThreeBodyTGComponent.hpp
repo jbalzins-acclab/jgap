@@ -19,8 +19,8 @@ namespace jgap {
 
         std::set<Species> getAllSpecies() const override;
 
-        std::unique_ptr<TabGapComponent> clone() const override {
-            return std::make_unique<ThreeBodyTGComponent>(*this);
+        ThreeBodyTGComponent* clone() const override {
+            return new ThreeBodyTGComponent(*this);
         }
 
         auto getSpeciesTriplet() const {

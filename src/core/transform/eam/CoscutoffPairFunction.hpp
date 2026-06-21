@@ -38,8 +38,8 @@ namespace jgap {
             return {{std::array{val}}, {std::array{deriv}}};
         }
 
-        std::unique_ptr<ClusterTransformation<1, 2>> clone() const override {
-            return std::make_unique<CoscutoffPairFunction>(*this);
+        CoscutoffPairFunction* clone() const override {
+            return new CoscutoffPairFunction(*this);
         }
 
         Real getRMin() const {

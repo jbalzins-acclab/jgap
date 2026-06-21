@@ -27,33 +27,6 @@ namespace jgap {
         return true;
     }
 
-    std::chrono::milliseconds elapsedMillisSince(std::chrono::steady_clock::time_point start) {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start);
-    }
-
-    std::string formatDuration(std::chrono::milliseconds duration) {
-        const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-        duration -= minutes;
-        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
-        duration -= seconds;
-
-        std::ostringstream oss;
-        oss << std::setfill('0')
-            << std::setw(2) << minutes.count() << ":"
-            << std::setw(2) << seconds.count() << ":"
-            << std::setw(3) << duration.count();
-        return oss.str();
-    }
-
-    std::vector<Atoms> readAtoms(const std::string& filename) {
-        return mapVector(XYZData::read(filename), [](const XYZData& d) { return Atoms(d); });
-    }
-
-    std::vector<Atoms> readAtoms(const std::string& filename, const AtomsPropertyNames& names) {
-        return mapVector(XYZData::read(filename), [&names](const XYZData& d) { return Atoms(d, names); });
-    }
-
     std::map<std::string, std::string> parseHeaderLine(const std::string &line) {
         std::map<std::string, std::string> header;
 

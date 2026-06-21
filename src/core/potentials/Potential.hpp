@@ -18,7 +18,7 @@ namespace jgap {
 
         virtual Cutoffs getCutoffs() const = 0;
 
-        virtual std::unique_ptr<Potential> clone() const = 0;
+        virtual Potential* clone() const = 0;
 
         virtual void fillTables(TabulationData& table) const = 0;
 

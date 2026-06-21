@@ -26,8 +26,8 @@ namespace jgap {
 
         void fillSigmas(Regularization &sigmas, const Atoms &atoms) const override;
 
-        std::unique_ptr<RegularizationRules> clone() const override {
-            return std::make_unique<PerConfigTypeRegularizationRules>(*this);
+        PerConfigTypeRegularizationRules* clone() const override {
+            return new PerConfigTypeRegularizationRules(*this);
         }
 
     private:

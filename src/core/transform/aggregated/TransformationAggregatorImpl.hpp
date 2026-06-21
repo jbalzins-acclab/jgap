@@ -82,8 +82,8 @@ namespace jgap {
             return combined;
         }
 
-        std::unique_ptr<TransformationAggregator<Dim>> clone() const override {
-            return std::make_unique<TransformationAggregatorImpl>(*this);
+        TransformationAggregatorImpl* clone() const override {
+            return new TransformationAggregatorImpl(*this);
         }
 
         void tabulateNewManyBodyGrid(TabulationData &tables) const override {

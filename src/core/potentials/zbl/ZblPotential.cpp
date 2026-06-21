@@ -54,14 +54,14 @@ namespace jgap {
 #endif
         }
 
-        std::set<SpeciesSet<2, Symmetric>> deducePairs(const std::vector<Atoms>& training_data) {
-            std::set<SpeciesSet<2, Symmetric>> species_pairs;
+        std::set<SpeciesSet<2, FullSymmetry>> deducePairs(const std::vector<Atoms>& training_data) {
+            std::set<SpeciesSet<2, FullSymmetry>> species_pairs;
             for (const auto& atoms : training_data) {
                 const auto& species_vec = atoms.lookupSpecies();
                 std::set unique_species(species_vec.begin(), species_vec.end());
                 for (auto it1 = unique_species.begin(); it1 != unique_species.end(); ++it1) {
                     for (auto it2 = it1; it2 != unique_species.end(); ++it2) {
-                        species_pairs.insert(SpeciesSet<2, Symmetric>{*it1, *it2});
+                        species_pairs.insert(SpeciesSet<2, FullSymmetry>{*it1, *it2});
                     }
                 }
             }
@@ -69,7 +69,7 @@ namespace jgap {
         }
     }
 
-    void ZblPotential::loadDataset(std::istream& dataset, const std::set<SpeciesSet<2, Symmetric>>* species_filter) {
+    void ZblPotential::loadDataset(std::istream& dataset, const std::set<SpeciesSet<2, FullSymmetry>>* species_filter) {
         std::string line;
         while (std::getline(dataset, line)) {
             if (line.empty()) continue;
@@ -83,7 +83,7 @@ namespace jgap {
 
             Species s1(elem1_str);
             Species s2(elem2_str);
-            SpeciesSet<2, Symmetric> pair{s1, s2};
+            SpeciesSet<2, FullSymmetry> pair{s1, s2};
 
             if (species_filter && !species_filter->contains(pair)) {
                 continue;
@@ -93,7 +93,7 @@ namespace jgap {
         }
     }
 
-    ZblPotential::ZblParameters ZblPotential::makeParameters(const SpeciesSet<2, Symmetric>& pair,
+    ZblPotential::ZblParameters ZblPotential::makeParameters(const SpeciesSet<2, FullSymmetry>& pair,
                                                              const std::array<Real, 6>& coeffs) {
         const Species& s1 = pair.getNodes()[0];
         const Species& s2 = pair.getNodes()[1];
@@ -115,7 +115,7 @@ namespace jgap {
         };
     }
 
-    ZblPotential::ZblPotential(const std::set<SpeciesSet<2, Symmetric>>& species,
+    ZblPotential::ZblPotential(const std::set<SpeciesSet<2, FullSymmetry>>& species,
                                EmbeddedZBLCoeffDataset embedded_dataset,
                                Real cutoff,
                                Real cutoff_transition_width)
@@ -131,7 +131,7 @@ namespace jgap {
                                Real cutoff_transition_width)
         : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
           cutoff_function(cutoff, cutoff_transition_width) {
-        std::set<SpeciesSet<2, Symmetric>> pairs = deducePairs(training_data);
+        std::set<SpeciesSet<2, FullSymmetry>> pairs = deducePairs(training_data);
         std::istringstream dataset_stream(getEmbeddedDataset(embedded_dataset));
         loadDataset(dataset_stream, &pairs);
     }
@@ -146,12 +146,12 @@ namespace jgap {
         if (!dataset_file.is_open()) {
             JGAP_LOG_AND_THROW("Could not open ZBL dataset file '{}'", dataset_filename);
         }
-        std::set<SpeciesSet<2, Symmetric>> pairs = deducePairs(training_data);
+        std::set<SpeciesSet<2, FullSymmetry>> pairs = deducePairs(training_data);
         loadDataset(dataset_file, &pairs);
     }
 
     ZblPotential::ZblPotential(std::istream& custom_dataset,
-                               const std::set<SpeciesSet<2, Symmetric>>& species,
+                               const std::set<SpeciesSet<2, FullSymmetry>>& species,
                                Real cutoff,
                                Real cutoff_transition_width)
         : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
@@ -165,11 +165,11 @@ namespace jgap {
                                Real cutoff_transition_width)
         : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
           cutoff_function(cutoff, cutoff_transition_width) {
-        std::set<SpeciesSet<2, Symmetric>> pairs = deducePairs(training_data);
+        std::set<SpeciesSet<2, FullSymmetry>> pairs = deducePairs(training_data);
         loadDataset(custom_dataset, &pairs);
     }
 
-    ZblPotential::ZblPotential(const std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>>& coefficients,
+    ZblPotential::ZblPotential(const std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>>& coefficients,
                                Real cutoff,
                                Real cutoff_transition_width)
         : cutoff(cutoff), cutoff_transition_width(cutoff_transition_width),
@@ -179,8 +179,8 @@ namespace jgap {
         }
     }
 
-    std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> ZblPotential::getCoefficients() const {
-        std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> coefficients;
+    std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> ZblPotential::getCoefficients() const {
+        std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> coefficients;
         for (const auto& [pair, params] : zbl_parameters) {
             coefficients[pair] = params.coeffs;
         }
@@ -225,7 +225,7 @@ namespace jgap {
         return result;
     }
 
-    std::array<Real, 2> ZblPotential::energyAndDerivative(const SpeciesSet<2, Symmetric>& species_pair, Real r) const {
+    std::array<Real, 2> ZblPotential::energyAndDerivative(const SpeciesSet<2, FullSymmetry>& species_pair, Real r) const {
         auto it = zbl_parameters.find(species_pair);
         if (it == zbl_parameters.end()) {
             return {0.0, 0.0};

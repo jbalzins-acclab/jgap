@@ -12,6 +12,10 @@
 
 namespace jgap {
 
+    /**
+     * Main structure for storing 3D vectors, implements some basic operations with them.
+     * Should be used unless within a code block needing to deal with an external linalg library.
+     */
     struct Vector3 {
         Vector3() : x(0.0), y(0.0), z(0.0) {}
         Vector3(Real x, Real y, Real z) : x(x), y(y), z(z) {}
@@ -91,8 +95,21 @@ namespace jgap {
             return dot(other) / other.norm();
         }
 
+        /**
+         * @return This vector's component perpendicular to {@param other}.
+         */
         Real aproject(const Vector3& other) const {
             return sqrt(norm() * norm() - project(other) * project(other));
+        }
+
+        /**
+         * @return This vector's component perpendicular to the plane in which
+         * vectors {@param u} and {@param v} lie.
+         */
+        Real aproject(const Vector3& u, const Vector3& v) const {
+            Vector3 _cross = u.cross(v);
+            if (_cross.norm() == 0.0) return this->aproject(u);
+            return abs(this->project(_cross));
         }
 
         Vector3 normalize() const {
@@ -102,12 +119,6 @@ namespace jgap {
         Real minComponent() const {
             const Real t = abs(x) < abs(y) ? x : y;
             return abs(t) < abs(z) ? abs(t) : abs(z);
-        }
-
-        Real aproject(const Vector3& u, const Vector3& v) const {
-            Vector3 _cross = u.cross(v);
-            if (_cross.norm() == 0.0) return this->aproject(u);
-            return abs(this->project(_cross));
         }
 
         bool operator==(const Vector3& other) const {
