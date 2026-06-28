@@ -23,7 +23,7 @@ namespace jgap {
 
     public:
         bool serialize(const ValuePtr<GapComponent>& obj, SerializationNode& node) const override {
-            auto derived = obj.template as<ComponentT>();
+            const auto derived = obj.as<ComponentT>();
             if (!derived) {
                 return false;
             }

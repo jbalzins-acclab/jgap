@@ -5,7 +5,7 @@
 
 namespace jgap {
 
-    bool FSGenPairFunctionSerialization::serialize(const ValuePtr<ClusterTransformation<1, 2>>& obj, SerializationNode& node) const {
+    bool FSGenPairFunctionSerialization::serialize(const ValuePtr<NBodyTransformation<1, 2>>& obj, SerializationNode& node) const {
         if (auto derived = obj.as<FSGenPairFunction>()) {
             node.writeAttribute("name", "FSGenPairFunction");
             node.writeAttribute("cutoff", derived->getCutoff());
@@ -16,7 +16,7 @@ namespace jgap {
         return false;
     }
 
-    ValuePtr<ClusterTransformation<1, 2>> FSGenPairFunctionSerialization::deserialize(const SerializationNode& node) const {
+    ValuePtr<NBodyTransformation<1, 2>> FSGenPairFunctionSerialization::deserialize(const SerializationNode& node) const {
         if (node.readAttribute<std::string>("name") != "FSGenPairFunction") {
             return nullptr;
         }
@@ -24,8 +24,8 @@ namespace jgap {
         auto degree = node.readAttribute<Real>("degree");
         auto prefactor = node.readAttribute<Real>("prefactor");
 
-        return ValuePtr<ClusterTransformation<1, 2>>(FSGenPairFunction(cutoff, degree, prefactor));
+        return ValuePtr<NBodyTransformation<1, 2>>(FSGenPairFunction(cutoff, degree, prefactor));
     }
 
-    REGISTER_SERIALIZATION(FSGenPairFunctionSerialization, ClusterTransformation<1, 2>);
+    REGISTER_SERIALIZATION(FSGenPairFunctionSerialization, NBodyTransformation<1, 2>);
 }

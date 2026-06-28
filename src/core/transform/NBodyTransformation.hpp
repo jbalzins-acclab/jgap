@@ -1,5 +1,5 @@
-#ifndef JGAP_TRANSFORMER_HPP
-#define JGAP_TRANSFORMER_HPP
+#ifndef JGAP_NBODYTRANSFORMATION_HPP
+#define JGAP_NBODYTRANSFORMATION_HPP
 
 #include <vector>
 #include <map>
@@ -9,31 +9,31 @@
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "../potentials/Cutoffs.hpp"
 #include "../ValuePtr.hpp"
+#include "core/atomic/iteration/ClusterFinder.hpp"
 
 namespace jgap {
 
     template<size_t NDim, size_t NClusterSize>
-    class ClusterTransformation {
+    class NBodyTransformation {
     public:
         static constexpr size_t Dim = NDim;
         static constexpr size_t ClusterSize = NClusterSize;
 
-        virtual ~ClusterTransformation() = default;
+        virtual ~NBodyTransformation() = default;
 
         virtual Descriptor<Dim> evaluate(const Cluster<ClusterSize>& cluster) const = 0;
-        virtual NBodyDescriptor<Dim, ClusterSize> evaluateAndDifferentiate(const Cluster<ClusterSize>& cluster)
-            const = 0;
+        virtual NBodyDescriptor<Dim, ClusterSize> evaluateAndDifferentiate(const Cluster<ClusterSize>& cl) const = 0;
 
         virtual Cutoffs getCutoffs() const = 0;
 
-        virtual Real symmetryFactor() const {
-            return 1.0;
-        }
 
-        virtual ClusterTransformation* clone() const = 0;
+        virtual bool isSymmetricWrtNodeIndices() const = 0;
+
+        virtual NBodyTransformation* clone() const = 0;
+
     };
 
-    static_assert(Cloneable<ClusterTransformation<1, 2>>);
+    static_assert(Cloneable<NBodyTransformation<1, 2>>);
 }
 
 #endif

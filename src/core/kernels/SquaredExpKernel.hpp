@@ -38,36 +38,35 @@ namespace jgap {
             return length_scales;
         }
 
-        Real value(const std::array<Real, TotalDimensions> &q1,
-                   const std::array<Real, TotalDimensions> &q2) const override {
+        Real value(const Descriptor<TotalDimensions> &q1,
+                   const Descriptor<TotalDimensions> &q2) const override {
 
             Real exp_argument = 0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q1[dim] - q2[dim];
+                Real diff = q1.value[dim] - q2.value[dim];
                 exp_argument += diff * diff * inverse_length_scales_squared[dim];
             }
             Real val = prefactor * std::exp(-0.5 * exp_argument);
 
             for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= q1[dim] * q2[dim];
+                val *= q1.value[dim] * q2.value[dim];
             }
 
             return val;
         }
 
-        KernelValueAndGradient valueAndGradient(
-            const std::array<Real, TotalDimensions> &sparse_point,
-            const std::array<Real, TotalDimensions> &q) const override {
+        KernelValueAndGradient valueAndGradient(const Descriptor<TotalDimensions> &sparse_point,
+                                                const Descriptor<TotalDimensions> &q) const override {
 
             Real exp_argument = 0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q[dim] - sparse_point[dim];
+                Real diff = q.value[dim] - sparse_point.value[dim];
                 exp_argument += diff * diff * inverse_length_scales_squared[dim];
             }
             Real val = prefactor * std::exp(-0.5 * exp_argument);
 
             for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= sparse_point[dim];
+                val *= sparse_point.value[dim];
             }
 
             std::array<Real, TotalDimensions> gradient{};
@@ -76,19 +75,19 @@ namespace jgap {
             }
 
             for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= q[dim];
+                val *= q.value[dim];
 
                 for (size_t j = ExpDimensions; j < dim; j++) {
-                    gradient[j] *= q[dim];
+                    gradient[j] *= q.value[dim];
                 }
 
                 for (size_t j = dim + 1; j < TotalDimensions; j++) {
-                    gradient[j] *= q[dim];
+                    gradient[j] *= q.value[dim];
                 }
             }
 
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                gradient[dim] = val * (sparse_point[dim] - q[dim]) * inverse_length_scales_squared[dim];
+                gradient[dim] = val * (sparse_point.value[dim] - q.value[dim]) * inverse_length_scales_squared[dim];
             }
 
             return {

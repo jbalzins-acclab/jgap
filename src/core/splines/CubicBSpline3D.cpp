@@ -22,7 +22,6 @@ namespace jgap {
             new_origin[i] -= values.spacing[i];
         }
 
-        // Pass 1: Filter along X
         Grid<3> temp1({Nx, My, Mz}, values.spacing, new_origin);
         for (size_t iy = 0; iy < My; ++iy) {
             for (size_t iz = 0; iz < Mz; ++iz) {
@@ -37,7 +36,6 @@ namespace jgap {
             }
         }
 
-        // Pass 2: Filter along Y
         Grid<3> temp2({Nx, Ny, Mz}, values.spacing, new_origin);
         for (size_t ix = 0; ix < Nx; ++ix) {
             for (size_t iz = 0; iz < Mz; ++iz) {
@@ -52,7 +50,6 @@ namespace jgap {
             }
         }
 
-        // Pass 3: Filter along Z
         Grid<3> final_coeff({Nx, Ny, Nz}, values.spacing, new_origin);
         for (size_t ix = 0; ix < Nx; ++ix) {
             for (size_t iy = 0; iy < Ny; ++iy) {

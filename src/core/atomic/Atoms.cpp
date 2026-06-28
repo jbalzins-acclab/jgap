@@ -109,7 +109,7 @@ namespace jgap {
         return std::get<std::vector<Species>>(arrays[main_property_names.species]);
     }
 
-    void Atoms::addAtom(const std::map<std::string, AtomValue>& atom_data) {
+    void Atoms::addAtom(const std::map<std::string, PerAtomPropery>& atom_data) {
         if (!atom_data.contains(main_property_names.positions) || !atom_data.contains(main_property_names.species)) {
             JGAP_LOG_AND_THROW("addAtom requires positions and species arrays");
         }

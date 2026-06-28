@@ -3,17 +3,17 @@
 #include <utility>
 
 #include "core/splines/Spline.hpp"
-#include "core/transform/ClusterTransformation.hpp"
+#include "core/transform/NBodyTransformation.hpp"
 
 namespace jgap {
-    class SplinePairTransformation : public ClusterTransformation<1, 2> {
+    class SplinePairTransformation : public NBodyTransformation<1, 2> {
     public:
 
         SplinePairTransformation(const SplinePairTransformation& other) = default;
         SplinePairTransformation(HermiteCubicSpline spline) : spline(std::move(spline)) {}
 
         Descriptor<1> evaluate(const Cluster<2> &cluster) const override {
-            Real r01 = cluster.between(0, 1);
+            Real r01 = cluster.separationBetween(0, 1);
 
             return {
                 .value = {
@@ -23,7 +23,7 @@ namespace jgap {
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2> &cluster) const override {
-            Real r01 = cluster.between(0, 1);
+            Real r01 = cluster.separationBetween(0, 1);
 
             auto [val, derivative] = spline.interpolate({r01});
 

@@ -67,7 +67,7 @@ namespace {
     bool isNi(const Species& s) { return s.symbol() == "Ni"; }
 
     /// Picks a different EAM pair (density) function per element pair, to exercise all three kinds.
-    ValuePtr<ClusterTransformation<1, 2>> makeEamPairFunction(const Species& central, const Species& contributor) {
+    ValuePtr<NBodyTransformation<1, 2>> makeEamPairFunction(const Species& central, const Species& contributor) {
         const int n_ni = (isNi(central) ? 1 : 0) + (isNi(contributor) ? 1 : 0);
         if (n_ni == 0) {
             return FSGenPairFunction(EAM_CUTOFF, /*degree=*/3.0);   // Fe-Fe
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     const auto start = std::chrono::steady_clock::now();
 
     JGAP_LOG_INFO("Custom FeNi fit on {}", training_file);
-    const auto training_data = readAtoms(training_file);
+    const auto training_data = Atoms::readAtoms(training_file);
 
     // Elements present in the training data.
     std::set<Species> elements;
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     }
 
     // ===== 3-body: per-triplet energy scale (grows slightly with the Ni count) =====
-    const ValuePtr<ClusterTransformation<4, 3>> trans3 = Angle3bTransformation(CosCutoff(CUTOFF_3B, WIDTH_3B));
+    const ValuePtr<NBodyTransformation<4, 3>> trans3 = Angle3bTransformation(CosCutoff(CUTOFF_3B, WIDTH_3B));
     const HistogramUniformSparsifier<4> sparsifier3(SEED, N_SPARSE_3B, std::array{true, true, true, false});
 
     std::set<SpeciesSet<3, HasCentralAtom>> triplets;
@@ -134,10 +134,10 @@ int main(int argc, char** argv) {
     }
 
     // ===== 2-body: one shared setup (as in the standard fit) =====
-    const ValuePtr<ClusterTransformation<2, 2>> trans2 = TwoBodyTransformation(CosCutoff(CUTOFF_2B, WIDTH_2B));
+    const ValuePtr<NBodyTransformation<2, 2>> trans2 = TwoBodyTransformation(CosCutoff(CUTOFF_2B, WIDTH_2B));
     const auto kernel2 = SquaredExpKernel<1, 1>(ENERGY_SCALE_2B, {1.0});
     const HistogramUniformSparsifier<2> sparsifier2(SEED, N_SPARSE_2B, std::array{true, false});
-    potential.addComponents(NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>::createComponents(
+    potential.addComponents(NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>::createComponents(
         training_data, trans2, kernel2, sparsifier2));
 
     // ===== external: isolated-atom energies + ZBL repulsion =====

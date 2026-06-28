@@ -5,7 +5,7 @@
 
 namespace jgap {
 
-    bool PolycutoffPairFunctionSerialization::serialize(const ValuePtr<ClusterTransformation<1, 2>>& obj, SerializationNode& node) const {
+    bool PolycutoffPairFunctionSerialization::serialize(const ValuePtr<NBodyTransformation<1, 2>>& obj, SerializationNode& node) const {
         if (auto derived = obj.as<PolycutoffPairFunction>()) {
             node.writeAttribute("name", "PolycutoffPairFunction");
             node.writeAttribute("cutoff", derived->getCutoff());
@@ -16,7 +16,7 @@ namespace jgap {
         return false;
     }
 
-    ValuePtr<ClusterTransformation<1, 2>> PolycutoffPairFunctionSerialization::deserialize(const SerializationNode& node) const {
+    ValuePtr<NBodyTransformation<1, 2>> PolycutoffPairFunctionSerialization::deserialize(const SerializationNode& node) const {
         if (node.readOptionalAttribute<std::string>("name") != "PolycutoffPairFunction") {
             return nullptr;
         }
@@ -24,8 +24,8 @@ namespace jgap {
         auto r_min = node.readAttribute<Real>("r_min");
         auto prefactor = node.readAttribute<Real>("prefactor");
 
-        return ValuePtr<ClusterTransformation<1, 2>>(PolycutoffPairFunction(cutoff, r_min, prefactor));
+        return ValuePtr<NBodyTransformation<1, 2>>(PolycutoffPairFunction(cutoff, r_min, prefactor));
     }
 
-    REGISTER_SERIALIZATION(PolycutoffPairFunctionSerialization, ClusterTransformation<1, 2>);
+    REGISTER_SERIALIZATION(PolycutoffPairFunctionSerialization, NBodyTransformation<1, 2>);
 }

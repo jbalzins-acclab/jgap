@@ -114,10 +114,11 @@ namespace jgap {
         return oss.str();
     }
 
-    double factorial(size_t n) {
+    inline double factorial(const size_t n) {
         double result = 1.0;
-        for (int i = 2; i <= (int)n; ++i)
-            result *= i;
+        for (size_t i = 2; i <= n; i++) {
+            result *= static_cast<Real>(i);
+        }
         return result;
     }
 

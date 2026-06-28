@@ -17,29 +17,12 @@ namespace jgap {
 
     class SerializationNode {
     public:
-        static constexpr int FormatVersion = 1;
-        static constexpr const char* FormatVersionAttribute = "jgap_format_version";
-
         static SerializationNode create(const std::string& filename) {
-            auto file = std::make_unique<HighFive::File>(filename, HighFive::File::Overwrite);
-            SerializationNode node(std::move(file));
-            node.writeAttribute(FormatVersionAttribute, FormatVersion);
-            return node;
+            return SerializationNode(std::make_unique<HighFive::File>(filename, HighFive::File::Overwrite));
         }
 
         static SerializationNode open(const std::string& filename) {
-            auto file = std::make_unique<HighFive::File>(filename, HighFive::File::ReadOnly);
-            SerializationNode node(std::move(file));
-            if (const auto version = node.readOptionalAttribute<int>(FormatVersionAttribute)) {
-                if (*version != FormatVersion) {
-                    JGAP_LOG_WARN("'{}' was written with jgap serialization format v{}, but this build "
-                                  "uses v{}; deserialization may be incorrect.", filename, *version, FormatVersion);
-                }
-            } else {
-                JGAP_LOG_WARN("'{}' has no jgap serialization format version stamp (pre-versioning file, "
-                              "or not a jgap serialization file).", filename);
-            }
-            return node;
+            return SerializationNode(std::make_unique<HighFive::File>(filename, HighFive::File::ReadOnly));
         }
 
         template<typename T>
@@ -95,29 +78,6 @@ namespace jgap {
             return opt.value();
         }
 
-        template<size_t Dim>
-        void saveSparsePoints(const std::vector<Descriptor<Dim>>& sparse_points) {
-            std::vector<std::array<Real, Dim>> data;
-            data.reserve(sparse_points.size());
-            for (const auto& sp : sparse_points) {
-                data.push_back(sp.value);
-            }
-            group.createDataSet("sparse_points", data);
-        }
-
-        template<size_t Dim>
-        std::vector<Descriptor<Dim>> loadSparsePoints() const {
-            std::vector<std::array<Real, Dim>> data;
-            group.getDataSet("sparse_points").read(data);
-
-            std::vector<Descriptor<Dim>> sparse_points;
-            sparse_points.reserve(data.size());
-            for (const auto& arr : data) {
-                sparse_points.push_back({arr});
-            }
-            return sparse_points;
-        }
-
         std::optional<SerializationNode> getGroup(const std::string& name) const {
             if (!group.exist(name)) {
                 return std::nullopt;
@@ -141,7 +101,6 @@ namespace jgap {
         }
 
         HighFive::Group& hdfGroup() { return group; }
-
         const HighFive::Group& hdfGroup() const { return group; }
 
     private:

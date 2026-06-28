@@ -2,20 +2,20 @@
 #define JGAP_ANGLE3BTRANSFORMATION_HPP
 
 #include "core/cutoff/CutoffFunction.hpp"
-#include "core/transform/ClusterTransformation.hpp"
+#include "core/transform/NBodyTransformation.hpp"
 
 namespace jgap {
 
-    class Angle3bTransformation final : public ClusterTransformation<4, 3> {
+    class Angle3bTransformation final : public NBodyTransformation<4, 3> {
     public:
 
         Angle3bTransformation(const ValuePtr<CutoffFunction>& cutoff)
             : cutoff(cutoff) {}
 
         Descriptor<4> evaluate(const Cluster<3>& triplet) const override {
-            Real r01 = triplet.between(0, 1);
-            Real r02 = triplet.between(0, 2);
-            Real r12 = triplet.between(1, 2);
+            Real r01 = triplet.separationBetween(0, 1);
+            Real r02 = triplet.separationBetween(0, 2);
+            Real r12 = triplet.separationBetween(1, 2);
 
             Real f_cut_01 = cutoff->evaluate(r01);
             Real f_cut_02 = cutoff->evaluate(r02);
@@ -31,9 +31,9 @@ namespace jgap {
         }
 
         NBodyDescriptor<4, 3> evaluateAndDifferentiate(const Cluster<3>& triplet) const override {
-            Real r01 = triplet.between(0, 1);
-            Real r02 = triplet.between(0, 2);
-            Real r12 = triplet.between(1, 2);
+            Real r01 = triplet.separationBetween(0, 1);
+            Real r02 = triplet.separationBetween(0, 2);
+            Real r12 = triplet.separationBetween(1, 2);
 
             auto [f_cut_01, df_cut_01] = cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = cutoff->evaluateAndDifferentiate(r02);

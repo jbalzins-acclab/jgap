@@ -41,7 +41,7 @@ namespace jgap {
         return *this;
     }
 
-    AtomicQuantity AtomicQuantity::operator*(double scalar) const {
+    AtomicQuantity AtomicQuantity::operator*(Real scalar) const {
         AtomicQuantity result(forces.size());
 
         result.value = value * scalar;
@@ -55,7 +55,7 @@ namespace jgap {
         return result;
     }
 
-    AtomicQuantity& AtomicQuantity::operator*=(double scalar) {
+    AtomicQuantity& AtomicQuantity::operator*=(Real scalar) {
         value *= scalar;
         virials *= scalar;
         for (auto& force : forces) {

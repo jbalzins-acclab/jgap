@@ -2,7 +2,7 @@
 #include "core/potentials/gap/component/NBodyGapComponent.hpp"
 #include "core/atomic/Atoms.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
-#include "core/transform/ClusterTransformation.hpp"
+#include "core/transform/NBodyTransformation.hpp"
 #include "core/kernels/Kernel.hpp"
 #include "core/transform/2b/TwoBodyTransformation.hpp"
 #include "core/transform/3b/Angle3bTransformation.hpp"
@@ -14,7 +14,7 @@ using namespace jgap;
 
 namespace {
     template<size_t Dim, size_t ClusterSize>
-    class MockClusterTransformation : public ClusterTransformation<Dim, ClusterSize> {
+    class MockTransformation : public NBodyTransformation<Dim, ClusterSize> {
     public:
         NBodyDescriptor<Dim, ClusterSize> evaluateAndDifferentiate(const Cluster<ClusterSize>& cluster)
             const override {
@@ -29,12 +29,15 @@ namespace {
         Descriptor<Dim> evaluate(const Cluster<ClusterSize> &cluster) const override {
             throw std::runtime_error("Not implemented");
         }
+        bool isSymmetricWrtNodeIndices() const override {
+            return true;
+        }
         Real symmetryFactor() const override {
             return ClusterSize == 3 ? 2.0 : 1.0;
         }
 
-        MockClusterTransformation* clone() const override {
-            return new MockClusterTransformation();
+        MockTransformation* clone() const override {
+            return new MockTransformation();
         }
     };
 
@@ -42,10 +45,11 @@ namespace {
     class MockKernel : public Kernel<Dim> {
     public:
         using KernelValueAndGradient = Kernel<Dim>::KernelValueAndGradient;
-        Real value(const std::array<Real, Dim>& q1, const std::array<Real, Dim>& q2) const override {
+        Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
             return 2.0;
         }
-        KernelValueAndGradient valueAndGradient(const std::array<Real, Dim>& sparse_point, const std::array<Real, Dim>& q) const override {
+        KernelValueAndGradient valueAndGradient(const Descriptor<Dim>& sparse_point,
+                                                const Descriptor<Dim>& q) const override {
             KernelValueAndGradient res;
             res.value = 2.0;
             res.gradient.fill(0.5);
@@ -59,9 +63,9 @@ TEST(TestNBodyGapComponent, MockTwoBody) {
         { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 11.0);
 
-    auto component = NBodyGapComponent<1, 2, HasCentralAtom, MockKernel<1>>(
-        SpeciesSet<2, HasCentralAtom>{"Fe", "Ni"},
-        MockClusterTransformation<1, 2>(),
+    auto component = NBodyGapComponent<1, 2, NodeSymmetric, MockKernel<1>>(
+        SpeciesSet<2, NodeSymmetric>{"Fe", "Ni"},
+        MockTransformation<1, 2>(),
         MockKernel<1>(),
         { {{{1.0}}} }
     );
@@ -99,9 +103,9 @@ TEST(TestNBodyGapComponent, MockThreeBody) {
     Atoms atoms({ {0,0,0}, {10,0,0}, {0,10,0}, {10,10,0} }, { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") });
     auto nl = NeighbourList(atoms, 11.0);
 
-    auto component = NBodyGapComponent<1, 3, HasCentralAtom, MockKernel<1>>(
-        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Ni"},
-        MockClusterTransformation<1, 3>(),
+    auto component = NBodyGapComponent<1, 3, NodeSymmetric, MockKernel<1>>(
+        SpeciesSet<3, NodeSymmetric>{"Fe", "Fe", "Ni"},
+        MockTransformation<1, 3>(),
         MockKernel<1>(),
         { {{{1.0}}} }
     );
@@ -190,8 +194,8 @@ TEST(TestNBodyGapComponent, RealThreeBody) {
     auto trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
     auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> sparse_points = { {{{7.0, 1.0, 5.0, 0.25}}} };
-    auto component = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
-        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Ni"}, trans, kernel, sparse_points
+    auto component = NBodyGapComponent<4, 3, NodeSymmetric, SquaredExpKernel<3, 1>>(
+        SpeciesSet<3, NodeSymmetric>{"Fe", "Fe", "Ni"}, trans, kernel, sparse_points
         );
 
     auto result = component.covariate(nl);
@@ -258,8 +262,8 @@ TEST(TestNBodyGapComponent, TabulationThreeBody) {
     auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> sparse_points = { {{{7.0, 1.0, 5.0, 0.25}}} };
     std::vector<Real> coeffs = {0.5};
-    SpeciesSet<3, HasCentralAtom> species{"Fe", "Fe", "Ni"};
-    auto component = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
+    SpeciesSet<3, NodeSymmetric> species{"Fe", "Fe", "Ni"};
+    auto component = NBodyGapComponent<4, 3, NodeSymmetric, SquaredExpKernel<3, 1>>(
         species, trans, kernel, sparse_points
     );
 
@@ -280,9 +284,9 @@ TEST(TestNBodyGapComponent, TabulationThreeBody) {
         auto grid_pos = grid.getCoord(grid.getIndices(i));
         auto triplet = TabulationData::gridPosAsCluster<3>(grid_pos);
 
-        Real r01 = triplet.between(0, 1);
-        Real r02 = triplet.between(0, 2);
-        Real r12 = triplet.between(1, 2);
+        Real r01 = triplet.separationBetween(0, 1);
+        Real r02 = triplet.separationBetween(0, 2);
+        Real r12 = triplet.separationBetween(1, 2);
 
         Real f_cut_01 = cutoff.evaluate(r01);
         Real f_cut_02 = cutoff.evaluate(r02);

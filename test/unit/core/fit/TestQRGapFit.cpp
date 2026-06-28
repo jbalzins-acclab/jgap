@@ -141,7 +141,7 @@ GapPotential createEamPotential(double theta, double delta, double r_min, double
     auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
     auto eam_aggregator = TransformationAggregatorImpl<1, 2>(Species("Fe"));
-    eam_aggregator.extend(SpeciesSet<2, HasCentralAtom>{"Fe", "Fe"}, PolycutoffPairFunction(trans));
+    eam_aggregator.extend(SpeciesSet<2, NodeSymmetric>{"Fe", "Fe"}, PolycutoffPairFunction(trans));
 
     auto kernel = SquaredExpKernel<1, 0>(delta, std::array<Real, 1>{theta});
 
@@ -170,8 +170,8 @@ TEST(TestQRGapFit, twoAtomsEamQuipCompatibility) {
 }
 
 TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
-    auto box = readAtoms("test/resources/xyz-samples/fe-only.xyz")[15];
-    box.properties.erase("virial"); // initial tests ignored virials unfortunately
+    auto box = Atoms::readAtoms("test/resources/xyz-samples/fe-only.xyz")[15];
+    box.getPropertiesForEditing().erase("virial"); // initial tests ignored virials unfortunately
     auto potential = createEamPotential(3.0, 2.0, 0.0, 5.0, {1.0, 2.5, 4.0});
     auto rules = SimpleRegularizationRules(0.001, 0.05, 1.0, 1.0);
     QRGapFit fitter;
@@ -196,8 +196,8 @@ GapPotential create3bPotential(double theta, double delta, double cutoff_transit
     for (const auto& q : sparsePts) {
         sparse_points.push_back({{{q.x, q.y, q.z, 1.0}}}); // Assume f_cut_prod=1 for sparse points
     }
-    auto component = NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>(
-        SpeciesSet<3, HasCentralAtom>{"Fe", "Fe", "Fe"},
+    auto component = NBodyGapComponent<4, 3, NodeSymmetric, SquaredExpKernel<3, 1>>(
+        SpeciesSet<3, NodeSymmetric>{"Fe", "Fe", "Fe"},
         std::move(trans),
         std::move(kernel),
         sparse_points

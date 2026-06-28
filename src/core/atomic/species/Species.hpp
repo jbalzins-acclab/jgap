@@ -14,18 +14,16 @@
 
 namespace jgap {
 
-    /**
-     * Lightweight representation of an atomic (or other) species defined externally by a string symbol.
-     * Assigns internal id to each unique species string by which it is constructed,
-     * with the first 117 ids reserved for the standard periodic table element symbols.
-     *
-     * Should be constructed with symbols from user-level / external data inputs,
-     * and then copied with the copy constructor to ensure better performance
-     * from not dealing with string in the logic.
-     *
-     * @note Thread safe.
-     * @warning  If MPI-like tool is ever to be used => requires review.
-     */
+    /// Lightweight representation of an atomic (or other) species defined externally by a string symbol.
+    /// Assigns internal id to each unique species string by which it is constructed,
+    /// with the first 117 ids reserved for the standard periodic table element symbols.
+    ///
+    /// Should be constructed with symbols from user-level / external data inputs,
+    /// and then copied with the copy constructor to ensure better performance
+    /// from not dealing with string in the logic.
+    ///
+    /// @note Thread safe.
+    /// @warning  If MPI-like tool is ever to be used => requires review.
     class Species {
     public:
         static constexpr size_t NumberOfElements = 118;

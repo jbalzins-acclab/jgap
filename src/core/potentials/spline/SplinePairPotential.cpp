@@ -35,7 +35,7 @@ namespace jgap {
 
             for (auto pair: pair_clusters) {
 
-                const Real& separation_magnitude = pair.between(0, 1);
+                const Real& separation_magnitude = pair.separationBetween(0, 1);
                 const SeparationDerivatives& separation_deriv = pair.derivativesBetween(0, 1);
 
                 InterpolationResults<1> spline_val = interpolator.interpolate({separation_magnitude});

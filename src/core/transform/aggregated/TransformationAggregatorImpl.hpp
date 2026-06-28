@@ -5,16 +5,17 @@
 
 namespace jgap {
 
-    template<size_t Dim, size_t ClusterSize>
+    template<size_t Dim, size_t ClusterSize, ClusterSymmetry ClusterSym>
+    requires (ClusterSym != FullSymmetry) && CClusterFindiningImplemented<ClusterSize, ClusterSym>
     class TransformationAggregatorImpl final : public TransformationAggregator<Dim> {
     public:
-        using TransformationPtr = ValuePtr<ClusterTransformation<Dim, ClusterSize>>;
+        using TransformationPtr = ValuePtr<NBodyTransformation<Dim, ClusterSize>>;
 
         TransformationAggregatorImpl(const Species central_atom_species)
             : central_atom_species(central_atom_species) {
         }
 
-        void extend(SpeciesSet<ClusterSize, HasCentralAtom> species_set, TransformationPtr transformation) {
+        void extend(SpeciesSet<ClusterSize, ClusterSym> species_set, TransformationPtr transformation) {
 
             if (species_set.getRoot() != central_atom_species) {
                 JGAP_LOG_AND_THROW("Transformation intended for a cluster "
@@ -44,6 +45,7 @@ namespace jgap {
                     size_t central_idx = cluster.atom_indexes[0];
 
                     auto& descriptor = aggregated_descriptors.at(central_idx);
+                    Symmetry factor
                     auto contribution = transformation->evaluateAndDifferentiate(cluster);
 
                     // Accumulate value
@@ -97,7 +99,7 @@ namespace jgap {
 
                     for (auto cell: grid) {
                         Cluster<2> as_cluster{};
-                        as_cluster.between(0, 1) = cell.pos[0];
+                        as_cluster.separationBetween(0, 1) = cell.pos[0];
                         cell.value += transformation->evaluate(as_cluster).value[0];
                     }
                 }
@@ -129,7 +131,7 @@ namespace jgap {
 
     private:
         Species central_atom_species;
-        std::multimap<SpeciesSet<ClusterSize, HasCentralAtom>, TransformationPtr> transformations;
+        std::multimap<SpeciesSet<ClusterSize, ClusterSym>, TransformationPtr> transformations;
     };
 }
 

@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     const auto start = std::chrono::steady_clock::now();
 
     JGAP_LOG_INFO("Fitting on {}", training_file);
-    auto training_data = readAtoms(training_file);
+    auto training_data = Atoms::readAtoms(training_file);
 
     StandardGapParams params{.seed = 120};
     if (argc == 4) {

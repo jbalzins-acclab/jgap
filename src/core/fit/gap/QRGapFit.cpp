@@ -186,13 +186,13 @@ namespace jgap {
         for (const auto& gap_component: gap_components) {
             Real cutoff = gap_component->getCutoff();
             if (!neighbour_lists.contains(cutoff)) {
-                neighbour_lists[cutoff] = NeighbourList(atoms, cutoff);
+                neighbour_lists.insert({cutoff, NeighbourList(atoms, cutoff)});
             }
         }
 
         size_t contribution_column = 0;
         for (const auto& gap_component: gap_components) {
-            auto& neighbour_list = neighbour_lists[gap_component->getCutoff()];
+            auto& neighbour_list = neighbour_lists.at(gap_component->getCutoff());
             auto covariances_opt = gap_component->covariate(neighbour_list);
 
             if (!covariances_opt.has_value()) {
@@ -272,9 +272,9 @@ namespace jgap {
         return llt.matrixU();
     }
 
-    EigenMatrix QRGapFit::convertToEigen(RowMajorMatrix &matrix_block) {
+    EigenMatrix QRGapFit::convertToEigen(Matrix &matrix_block) {
         return Eigen::Map<Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-            matrix_block.rawData().data(), matrix_block.nRows(), matrix_block.nColumns()
+            matrix_block.rowMajorFlatData().data(), matrix_block.nRows(), matrix_block.nColumns()
             );
     }
 }

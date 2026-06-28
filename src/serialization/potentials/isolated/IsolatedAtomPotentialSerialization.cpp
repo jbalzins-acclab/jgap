@@ -6,7 +6,7 @@
 namespace jgap {
 
     bool IsolatedAtomPotentialSerialization::serialize(const ValuePtr<Potential>& obj, SerializationNode& node) const {
-        if (auto derived = obj.as<IsolatedAtomPotential>()) {
+        if (const auto derived = obj.as<IsolatedAtomPotential>()) {
             node.writeAttribute("name", "IsolatedAtomPotential");
 
             auto energies_group = node.createGroup("isolated_energies");

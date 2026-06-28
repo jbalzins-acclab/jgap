@@ -8,7 +8,7 @@
 
 namespace jgap {
 
-    bool SplinePairTransformationSerialization::serialize(const ValuePtr<ClusterTransformation<1, 2>>& obj, SerializationNode& node) const {
+    bool SplinePairTransformationSerialization::serialize(const ValuePtr<NBodyTransformation<1, 2>>& obj, SerializationNode& node) const {
         if (auto derived = obj.as<SplinePairTransformation>()) {
             node.writeAttribute("name", "SplinePairTransformation");
 
@@ -22,7 +22,7 @@ namespace jgap {
         return false;
     }
 
-    ValuePtr<ClusterTransformation<1, 2>> SplinePairTransformationSerialization::deserialize(const SerializationNode& node) const {
+    ValuePtr<NBodyTransformation<1, 2>> SplinePairTransformationSerialization::deserialize(const SerializationNode& node) const {
         if (node.readOptionalAttribute<std::string>("name") != "SplinePairTransformation") {
             return nullptr;
         }
@@ -39,8 +39,8 @@ namespace jgap {
         Grid<1> grid(dims, spacing, origin, data_flat);
         HermiteCubicSpline spline(grid);
 
-        return ValuePtr<ClusterTransformation<1, 2>>(SplinePairTransformation(std::move(spline)));
+        return ValuePtr<NBodyTransformation<1, 2>>(SplinePairTransformation(std::move(spline)));
     }
 
-    REGISTER_SERIALIZATION(SplinePairTransformationSerialization, ClusterTransformation<1, 2>);
+    REGISTER_SERIALIZATION(SplinePairTransformationSerialization, NBodyTransformation<1, 2>);
 }

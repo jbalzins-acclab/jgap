@@ -1,14 +1,14 @@
 #ifndef JGAP_COSTRANSFORMATION_HPP
 #define JGAP_COSTRANSFORMATION_HPP
-#include "core/transform/ClusterTransformation.hpp"
+#include "core/transform/NBodyTransformation.hpp"
 
 namespace jgap {
-    class CosTransformation final : public ClusterTransformation<3, 3> {
+    class CosTransformation final : public NBodyTransformation<3, 3> {
     public:
         Descriptor<3> evaluate(const Cluster<3> &cluster) const override {
-            Real r01 = cluster.between(0, 1);
-            Real r02 = cluster.between(0, 2);
-            Real r12 = cluster.between(1, 2);
+            Real r01 = cluster.separationBetween(0, 1);
+            Real r02 = cluster.separationBetween(0, 2);
+            Real r12 = cluster.separationBetween(1, 2);
 
             Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) / (2.0 * r01 * r02);
 
@@ -22,9 +22,9 @@ namespace jgap {
         }
 
         NBodyDescriptor<3, 3> evaluateAndDifferentiate(const Cluster<3> &cluster) const override {
-            Real r01 = cluster.between(0, 1);
-            Real r02 = cluster.between(0, 2);
-            Real r12 = cluster.between(1, 2);
+            Real r01 = cluster.separationBetween(0, 1);
+            Real r02 = cluster.separationBetween(0, 2);
+            Real r12 = cluster.separationBetween(1, 2);
 
             Real inv_r01 = 1.0 / r01;
             Real inv_r02 = 1.0 / r02;

@@ -10,7 +10,7 @@ namespace jgap {
 
         for (const auto& cluster: nl.findAllClusters<WithGradients>(species_pair)) {
 
-            auto [val, deriv] = spline->interpolate({cluster.between(0, 1)});
+            auto [val, deriv] = spline->interpolate({cluster.separationBetween(0, 1)});
 
             result.value += val;
 

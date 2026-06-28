@@ -1,9 +1,10 @@
 #include "ThreeBodyTGComponent.hpp"
 
 namespace jgap {
-    ThreeBodyTGComponent::ThreeBodyTGComponent(const SpeciesSet<3, HasCentralAtom> &species,
-        const CubicBSpline3D &spline): species(species),
-                                       spline(spline) {
+    ThreeBodyTGComponent::ThreeBodyTGComponent(const SpeciesSet<3, NodeSymmetric>& species,
+                                               const CubicBSpline3D& spline)
+        : species(species),
+          spline(spline) {
     }
 
     AtomicQuantity ThreeBodyTGComponent::energy(const NeighbourList &nl) const {

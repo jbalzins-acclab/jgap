@@ -9,7 +9,7 @@ namespace jgap {
     class ThreeBodyTGComponent : public TabGapComponent {
     public:
 
-        ThreeBodyTGComponent(const SpeciesSet<3, HasCentralAtom> &species, const CubicBSpline3D &spline);
+        ThreeBodyTGComponent(const SpeciesSet<3, NodeSymmetric> &species, const CubicBSpline3D &spline);
 
         AtomicQuantity energy(const NeighbourList &nl) const override;
 
@@ -32,7 +32,7 @@ namespace jgap {
         }
 
     private:
-        SpeciesSet<3, HasCentralAtom> species;
+        SpeciesSet<3, NodeSymmetric> species;
         CubicBSpline3D spline;
 
         CosTransformation transformation{};

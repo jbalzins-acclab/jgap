@@ -35,15 +35,15 @@ TEST(TestComponentSerialization, NBodyTwoBody) {
     std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}, Descriptor<2>{{2.5, 0.5}}};
     std::vector<Real> coefficients = {0.5, -0.3};
 
-    NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>> component(
-        SpeciesSet<2, Symmetric>{"Fe", "Fe"},
+    NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>> component(
+        SpeciesSet<2, FullSymmetry>{"Fe", "Fe"},
         TwoBodyTransformation(CosCutoff(5.0, 1.0)),
         SquaredExpKernel<1, 1>(10.0, {1.3}),
         sparse_points,
         coefficients);
 
     auto rt = roundTrip(component, tmpFile("nbody_2b.h5"));
-    auto restored = rt.as<NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>>();
+    auto restored = rt.as<NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>>();
     ASSERT_NE(restored, nullptr);
 
     EXPECT_DOUBLE_EQ(restored->getKernel().getEnergyScale(), 10.0);

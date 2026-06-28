@@ -60,8 +60,8 @@ TEST(TestPotentialSerialization, IsolatedAtomPotential) {
 }
 
 TEST(TestPotentialSerialization, ZblPotential) {
-    std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>> coeffs = {
-        {SpeciesSet<2, Symmetric>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
+    std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> coeffs = {
+        {SpeciesSet<2, FullSymmetry>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
     ZblPotential original(coeffs, 8.0, 1.0);
 
     auto rt = roundTrip(original, tmpFile("zbl.h5"));
@@ -72,9 +72,9 @@ TEST(TestPotentialSerialization, ZblPotential) {
 
     const auto restored_coeffs = restored->getCoefficients();
     ASSERT_EQ(restored_coeffs.size(), 1u);
-    const auto& c = restored_coeffs.at(SpeciesSet<2, Symmetric>{"Fe", "Ni"});
+    const auto& c = restored_coeffs.at(SpeciesSet<2, FullSymmetry>{"Fe", "Ni"});
     for (size_t i = 0; i < 6; ++i) {
-        EXPECT_DOUBLE_EQ(c[i], coeffs.at(SpeciesSet<2, Symmetric>{"Fe", "Ni"})[i]);
+        EXPECT_DOUBLE_EQ(c[i], coeffs.at(SpeciesSet<2, FullSymmetry>{"Fe", "Ni"})[i]);
     }
 
     expectSameEnergy(original, *rt, feNiPair());
@@ -101,8 +101,8 @@ TEST(TestPotentialSerialization, SplinePairPotential) {
 TEST(TestPotentialSerialization, CompositePotential) {
     CompositePotential original{std::map<std::string, ValuePtr<Potential>>{
         {"isolated", IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}})},
-        {"zbl", ZblPotential(std::map<SpeciesSet<2, Symmetric>, std::array<Real, 6>>{
-                                {SpeciesSet<2, Symmetric>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
+        {"zbl", ZblPotential(std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>>{
+                                {SpeciesSet<2, FullSymmetry>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
                              8.0, 1.0)},
     }};
 
@@ -125,8 +125,8 @@ namespace {
 
         GapPotential potential;
         potential.addComponent(ValuePtr<GapComponent>(
-            NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>(
-                SpeciesSet<2, Symmetric>{"Fe", "Fe"},
+            NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
+                SpeciesSet<2, FullSymmetry>{"Fe", "Fe"},
                 TwoBodyTransformation(CosCutoff(5.0, 1.0)),
                 SquaredExpKernel<1, 1>(10.0, {1.3}),
                 sparse_points,

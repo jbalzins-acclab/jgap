@@ -19,32 +19,27 @@
 
 namespace jgap {
 
-    /**
-     * Types underlying {@link XYZArrayType} vector types.
-     */
-    using AtomValue = std::variant<int, Real, Vector3, std::string, Species>;
+    /// Types underlying \ref XYZArrayType vector types.
+    using PerAtomPropery = std::variant<int, Real, Vector3, std::string, Species>;
 
-
-    /**
-     * Stores the positions and species of atoms in a structure,
-     * as well as information on periodicity, and may optionally store
-     * lattice vectors (will provide if the system is periodic)
-     * and energy/virials/forces,
-     * and the "config type" of the structure.
-     *
-     * Positions are guaranteed to be wrapped within the box (i.e. fractional coords \in [0; 1) )
-     * in periodic dimensions.
-     *
-     * Derived from {@link XYZData} to avoid losing any relevant data from the input files.
-     * To avoid duplication and errors that would come with it,
-     * all quantities are found by searching them in the {@link XYZData}'s maps,
-     * looking up by property names defined in {@link MainXYZPropertyNames} upon construction.
-     * This comes at the cost of repeated access being inefficient,
-     * so the getters use the prefix "lookup" instead of "get"
-     * to indicate that finding property requires a map lookup.
-     *
-     * @note Inspired by Atoms from ASE.
-     */
+    /// Stores the positions and species of atoms in a structure,
+    /// as well as information on periodicity, and may optionally store
+    /// lattice vectors (will provide if the system is periodic)
+    /// and energy/virials/forces,
+    /// and the "config type" of the structure.
+    ///
+    /// Positions are guaranteed to be wrapped within the box (i.e. fractional coords \in [0; 1) )
+    /// in periodic dimensions.
+    ///
+    /// \note Derived from \ref XYZData to avoid losing any relevant data from the input files.
+    /// To avoid duplication and errors that would come with it,
+    /// all quantities are found by searching them in the \ref XYZData's maps,
+    /// looking up by property names defined in \ref MainXYZPropertyNames upon construction.
+    /// This comes at the cost of repeated access being inefficient,
+    /// so the getters use the prefix "lookup" instead of "get"
+    /// to indicate that finding property requires a map lookup.
+    ///
+    /// \note Inspired by Atoms from ASE.
     class Atoms : public XYZData {
     public:
 
@@ -58,13 +53,16 @@ namespace jgap {
               std::array<bool, 3> pbc = {false, false, false},
               const MainXYZPropertyNames &names = {});
 
-        /**
-         * Construct by coping {@link XYZData}.
-         * @throws {@link std::runtime_error} if {@link XYZData} doesn't contain
-         * position/species arrays disguised by array name defined in {@link MainXYZPropertyNames},
-         * or PBC info from there is inconsistent.
-         */
+        /// Construct by coping \ref XYZData.
+        /// \throws \ref std::runtime_error if \ref XYZData doesn't contain
+        /// position/species arrays disguised by array name defined in \ref MainXYZPropertyNames,
+        /// or if PBC info in XYZData is inconsistent.
         explicit Atoms(const XYZData& data);
+
+        /// Construct by coping \ref XYZData.
+        /// \throws \ref std::runtime_error if \ref XYZData doesn't contain
+        /// position/species arrays disguised by array name defined in \ref MainXYZPropertyNames,
+        /// or if PBC info in XYZData is inconsistent.
         explicit Atoms(XYZData&& data);
 
         Atoms(const Atoms& other) = default;
@@ -72,10 +70,8 @@ namespace jgap {
         Atoms& operator=(const Atoms& other) = default;
         Atoms& operator=(Atoms&& other) = default;
 
-        /**
-         * Set energy, forces and virials.
-         * @note essentially to simplify updating energies with the result of {@link Potential#calculateEnergy}.
-         */
+        /// Set energy, forces and virials.
+        /// @note essentially to simplify updating energies with the result of \ref Potential::calculateEnergy.
         Atoms& operator<<(const AtomicQuantity& energy_and_derivatives);
 
         std::optional<Lattice> lookupLattice() const;
@@ -92,7 +88,7 @@ namespace jgap {
 
         size_t nAtoms() const { return lookupPositions().size(); }
 
-        void addAtom(const std::map<std::string, AtomValue>& atom_data);
+        void addAtom(const std::map<std::string, PerAtomPropery>& atom_data);
         void removeAtom(size_t index);
         void removeArray(const std::string& name);
 

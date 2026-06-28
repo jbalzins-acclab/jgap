@@ -6,7 +6,7 @@
 #include "../../../transform/aggregated/TransformationAggregator.hpp"
 #include "core/sparsification/Sparsifier.hpp"
 #include "GapComponent.hpp"
-#include "core/RowMajorMatrix.hpp"
+#include "core/Matrix.hpp"
 #include <memory>
 
 namespace jgap {
@@ -46,10 +46,10 @@ namespace jgap {
 
             AtomicQuantities result(nSparsePoints(), nl.nAtoms());
 
-            for (const auto& [atom_idx, descriptor] : aggregated_descriptors) {
+            for (const auto& [atom_idx, descriptor]: aggregated_descriptors) {
                 for (size_t sparse_idx = 0; sparse_idx < nSparsePoints(); sparse_idx++) {
                     const auto& sparse_desc = sparse_points[sparse_idx];
-                    const auto [K, gradK_wrt_q] = kernel.valueAndGradient(sparse_desc.value, descriptor.value);
+                    const auto [K, gradK_wrt_q] = kernel.valueAndGradient(sparse_desc, descriptor);
 
                     result.energy(sparse_idx) += K;
 
@@ -67,11 +67,11 @@ namespace jgap {
             return result;
         }
 
-        RowMajorMatrix sparseToSparseCovariance() const override {
-            RowMajorMatrix result(nSparsePoints(), nSparsePoints());
+        Matrix sparseToSparseCovariance() const override {
+            Matrix result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
-                    result(i, j) = kernel.value(sparse_points[i].value, sparse_points[j].value);
+                    result(i, j) = kernel.value(sparse_points[i], sparse_points[j]);
                     result(j, i) = result(i, j);
                 }
             }
@@ -106,8 +106,8 @@ namespace jgap {
                 auto& eam_grids = tables.eam_grids_vec.back();
 
                 for (auto cell: eam_grids.value_grid) {
-                    for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); ++sparse_idx) {
-                        cell.value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx].value, cell.pos);
+                    for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
+                        cell.value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], cell.pos);
                     }
                 }
 
@@ -124,7 +124,7 @@ namespace jgap {
             for (const auto& atoms : training_data) {
                 NeighbourList nl(atoms, cutoff);
                 auto aggregated = aggregator->aggregate(nl);
-                for (const auto& [idx, desc] : aggregated) {
+                for (const auto& [idx, desc]: aggregated) {
                     all_descriptors.push_back({desc.value});
                 }
             }

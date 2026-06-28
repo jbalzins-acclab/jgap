@@ -27,7 +27,7 @@ namespace {
 }
 
 TEST(TestTransformSerialization, TwoBodyTransformation) {
-    auto restored = roundTrip<ClusterTransformation<2, 2>>(
+    auto restored = roundTrip<NBodyTransformation<2, 2>>(
         TwoBodyTransformation(CosCutoff(5.0, 1.0)), tmpFile("twobody.h5"));
 
     auto casted = restored.as<TwoBodyTransformation>();
@@ -40,7 +40,7 @@ TEST(TestTransformSerialization, TwoBodyTransformation) {
 }
 
 TEST(TestTransformSerialization, Angle3bTransformation) {
-    auto restored = roundTrip<ClusterTransformation<4, 3>>(
+    auto restored = roundTrip<NBodyTransformation<4, 3>>(
         Angle3bTransformation(CosCutoff(4.0, 0.5)), tmpFile("angle3b.h5"));
 
     auto casted = restored.as<Angle3bTransformation>();
@@ -53,7 +53,7 @@ TEST(TestTransformSerialization, Angle3bTransformation) {
 }
 
 TEST(TestTransformSerialization, FSGenPairFunction) {
-    auto restored = roundTrip<ClusterTransformation<1, 2>>(
+    auto restored = roundTrip<NBodyTransformation<1, 2>>(
         FSGenPairFunction(4.5, 3.0, 1.2), tmpFile("fsgen.h5"));
 
     auto casted = restored.as<FSGenPairFunction>();
@@ -64,7 +64,7 @@ TEST(TestTransformSerialization, FSGenPairFunction) {
 }
 
 TEST(TestTransformSerialization, CoscutoffPairFunction) {
-    auto restored = roundTrip<ClusterTransformation<1, 2>>(
+    auto restored = roundTrip<NBodyTransformation<1, 2>>(
         CoscutoffPairFunction(4.0, 1.0, 2.0), tmpFile("coscutoff_pf.h5"));
 
     auto casted = restored.as<CoscutoffPairFunction>();
@@ -75,7 +75,7 @@ TEST(TestTransformSerialization, CoscutoffPairFunction) {
 }
 
 TEST(TestTransformSerialization, PolycutoffPairFunction) {
-    auto restored = roundTrip<ClusterTransformation<1, 2>>(
+    auto restored = roundTrip<NBodyTransformation<1, 2>>(
         PolycutoffPairFunction(4.0, 1.0, 2.0), tmpFile("polycutoff_pf.h5"));
 
     auto casted = restored.as<PolycutoffPairFunction>();
@@ -89,7 +89,7 @@ TEST(TestTransformSerialization, SplinePairTransformation) {
     Grid<1> grid({4}, {0.5}, {1.0}, {0.0, 1.0, 4.0, 9.0});
     SplinePairTransformation original(HermiteCubicSpline{grid});
 
-    auto restored = roundTrip<ClusterTransformation<1, 2>>(original, tmpFile("spline_pf.h5"));
+    auto restored = roundTrip<NBodyTransformation<1, 2>>(original, tmpFile("spline_pf.h5"));
 
     auto casted = restored.as<SplinePairTransformation>();
     ASSERT_NE(casted, nullptr);

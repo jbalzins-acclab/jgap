@@ -15,7 +15,7 @@ namespace jgap {
     }
 
     AtomicQuantity GapComponent::energy(const NeighbourList &neighbour_list) const {
-        assert(neighbour_list.cutoff >= getCutoffs().maxOverall());
+        assert(neighbour_list.getCutoff() >= getCutoffs().maxOverall());
         assert(coefficients.size() == nSparsePoints());
 
         auto covariance = covariate(neighbour_list);

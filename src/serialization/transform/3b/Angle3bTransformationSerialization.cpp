@@ -7,7 +7,7 @@
 
 namespace jgap {
 
-    bool Angle3bTransformationSerialization::serialize(const ValuePtr<ClusterTransformation<4, 3>>& obj,
+    bool Angle3bTransformationSerialization::serialize(const ValuePtr<NBodyTransformation<4, 3>>& obj,
         SerializationNode& node) const
     {
         if (auto derived = obj.as<Angle3bTransformation>()) {
@@ -19,7 +19,7 @@ namespace jgap {
         return false;
     }
 
-    ValuePtr<ClusterTransformation<4, 3>> Angle3bTransformationSerialization::deserialize(
+    ValuePtr<NBodyTransformation<4, 3>> Angle3bTransformationSerialization::deserialize(
         const SerializationNode& node) const
     {
         if (node.readOptionalAttribute<std::string>("name") != "Angle3bTransformation") {
@@ -30,8 +30,8 @@ namespace jgap {
             JGAP_LOG_AND_THROW("Missing 'cutoff' group in Angle3bTransformation serialization");
         }
         auto cutoff = SerializationRegistry<CutoffFunction>::deserialize(cutoff_node_opt.value());
-        return ValuePtr<ClusterTransformation<4, 3>>(Angle3bTransformation(cutoff));
+        return ValuePtr<NBodyTransformation<4, 3>>(Angle3bTransformation(cutoff));
     }
 
-    REGISTER_SERIALIZATION(Angle3bTransformationSerialization, ClusterTransformation<4, 3>);
+    REGISTER_SERIALIZATION(Angle3bTransformationSerialization, NBodyTransformation<4, 3>);
 }

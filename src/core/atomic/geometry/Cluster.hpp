@@ -10,6 +10,9 @@
 
 namespace jgap {
 
+    /// @brief Calculates flat-array index for a symmetric matrix.
+    /// @note The first matrix index must be lower than the second index.
+    /// To save performance, this is unchecked unless the DEBUG flag is on.
     static constexpr size_t flattenedIndex(size_t lower_index, size_t higher_index) {
 #ifdef DEBUG
         assert(lower_index < higher_index);
@@ -17,6 +20,13 @@ namespace jgap {
         return higher_index * (higher_index - 1) / 2 + lower_index;
     }
 
+    /// @brief Separation matrix for a cluster of atoms,
+    /// as well as their indexes in Atoms from which they originate.
+    /// \tparam NAtoms Number of atoms in a cluster.
+    /// \tparam CalcType Indicates whether the \ref SeparationDerivatives should be stored as well.
+    ///
+    /// @note Only independent matrix components are stored in a flat array,
+    /// indexed as in \ref flattenedIndex.
     template<size_t NAtoms, CalculationType CalcType = ValueOnly>
     requires(NAtoms > 1)
     struct Cluster;
@@ -36,7 +46,7 @@ namespace jgap {
             atom_indexes[0] = index0;
 
             for (size_t i = 1; i < NAtoms; i++) {
-                atom_indexes[i] = atom_neigh[i - 1].atom_index;
+                atom_indexes[i] = atom_neigh[i - 1].neighbour_index;
             }
 
             for (size_t j = 1; j < NAtoms; j++) {
@@ -51,18 +61,26 @@ namespace jgap {
             }
         }
 
-        Real between(const size_t lower_index, const size_t higher_index) const {
+        /// \see flattenedIndex
+        Real separationBetween(const size_t lower_index, const size_t higher_index) const {
+#ifdef DEBUG
+            assert(lower_index < higher_index);
+#endif
             return separation_magnitudes[flattenedIndex(lower_index, higher_index)];
         }
 
-        Real& between(const size_t lower_index, const size_t higher_index) {
+        /// \see flattenedIndex
+        Real& separationBetween(const size_t lower_index, const size_t higher_index) {
+#ifdef DEBUG
+            assert(lower_index < higher_index);
+#endif
             return separation_magnitudes[flattenedIndex(lower_index, higher_index)];
         }
     };
 
     template<size_t NAtoms>
-    struct Cluster<NAtoms, WithGradients> : public Cluster<NAtoms, ValueOnly> {
-        using Base = Cluster<NAtoms, ValueOnly>;
+    struct Cluster<NAtoms, WithGradients> : Cluster<NAtoms> {
+        using Base = Cluster<NAtoms>;
         using Base::NSeparations;
         using Base::atom_indexes;
         using Base::separation_magnitudes;
@@ -77,7 +95,7 @@ namespace jgap {
             atom_indexes[0] = index0;
 
             for (size_t i = 1; i < NAtoms; i++) {
-                atom_indexes[i] = atom_neigh[i - 1].atom_index;
+                atom_indexes[i] = atom_neigh[i - 1].neighbour_index;
             }
 
             for (size_t j = 1; j < NAtoms; j++) {
@@ -99,11 +117,19 @@ namespace jgap {
             }
         }
 
+        /// \see flattenedIndex
         const SeparationDerivatives& derivativesBetween(const size_t lower_index, const size_t higher_index) const {
+#ifdef DEBUG
+            assert(lower_index < higher_index);
+#endif
             return derivatives[flattenedIndex(lower_index, higher_index)];
         }
 
+        /// \see flattenedIndex
         SeparationDerivatives& derivativesBetween(const size_t lower_index, const size_t higher_index) {
+#ifdef DEBUG
+            assert(lower_index < higher_index);
+#endif
             return derivatives[flattenedIndex(lower_index, higher_index)];
         }
     };

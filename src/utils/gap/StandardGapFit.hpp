@@ -22,6 +22,21 @@ namespace jgap {
     inline GapPotential standardGapFit(const std::vector<Atoms>& training_data, const StandardGapParams& params) {
         GapPotential potential;
 
+        if (params.n_sparse2 == 0 && params.n_sparse3 == 0 && params.eam_n_sparse == 0) {
+            JGAP_LOG_AND_THROW("Cannot make a standard GAP potential without any components");
+        }
+
+        // ====================================================================================
+        // 2-Body Components
+        // ====================================================================================
+        if (params.n_sparse2 > 0) {
+            auto trans2 = TwoBodyTransformation(CosCutoff(params.cutoff2, params.cutoff2_width));
+            auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
+            auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
+            potential.addComponents(NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>::createComponents(
+                training_data, trans2, kernel2, sparsifier2));
+        }
+
         // ====================================================================================
         // ManyBodyGapComponent with EAM Pair Function
         // ====================================================================================
@@ -43,17 +58,6 @@ namespace jgap {
                 );
             potential.addComponents(NBodyGapComponent<4, 3, HasCentralAtom, SquaredExpKernel<3, 1>>::createComponents(
                 training_data, trans3, kernel3, sparsifier3));
-        }
-
-        // ====================================================================================
-        // 2-Body Components
-        // ====================================================================================
-        if (params.n_sparse2 > 0) {
-            auto trans2 = TwoBodyTransformation(CosCutoff(params.cutoff2, params.cutoff2_width));
-            auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
-            auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
-            potential.addComponents(NBodyGapComponent<2, 2, Symmetric, SquaredExpKernel<1, 1>>::createComponents(
-                training_data, trans2, kernel2, sparsifier2));
         }
 
         IsolatedAtomPotential isolated_atom_pot{training_data};

@@ -19,7 +19,7 @@ namespace jgap {
 
         Real evaluate(Real r) const override {
             if (r <= r_min) return 1.0;
-            if (r >= cutoff) return 0.0;
+            if (r >= cutoff) [[unlikely]] return 0.0;
 
             const Real chi = (r - r_min) * cutoff_width_inverse;
             return 1.0 - chi * chi * chi * (10.0 - 15.0 * chi + 6.0 * chi * chi);
@@ -27,7 +27,7 @@ namespace jgap {
 
         std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override {
             if (r <= r_min) return {1.0, 0.0};
-            if (r >= cutoff) return {0.0, 0.0};
+            if (r >= cutoff) [[unlikely]] return {0.0, 0.0};
 
             const Real chi = (r - r_min) * cutoff_width_inverse;
             const Real chi_sq = chi * chi;

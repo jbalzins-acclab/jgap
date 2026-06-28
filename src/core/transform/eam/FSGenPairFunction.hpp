@@ -16,13 +16,13 @@ namespace jgap {
 
 
         Descriptor<1> evaluate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1);
+            Real distance = pair.separationBetween(0, 1);
             if (distance >= cutoff) return {{0.0}};
             return {{prefactor * std::pow(1.0 - distance * cutoff_inverse, degree)}};
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1);
+            Real distance = pair.separationBetween(0, 1);
             if (distance >= cutoff) return {{{0.0}}, {}};
 
             Real val = prefactor * std::pow(1.0 - distance * cutoff_inverse, degree);

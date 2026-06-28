@@ -10,7 +10,7 @@
 namespace jgap {
 
     bool GapPotentialSerialization::serialize(const ValuePtr<Potential>& obj, SerializationNode& node) const {
-        auto derived = obj.as<GapPotential>();
+        const auto derived = obj.as<GapPotential>();
         if (!derived) {
             return false;
         }

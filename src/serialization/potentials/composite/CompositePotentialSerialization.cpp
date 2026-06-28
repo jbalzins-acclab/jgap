@@ -6,7 +6,7 @@
 namespace jgap {
 
     bool CompositePotentialSerialization::serialize(const ValuePtr<Potential>& obj, SerializationNode& node) const {
-        auto derived = obj.as<CompositePotential>();
+        const auto derived = obj.as<CompositePotential>();
         if (!derived) {
             return false;
         }

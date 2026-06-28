@@ -26,10 +26,10 @@ namespace jgap {
 
         virtual ~Kernel() = default;
 
-        virtual Real value(const std::array<Real, Dim>& q1, const std::array<Real, Dim>& q2) const = 0;
+        virtual Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const = 0;
 
-        virtual KernelValueAndGradient valueAndGradient(const std::array<Real, Dim> &sparse_point,
-                                                        const std::array<Real, Dim> &q) const = 0;
+        virtual KernelValueAndGradient valueAndGradient(const Descriptor<Dim> &sparse_point,
+                                                        const Descriptor<Dim> &q) const = 0;
 
     };
 

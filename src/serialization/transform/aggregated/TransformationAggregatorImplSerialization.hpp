@@ -33,7 +33,7 @@ namespace jgap {
                     transformation_group.writeAttribute("species_set", species_symbols);
 
                     auto ct_group = transformation_group.createGroup("cluster_transformation");
-                    SerializationRegistry<ClusterTransformation<Dim, ClusterSize>>::serialize(transformation, ct_group);
+                    SerializationRegistry<NBodyTransformation<Dim, ClusterSize>>::serialize(transformation, ct_group);
                 }
                 return true;
             }
@@ -64,16 +64,16 @@ namespace jgap {
                 Species root(species_symbols[0]);
 
                 if constexpr (ClusterSize == 2) {
-                    SpeciesSet<2, HasCentralAtom> species_set(root, Species(species_symbols[1]));
+                    SpeciesSet<2, NodeSymmetric> species_set(root, Species(species_symbols[1]));
                     auto ct_group_opt = transformation_group.getGroup("cluster_transformation");
                     if (!ct_group_opt) JGAP_LOG_AND_THROW("Missing 'cluster_transformation' group in TransformationAggregatorImpl serialization");
-                    auto transformation = SerializationRegistry<ClusterTransformation<Dim, 2>>::deserialize(ct_group_opt.value());
+                    auto transformation = SerializationRegistry<NBodyTransformation<Dim, 2>>::deserialize(ct_group_opt.value());
                     aggregator->extend(species_set, transformation);
                 } else if constexpr (ClusterSize == 3) {
-                    SpeciesSet<3, HasCentralAtom> species_set(root, Species(species_symbols[1]), Species(species_symbols[2]));
+                    SpeciesSet<3, NodeSymmetric> species_set(root, Species(species_symbols[1]), Species(species_symbols[2]));
                     auto ct_group_opt = transformation_group.getGroup("cluster_transformation");
                     if (!ct_group_opt) JGAP_LOG_AND_THROW("Missing 'cluster_transformation' group in TransformationAggregatorImpl serialization");
-                    auto transformation = SerializationRegistry<ClusterTransformation<Dim, 3>>::deserialize(ct_group_opt.value());
+                    auto transformation = SerializationRegistry<NBodyTransformation<Dim, 3>>::deserialize(ct_group_opt.value());
                     aggregator->extend(species_set, transformation);
                 }
             }

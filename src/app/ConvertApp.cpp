@@ -22,9 +22,6 @@ namespace {
         if (path.ends_with(".xml")) {
             path.resize(path.size() - 4);
         }
-        if (path.ends_with(".quip")) {
-            path.resize(path.size() - 5);
-        }
         return path + ".h5";
     }
 }
@@ -33,7 +30,7 @@ int main(int argc, char** argv) {
     CurrentLogger::initDefault({});
 
     if (argc < 2 || argc > 3) {
-        std::cerr << "Usage: " << argv[0] << " <potential.quip.xml> [output.h5]\n";
+        std::cerr << "Usage: " << argv[0] << " <quip-potential.xml> [output.h5]\n";
         return 1;
     }
 

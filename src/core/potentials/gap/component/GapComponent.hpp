@@ -3,13 +3,13 @@
 
 #include <vector>
 
-#include "core/RowMajorMatrix.hpp"
+#include "core/Matrix.hpp"
 #include "core/atomic/Atoms.hpp"
 #include "core/atomic/energy/AtomicQuantities.hpp"
 #include "core/atomic/energy/AtomicQuantity.hpp"
 #include "core/atomic/neighbours/NeighbourList.hpp"
 #include "core/tabulation/TabulationData.hpp"
-#include "core/transform/ClusterTransformation.hpp"
+#include "core/transform/NBodyTransformation.hpp"
 
 namespace jgap {
 
@@ -17,7 +17,7 @@ namespace jgap {
     public:
         virtual ~GapComponent() = default;
         virtual std::optional<AtomicQuantities> covariate(const NeighbourList& neighbour_list) const = 0;
-        virtual RowMajorMatrix sparseToSparseCovariance() const = 0;
+        virtual Matrix sparseToSparseCovariance() const = 0;
         virtual size_t nSparsePoints() const = 0;
         virtual Cutoffs getCutoffs() const = 0;
 

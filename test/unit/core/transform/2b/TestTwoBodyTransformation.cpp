@@ -51,7 +51,7 @@ TEST(TestTwoBodyTransformation, CorrectlyUsesCutoff) {
     TwoBodyTransformation trans(mock_cutoff);
 
     Cluster<2> pair;
-    pair.between(0, 1) = test_dist;
+    pair.separationBetween(0, 1) = test_dist;
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(pair);

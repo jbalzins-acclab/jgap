@@ -7,7 +7,7 @@
 
 namespace jgap {
 
-    bool TwoBodyTransformationSerialization::serialize(const ValuePtr<ClusterTransformation<2, 2>>& obj,
+    bool TwoBodyTransformationSerialization::serialize(const ValuePtr<NBodyTransformation<2, 2>>& obj,
         SerializationNode& node) const
     {
         if (auto derived = obj.as<TwoBodyTransformation>()) {
@@ -19,7 +19,7 @@ namespace jgap {
         return false;
     }
 
-    ValuePtr<ClusterTransformation<2, 2>> TwoBodyTransformationSerialization::deserialize(
+    ValuePtr<NBodyTransformation<2, 2>> TwoBodyTransformationSerialization::deserialize(
         const SerializationNode& node) const
     {
         if (node.readOptionalAttribute<std::string>("name") != "TwoBodyTransformation") {
@@ -30,8 +30,8 @@ namespace jgap {
             JGAP_LOG_AND_THROW("Missing 'cutoff' group in TwoBodyTransformation serialization");
         }
         auto cutoff = SerializationRegistry<CutoffFunction>::deserialize(cutoff_node_opt.value());
-        return ValuePtr<ClusterTransformation<2, 2>>(TwoBodyTransformation(cutoff));
+        return ValuePtr<NBodyTransformation<2, 2>>(TwoBodyTransformation(cutoff));
     }
 
-    REGISTER_SERIALIZATION(TwoBodyTransformationSerialization, ClusterTransformation<2, 2>);
+    REGISTER_SERIALIZATION(TwoBodyTransformationSerialization, NBodyTransformation<2, 2>);
 }

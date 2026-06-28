@@ -9,7 +9,7 @@ namespace jgap {
 
         Species central_atom_species;
 
-        NBodyGrids<NBodies, HasCentralAtom, AggregatorDim> aggregator_grids;
+        NBodyGrids<NBodies, NodeSymmetric, AggregatorDim> aggregator_grids;
         Grid<AggregatorDim> value_grid;
     };
 }

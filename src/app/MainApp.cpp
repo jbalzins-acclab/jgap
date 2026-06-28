@@ -38,7 +38,7 @@ namespace {
                      " [n_grid_2b=..] [n_grid_3b=a,b,c]\n";
     }
 
-    /** Strips a trailing ".h5" so e.g. "pot.h5" -> "pot" (the prefix TabGapIO::write extends). */
+    /// Strips a trailing ".h5" so e.g. "pot.h5" -> "pot" (the prefix TabGapIO::write extends).
     std::string potentialPrefix(std::string path) {
         if (path.ends_with(".h5")) {
             path.resize(path.size() - 3);
@@ -46,7 +46,7 @@ namespace {
         return path;
     }
 
-    /** Splits "key=value" into its parts; value is empty when there is no '='. */
+    /// Splits "key=value" into its parts; value is empty when there is no '='.
     std::pair<std::string, std::string> splitKeyValue(const std::string& arg) {
         const auto eq = arg.find('=');
         if (eq == std::string::npos) {
@@ -81,7 +81,7 @@ namespace {
 
         const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(pot_file);
 
-        std::vector<Atoms> frames = readAtoms(in_xyz);
+        std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
 
         std::ofstream out(out_xyz);
         if (!out.is_open()) {

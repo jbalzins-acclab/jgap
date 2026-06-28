@@ -207,7 +207,7 @@ namespace jgap {
             auto pair_clusters = nl.findAllClusters<WithGradients>(species_pair);
 
             for (auto pair: pair_clusters) {
-                const Real& separation_magnitude = pair.between(0, 1);
+                const Real& separation_magnitude = pair.separationBetween(0, 1);
                 const SeparationDerivatives& separation_deriv = pair.derivativesBetween(0, 1);
 
                 auto [e, dE_dr] = energyAndDerivative(params, separation_magnitude);

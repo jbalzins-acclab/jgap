@@ -21,7 +21,7 @@ namespace {
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real deriv = pair.between(0, 1) * deriv_factor_;
+            Real deriv = pair.separationBetween(0, 1) * deriv_factor_;
             return {{{value_to_return_}}, {std::array<Real, 1>{deriv}}};
         }
 

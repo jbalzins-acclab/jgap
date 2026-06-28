@@ -22,13 +22,13 @@ namespace jgap {
 
         Real evaluate(Real r) const override {
             if (r <= r_min) return 1.0;
-            if (r >= cutoff) return 0.0;
+            if (r >= cutoff) [[unlikely]] return 0.0;
             return 0.5 * (std::cos((r - r_min) * pi_over_w) + 1.0);
         }
 
         std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override {
             if (r <= r_min) return {1.0, 0.0};
-            if (r >= cutoff) return {0.0, 0.0};
+            if (r >= cutoff) [[unlikely]] return {0.0, 0.0};
 
             const Real phase = (r - r_min) * pi_over_w;
             Real s, c;

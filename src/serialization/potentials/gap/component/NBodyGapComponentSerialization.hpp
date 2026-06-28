@@ -24,7 +24,7 @@ namespace jgap {
 
     public:
         bool serialize(const ValuePtr<GapComponent>& obj, SerializationNode& node) const override {
-            auto derived = obj.template as<ComponentT>();
+            const auto derived = obj.template as<ComponentT>();
             if (!derived) {
                 return false;
             }
@@ -34,9 +34,9 @@ namespace jgap {
             node.writeAttribute("cluster_size", ClusterSize);
             node.writeAttribute("cluster_symmetry", symmetryName());
 
-            // Species set: for Symmetric this is just the nodes, for HasCentralAtom the root comes first.
+            // Species set: for FullSymmetry this is just the nodes, for HasCentralAtom the root comes first.
             std::vector<std::string> species_symbols;
-            if constexpr (ClusterSym == HasCentralAtom) {
+            if constexpr (ClusterSym == NodeSymmetric) {
                 species_symbols.push_back(derived->getSpecies().getRoot().symbol());
             }
             for (const auto& s : derived->getSpecies().getNodes()) {
@@ -48,7 +48,7 @@ namespace jgap {
             KernelSerialization::serialize(derived->getKernel(), kernel_group);
 
             auto transformation_group = node.createGroup("transformation");
-            SerializationRegistry<ClusterTransformation<Dim, ClusterSize>>::serialize(
+            SerializationRegistry<NBodyTransformation<Dim, ClusterSize>>::serialize(
                 derived->getTransformation(), transformation_group);
 
             node.saveSparsePoints<Dim>(derived->getSparsePoints());
@@ -77,7 +77,7 @@ namespace jgap {
 
             auto transformation_group_opt = node.getGroup("transformation");
             if (!transformation_group_opt) JGAP_LOG_AND_THROW("Missing 'transformation' group in NBodyGapComponent serialization");
-            auto transformation = SerializationRegistry<ClusterTransformation<Dim, ClusterSize>>::deserialize(
+            auto transformation = SerializationRegistry<NBodyTransformation<Dim, ClusterSize>>::deserialize(
                 transformation_group_opt.value());
 
             auto sparse_points = node.loadSparsePoints<Dim>();
@@ -89,16 +89,16 @@ namespace jgap {
 
     private:
         static std::string symmetryName() {
-            return ClusterSym == HasCentralAtom ? "HasCentralAtom" : "Symmetric";
+            return ClusterSym == NodeSymmetric ? "HasCentralAtom" : "FullSymmetry";
         }
 
         static SpeciesSet<ClusterSize, ClusterSym> makeSpeciesSet(const std::vector<std::string>& symbols) {
             if constexpr (ClusterSym == FullSymmetry && ClusterSize == 2) {
-                if (symbols.size() != 2) JGAP_LOG_AND_THROW("Expected 2 species for NBodyGapComponent<*,2,Symmetric>");
+                if (symbols.size() != 2) JGAP_LOG_AND_THROW("Expected 2 species for NBodyGapComponent<*,2,FullSymmetry>");
                 return SpeciesSet<2, FullSymmetry>(Species(symbols[0]), Species(symbols[1]));
-            } else if constexpr (ClusterSym == HasCentralAtom && ClusterSize == 3) {
+            } else if constexpr (ClusterSym == NodeSymmetric && ClusterSize == 3) {
                 if (symbols.size() != 3) JGAP_LOG_AND_THROW("Expected 3 species for NBodyGapComponent<*,3,HasCentralAtom>");
-                return SpeciesSet<3, HasCentralAtom>(Species(symbols[0]), Species(symbols[1]), Species(symbols[2]));
+                return SpeciesSet<3, NodeSymmetric>(Species(symbols[0]), Species(symbols[1]), Species(symbols[2]));
             } else {
                 JGAP_LOG_AND_THROW("Species set reconstruction not implemented for this NBodyGapComponent specialization");
             }

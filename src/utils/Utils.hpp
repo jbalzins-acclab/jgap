@@ -35,7 +35,7 @@ namespace jgap {
 
     std::string uniqueStamp();
 
-    double factorial(size_t n);
+    inline double factorial(size_t n);
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);

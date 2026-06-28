@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     // Deserialize without knowing the concrete type: the registry picks the right deserializer.
     const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(potential_file);
 
-    std::vector<Atoms> frames = readAtoms(in_xyz);
+    std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
 
     std::ofstream out(out_xyz);
     if (!out.is_open()) {

@@ -39,43 +39,41 @@ namespace jgap {
                                                       const std::filesystem::path& base_dir);
 
 
-        /** Reads the {@code GAP_data} e0 entries into an {@link IsolatedAtomPotential}. */
+        /// Reads the `GAP_data` e0 entries into an \ref IsolatedAtomPotential.
         static IsolatedAtomPotential transformIsolatedAtomParams(
                                                         const pugi::xml_node& quip_isolated_atom_params);
 
-        /** Builds the GAP components from the {@code gpSparse} block (one per {@code gpCoordinates}).
-         *  @param base_dir directory the referenced {@code sparseX} filenames are resolved against. */
+        /// Builds the GAP components from the `gpSparse` block (one per `gpCoordinates`).
+        /// @param base_dir directory the referenced `sparseX` filenames are resolved against.
         static GapPotential transformSparseData(const pugi::xml_node& quip_sparse_data,
                                                 const std::filesystem::path& base_dir);
 
-        /**
-         * Builds a 2-body component (TwoBodyTransformation + SquaredExpKernel) from a {@code distance_2b}
-         * descriptor, reading sparse points from the referenced {@code sparseX} file (resolved against
-         * {@code base_dir}) and the per-point {@code alpha} coefficients.
-         */
+        /// Builds a 2-body component (TwoBodyTransformation + SquaredExpKernel) from a `distance_2b`
+        /// descriptor, reading sparse points from the referenced `sparseX` file (resolved against
+        /// `base_dir`) and the per-point `alpha` coefficients.
         static ValuePtr<GapComponent> transformDistance2b(const QuipDescriptorData &main_data,
                                                                  const pugi::xml_node &distance2b_node,
                                                                  const std::filesystem::path& base_dir);
 
-        /** Builds a 3-body component (Angle3bTransformation + SquaredExpKernel) from an {@code angle_3b}
-         *  descriptor. */
+        /// Builds a 3-body component (Angle3bTransformation + SquaredExpKernel) from an `angle_3b`
+        /// descriptor.
         static ValuePtr<GapComponent> transformAngle3b(const QuipDescriptorData &mainData,
                                                               const pugi::xml_node &angle3b_node,
                                                               const std::filesystem::path& base_dir);
 
-        /** Builds an EAM many-body component from an {@code eam_density} descriptor, given the set of
-         *  species present. */
+        /// Builds an EAM many-body component from an `eam_density` descriptor, given the set of
+        /// species present.
         static ValuePtr<GapComponent> transformEam(const QuipDescriptorData &main_data,
                                                           const pugi::xml_node &eam_nodes,
                                                           const std::set<Species> &species,
                                                           const std::filesystem::path& base_dir);
 
-        /** Resolves a {@code sparseX_filename} against {@code base_dir}: absolute paths and the
-         *  empty-{@code base_dir} case are returned unchanged, otherwise joined onto {@code base_dir}. */
+        /// Resolves a `sparseX_filename` against `base_dir`: absolute paths and the
+        /// empty-`base_dir` case are returned unchanged, otherwise joined onto `base_dir`.
         static std::string resolveSparseX(const std::filesystem::path& base_dir, const std::string& filename);
 
-        /** Selects the EAM base pair (density) function (FSGen / Polycutoff / Coscutoff / spline) from the
-         *  descriptor's {@code pair_function}/{@code order}/{@code mode} fields. */
+        /// Selects the EAM base pair (density) function (FSGen / Polycutoff / Coscutoff / spline) from the
+        /// descriptor's `pair_function`/`order`/`mode` fields.
         static ValuePtr<EamPairFunction> selectPairFunction(const QuipDescriptorData &main_data,
                                                                                 std::optional<double> r_min,
                                                                                 double prefactor);

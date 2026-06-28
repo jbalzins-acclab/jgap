@@ -18,7 +18,7 @@ namespace jgap {
         std::map<Species, Real> isolated_energies{};
 
         NBodyGrids<2, FullSymmetry> two_body_grids;
-        NBodyGrids<3, HasCentralAtom> three_body_grids;
+        NBodyGrids<3, NodeSymmetric> three_body_grids;
 
         std::vector<ManyBodyGrids<2>> eam_grids_vec{};
 
@@ -38,7 +38,7 @@ namespace jgap {
 
         ManyBodyGrids<2>& newEamGrid(const Species& central_atom_species) {
 
-            NBodyGrids<2, HasCentralAtom> aggregator_grids(
+            NBodyGrids<2, NodeSymmetric> aggregator_grids(
                 {0.0},
                 {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b)},
                 {params.n_grid_2b}
@@ -69,7 +69,7 @@ namespace jgap {
     Cluster<N> TabulationData::gridPosAsCluster(std::array<Real, Cluster<N>::NSeparations> grid_pos) {
         if constexpr (N == 2) {
             Cluster<2> res{};
-            res.between(0, 1) = grid_pos[0];
+            res.separationBetween(0, 1) = grid_pos[0];
             return res;
         }
         if constexpr (N == 3) {
@@ -81,9 +81,9 @@ namespace jgap {
             Real cos12 = grid_pos[2];
             Real r12 = sqrt(r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12);
 
-            res.between(0, 1) = r01;
-            res.between(0, 2) = r02;
-            res.between(1, 2) = r12;
+            res.separationBetween(0, 1) = r01;
+            res.separationBetween(0, 2) = r02;
+            res.separationBetween(1, 2) = r12;
             return res;
         }
 

@@ -270,7 +270,7 @@ namespace jgap {
 
         SpeciesSet<2, FullSymmetry> species_set(species1.symbol(), species2.symbol());
 
-        ValuePtr<ClusterTransformation<2, 2>> trans = TwoBodyTransformation(
+        ValuePtr<NBodyTransformation<2, 2>> trans = TwoBodyTransformation(
             CosCutoff(main_data.cutoff, cutoff_transition_width)
             );
         auto kernel = SquaredExpKernel<1, 1>(main_data.delta, std::array<Real, 1>{main_data.theta});
@@ -315,9 +315,9 @@ namespace jgap {
 
         Species species2 = Species::fromAtomicNumber(std::stoi(param_map["Z2"]));
 
-        SpeciesSet<3, HasCentralAtom> species_set(root_species, species1, species2);
+        SpeciesSet<3, NodeSymmetric> species_set(root_species, species1, species2);
 
-        ValuePtr<ClusterTransformation<4, 3>> trans = Angle3bTransformation(
+        ValuePtr<NBodyTransformation<4, 3>> trans = Angle3bTransformation(
             CosCutoff(mainData.cutoff, mainData.cutoff - r_min)
             );
         auto kernel = SquaredExpKernel<3, 1>(
@@ -394,8 +394,8 @@ namespace jgap {
 
             auto pf = selectPairFunction(main_data, rMin, prefactor);
 
-            SpeciesSet<2, HasCentralAtom> sp(central_species, contributor_species);
-            aggregator.extend(sp, pf);
+            SpeciesSet<2, NodeSymmetric> sp(central_species, contributor_species);
+            aggregator.extend(sp, ValuePtr<NBodyTransformation<1, 2>>(pf.release()));
         }
 
         auto kernel = SquaredExpKernel<1, 0>(main_data.delta, std::array{main_data.theta});

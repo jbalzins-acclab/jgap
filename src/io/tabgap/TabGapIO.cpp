@@ -172,25 +172,23 @@ namespace jgap {
         return eam_fs_contents;
     }
 
-    /**
-     * Writes one 2-body group into {@code root}.
-     *
-     * On-disk convention (a quirk of the external tabGAP format): the group describes the *original*
-     * tabulation grid but stores the cubic B-spline *coefficients* as its values:
-     * <ul>
-     *   <li>{@code N}: original grid point count (= coefficient count - 2; CubicBSpline::fit pads one
-     *       ghost coefficient on each side).</li>
-     *   <li>{@code grid_limits}: [lower, upper]. {@code lower} is the original-grid origin
-     *       (coeff origin + spacing); {@code upper} is the coefficient grid's cutoff, which sits ONE
-     *       spacing past the last original point (origin + (coeff_dims - 1) * spacing).</li>
-     *   <li>{@code energies}: the raw B-spline coefficients (N + 2 values).</li>
-     * </ul>
-     * Because of the one-extra-spacing {@code upper}, the reader recovers spacing as (upper - lower) / N
-     * (see {@link TabGapIO#readFromGroup}), not / (N - 1).
-     *
-     * @param root the HDF5 group to add the pair group to.
-     * @param component the 2-body component to write (its spline must be a CubicBSpline).
-     */
+    /// Writes one 2-body group into `root`.
+    ///
+    /// On-disk convention (a quirk of the external tabGAP format): the group describes the *original*
+    /// tabulation grid but stores the cubic B-spline *coefficients* as its values:
+    /// <ul>
+    ///   <li>`N`: original grid point count (= coefficient count - 2; CubicBSpline::fit pads one
+    ///       ghost coefficient on each side).</li>
+    ///   <li>`grid_limits`: [lower, upper]. `lower` is the original-grid origin
+    ///       (coeff origin + spacing); `upper` is the coefficient grid's cutoff, which sits ONE
+    ///       spacing past the last original point (origin + (coeff_dims - 1) * spacing).</li>
+    ///   <li>`energies`: the raw B-spline coefficients (N + 2 values).</li>
+    /// </ul>
+    /// Because of the one-extra-spacing `upper`, the reader recovers spacing as (upper - lower) / N
+    /// (see \ref TabGapIO::readFromGroup), not / (N - 1).
+    ///
+    /// @param root the HDF5 group to add the pair group to.
+    /// @param component the 2-body component to write (its spline must be a CubicBSpline).
     void TabGapIO::write2b(HighFive::Group& root, const TwoBodyTGComponent &component) {
 
         auto species = component.getSpeciesPair().getNodes();
@@ -214,16 +212,14 @@ namespace jgap {
         pair_group.createDataSet("energies", coeff_grid.data_flat);
     }
 
-    /**
-     * Writes one 3-body group, following the same on-disk convention as {@link TabGapIO#write2b} (see its doc):
-     * per axis, {@code N} is the original grid point count (= coeff dims - 2) and {@code grid_limits}
-     * stores the original-grid extent [origin, cutoff] derived from the coefficient grid; {@code energies}
-     * holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
-     * "&lt;i&gt;-&lt;j&gt;-&lt;k&gt;" so readers can tell 2b (one '-') from 3b (two '-') groups.
-     *
-     * @param root the HDF5 group to add the triplet group to.
-     * @param component the 3-body component to write.
-     */
+    /// Writes one 3-body group, following the same on-disk convention as \ref TabGapIO::write2b (see its doc):
+    /// per axis, `N` is the original grid point count (= coeff dims - 2) and `grid_limits`
+    /// stores the original-grid extent [origin, cutoff] derived from the coefficient grid; `energies`
+    /// holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
+    /// "&lt;i&gt;-&lt;j&gt;-&lt;k&gt;" so readers can tell 2b (one '-') from 3b (two '-') groups.
+    ///
+    /// @param root the HDF5 group to add the triplet group to.
+    /// @param component the 3-body component to write.
     void TabGapIO::write3b(HighFive::Group& root, const ThreeBodyTGComponent &component) {
 
         auto root_species = component.getSpeciesTriplet().getRoot();
@@ -257,22 +253,20 @@ namespace jgap {
         triplet_group.createDataSet("energies", coeff_grid.data_flat);
     }
 
-    /**
-     * Builds the contents of one LAMMPS .eam.fs file from (some of) the supplied components, and
-     * CONSUMES the ones it used: it takes at most one EAM component per element plus the pair potentials,
-     * erasing them from {@code eam_components}/{@code pair_pots}. Callers loop until both are empty,
-     * producing one .eam.fs per round (a single .eam.fs cannot hold two embedding functions for the same
-     * element).
-     *
-     * .eam.fs structure: 3 comment lines; an elements line; a (Nrho, drho, Nr, dr, cutoff) line; then per
-     * element an embedding function F(rho) and one density function rho(r) per element; finally the
-     * pair-potential tables phi(r) for i &gt;= j (stored as r * phi(r), as the format requires).
-     *
-     * @param all_species the element ordering shared by every emitted file.
-     * @param pair_pots pair potentials still to write; consumed (cleared) by this call.
-     * @param eam_components EAM components still to write; the ones used are erased.
-     * @return the text of one .eam.fs file.
-     */
+    /// Builds the contents of one LAMMPS .eam.fs file from (some of) the supplied components, and
+    /// CONSUMES the ones it used: it takes at most one EAM component per element plus the pair potentials,
+    /// erasing them from `eam_components`/`pair_pots`. Callers loop until both are empty,
+    /// producing one .eam.fs per round (a single .eam.fs cannot hold two embedding functions for the same
+    /// element).
+    ///
+    /// .eam.fs structure: 3 comment lines; an elements line; a (Nrho, drho, Nr, dr, cutoff) line; then per
+    /// element an embedding function F(rho) and one density function rho(r) per element; finally the
+    /// pair-potential tables phi(r) for i &gt;= j (stored as r * phi(r), as the format requires).
+    ///
+    /// @param all_species the element ordering shared by every emitted file.
+    /// @param pair_pots pair potentials still to write; consumed (cleared) by this call.
+    /// @param eam_components EAM components still to write; the ones used are erased.
+    /// @return the text of one .eam.fs file.
     std::string TabGapIO::useSomeComponentsAndGenerateEamFs(
         const std::vector<Species> &all_species,
         std::map<SpeciesSet<2, FullSymmetry>, const TwoBodyTGComponent* >& pair_pots,
@@ -287,7 +281,7 @@ namespace jgap {
         size_t n_rho{}, n_2b{};
         Real drho{}, dr{};
         std::map<Species, Grid<1>> energy_per_density_grids;
-        std::map<SpeciesSet<2, HasCentralAtom>, Grid<1>> density_grids;
+        std::map<SpeciesSet<2, NodeSymmetric>, Grid<1>> density_grids;
 
         for (Species element: all_species) {
             if (eam_components.contains(element)) {
@@ -484,7 +478,7 @@ namespace jgap {
                 group.getAttribute("element_j").read(species_j);
                 group.getAttribute("element_k").read(species_k);
 
-                SpeciesSet<3, HasCentralAtom> triplet{species_i, species_j, species_k};
+                SpeciesSet<3, NodeSymmetric> triplet{species_i, species_j, species_k};
 
                 std::array<size_t, 3> n_original{}; // original grid point counts (see write3b)
                 group.getDataSet("N").read(n_original);
@@ -536,15 +530,13 @@ namespace jgap {
         }
     }
 
-    /**
-     * Parses one LAMMPS .eam.fs stream (a file or an embedded "eam_files" dataset) and appends the
-     * resulting EAM components (one per element) and pair-potential 2-body components to {@code pot}.
-     * Inverse of {@link #useSomeComponentsAndGenerateEamFs}; pair tables stored as r * phi(r) are divided
-     * back by r.
-     *
-     * @param file the .eam.fs text stream to parse.
-     * @param pot the potential to append the parsed components to.
-     */
+    /// Parses one LAMMPS .eam.fs stream (a file or an embedded "eam_files" dataset) and appends the
+    /// resulting EAM components (one per element) and pair-potential 2-body components to `pot`.
+    /// Inverse of \ref ::useSomeComponentsAndGenerateEamFs; pair tables stored as r * phi(r) are divided
+    /// back by r.
+    ///
+    /// @param file the .eam.fs text stream to parse.
+    /// @param pot the potential to append the parsed components to.
     void TabGapIO::parseEamFs(std::istream &file, TabGapPotential &pot) {
         std::string line;
         for (size_t i = 0; i < 3; i++) {
@@ -579,12 +571,12 @@ namespace jgap {
         iss >> n_rho >> drho >> n_r >> dr >> cutoff;
 
         std::map<Species, Grid<1>> embedding_energies;
-        std::map<Species, NBodyGrids<2, HasCentralAtom>> density_grids;
+        std::map<Species, NBodyGrids<2, NodeSymmetric>> density_grids;
 
         for (const auto& central_atom_species: elements) {
             density_grids.insert({
                 central_atom_species,
-                NBodyGrids<2, HasCentralAtom>{{0.0}, {dr}, {n_r}}
+                NBodyGrids<2, NodeSymmetric>{{0.0}, {dr}, {n_r}}
             });
         }
 

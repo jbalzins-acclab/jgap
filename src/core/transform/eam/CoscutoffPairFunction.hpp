@@ -16,7 +16,7 @@ namespace jgap {
         }
 
         Descriptor<1> evaluate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1);
+            Real distance = pair.separationBetween(0, 1);
             if (distance >= cutoff) return {{0.0}};
             if (distance <= r_min) return {{prefactor}};
 
@@ -25,7 +25,7 @@ namespace jgap {
         }
 
         NBodyDescriptor<1, 2> evaluateAndDifferentiate(const Cluster<2>& pair) const override {
-            Real distance = pair.between(0, 1);
+            Real distance = pair.separationBetween(0, 1);
             if (distance >= cutoff) return {{{0.0}}, {}};
             if (distance <= r_min) return {{{prefactor}}, {}};
 
