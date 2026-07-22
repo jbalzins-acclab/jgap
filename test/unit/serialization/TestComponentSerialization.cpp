@@ -1,21 +1,21 @@
 #include <gtest/gtest.h>
 
+#include "core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "core/cutoff/CosCutoff.hpp"
 #include "core/kernels/SquaredExpKernel.hpp"
-#include "core/potentials/gap/component/GapComponent.hpp"
+#include "core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "core/potentials/gap/component/NBodyGapComponent.hpp"
-#include "core/transform/2b/TwoBodyTransformation.hpp"
-#include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
-#include "core/transform/eam/PolycutoffPairFunction.hpp"
+#include "core/potentials/gap/component/TwoBodyGapComponent.hpp"
+#include "core/transform/manybody/TwoBodySum.hpp"
+#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
 
 namespace {
-    std::string tmpFile(const std::string& name) {
-        return testing::TempDir() + "/" + name;
-    }
+    std::string tmpFile(const std::string& name) { return testing::TempDir() + "/" + name; }
 
     template<typename Obj>
     ValuePtr<GapComponent> roundTrip(const Obj& component, const std::string& file) {
@@ -35,15 +35,13 @@ TEST(TestComponentSerialization, NBodyTwoBody) {
     std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}, Descriptor<2>{{2.5, 0.5}}};
     std::vector<Real> coefficients = {0.5, -0.3};
 
-    NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>> component(
-        SpeciesSet<2, FullSymmetry>{"Fe", "Fe"},
-        TwoBodyTransformation(CosCutoff(5.0, 1.0)),
-        SquaredExpKernel<1, 1>(10.0, {1.3}),
-        sparse_points,
-        coefficients);
+    auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
+    TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> component(Species2Sorted(Species("Fe"), Species("Fe")),
+                                                             transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}),
+                                                             sparse_points, coefficients);
 
     auto rt = roundTrip(component, tmpFile("nbody_2b.h5"));
-    auto restored = rt.as<NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>>();
+    auto restored = rt.as<TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>>();
     ASSERT_NE(restored, nullptr);
 
     EXPECT_DOUBLE_EQ(restored->getKernel().getEnergyScale(), 10.0);
@@ -52,23 +50,21 @@ TEST(TestComponentSerialization, NBodyTwoBody) {
 
     ASSERT_EQ(restored->getSparsePoints().size(), sparse_points.size());
     for (size_t i = 0; i < sparse_points.size(); ++i) {
-        EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i].value[0], sparse_points[i].value[0]);
-        EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i].value[1], sparse_points[i].value[1]);
+        EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i][0], sparse_points[i][0]);
+        EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i][1], sparse_points[i][1]);
     }
 }
 
 TEST(TestComponentSerialization, ManyBodyEam) {
-    TransformationAggregatorImpl<1, 2> aggregator("Fe");
-    aggregator.extend({"Fe", "Ni"}, PolycutoffPairFunction(4.0, 1.0, 2.0));
+    TwoBodySum<1> aggregator("Fe");
+    aggregator.extend(Species2Atomic("Fe|Ni"),
+                      ValuePtr<TwoBodyTransformation<1>>(PolycutoffPairFunction(4.0, 1.0, 2.0)));
 
     std::vector<Descriptor<1>> sparse_points = {Descriptor<1>{{1.5}}};
     std::vector<Real> coefficients = {0.42};
 
-    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> component(
-        aggregator,
-        SquaredExpKernel<1, 0>(1.0, {1.0}),
-        sparse_points,
-        coefficients);
+    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> component(aggregator, SquaredExpKernel<1, 0>(1.0, {1.0}),
+                                                              sparse_points, coefficients);
 
     auto rt = roundTrip(component, tmpFile("manybody_eam.h5"));
     auto restored = rt.as<ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>>();
@@ -77,9 +73,37 @@ TEST(TestComponentSerialization, ManyBodyEam) {
     EXPECT_DOUBLE_EQ(restored->getKernel().getEnergyScale(), 1.0);
     expectCoeffsEq(restored->getCoefficients(), coefficients);
     ASSERT_EQ(restored->getSparsePoints().size(), sparse_points.size());
-    EXPECT_DOUBLE_EQ(restored->getSparsePoints()[0].value[0], 1.5);
+    EXPECT_DOUBLE_EQ(restored->getSparsePoints()[0][0], 1.5);
 
-    auto restored_aggregator = restored->getAggregator().as<TransformationAggregatorImpl<1, 2>>();
+    auto restored_aggregator = restored->getAggregator().as<TwoBodySum<1>>();
     ASSERT_NE(restored_aggregator, nullptr);
     EXPECT_EQ(restored_aggregator->getCentralSpecies().symbol(), "Fe");
+}
+
+TEST(TestComponentSerialization, AtomicThreeBody) {
+    std::vector<Descriptor<4>> sparse_points = {Descriptor<4>{{6.0, 0.0, 3.0, 1.0}},
+                                                Descriptor<4>{{5.0, 0.5, 2.5, 0.8}}};
+    std::vector<Real> coefficients = {0.15, -0.25};
+
+    auto transform_ptr = ValuePtr<ThreeBodyTransformation<4>>(Angle3bTransformation(CosCutoff(6.0, 1.0)));
+    AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(Species3AtomicSorted("Fe|Fe,Ni"), transform_ptr,
+                                                                     SquaredExpKernel<3, 1>(5.0, {1.0, 1.5, 2.0}),
+                                                                     sparse_points, coefficients);
+
+    auto rt = roundTrip(component, tmpFile("atomic_3b.h5"));
+    auto restored = rt.as<AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>>();
+    ASSERT_NE(restored, nullptr);
+
+    EXPECT_DOUBLE_EQ(restored->getKernel().getEnergyScale(), 5.0);
+    EXPECT_DOUBLE_EQ(restored->getKernel().getLengthScales()[0], 1.0);
+    EXPECT_DOUBLE_EQ(restored->getKernel().getLengthScales()[1], 1.5);
+    EXPECT_DOUBLE_EQ(restored->getKernel().getLengthScales()[2], 2.0);
+    expectCoeffsEq(restored->getCoefficients(), coefficients);
+
+    ASSERT_EQ(restored->getSparsePoints().size(), sparse_points.size());
+    for (size_t i = 0; i < sparse_points.size(); ++i) {
+        for (size_t d = 0; d < 4; ++d) {
+            EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i][d], sparse_points[i][d]);
+        }
+    }
 }

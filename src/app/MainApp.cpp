@@ -88,7 +88,7 @@ namespace {
             JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
         }
         for (Atoms& atoms : frames) {
-            atoms << potential->calculateEnergy(atoms);
+            atoms.setEnergyAndDerivatives(potential->calculateEnergy(atoms));
             atoms.write(out);
         }
 

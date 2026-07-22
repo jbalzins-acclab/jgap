@@ -1,7 +1,7 @@
 #include "PerriotPolynomialCutoffSerialization.hpp"
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
-#include "io/log/CurrentLogger.hpp"
 #include "serialization/SerializationNode.hpp"
+#include "serialization/SerializationRegistry.hpp"
 
 namespace jgap {
 

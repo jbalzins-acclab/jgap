@@ -4,9 +4,10 @@
 #include <array>
 #include <optional>
 #include <string>
-#include "core/transform/eam/EamPairFunction.hpp"
-#include "core/transform/eam/FSGenPairFunction.hpp"
+#include "core/ValuePtr.hpp"
 #include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
+#include "core/transform/nbody/2b/eam/EamPairFunction.hpp"
+#include "core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 
 namespace jgap {
     struct StandardGapParams {

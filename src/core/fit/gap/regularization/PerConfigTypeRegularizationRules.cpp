@@ -59,7 +59,7 @@ namespace jgap {
     }
 
     void PerConfigTypeRegularizationRules::fillSigmas(Regularization& sigmas, const Atoms& atoms) const {
-        const std::string ct = atoms.lookupConfigType().value_or("");
+        const std::string ct = atoms.getConfigType().value_or("");
 
         if (exact_config_type_sigmas.contains(ct)) {
             const auto& s = exact_config_type_sigmas.at(ct);

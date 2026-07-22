@@ -3,7 +3,7 @@
 
 #include "RegularizationRules.hpp"
 #include "ConfigSigmas.hpp"
-#include "core/atomic/neighbours/NeighbourList.hpp"
+#include "core/atomic/neighbours/NeighbourLists.hpp"
 
 namespace jgap {
     class SimpleRegularizationRules : public RegularizationRules {

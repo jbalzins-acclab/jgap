@@ -1,22 +1,22 @@
 #include "utils/Utils.hpp"
 
+#include <Eigen/Dense>
+#include <array>
+#include <chrono>
+#include <deque>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <ranges>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <array>
-#include <sstream>
-#include <iomanip>
-#include <chrono>
-#include <fstream>
-#include <ranges>
-#include <Eigen/Dense>
-#include <deque>
 #include <unistd.h>
 
-#include "io/log/CurrentLogger.hpp"
 #include "../core/atomic/io/XYZData.hpp"
 #include "core/atomic/Atoms.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
     bool getLine(std::istream &file, std::string &line) {
@@ -55,7 +55,6 @@ namespace jgap {
                 std::string value;
 
                 if (!isspace(line[pos])) {
-
                     pos++;
 
                     if (line[pos] == '"') {
@@ -75,7 +74,7 @@ namespace jgap {
 
                 header[property] = value;
             }
-        } catch (std::exception& e) {
+        } catch (std::exception &e) {
             JGAP_LOG_AND_THROW("Formatting error {} in : {}", e.what(), line);
         } catch (...) {
             JGAP_LOG_AND_THROW("Formatting error in: {}", line);
@@ -101,8 +100,7 @@ namespace jgap {
 
         std::ostringstream oss;
         // Human-readable and filename-friendly: YYYY-MM-DD_HH-MM-SS_mmm-pPID
-        oss << std::put_time(&local_tm, "%Y-%m-%d_%H-%M-%S")
-            << '_' << std::setw(3) << std::setfill('0') << ms.count();
+        oss << std::put_time(&local_tm, "%Y-%m-%d_%H-%M-%S") << '_' << std::setw(3) << std::setfill('0') << ms.count();
 
 #if _WIN32
         DWORD pid = GetCurrentProcessId();
@@ -114,19 +112,11 @@ namespace jgap {
         return oss.str();
     }
 
-    inline double factorial(const size_t n) {
-        double result = 1.0;
-        for (size_t i = 2; i <= n; i++) {
-            result *= static_cast<Real>(i);
-        }
-        return result;
-    }
-
     double rms(const std::vector<double> &x) {
         if (x.empty()) return 0.0;
         double res = 0.0;
-        for (double i : x) {
-            res += i*i;
+        for (double i: x) {
+            res += i * i;
         }
         res = sqrt(res / static_cast<double>(x.size()));
         return res;
@@ -135,19 +125,19 @@ namespace jgap {
     double deviation(const std::vector<double> &x) {
         if (x.empty()) return 0.0;
         double mean = 0.0;
-        for (double i : x) {
+        for (double i: x) {
             mean += i;
         }
         mean /= static_cast<double>(x.size());
         double variance = 0.0;
-        for (double i : x) {
+        for (double i: x) {
             variance += (i - mean) * (i - mean);
         }
         variance = variance / static_cast<double>(x.size());
         return sqrt(variance);
     }
 
-    std::vector<std::string> split(const std::string& s, char delimiter) {
+    std::vector<std::string> split(const std::string &s, char delimiter) {
         std::vector<std::string> result;
         std::stringstream ss(s);
         std::string token;
@@ -169,7 +159,6 @@ namespace jgap {
     }
 
     std::string withoutExtension(const std::string &s) {
-
         if (s.find('.') == std::string::npos) {
             return s;
         }
@@ -178,13 +167,12 @@ namespace jgap {
         return join(std::vector(after_split.begin(), after_split.end() - 1), '.');
     }
 
-    std::string matrixToString(const Eigen::MatrixXd& mat) {
+    std::string matrixToString(const Eigen::MatrixXd &mat) {
         std::stringstream ss;
         for (int i = 0; i < mat.rows(); ++i) {
             for (int j = 0; j < mat.cols(); ++j) {
                 ss << mat(i, j);
-                if (j != mat.cols() - 1)
-                    ss << ", ";
+                if (j != mat.cols() - 1) ss << ", ";
             }
             ss << "\n";
         }

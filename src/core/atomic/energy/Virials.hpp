@@ -53,8 +53,9 @@ namespace jgap {
         }
 
         Virials& operator/=(Real scalar) {
-            xx /= scalar; xy /= scalar; xz /= scalar;
-            yy /= scalar; yz /= scalar; zz /= scalar;
+            Real inv = 1.0 / scalar;
+            xx *= inv; xy *= inv; xz *= inv;
+            yy *= inv; yz *= inv; zz *= inv;
             return *this;
         }
     };

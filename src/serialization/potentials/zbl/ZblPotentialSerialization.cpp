@@ -1,7 +1,9 @@
 #include "ZblPotentialSerialization.hpp"
 #include "core/potentials/zbl/ZblPotential.hpp"
-#include "serialization/SerializationNode.hpp"
 #include "io/log/CurrentLogger.hpp"
+#include "serialization/SerializationNode.hpp"
+
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 
 namespace jgap {
 
@@ -14,14 +16,10 @@ namespace jgap {
             // z1_z2 and a_inverse are deduced from the species, so only the coefficients are stored.
             auto coefficients_group = node.createGroup("coefficients");
             int i = 0;
-            for (const auto& [species_set, coeffs] : derived->getCoefficients()) {
+            for (const auto& [species_set, coeffs]: derived->getCoefficients()) {
                 auto pair_group = coefficients_group.createGroup(std::to_string(i++));
 
-                std::vector<std::string> species_symbols;
-                for (const auto& s : species_set.getNodes()) {
-                    species_symbols.push_back(s.symbol());
-                }
-                pair_group.writeAttribute("species_set", species_symbols);
+                pair_group.writeAttribute("species_set", species_set.toString());
                 pair_group.writeDataSet("coeffs", coeffs);
             }
             return true;
@@ -43,19 +41,16 @@ namespace jgap {
         }
         const auto& coefficients_group = coefficients_group_opt.value();
 
-        std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> coefficients;
-        for (const auto& group_name : coefficients_group.getChildNames()) {
+        std::map<Species2Sorted, std::array<Real, 6>> coefficients;
+        for (const auto& group_name: coefficients_group.getChildNames()) {
             auto pair_group_opt = coefficients_group.getGroup(group_name);
             if (!pair_group_opt) {
                 JGAP_LOG_AND_THROW("Missing coefficient group in ZblPotential serialization");
             }
             const auto& pair_group = pair_group_opt.value();
 
-            auto species_symbols = pair_group.readAttribute<std::vector<std::string>>("species_set");
-            if (species_symbols.size() != 2) {
-                JGAP_LOG_AND_THROW("Expected 2 species in species_set for ZblPotential");
-            }
-            SpeciesSet<2, FullSymmetry> pair{Species(species_symbols[0]), Species(species_symbols[1])};
+            auto species_encoded = pair_group.readAttribute<std::string>("species_set");
+            Species2Sorted pair(species_encoded);
 
             coefficients[pair] = pair_group.readDataSet<std::array<Real, 6>>("coeffs");
         }

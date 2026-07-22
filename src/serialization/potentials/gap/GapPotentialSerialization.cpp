@@ -1,8 +1,9 @@
 #include "GapPotentialSerialization.hpp"
 #include "core/potentials/gap/GapPotential.hpp"
 #include "core/potentials/gap/component/GapComponent.hpp"
-#include "serialization/SerializationNode.hpp"
 #include "io/log/CurrentLogger.hpp"
+#include "serialization/SerializationNode.hpp"
+#include "serialization/SerializationRegistry.hpp"
 
 #include <algorithm>
 #include <string>
@@ -24,7 +25,7 @@ namespace jgap {
 
         auto components_group = node.createGroup("components");
         int i = 0;
-        for (const auto& component : derived->getComponents()) {
+        for (const auto& component: derived->getComponents()) {
             auto component_group = components_group.createGroup(std::to_string(i++));
             SerializationRegistry<GapComponent>::serialize(component, component_group);
         }
@@ -40,7 +41,8 @@ namespace jgap {
         auto potential = std::make_unique<GapPotential>();
 
         if (auto external_group_opt = node.getGroup("external_potential")) {
-            potential->optional_external_potential = SerializationRegistry<Potential>::deserialize(external_group_opt.value());
+            potential->optional_external_potential =
+                SerializationRegistry<Potential>::deserialize(external_group_opt.value());
         }
 
         auto components_group_opt = node.getGroup("components");
@@ -51,11 +53,10 @@ namespace jgap {
 
         // Child group names are numeric indices; sort numerically to preserve component order.
         auto child_names = components_group.getChildNames();
-        std::sort(child_names.begin(), child_names.end(), [](const std::string& a, const std::string& b) {
-            return std::stoi(a) < std::stoi(b);
-        });
+        std::sort(child_names.begin(), child_names.end(),
+                  [](const std::string& a, const std::string& b) { return std::stoi(a) < std::stoi(b); });
 
-        for (const auto& group_name : child_names) {
+        for (const auto& group_name: child_names) {
             auto component_group_opt = components_group.getGroup(group_name);
             if (!component_group_opt) {
                 JGAP_LOG_AND_THROW("Missing component group in GapPotential serialization");

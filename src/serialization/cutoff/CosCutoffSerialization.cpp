@@ -1,7 +1,7 @@
 #include "CosCutoffSerialization.hpp"
 #include "core/cutoff/CosCutoff.hpp"
-#include "io/log/CurrentLogger.hpp"
 #include "serialization/SerializationNode.hpp"
+#include "serialization/SerializationRegistry.hpp"
 
 namespace jgap {
 

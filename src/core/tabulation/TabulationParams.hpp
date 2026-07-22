@@ -1,9 +1,6 @@
 #ifndef JGAP_TABULATIONPARAMS_HPP
 #define JGAP_TABULATIONPARAMS_HPP
 
-#include <set>
-
-#include "core/atomic/species/Species.hpp"
 #include "core/potentials/Cutoffs.hpp"
 
 namespace jgap {

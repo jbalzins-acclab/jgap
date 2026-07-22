@@ -4,9 +4,6 @@
 
 namespace jgap {
     AtomicQuantity AtomicQuantity::operator+(const AtomicQuantity &other) const {
-        if (empty()) return other;
-        if (other.empty()) return *this;
-
         assert(forces.size() == other.forces.size() && "Number of forces doesn't match");
 
         AtomicQuantity result(forces.size());
@@ -23,12 +20,6 @@ namespace jgap {
     }
 
     AtomicQuantity& AtomicQuantity::operator+=(const AtomicQuantity &other) {
-        if (other.empty()) return *this;
-        if (empty()) {
-            *this = other;
-            return *this;
-        }
-
         assert(forces.size() == other.forces.size() && "Number of forces doesn't match");
 
         value += other.value;

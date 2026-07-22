@@ -1,24 +1,27 @@
 #include "QuipXmlConverter.hpp"
 
-#include "core/potentials/CompositePotential.hpp"
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <set>
 #include "core/atomic/species/Species.hpp"
 #include "core/cutoff/CosCutoff.hpp"
 #include "core/kernels/SquaredExpKernel.hpp"
-#include "core/potentials/gap/component/NBodyGapComponent.hpp"
+#include "core/potentials/CompositePotential.hpp"
+#include "core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "core/transform/2b/TwoBodyTransformation.hpp"
-#include "core/transform/3b/Angle3bTransformation.hpp"
-#include "core/transform/eam/PolycutoffPairFunction.hpp"
-#include "core/transform/eam/FSGenPairFunction.hpp"
-#include "core/transform/eam/CoscutoffPairFunction.hpp"
+#include "core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "io/log/CurrentLogger.hpp"
-#include <fstream>
-#include <cmath>
-#include <filesystem>
-#include <set>
 
+#include "core/atomic/species/composition/Species2Sorted.hpp"
+#include "core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "core/potentials/spline/SplinePairPotential.hpp"
-#include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
+#include "core/transform/manybody/TwoBodySum.hpp"
+#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
+#include "core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
+#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "core/transform/nbody/3b/Angle3bTransformation.hpp"
 
 namespace jgap {
     ValuePtr<Potential> QuipXmlConverter::transform(const std::filesystem::path& xml_filename) {
@@ -33,7 +36,6 @@ namespace jgap {
 
     ValuePtr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded,
                                                     const std::filesystem::path& base_dir) {
-
         if (quip_potential_encoded.name() == std::string("GAP_params")) {
             return transformGapParams(quip_potential_encoded, base_dir);
         }
@@ -65,13 +67,9 @@ namespace jgap {
         }
 
         if (auto* gap = dynamic_cast<GapPotential*>(gap_or_isolated.get())) {
-
             if (gap->optional_external_potential.get() != nullptr) {
-
-                gap->optional_external_potential = CompositePotential(
-                    std::move(gap->optional_external_potential),
-                    std::move(pairpot)
-                    );
+                gap->optional_external_potential =
+                    CompositePotential(std::move(gap->optional_external_potential), std::move(pairpot));
 
             } else {
                 gap->optional_external_potential = std::move(pairpot);
@@ -84,7 +82,6 @@ namespace jgap {
     }
 
     ValuePtr<Potential> QuipXmlConverter::transformPairpot(const pugi::xml_node& quip_pairpot) {
-
         if (quip_pairpot.child("Potential").attribute("init_args").as_string() != std::string("IP Glue")) {
             JGAP_LOG_WARN("Strange 'init_args'");
         }
@@ -135,15 +132,14 @@ namespace jgap {
     }
 
     IsolatedAtomPotential QuipXmlConverter::transformIsolatedAtomParams(
-                                                        const pugi::xml_node& quip_isolated_atom_params) {
-
+        const pugi::xml_node& quip_isolated_atom_params) {
         std::map<Species, double> isolated_atom_energies;
 
         for (pugi::xml_node isolated_atom_node: quip_isolated_atom_params.children("e0")) {
             if (isolated_atom_node.attribute("value").as_double() != 0.0) {
                 const size_t Z = isolated_atom_node.attribute("Z").as_uint();
-                isolated_atom_energies[Species::fromAtomicNumber(Z)]
-                    = isolated_atom_node.attribute("value").as_double();
+                isolated_atom_energies[Species::fromAtomicNumber(Z)] =
+                    isolated_atom_node.attribute("value").as_double();
             }
         }
 
@@ -152,7 +148,6 @@ namespace jgap {
 
     GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data,
                                                        const std::filesystem::path& base_dir) {
-
         GapPotential result;
 
         std::set<Species> species_encountered;
@@ -168,7 +163,6 @@ namespace jgap {
         }
 
         for (pugi::xml_node sparse_node: quip_sparse_data.children("gpCoordinates")) {
-
             std::string descriptor_param_string = sparse_node.child("descriptor").first_child().value();
 
             std::string type;
@@ -245,8 +239,7 @@ namespace jgap {
         return result;
     }
 
-    std::string QuipXmlConverter::resolveSparseX(const std::filesystem::path& base_dir,
-                                                 const std::string& filename) {
+    std::string QuipXmlConverter::resolveSparseX(const std::filesystem::path& base_dir, const std::string& filename) {
         const std::filesystem::path p(filename);
         if (p.is_absolute() || base_dir.empty()) {
             return filename;
@@ -254,10 +247,9 @@ namespace jgap {
         return (base_dir / p).string();
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData &main_data,
-                                                                 const pugi::xml_node &distance_2b_node,
+    ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData& main_data,
+                                                                 const pugi::xml_node& distance_2b_node,
                                                                  const std::filesystem::path& base_dir) {
-
         double cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();
 
@@ -268,18 +260,17 @@ namespace jgap {
 
         Species species2 = Species::fromAtomicNumber(std::stoi(param_map["Z2"]));
 
-        SpeciesSet<2, FullSymmetry> species_set(species1.symbol(), species2.symbol());
+        Species2Sorted species_set(species1, species2);
 
-        ValuePtr<NBodyTransformation<2, 2>> trans = TwoBodyTransformation(
-            CosCutoff(main_data.cutoff, cutoff_transition_width)
-            );
+        auto trans = PairDistanceTransformation(CosCutoff(main_data.cutoff, cutoff_transition_width));
         auto kernel = SquaredExpKernel<1, 1>(main_data.delta, std::array<Real, 1>{main_data.theta});
 
         std::vector<Descriptor<2>> sparse_points;
         std::vector<Real> coeffs;
 
         double r;
-        std::string points_filename = resolveSparseX(base_dir, distance_2b_node.attribute("sparseX_filename").as_string());
+        std::string points_filename =
+            resolveSparseX(base_dir, distance_2b_node.attribute("sparseX_filename").as_string());
         std::ifstream fin(points_filename);
         if (!fin.is_open()) {
             JGAP_LOG_AND_THROW("Could not open file {}", points_filename);
@@ -289,20 +280,17 @@ namespace jgap {
             fin >> r;
             double coeff = pt.attribute("alpha").as_double();
             double sparse_cutoff = pt.attribute("sparseCutoff").as_double();
-            sparse_points.push_back({{{r, sparse_cutoff}}});
+            sparse_points.push_back({r, sparse_cutoff});
             coeffs.push_back(coeff);
         }
         fin.close();
 
-        return NBodyGapComponent(
-            species_set, trans, kernel, sparse_points, coeffs
-        );
+        return TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(species_set, trans, kernel, sparse_points, coeffs);
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData &mainData,
-                                                                     const pugi::xml_node &angle3b_node,
-                                                                     const std::filesystem::path& base_dir) {
-
+    ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData& mainData,
+                                                              const pugi::xml_node& angle3b_node,
+                                                              const std::filesystem::path& base_dir) {
         double r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
         if (mainData.r_min.has_value()) r_min = mainData.r_min.value();
 
@@ -315,14 +303,11 @@ namespace jgap {
 
         Species species2 = Species::fromAtomicNumber(std::stoi(param_map["Z2"]));
 
-        SpeciesSet<3, NodeSymmetric> species_set(root_species, species1, species2);
+        Species3AtomicSorted species_set(root_species, species1, species2);
 
-        ValuePtr<NBodyTransformation<4, 3>> trans = Angle3bTransformation(
-            CosCutoff(mainData.cutoff, mainData.cutoff - r_min)
-            );
-        auto kernel = SquaredExpKernel<3, 1>(
-            mainData.delta, std::array{mainData.theta, mainData.theta, mainData.theta}
-            );
+        auto trans = Angle3bTransformation(CosCutoff(mainData.cutoff, mainData.cutoff - r_min));
+        auto kernel =
+            SquaredExpKernel<3, 1>(mainData.delta, std::array{mainData.theta, mainData.theta, mainData.theta});
 
         std::vector<Descriptor<4>> sparse_points;
         std::vector<Real> coeffs;
@@ -340,32 +325,29 @@ namespace jgap {
 
             fin >> q.x >> q.y >> q.z;
 
-            sparse_points.push_back({{{q.x, q.y, q.z, f_cut_prod}}});
+            sparse_points.push_back({q.x, q.y, q.z, f_cut_prod});
             coeffs.push_back(coeff);
         }
         fin.close();
 
-        return NBodyGapComponent(
-            species_set, trans, kernel, sparse_points, coeffs
-        );
+        return AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(species_set, trans, kernel, sparse_points,
+                                                                      coeffs);
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData &main_data,
-                                                                 const pugi::xml_node &eam_node,
-                                                                 const std::set<Species> &species_encountered,
-                                                                 const std::filesystem::path& base_dir) {
-
-        std::optional<double> rMin = main_data.cutoff_transition_width.transform([&](double val) -> double {
-            return main_data.cutoff - val;
-        });
+    ValuePtr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData& main_data,
+                                                          const pugi::xml_node& eam_node,
+                                                          const std::set<Species>& species_encountered,
+                                                          const std::filesystem::path& base_dir) {
+        std::optional<double> rMin =
+            main_data.cutoff_transition_width.transform([&](double val) -> double { return main_data.cutoff - val; });
         if (main_data.r_min.has_value()) rMin = main_data.r_min.value();
 
         if (!main_data.pair_function.has_value()) {
             JGAP_LOG_AND_THROW("pair_function not specified in eam_density");
         }
 
-        if ((main_data.pair_function.value() == "coscutoff" || main_data.pair_function.value() == "polycutoff")
-            && !rMin.has_value()) {
+        if ((main_data.pair_function.value() == "coscutoff" || main_data.pair_function.value() == "polycutoff") &&
+            !rMin.has_value()) {
             JGAP_LOG_AND_THROW("rmin is required for coscutoff/polycutoff eam pair_function");
         }
 
@@ -379,10 +361,9 @@ namespace jgap {
 
         Species central_species = Species::fromAtomicNumber(Z_center);
 
-        auto aggregator = TransformationAggregatorImpl<1, 2>(central_species);
+        auto aggregator = TwoBodySum<1>(central_species);
 
         for (Species contributor_species: species_encountered) {
-
             double prefactor = 1.0;
             if (main_data.mode.value_or("blind") == "FSsym") {
                 prefactor = std::sqrt(Z_center * contributor_species.atomicNumber().value()) / 40.0;
@@ -394,8 +375,8 @@ namespace jgap {
 
             auto pf = selectPairFunction(main_data, rMin, prefactor);
 
-            SpeciesSet<2, NodeSymmetric> sp(central_species, contributor_species);
-            aggregator.extend(sp, ValuePtr<NBodyTransformation<1, 2>>(pf.release()));
+            Species2Atomic sp(central_species, contributor_species);
+            aggregator.extend(sp, pf);
         }
 
         auto kernel = SquaredExpKernel<1, 0>(main_data.delta, std::array{main_data.theta});
@@ -415,19 +396,16 @@ namespace jgap {
 
             double coeff = point_node.attribute("alpha").as_double();
 
-            sparse_points.push_back({{{density}}});
+            sparse_points.push_back({density});
             coeffs.push_back(coeff);
         }
         fin.close();
 
-        return ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
-            aggregator, kernel, sparse_points, coeffs
-            );
+        return ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(aggregator, kernel, sparse_points, coeffs);
     }
 
-    ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(
-        const QuipDescriptorData& main_data, std::optional<double> r_min, double prefactor) {
-
+    ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(const QuipDescriptorData& main_data,
+                                                                   std::optional<double> r_min, double prefactor) {
         if (main_data.pair_function.value() == "FSgen") {
             return FSGenPairFunction(main_data.cutoff, main_data.order.value(), prefactor);
         }

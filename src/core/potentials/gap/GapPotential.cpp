@@ -3,6 +3,16 @@
 #include <numeric>
 
 namespace jgap {
+    void GapPotential::addComponent(ValuePtr<GapComponent> component) {
+        components.push_back(std::move(component));
+
+        if (components.back()->getCoefficients().empty() != components.front()->getCoefficients().empty()) {
+            JGAP_LOG_WARN("Adding component that {} coefficients set "
+                          "while some previously added components {} coefficients set.",
+                          components.back()->getCoefficients().empty() ? "doesn't have" : "has",
+                          components.front()->getCoefficients().empty() ? "don't have" : "have");
+        }
+    }
 
     void GapPotential::setCoefficients(const std::vector<Real> &new_coefficients) {
         if (new_coefficients.empty()) {
@@ -12,13 +22,13 @@ namespace jgap {
         size_t n = std::transform_reduce(
             components.begin(),
             components.end(),
-            size_t{0},
-            std::plus(),
+            size_t{0u},
+            std::plus{},
             [](const auto& ptr) { return ptr->nSparsePoints(); }
         );
 
         if (n != new_coefficients.size()) {
-            JGAP_LOG_AND_THROW("{} sparse points, but {} coefficients", n, new_coefficients.size());
+            JGAP_LOG_AND_THROW("{} sparse points in total, but {} coefficients", n, new_coefficients.size());
         }
 
         auto iter = new_coefficients.begin();
@@ -30,7 +40,7 @@ namespace jgap {
     AtomicQuantity GapPotential::calculateEnergy(const Atoms &atoms) const {
         AtomicQuantity result(atoms.nAtoms());
 
-        const NeighbourList neighbour_list(atoms, getCutoffs().maxOverall());
+        const NeighbourLists neighbour_list(atoms, getCutoffs().maxOverall());
 
         if (optional_external_potential.get() != nullptr) {
             result += optional_external_potential->calculateEnergy(atoms);

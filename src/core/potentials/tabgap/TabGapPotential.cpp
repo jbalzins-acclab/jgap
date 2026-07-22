@@ -2,31 +2,26 @@
 
 #include "components/ThreeBodyTGComponent.hpp"
 #include "components/TwoBodyTGComponent.hpp"
-#include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
+#include "core/potentials/tabgap/components/EamTGComponent.hpp"
+#include "core/splines/CubicBSpline.hpp"
+#include "core/splines/HermiteCubicSpline.hpp"
 
 namespace jgap {
     TabGapPotential::TabGapPotential(TabulationData energy_tables) {
-
         isolated_atom_energies = energy_tables.isolated_energies;
 
         for (auto& [species_pair, grid]: energy_tables.two_body_grids.value_grids) {
             ++n_2b_components;
 
-            components.emplace_back(TwoBodyTGComponent(
-                species_pair,
-                energy_tables.eam_grids_vec.empty() ?
-                    CubicBSpline::fit(grid) :
-                    HermiteCubicSpline(grid)
-                ));
+            components.emplace_back(TwoBodyTGComponent(species_pair, energy_tables.eam_grids_vec.empty()
+                                                                         ? CubicBSpline::fit(grid)
+                                                                         : HermiteCubicSpline(grid)));
         }
 
         for (auto& [species_triplet, grid]: energy_tables.three_body_grids.value_grids) {
             ++n_3b_components;
 
-            components.emplace_back(ThreeBodyTGComponent(
-                species_triplet,
-                CubicBSpline3D::fit(grid)
-                ));
+            components.emplace_back(ThreeBodyTGComponent(species_triplet, CubicBSpline3D::fit(grid)));
         }
 
         for (auto& eam_grids: energy_tables.eam_grids_vec) {
@@ -36,10 +31,9 @@ namespace jgap {
         }
     }
 
-    TabGapPotential::TabGapPotential(const std::map<Species, Real> &isolated_atom_energies,
-                                     const std::vector<ValuePtr<TabGapComponent> > &components)
-        : isolated_atom_energies(isolated_atom_energies),
-          components(components) {
+    TabGapPotential::TabGapPotential(const std::map<Species, Real>& isolated_atom_energies,
+                                     const std::vector<ValuePtr<TabGapComponent> >& components) :
+        isolated_atom_energies(isolated_atom_energies), components(components) {
         recomputeComponentCounts();
     }
 
@@ -58,20 +52,21 @@ namespace jgap {
         }
     }
 
-    AtomicQuantity TabGapPotential::calculateEnergy(const Atoms &atoms) const {
-
+    AtomicQuantity TabGapPotential::calculateEnergy(const Atoms& atoms) const {
         AtomicQuantity result(atoms.nAtoms());
 
-        for (const Species& species: atoms.lookupSpecies()) {
+        for (const Species& species: atoms.getSpecies()) {
             if (isolated_atom_energies.contains(species)) {
                 result.value += isolated_atom_energies.at(species);
             } else {
-                JGAP_LOG_WARN("Unknown species {} for a tabGAP potential;"
-                              "comment out this line if that's expected", species.symbol());
+                JGAP_LOG_WARN(
+                    "Unknown species {} for a tabGAP potential;"
+                    "comment out this line if that's expected",
+                    species.symbol());
             }
         }
 
-        const NeighbourList nl{atoms, getCutoffs().maxOverall()};
+        const NeighbourLists nl{atoms, getCutoffs().maxOverall()};
         for (const auto& component: components) {
             result += component->energy(nl);
         }
@@ -89,8 +84,7 @@ namespace jgap {
         return result;
     }
 
-    void TabGapPotential::fillTables(TabulationData &table) const {
-
+    void TabGapPotential::fillTables(TabulationData& table) const {
         for (auto& [species, energy]: isolated_atom_energies) {
             table.isolated_energies[species] += energy;
         }

@@ -1,4 +1,4 @@
-build/*
+*/build/*
 logs/*
 notes/*
 cmake-build-debug/*
@@ -9,3 +9,4 @@ vcpkg_installed/*
 .vscode*
 /test-local/*
 build*/*
+.cache/*

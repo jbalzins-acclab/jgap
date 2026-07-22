@@ -1,16 +1,12 @@
 #ifndef JGAP_KERNEL_HPP
 #define JGAP_KERNEL_HPP
 
-#include "../Vector3.hpp"
+#include <array>
+#include <memory>
 #include <optional>
 #include <string>
-#include <memory>
-#include <array>
 #include <vector>
-
-#include "../atomic/Descriptor.hpp"
-#include "core/atomic/energy/AtomicQuantity.hpp"
-#include "core/atomic/geometry/Cluster.hpp"
+#include "core/atomic/descriptor/Descriptor.hpp"
 
 namespace jgap {
 
@@ -26,11 +22,10 @@ namespace jgap {
 
         virtual ~Kernel() = default;
 
-        virtual Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const = 0;
+        virtual Real value(const Descriptor<Dim> &q1, const Descriptor<Dim> &q2) const = 0;
 
         virtual KernelValueAndGradient valueAndGradient(const Descriptor<Dim> &sparse_point,
                                                         const Descriptor<Dim> &q) const = 0;
-
     };
 
     template<typename T>

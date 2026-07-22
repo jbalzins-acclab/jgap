@@ -17,7 +17,7 @@ namespace jgap {
                                                const Atoms &atoms) const {
 
         Real multiplier = 1.0;
-        const std::string ct = atoms.lookupConfigType().value_or("default");
+        const std::string ct = atoms.getConfigType().value_or("default");
 
         if (ct == "isolated_atom") {
             multiplier = 0.001;

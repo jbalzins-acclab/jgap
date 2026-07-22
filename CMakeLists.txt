@@ -10,8 +10,14 @@ set(CMAKE_C_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(TBB CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
+
+find_package(TBB CONFIG QUIET)
+if (TBB_FOUND)
+    message(STATUS "Found TBB: multi-core parallelization will be enabled")
+else ()
+    message(STATUS "TBB not found: multi-core parallelization won't be enabled")
+endif ()
 
 # BLAS only accelerates Eigen (EIGEN_USE_BLAS) and is OPTIONAL. Prefer an OpenBLAS CMake config (vcpkg /
 # conda / spack ship one); otherwise fall back to CMake's generic BLAS finder (Homebrew / system /
@@ -103,6 +109,10 @@ add_executable(jgap
         ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
 )
 
+add_executable(jgap_custom
+        ${PROJECT_SOURCE_DIR}/src/app/CustomApp.cpp
+)
+
 # jgap's public headers include Eigen/TBB/HighFive (and pugixml for the converter), so those are PUBLIC:
 # linking the jgap::jgap / jgap_lib target alone brings in their headers and libraries. BLAS is only used
 # internally (Eigen's BLAS backend in .cpp), so it stays PRIVATE and is omitted when unavailable.
@@ -115,12 +125,16 @@ endif ()
 
 target_link_libraries(jgap_lib PUBLIC
         Eigen3::Eigen
-        TBB::tbb TBB::tbbmalloc
         HighFive
 )
 
 if (pugixml_FOUND)
     target_link_libraries(jgap_lib PUBLIC pugixml::static pugixml::pugixml)
+endif ()
+
+if (TBB_FOUND)
+    target_compile_definitions(jgap_lib PRIVATE HAS_TBB)
+    target_link_libraries(jgap_lib PRIVATE TBB::tbb TBB::tbbmalloc)
 endif ()
 
 # Public include dirs so consumers of the (installed or in-tree) target get jgap's headers for free.

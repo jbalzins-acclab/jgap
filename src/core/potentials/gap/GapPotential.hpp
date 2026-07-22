@@ -1,7 +1,7 @@
 #ifndef JGAP_GAPPOTENTIAL_HPP
 #define JGAP_GAPPOTENTIAL_HPP
-#include "component/GapComponent.hpp"
 #include "../Potential.hpp"
+#include "component/GapComponent.hpp"
 
 namespace jgap {
     class GapPotential : public Potential {
@@ -12,17 +12,13 @@ namespace jgap {
         GapPotential() = default;
 
         template<typename GapComponentT>
-        requires (std::convertible_to<GapComponentT, ValuePtr<GapComponent>>)
-        GapPotential(std::initializer_list<GapComponentT> components,
-                     ValuePtr<Potential> external = nullptr,
-                     const std::vector<Real> &coefficients = {})
-            : optional_external_potential(std::move(external)),
-              components(components.begin(), components.end()) {
-            if (!coefficients.empty()) setCoefficients(coefficients);
-        }
-
-        void addComponent(ValuePtr<GapComponent> component) {
-            components.push_back(std::move(component));
+            requires(std::convertible_to<GapComponentT, ValuePtr<GapComponent>>)
+        GapPotential(std::initializer_list<GapComponentT> components, ValuePtr<Potential> external = nullptr,
+                     const std::vector<Real>& coefficients = {}) :
+            optional_external_potential(std::move(external)), components(components.begin(), components.end()) {
+            if (!coefficients.empty()) {
+                setCoefficients(coefficients);
+            }
         }
 
         template<typename GapComponentT>
@@ -33,19 +29,19 @@ namespace jgap {
             }
         }
 
+        void addComponent(ValuePtr<GapComponent> component);
+
         void setCoefficients(const std::vector<Real>& new_coefficients);
 
-        AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
+        AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
 
         Cutoffs getCutoffs() const override;
 
         const std::vector<ValuePtr<GapComponent>>& getComponents() const;
 
-        void fillTables(TabulationData &table) const override;
+        void fillTables(TabulationData& table) const override;
 
-        GapPotential* clone() const override {
-            return new GapPotential(*this);
-        }
+        GapPotential* clone() const override { return new GapPotential(*this); }
     };
 }
 

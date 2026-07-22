@@ -1,9 +1,8 @@
 #ifndef JGAP_PERRIOTPOLYNOMIALCUTOFFSERIALIZATION_HPP
 #define JGAP_PERRIOTPOLYNOMIALCUTOFFSERIALIZATION_HPP
+#include "core/ValuePtr.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
 #include "serialization/Serialization.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "core/ValuePtr.hpp"
 
 namespace jgap {
     class PerriotPolynomialCutoffSerialization : public Serialization<CutoffFunction> {

@@ -1,37 +1,36 @@
-#include <gtest/gtest.h>
 #include <core/potentials/zbl/ZblPotential.hpp>
-#include "core/atomic/species/Species.hpp"
+#include <gtest/gtest.h>
 #include "core/atomic/Atoms.hpp"
+#include "core/atomic/species/Species.hpp"
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 
-#include <sstream>
-#include <iostream>
-#include <vector>
 #include <array>
 #include <cmath>
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 using namespace std;
 using namespace jgap;
 
 TEST(ZblPotentialTest, FeNiInteractionFromEmbedded) {
     Species fe("Fe"), ni("Ni");
-    std::set species = {SpeciesSet<2, FullSymmetry>{fe, ni}};
+    std::set species = {Species2Sorted(fe, ni)};
 
     ZblPotential zbl(species, EmbeddedZBLCoeffDataset::DMOL, 10.0);
 
     // Test at a specific distance
     Real r = 0.5; // Angstroms
-    auto [energy, derivative] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{fe, ni}, r);
+    auto [energy, derivative] = zbl.energyAndDerivative(Species2Sorted(fe, ni), r);
 
     // The coefficients for Fe-Ni from dmol.dat are:
-    // 0.32818750683529224 1.2763590338471473 0.5319935400634741 0.4920242580140316 0.13562223656825356 2.9359601944688674
+    // 0.32818750683529224 1.2763590338471473 0.5319935400634741 0.4920242580140316
+    // 0.13562223656825356 2.9359601944688674
 
     Real z1 = fe.atomicNumber().value();
     Real z2 = ni.atomicNumber().value();
-    std::array c = {
-        0.32818750683529224, 1.2763590338471473,
-        0.5319935400634741,  0.4920242580140316,
-        0.13562223656825356, 2.9359601944688674
-    };
+    std::array c = {0.32818750683529224, 1.2763590338471473,  0.5319935400634741,
+                    0.4920242580140316,  0.13562223656825356, 2.9359601944688674};
 
     Real a_inverse = (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848;
     Real x = r * a_inverse;
@@ -41,7 +40,7 @@ TEST(ZblPotentialTest, FeNiInteractionFromEmbedded) {
     Real term3 = exp(-c[5] * x);
 
     Real phi = c[0] * term1 + c[2] * term2 + c[4] * term3;
-    Real dphi_dx = -c[0]*c[1]*term1 - c[2]*c[3]*term2 - c[4]*c[5]*term3;
+    Real dphi_dx = -c[0] * c[1] * term1 - c[2] * c[3] * term2 - c[4] * c[5] * term3;
     Real dphi_dr = a_inverse * dphi_dx;
 
     Real prefactor = z1 * z2 * ZblPotential::CoulombConstant_eV_Ang / r;
@@ -58,12 +57,12 @@ TEST(ZblPotentialTest, MockInteraction) {
     mock_stream << "H He 0.1 0.2 0.3 0.4 0.5 0.6" << std::endl;
 
     Species h("H"), he("He");
-    std::set species = {SpeciesSet<2, FullSymmetry>{h, he}};
+    std::set species = {Species2Sorted(h, he)};
 
     ZblPotential zbl(mock_stream, species, 10.0);
 
     Real r = 1.0;
-    auto [energy, derivative] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{h, he}, r);
+    auto [energy, derivative] = zbl.energyAndDerivative(Species2Sorted(h, he), r);
 
     // --- Manual Calculation ---
     // Z(H) = 1, Z(He) = 2
@@ -88,14 +87,14 @@ TEST(ZblPotentialTest, Mock2AtomSystem) {
     mock_stream << "H He 0.1 0.2 0.3 0.4 0.5 0.6\n";
 
     Species h("H"), he("He");
-    std::set species = {SpeciesSet<2, FullSymmetry>{h, he}};
+    std::set species = {Species2Sorted(h, he)};
 
     ZblPotential zbl(mock_stream, species);
 
-    Atoms atoms({ {0, 0, 0}, {1.0, 0, 0} }, {h, he});
+    Atoms atoms({{0, 0, 0}, {1.0, 0, 0}}, {h, he});
     AtomicQuantity quantity = zbl.calculateEnergy(atoms);
 
-    auto [expected_energy, expected_deriv] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{h, he}, 1.0);
+    auto [expected_energy, expected_deriv] = zbl.energyAndDerivative(Species2Sorted(h, he), 1.0);
 
     // Check energy
     EXPECT_NEAR(quantity.value, expected_energy, 1e-6);
@@ -118,21 +117,18 @@ TEST(ZblPotentialTest, Mock3AtomSystem) {
     mock_stream << "He Li 0.3 0.4 0.5 0.6 0.7 0.8\n";
 
     Species h("H"), he("He"), li("Li");
-    std::set species = {SpeciesSet<2, FullSymmetry>{h, he}, SpeciesSet<2, FullSymmetry>{h, li}, SpeciesSet<2, FullSymmetry>{he, li}};
+    std::set species = {Species2Sorted(h, he), Species2Sorted(h, li), Species2Sorted(he, li)};
 
     ZblPotential zbl(mock_stream, species);
 
-    Atoms atoms(
-        { {0, 0, 0}, {1.0, 0, 0}, {0, 1.0, 0} },
-        {h, he, li}
-    );
+    Atoms atoms({{0, 0, 0}, {1.0, 0, 0}, {0, 1.0, 0}}, {h, he, li});
 
     AtomicQuantity quantity = zbl.calculateEnergy(atoms);
 
-    auto [e_h_he, dE_h_he] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{h, he}, 1.0);
-    auto [e_h_li, dE_h_li] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{h, li}, 1.0);
+    auto [e_h_he, dE_h_he] = zbl.energyAndDerivative(Species2Sorted(h, he), 1.0);
+    auto [e_h_li, dE_h_li] = zbl.energyAndDerivative(Species2Sorted(h, li), 1.0);
     Real r_he_li = std::sqrt(2.0);
-    auto [e_he_li, dE_he_li] = zbl.energyAndDerivative(SpeciesSet<2, FullSymmetry>{he, li}, r_he_li);
+    auto [e_he_li, dE_he_li] = zbl.energyAndDerivative(Species2Sorted(he, li), r_he_li);
 
     // Check total energy
     Real expected_total_energy = e_h_he + e_h_li + e_he_li;

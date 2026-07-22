@@ -1,12 +1,13 @@
 #ifndef JGAP_SQUAREDEXPKERNEL_HPP
 #define JGAP_SQUAREDEXPKERNEL_HPP
 
-#include "Kernel.hpp"
 #include <cmath>
+#include "Kernel.hpp"
 
 namespace jgap {
 
     template<size_t ExpDimensions, size_t CutoffDimensions>
+        requires(CutoffDimensions <= 1)
     class SquaredExpKernel : public Kernel<ExpDimensions + CutoffDimensions> {
     public:
         static constexpr size_t ExpDim = ExpDimensions;
@@ -24,11 +25,7 @@ namespace jgap {
             }
         }
 
-        // energy_scale and length_scales as passed to the constructor (prefactor = energy_scale^2,
-        // inverse_length_scales_squared[d] = 1 / length_scales[d]^2).
-        Real getEnergyScale() const {
-            return std::sqrt(prefactor);
-        }
+        Real getEnergyScale() const { return std::sqrt(prefactor); }
 
         std::array<Real, ExpDimensions> getLengthScales() const {
             std::array<Real, ExpDimensions> length_scales{};
@@ -38,62 +35,42 @@ namespace jgap {
             return length_scales;
         }
 
-        Real value(const Descriptor<TotalDimensions> &q1,
-                   const Descriptor<TotalDimensions> &q2) const override {
-
+        Real value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
             Real exp_argument = 0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q1.value[dim] - q2.value[dim];
+                Real diff = q1[dim] - q2[dim];
                 exp_argument += diff * diff * inverse_length_scales_squared[dim];
             }
             Real val = prefactor * std::exp(-0.5 * exp_argument);
 
-            for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= q1.value[dim] * q2.value[dim];
+            if constexpr (CutoffDimensions == 1) {
+                val *= q1[ExpDimensions] * q2[ExpDimensions];
             }
 
             return val;
         }
 
-        KernelValueAndGradient valueAndGradient(const Descriptor<TotalDimensions> &sparse_point,
-                                                const Descriptor<TotalDimensions> &q) const override {
-
+        KernelValueAndGradient valueAndGradient(const Descriptor<TotalDimensions>& sparse_point,
+                                                const Descriptor<TotalDimensions>& q) const override {
             Real exp_argument = 0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q.value[dim] - sparse_point.value[dim];
+                Real diff = q[dim] - sparse_point[dim];
                 exp_argument += diff * diff * inverse_length_scales_squared[dim];
             }
             Real val = prefactor * std::exp(-0.5 * exp_argument);
 
-            for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= sparse_point.value[dim];
-            }
-
             std::array<Real, TotalDimensions> gradient{};
-            for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                gradient[dim] = val;
-            }
 
-            for (size_t dim = ExpDimensions; dim < TotalDimensions; dim++) {
-                val *= q.value[dim];
-
-                for (size_t j = ExpDimensions; j < dim; j++) {
-                    gradient[j] *= q.value[dim];
-                }
-
-                for (size_t j = dim + 1; j < TotalDimensions; j++) {
-                    gradient[j] *= q.value[dim];
-                }
+            if constexpr (CutoffDimensions == 1) {
+                gradient[ExpDimensions] = val * sparse_point[ExpDimensions];
+                val *= sparse_point[ExpDimensions] * q[ExpDimensions];
             }
 
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                gradient[dim] = val * (sparse_point.value[dim] - q.value[dim]) * inverse_length_scales_squared[dim];
+                gradient[dim] = val * (sparse_point[dim] - q[dim]) * inverse_length_scales_squared[dim];
             }
 
-            return {
-                .value = val,
-                .gradient = gradient
-            };
+            return {.value = val, .gradient = gradient};
         }
 
     private:

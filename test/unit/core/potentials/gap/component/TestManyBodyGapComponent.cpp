@@ -1,32 +1,28 @@
-#include <gtest/gtest.h>
-#include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "core/atomic/Atoms.hpp"
-#include "core/atomic/neighbours/NeighbourList.hpp"
-#include "core/kernels/SquaredExpKernel.hpp"
 #include <cmath>
+#include <gtest/gtest.h>
+#include "core/atomic/Atoms.hpp"
+#include "core/atomic/neighbours/NeighbourLists.hpp"
+#include "core/kernels/SquaredExpKernel.hpp"
+#include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
 
-#include "core/transform/aggregated/TransformationAggregatorImpl.hpp"
-#include "core/transform/eam/PolycutoffPairFunction.hpp"
 #include "core/tabulation/TabulationData.hpp"
+#include "core/transform/manybody/TwoBodySum.hpp"
+#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 
 using namespace jgap;
 
 TEST(TestManyBodyGapComponent, RealPolycutoff) {
-    Atoms atoms({ {0,0,0}, {2,0,0} }, { Species("Fe"), Species("Ni") });
-    auto nl = NeighbourList(atoms, 5.0);
+    Atoms atoms({{0, 0, 0}, {2, 0, 0}}, {Species("Fe"), Species("Ni")});
+    auto nl = NeighbourLists(atoms, 5.0);
     auto trans = PolycutoffPairFunction(4.0, 1.0, 2.0);
 
-    auto eam_aggregator = TransformationAggregatorImpl<1, 2>("Fe");
+    auto eam_aggregator = TwoBodySum<1>("Fe");
     eam_aggregator.extend({"Fe", "Ni"}, trans);
 
     auto kernel = SquaredExpKernel<1, 0>(1.0, std::array<Real, 1>{1.0});
-    std::vector<Descriptor<1>> sparse_points = { {{{1.5}}} };
+    std::vector<Descriptor<1>> sparse_points = {{1.5}};
 
-    auto component = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
-        eam_aggregator,
-        kernel,
-        sparse_points
-    );
+    auto component = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(eam_aggregator, kernel, sparse_points);
 
     auto result_opt = component.covariate(nl);
     ASSERT_TRUE(result_opt.has_value());
@@ -56,8 +52,8 @@ TEST(TestManyBodyGapComponent, RealPolycutoff) {
     // dE/dr = (dq/dr) * (dK/dq) = expected_deriv * gradK
     // u = direction from 0 to 1 = (1, 0, 0)
     // F_0 = dE/dr * u. F_1 = -dE/dr * u
-    Vector3 expected_force_Fe{  expected_deriv * gradK, 0.0, 0.0 };
-    Vector3 expected_force_Ni{ -expected_deriv * gradK, 0.0, 0.0 };
+    Vector3 expected_force_Fe{expected_deriv * gradK, 0.0, 0.0};
+    Vector3 expected_force_Ni{-expected_deriv * gradK, 0.0, 0.0};
 
     EXPECT_NEAR(quantities.force(0, 0).x, expected_force_Fe.x, 1e-9);
     EXPECT_NEAR(quantities.force(0, 0).y, 0.0, 1e-9);
@@ -74,11 +70,11 @@ TEST(TestManyBodyGapComponent, RealPolycutoff) {
 
 TEST(TestManyBodyGapComponent, TabulationRealPolycutoff) {
     auto trans = PolycutoffPairFunction(4.0, 1.0, 2.0);
-    auto eam_aggregator = TransformationAggregatorImpl<1, 2>("Fe");
+    auto eam_aggregator = TwoBodySum<1>("Fe");
     eam_aggregator.extend({"Fe", "Ni"}, trans);
 
     auto kernel = SquaredExpKernel<1, 0>(1.0, std::array<Real, 1>{1.0});
-    std::vector<Descriptor<1>> sparse_points = { {{{1.5}}} };
+    std::vector<Descriptor<1>> sparse_points = {{1.5}};
     std::vector<Real> coeffs = {3.0};
 
     auto component = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(eam_aggregator, kernel, sparse_points);

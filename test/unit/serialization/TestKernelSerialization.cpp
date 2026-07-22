@@ -7,9 +7,7 @@
 using namespace jgap;
 
 namespace {
-    std::string tmpFile(const std::string& name) {
-        return testing::TempDir() + "/" + name;
-    }
+    std::string tmpFile(const std::string& name) { return testing::TempDir() + "/" + name; }
 
     // SquaredExpKernel isn't registry-managed (it's a value type keyed on its dimensions), so it is
     // round-tripped through a node directly via SquaredExpKernelSerialization<E, C>.

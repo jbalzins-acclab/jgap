@@ -1,18 +1,20 @@
 #ifndef JGAP_TABGAPIO_HPP
 #define JGAP_TABGAPIO_HPP
 
+#include <highfive/H5File.hpp>
+#include <highfive/H5Group.hpp>
 #include <iosfwd>
 #include <memory>
 #include <optional>
 #include <vector>
-#include <highfive/H5File.hpp>
-#include <highfive/H5Group.hpp>
 
+#include "../../core/ValuePtr.hpp"
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 #include "core/potentials/tabgap/TabGapPotential.hpp"
+#include "core/potentials/tabgap/components/EamTGComponent.hpp"
 #include "core/potentials/tabgap/components/TabGapComponent.hpp"
 #include "core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"
 #include "core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
-#include "../../core/ValuePtr.hpp"
 
 namespace jgap {
 
@@ -39,8 +41,8 @@ namespace jgap {
     /// contents under "eam_files"; \ref TabGapIO::read prefers separately-supplied .eam.fs files, but when none
     /// are given and the .h5 is jgap=true it falls back to the embedded copies.
     ///
-    /// The HDF5 core (\ref TabGapIO::writeToGroup / \ref TabGapIO::readFromGroup) works on a plain HighFive group, so it
-    /// can target either a standalone file or a node inside a larger serialization (see
+    /// The HDF5 core (\ref TabGapIO::writeToGroup / \ref TabGapIO::readFromGroup) works on a plain HighFive group, so
+    /// it can target either a standalone file or a node inside a larger serialization (see
     /// TabGapPotentialSerialization, which reuses it and never emits separate .eam.fs files).
     class TabGapIO {
     public:
@@ -58,7 +60,7 @@ namespace jgap {
         /// @param potential the potential to write.
         /// @param output_filename_prefix prefix for the produced filenames.
         /// @return the filenames written (the .h5 first, then any .eam.fs files).
-        static Filenames write(const TabGapPotential& potential, const std::string &output_filename_prefix);
+        static Filenames write(const TabGapPotential& potential, const std::string& output_filename_prefix);
 
         /// Writes the whole potential into `root` (e0, 2b/3b groups, embedded EAM .eam.fs contents
         /// under an "eam_files" group, and a jgap=true marker). Writes NO separate .eam.fs files.
@@ -89,9 +91,9 @@ namespace jgap {
         static void write2b(HighFive::Group& root, const TwoBodyTGComponent& component);
         static void write3b(HighFive::Group& root, const ThreeBodyTGComponent& component);
 
-        static std::string useSomeComponentsAndGenerateEamFs(const std::vector<Species>& all_species,
-                                      std::map<SpeciesSet<2, FullSymmetry>, const TwoBodyTGComponent*>& pair_pots,
-                                      std::multimap<Species, const EamTGComponent*>& eam_components);
+        static std::string useSomeComponentsAndGenerateEamFs(
+            const std::vector<Species>& all_species, std::map<Species2Sorted, const TwoBodyTGComponent*>& pair_pots,
+            std::multimap<Species, const EamTGComponent*>& eam_components);
 
         static void parseEamFs(std::istream& in, TabGapPotential& pot);
     };

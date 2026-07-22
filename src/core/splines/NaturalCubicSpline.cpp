@@ -5,15 +5,14 @@
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    NaturalCubicSpline::NaturalCubicSpline(const std::vector<double> &r_vec_in,
-                                                                const std::vector<double> &e_vec_in) {
+    NaturalCubicSpline::NaturalCubicSpline(const std::vector<double>& r_vec_in, const std::vector<double>& e_vec_in) {
         init(r_vec_in, e_vec_in);
     }
 
     InterpolationResults<1> NaturalCubicSpline::interpolate(std::array<Real, 1> pos) const {
         const Real r = pos[0];
         if (r < r_vec.front()) return {energies.front(), {0.0}};
-        if (r > r_vec.back())  return {0.0, {0.0}}; // cutoff behavior
+        if (r > r_vec.back()) return {0.0, {0.0}}; // cutoff behavior
 
         size_t i = findInterval(r);
         double dx = r - r_vec[i];
@@ -24,11 +23,9 @@ namespace jgap {
         return {value, {derivative}};
     }
 
-    void NaturalCubicSpline::init(const std::vector<double> &r, const std::vector<double> &e) {
+    void NaturalCubicSpline::init(const std::vector<double>& r, const std::vector<double>& e) {
         if (r.size() != e.size() || r.size() < 2) {
-            JGAP_LOG_ERROR(
-                "Spline reference vectors must be the same size and have at least 2 points.", true
-                );
+            JGAP_LOG_ERROR("Spline reference vectors must be the same size and have at least 2 points.", true);
         }
         if (!std::ranges::is_sorted(r)) {
             JGAP_LOG_ERROR("Spline reference distances must be sorted", true);
@@ -42,13 +39,12 @@ namespace jgap {
         d.resize(n - 1);
 
         std::vector<double> h(n - 1);
-        for (size_t i = 0; i < n - 1; ++i)
-            h[i] = r[i + 1] - r[i];
+        for (size_t i = 0; i < n - 1; ++i) h[i] = r[i + 1] - r[i];
 
         std::vector<double> alpha(n - 1);
         for (size_t i = 1; i < n - 1; i++) {
-            alpha[i] = (3.0 / h[i]) * (energies[i + 1] - energies[i])
-                        - (3.0 / h[i - 1]) * (energies[i] - energies[i - 1]);
+            alpha[i] =
+                    (3.0 / h[i]) * (energies[i + 1] - energies[i]) - (3.0 / h[i - 1]) * (energies[i] - energies[i - 1]);
         }
 
         std::vector<double> l(n), mu(n), z(n);

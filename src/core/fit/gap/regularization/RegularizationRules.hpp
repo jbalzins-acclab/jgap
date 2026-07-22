@@ -2,7 +2,7 @@
 #define JGAP_REGULARIZATIONRULES_HPP
 
 #include "Regularization.hpp"
-#include "core/atomic/neighbours/NeighbourList.hpp"
+#include "core/atomic/neighbours/NeighbourLists.hpp"
 #include <memory>
 
 namespace jgap {

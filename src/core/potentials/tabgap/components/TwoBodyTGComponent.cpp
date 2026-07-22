@@ -1,22 +1,26 @@
 #include "TwoBodyTGComponent.hpp"
+#include "core/atomic/iteration/Cluster2Expansion.hpp"
 
 namespace jgap {
-    TwoBodyTGComponent::TwoBodyTGComponent(SpeciesSet<2, FullSymmetry> species_pair, ValuePtr<Spline<1>> spline)
-        : species_pair(species_pair), spline(std::move(spline)) {
-    }
+    TwoBodyTGComponent::TwoBodyTGComponent(Species2Sorted species_pair, ValuePtr<Spline<1>> spline) :
+        species_pair(species_pair), spline(std::move(spline)), expansion(species_pair) {}
 
-    AtomicQuantity TwoBodyTGComponent::energy(const NeighbourList &nl) const {
+    AtomicQuantity TwoBodyTGComponent::energy(const NeighbourLists& nl) const {
         AtomicQuantity result(nl.nAtoms());
 
-        for (const auto& cluster: nl.findAllClusters<WithGradients>(species_pair)) {
 
-            auto [val, deriv] = spline->interpolate({cluster.separationBetween(0, 1)});
+        auto expansion_result = expansion.find(nl, CalculationType::WithGradients);
+        assert(expansion_result.derivatives.has_value());
+
+        for (const auto& [cluster, cluster_derivs]:
+             std::views::zip(expansion_result.clusters, *expansion_result.derivatives)) {
+            auto [val, deriv] = spline->interpolate({cluster.r01});
 
             result.value += val;
 
-            result.virials += cluster.derivatives[0].virials * deriv[0];
+            result.virials += cluster_derivs.dr01.virials * deriv[0];
 
-            Vector3 f10 = cluster.derivatives[0].direction * deriv[0];
+            Vector3 f10 = cluster_derivs.dr01.direction * deriv[0];
             result.forces[cluster.atom_indexes[0]] += f10;
             result.forces[cluster.atom_indexes[1]] -= f10;
         }
@@ -24,13 +28,9 @@ namespace jgap {
         return result;
     }
 
-    Cutoffs TwoBodyTGComponent::getCutoffs() const {
-        return Cutoffs{
-            {2u, spline->getCutoff()[0]}
-        };
-    }
+    Cutoffs TwoBodyTGComponent::getCutoffs() const { return Cutoffs{{2u, spline->getCutoff()[0]}}; }
 
-    void TwoBodyTGComponent::tabulate(TabulationData &tables) const {
+    void TwoBodyTGComponent::tabulate(TabulationData& tables) const {
         auto& table = tables.two_body_grids.getValueGrid(species_pair);
 
         for (const auto cell: table) {

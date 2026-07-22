@@ -2,9 +2,9 @@
 #define JGAP_HERMITECUBICSPLINE_HPP
 
 #include <vector>
-#include "core/Real.hpp"
-#include "Spline.hpp"
 #include "Grid.hpp"
+#include "Spline.hpp"
+#include "core/Real.hpp"
 
 namespace jgap {
     class HermiteCubicSpline : public Spline<1> {
@@ -14,9 +14,7 @@ namespace jgap {
         InterpolationResults<1> interpolate(std::array<Real, 1> pos) const override;
         std::array<Real, 1> getCutoff() const override;
 
-        HermiteCubicSpline* clone() const override {
-            return new HermiteCubicSpline(*this);
-        }
+        HermiteCubicSpline* clone() const override { return new HermiteCubicSpline(*this); }
 
         const Grid<1>& getTable() const { return table; }
 

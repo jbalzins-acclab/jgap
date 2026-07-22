@@ -31,9 +31,8 @@ namespace jgap {
         Real forDim(const size_t dim) const {
             if (per_cluster_size.contains(dim)) {
                 return per_cluster_size.at(dim);
-            } else {
-                return 0.0;
             }
+            return 0.0;
         }
 
         Cutoffs operator+(const Cutoffs& other) const {

@@ -5,21 +5,18 @@
 #include "core/kernels/SquaredExpKernel.hpp"
 #include "core/potentials/CompositePotential.hpp"
 #include "core/potentials/gap/GapPotential.hpp"
-#include "core/potentials/gap/component/NBodyGapComponent.hpp"
+#include "core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "core/potentials/isolated/IsolatedAtomPotential.hpp"
 #include "core/potentials/spline/SplinePairPotential.hpp"
 #include "core/potentials/tabgap/TabGapPotential.hpp"
 #include "core/potentials/zbl/ZblPotential.hpp"
-#include "core/tabulation/TabulationParams.hpp"
-#include "core/transform/2b/TwoBodyTransformation.hpp"
+#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
 
 namespace {
-    std::string tmpFile(const std::string& name) {
-        return testing::TempDir() + "/" + name;
-    }
+    std::string tmpFile(const std::string& name) { return testing::TempDir() + "/" + name; }
 
     template<typename Obj>
     ValuePtr<Potential> roundTrip(const Obj& potential, const std::string& file) {
@@ -41,9 +38,7 @@ namespace {
         }
     }
 
-    Atoms feNiPair() {
-        return Atoms({{0, 0, 0}, {2.5, 0, 0}}, {Species("Fe"), Species("Ni")});
-    }
+    Atoms feNiPair() { return Atoms({{0, 0, 0}, {2.5, 0, 0}}, {Species("Fe"), Species("Ni")}); }
 }
 
 TEST(TestPotentialSerialization, IsolatedAtomPotential) {
@@ -60,8 +55,7 @@ TEST(TestPotentialSerialization, IsolatedAtomPotential) {
 }
 
 TEST(TestPotentialSerialization, ZblPotential) {
-    std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> coeffs = {
-        {SpeciesSet<2, FullSymmetry>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
+    std::map<Species2Sorted, std::array<Real, 6>> coeffs = {{Species2Sorted("Fe,Ni"), {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
     ZblPotential original(coeffs, 8.0, 1.0);
 
     auto rt = roundTrip(original, tmpFile("zbl.h5"));
@@ -72,9 +66,9 @@ TEST(TestPotentialSerialization, ZblPotential) {
 
     const auto restored_coeffs = restored->getCoefficients();
     ASSERT_EQ(restored_coeffs.size(), 1u);
-    const auto& c = restored_coeffs.at(SpeciesSet<2, FullSymmetry>{"Fe", "Ni"});
+    const auto& c = restored_coeffs.at(Species2Sorted("Fe,Ni"));
     for (size_t i = 0; i < 6; ++i) {
-        EXPECT_DOUBLE_EQ(c[i], coeffs.at(SpeciesSet<2, FullSymmetry>{"Fe", "Ni"})[i]);
+        EXPECT_DOUBLE_EQ(c[i], coeffs.at(Species2Sorted("Fe,Ni"))[i]);
     }
 
     expectSameEnergy(original, *rt, feNiPair());
@@ -101,8 +95,8 @@ TEST(TestPotentialSerialization, SplinePairPotential) {
 TEST(TestPotentialSerialization, CompositePotential) {
     CompositePotential original{std::map<std::string, ValuePtr<Potential>>{
         {"isolated", IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}})},
-        {"zbl", ZblPotential(std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>>{
-                                {SpeciesSet<2, FullSymmetry>{"Fe", "Ni"}, {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
+        {"zbl", ZblPotential(std::map<Species2Sorted, std::array<Real, 6>>{{Species2Sorted("Fe,Ni"),
+                                                                            {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
                              8.0, 1.0)},
     }};
 
@@ -124,21 +118,14 @@ namespace {
         std::vector<Real> coefficients = {0.5, -0.3};
 
         GapPotential potential;
-        potential.addComponent(ValuePtr<GapComponent>(
-            NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>(
-                SpeciesSet<2, FullSymmetry>{"Fe", "Fe"},
-                TwoBodyTransformation(CosCutoff(5.0, 1.0)),
-                SquaredExpKernel<1, 1>(10.0, {1.3}),
-                sparse_points,
-                coefficients)));
-        potential.optional_external_potential =
-            IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}});
+        auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
+        potential.addComponent(ValuePtr<GapComponent>(TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(
+            Species2Sorted("Fe,Fe"), transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}), sparse_points, coefficients)));
+        potential.optional_external_potential = IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}});
         return potential;
     }
 
-    Atoms fePair() {
-        return Atoms({{0, 0, 0}, {2.5, 0, 0}}, {Species("Fe"), Species("Fe")});
-    }
+    Atoms fePair() { return Atoms({{0, 0, 0}, {2.5, 0, 0}}, {Species("Fe"), Species("Fe")}); }
 }
 
 TEST(TestPotentialSerialization, GapPotential) {

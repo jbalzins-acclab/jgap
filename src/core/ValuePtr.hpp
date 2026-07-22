@@ -9,6 +9,9 @@
 namespace jgap {
 
     /// Ensures one can deep-copy an object.
+    /// \note Using a raw pointer is unsafe,
+    /// but it avoids the boilerplate when dealing with multi-inheritance
+    /// (e.g. with \ref EamPairFunction).
     template <typename T>
     concept Cloneable = requires(const T& obj) {
             { obj.clone() } -> std::convertible_to<T*>;

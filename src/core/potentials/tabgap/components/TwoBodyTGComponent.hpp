@@ -2,39 +2,34 @@
 #define JGAP_TWOBODYTGCOMPONENT_HPP
 
 #include "TabGapComponent.hpp"
-#include "core/splines/CubicBSpline.hpp"
+#include "core/ValuePtr.hpp"
+#include "core/atomic/iteration/Cluster2Expansion.hpp"
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 #include "core/splines/Spline.hpp"
 
 namespace jgap {
     class TwoBodyTGComponent : public TabGapComponent {
     public:
-        TwoBodyTGComponent(SpeciesSet<2, FullSymmetry> species_pair, ValuePtr<Spline<1>> spline);
+        TwoBodyTGComponent(Species2Sorted species_pair, ValuePtr<Spline<1>> spline);
 
-        AtomicQuantity energy(const NeighbourList &nl) const override;
+        AtomicQuantity energy(const NeighbourLists& nl) const override;
 
         Cutoffs getCutoffs() const override;
 
-        void tabulate(TabulationData &tables) const override;
+        void tabulate(TabulationData& tables) const override;
 
-        std::set<Species> getAllSpecies() const override {
-            return {species_pair.getNodes()[0], species_pair.getNodes()[1]};
-        }
+        std::set<Species> getAllSpecies() const override { return {species_pair.nodes[0], species_pair.nodes[1]}; }
 
-        TwoBodyTGComponent* clone() const override {
-            return new TwoBodyTGComponent(*this);
-        }
+        TwoBodyTGComponent* clone() const override { return new TwoBodyTGComponent(*this); }
 
-        const auto& getSpeciesPair() const {
-            return species_pair;
-        }
+        const auto& getSpeciesPair() const { return species_pair; }
 
-        const auto& getSpline() const {
-            return spline;
-        }
+        const auto& getSpline() const { return spline; }
 
     private:
-        SpeciesSet<2, FullSymmetry> species_pair;
+        Species2Sorted species_pair;
         ValuePtr<Spline<1>> spline;
+        Cluster2Expansion expansion;
     };
 }
 

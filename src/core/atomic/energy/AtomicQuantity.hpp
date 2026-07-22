@@ -20,7 +20,7 @@ namespace jgap {
         Virials virials;
         std::vector<Vector3> forces;
 
-        AtomicQuantity(size_t n_atoms) : value(Real{}), virials({}), forces(n_atoms, Vector3{}) {}
+        explicit AtomicQuantity(size_t n_atoms) : value(Real{}), virials({}), forces(n_atoms, Vector3{}) {}
 
         AtomicQuantity operator+(const AtomicQuantity& other) const;
         AtomicQuantity& operator+=(const AtomicQuantity& other);

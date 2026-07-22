@@ -1,16 +1,17 @@
 #ifndef JGAP_MANYBODYGAPCOMPONENTSERIALIZATION_HPP
 #define JGAP_MANYBODYGAPCOMPONENTSERIALIZATION_HPP
 
+#include <vector>
+#include "core/ValuePtr.hpp"
+#include "core/atomic/descriptor/Descriptor.hpp"
+#include "core/kernels/SquaredExpKernel.hpp"
 #include "core/potentials/gap/component/GapComponent.hpp"
 #include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "core/transform/aggregated/TransformationAggregator.hpp"
-#include "core/kernels/SquaredExpKernel.hpp"
-#include "serialization/Serialization.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "serialization/SerializationNode.hpp"
-#include "serialization/kernels/SquaredExpKernelSerialization.hpp"
-#include "core/ValuePtr.hpp"
 #include "io/log/CurrentLogger.hpp"
+#include "serialization/Serialization.hpp"
+#include "serialization/SerializationNode.hpp"
+#include "serialization/SerializationRegistry.hpp"
+#include "serialization/kernels/SquaredExpKernelSerialization.hpp"
 
 namespace jgap {
 
@@ -35,10 +36,9 @@ namespace jgap {
             KernelSerialization::serialize(derived->getKernel(), kernel_group);
 
             auto aggregator_group = node.createGroup("aggregator");
-            SerializationRegistry<TransformationAggregator<Dim>>::serialize(
-                derived->getAggregator(), aggregator_group);
+            SerializationRegistry<NBodyAggregator<Dim>>::serialize(derived->getAggregator(), aggregator_group);
 
-            node.saveSparsePoints<Dim>(derived->getSparsePoints());
+            node.writeDataSet("sparse_points", derived->getSparsePoints());
 
             const auto& coefficients = derived->getCoefficients();
             if (!coefficients.empty()) {
@@ -59,12 +59,13 @@ namespace jgap {
             TKernel kernel = KernelSerialization::deserialize(kernel_group_opt.value());
 
             auto aggregator_group_opt = node.getGroup("aggregator");
-            if (!aggregator_group_opt) JGAP_LOG_AND_THROW("Missing 'aggregator' group in ManyBodyGapComponent serialization");
-            auto aggregator = SerializationRegistry<TransformationAggregator<Dim>>::deserialize(
-                aggregator_group_opt.value());
+            if (!aggregator_group_opt)
+                JGAP_LOG_AND_THROW("Missing 'aggregator' group in ManyBodyGapComponent serialization");
+            auto aggregator = SerializationRegistry<NBodyAggregator<Dim>>::deserialize(aggregator_group_opt.value());
 
-            auto sparse_points = node.loadSparsePoints<Dim>();
-            auto coefficients = node.readOptionalDataSet<std::vector<Real>>("coefficients").value_or(std::vector<Real>{});
+            auto sparse_points = node.readDataSet<std::vector<Descriptor<Dim>>>("sparse_points");
+            auto coefficients =
+                node.readOptionalDataSet<std::vector<Real>>("coefficients").value_or(std::vector<Real>{});
 
             return ValuePtr<GapComponent>(ComponentT(aggregator, kernel, sparse_points, coefficients));
         }

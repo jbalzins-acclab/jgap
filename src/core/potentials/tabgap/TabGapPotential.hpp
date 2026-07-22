@@ -1,8 +1,8 @@
 #ifndef JGAP_TABGAPPOTENTIAL_HPP
 #define JGAP_TABGAPPOTENTIAL_HPP
 
-#include "components/EamTGComponent.hpp"
 #include "components/TabGapComponent.hpp"
+#include "core/ValuePtr.hpp"
 #include "core/potentials/Potential.hpp"
 
 namespace jgap {
@@ -19,9 +19,7 @@ namespace jgap {
 
         void fillTables(TabulationData& table) const override;
 
-        TabGapPotential* clone() const override {
-            return new TabGapPotential(*this);
-        }
+        TabGapPotential* clone() const override { return new TabGapPotential(*this); }
 
     private:
         size_t n_2b_components{};

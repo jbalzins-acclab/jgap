@@ -2,9 +2,8 @@
 #define JGAP_SPLINEPAIRPOTENTIAL_HPP
 
 #include "../../splines/NaturalCubicSpline.hpp"
-#include "core/atomic/species/SpeciesSet.hpp"
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 #include "core/potentials/Potential.hpp"
-#include "../../../serialization/SerializationRegistry.hpp"
 
 namespace jgap {
     class SplinePairPotential : public Potential {
@@ -12,7 +11,7 @@ namespace jgap {
         SplinePairPotential() = default;
         ~SplinePairPotential() override = default;
 
-        void extend(Species species1, Species species2, const std::vector<Real>& r, const std::vector<Real>& energies);
+        void extend(Species species1, Species species2, const std::vector<Real> &r, const std::vector<Real> &energies);
 
         AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
 
@@ -20,16 +19,12 @@ namespace jgap {
 
         void fillTables(TabulationData &tables) const override;
 
-        SplinePairPotential* clone() const override {
-            return new SplinePairPotential(*this);
-        }
+        SplinePairPotential *clone() const override { return new SplinePairPotential(*this); }
 
-        const auto& getInterpolators() const {
-            return per_species_interpolators;
-        }
+        const auto &getInterpolators() const { return per_species_interpolators; }
 
     private:
-        std::map<SpeciesSet<2, FullSymmetry>, NaturalCubicSpline> per_species_interpolators;
+        std::map<Species2Sorted, NaturalCubicSpline> per_species_interpolators;
     };
 }
 

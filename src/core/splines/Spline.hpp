@@ -1,8 +1,6 @@
 #ifndef JGAP_SPLINE_HPP
 #define JGAP_SPLINE_HPP
 
-#include <memory>
-
 #include "InterpolationResults.hpp"
 
 namespace jgap {

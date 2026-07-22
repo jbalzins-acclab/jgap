@@ -11,18 +11,14 @@ namespace jgap {
     public:
         virtual ~Serialization() = default;
 
-
         virtual bool serialize(const ValuePtr<TBase>& obj, SerializationNode& node) const = 0;
 
-
         virtual ValuePtr<TBase> deserialize(const SerializationNode& node) const = 0;
-
 
         void serialize(const ValuePtr<TBase>& obj, const std::string& filename) const {
             SerializationNode node = SerializationNode::create(filename);
             serialize(obj, node);
         }
-
 
         virtual ValuePtr<TBase> deserialize(const std::string& filename) const {
             const SerializationNode node = SerializationNode::open(filename);

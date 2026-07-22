@@ -1,15 +1,15 @@
 #ifndef JGAP_UTILS_HPP
 #define JGAP_UTILS_HPP
 
-#include <string>
-#include <vector>
-#include <ranges>
-#include <cmath>
-#include <chrono>
-#include <map>
-#include <iosfwd>
 #include <Eigen/Dense>
+#include <chrono>
+#include <cmath>
+#include <iosfwd>
+#include <map>
+#include <ranges>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/Real.hpp"
 
@@ -17,25 +17,36 @@ namespace jgap {
     struct MainXYZPropertyNames;
     class Atoms;
 
-    // Portable sincos implementation
-    #if defined(__GNUC__) || defined(__clang__)
-        inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
-            __builtin_sincos(angle, sin_val, cos_val);
-        }
-    #else
-        inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
-            *sin_val = std::sin(angle);
-            *cos_val = std::cos(angle);
-        }
-    #endif
+#if defined(__GNUC__) || defined(__clang__)
+    inline void sincos(Real angle, Real* sin_val, Real* cos_val) { __builtin_sincos(angle, sin_val, cos_val); }
+#else
+    inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
+        *sin_val = std::sin(angle);
+        *cos_val = std::cos(angle);
+    }
+#endif
 
-    bool getLine(std::istream &file, std::string &line);
+    bool getLine(std::istream& file, std::string& line);
 
-    std::map<std::string, std::string> parseHeaderLine(const std::string &line);
+    std::map<std::string, std::string> parseHeaderLine(const std::string& line);
 
     std::string uniqueStamp();
 
-    inline double factorial(size_t n);
+    constexpr double factorialD(size_t n) {
+        double result = 1.0;
+        for (size_t i = 2; i <= n; i++) {
+            result *= static_cast<Real>(i);
+        }
+        return result;
+    }
+
+    constexpr size_t factorial(size_t n) {
+        size_t result = 1;
+        for (size_t i = 2; i <= n; i++) {
+            result *= i;
+        }
+        return result;
+    }
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);
@@ -50,7 +61,7 @@ namespace jgap {
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
 
-    template <typename T>
+    template<typename T>
     std::string typeName() {
 #if defined(__clang__) || defined(__GNUC__)
         std::string_view name = __PRETTY_FUNCTION__;
@@ -61,8 +72,8 @@ namespace jgap {
         }
         const auto value_start = start + 4;
         const auto value_end = name.find_first_of(";]", value_start);
-        return std::string(name.substr(value_start,
-            value_end == std::string_view::npos ? std::string_view::npos : value_end - value_start));
+        return std::string(name.substr(
+            value_start, value_end == std::string_view::npos ? std::string_view::npos : value_end - value_start));
 #elif defined(_MSC_VER)
         std::string_view name = __FUNCSIG__;
         constexpr std::string_view prefix = "typeName<";
@@ -79,7 +90,7 @@ namespace jgap {
 #endif
     }
 
-    template <typename Iterator>
+    template<typename Iterator>
     std::string iteratorToString(Iterator begin, Iterator end) {
         std::ostringstream oss;
         oss << "[";
@@ -98,7 +109,7 @@ namespace jgap {
         return oss.str();
     }
 
-    template <typename InputRange, typename Func>
+    template<typename InputRange, typename Func>
     auto mapVector(InputRange&& range, Func func) {
         return range | std::views::transform(func) | std::ranges::to<std::vector>();
     }

@@ -4,20 +4,10 @@
 //   writes <output_prefix>.jgap.h5 (the serialized potential) and, via TabGapIO,
 //   <output_prefix>.tabgap.h5 + <output_prefix>.eam.fs file(s).
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 #include <string>
 
-#include "core/atomic/Atoms.hpp"
-#include "io/tabgap/TabGapIO.hpp"
-#include "utils/gap/StandardGapFit.hpp"
-#include "core/potentials/tabgap/TabGapPotential.hpp"
-#include "core/transform/eam/FSGenPairFunction.hpp"
-#include "core/fit/gap/regularization/SimpleRegularizationRules.hpp"
-#include "core/potentials/Potential.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "utils/Utils.hpp"
-#include "io/log/CurrentLogger.hpp"
 
 using namespace jgap;
 
@@ -53,12 +43,8 @@ int main(int argc, char** argv) {
     SerializationRegistry<Potential>::serialize(potential, potential_file);
     JGAP_LOG_INFO("Saved fitted potential to {}", potential_file);
 
-    TabulationData tabulation_data = potential.tabulate({
-            .max_cutoffs = potential.getCutoffs(),
-            .max_eam_density = 10.0,
-            .n_grid_2b = 5000,
-            .n_grid_3b = {80, 80, 80}
-        });
+    TabulationData tabulation_data = potential.tabulate(
+        {.max_cutoffs = potential.getCutoffs(), .max_eam_density = 10.0, .n_grid_2b = 5000, .n_grid_3b = {80, 80, 80}});
     TabGapPotential tabgap{tabulation_data};
 
     const Filenames tabgap_files = TabGapIO::write(tabgap, output_prefix);

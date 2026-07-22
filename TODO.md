@@ -1,0 +1,1 @@
+- [ ] Update `Atoms` class documentation to reflect its decoupling from `XYZData`.

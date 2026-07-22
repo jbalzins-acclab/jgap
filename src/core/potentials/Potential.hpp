@@ -1,12 +1,9 @@
 #ifndef JGAP_POTENTIAL_HPP
 #define JGAP_POTENTIAL_HPP
 
-#include <string>
-#include <functional>
-
-#include "core/atomic/energy/AtomicQuantity.hpp"
-#include "core/atomic/Atoms.hpp"
 #include "Cutoffs.hpp"
+#include "core/atomic/Atoms.hpp"
+#include "core/atomic/energy/AtomicQuantity.hpp"
 #include "core/tabulation/TabulationData.hpp"
 
 namespace jgap {
@@ -14,7 +11,7 @@ namespace jgap {
     public:
         virtual ~Potential() = default;
 
-        virtual AtomicQuantity calculateEnergy(const Atoms &atoms) const = 0;
+        virtual AtomicQuantity calculateEnergy(const Atoms& atoms) const = 0;
 
         virtual Cutoffs getCutoffs() const = 0;
 

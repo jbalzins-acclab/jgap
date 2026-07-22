@@ -1,16 +1,14 @@
 #ifndef JGAP_SERIALIZATIONNODE_HPP
 #define JGAP_SERIALIZATIONNODE_HPP
 
+#include <highfive/H5DataSet.hpp>
 #include <highfive/H5File.hpp>
 #include <highfive/H5Group.hpp>
-#include <highfive/H5DataSet.hpp>
-#include <optional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <array>
 
-#include "core/atomic/Descriptor.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -92,13 +90,9 @@ namespace jgap {
             return SerializationNode(group.createGroup(group_name));
         }
 
-        std::vector<std::string> getChildNames() const {
-            return group.listObjectNames();
-        }
+        std::vector<std::string> getChildNames() const { return group.listObjectNames(); }
 
-        std::vector<std::string> getAttributeNames() const {
-            return group.listAttributeNames();
-        }
+        std::vector<std::string> getAttributeNames() const { return group.listAttributeNames(); }
 
         HighFive::Group& hdfGroup() { return group; }
         const HighFive::Group& hdfGroup() const { return group; }
@@ -107,8 +101,8 @@ namespace jgap {
         std::unique_ptr<HighFive::File> file_owner;
         HighFive::Group group;
 
-        explicit SerializationNode(std::unique_ptr<HighFive::File> file)
-            : file_owner(std::move(file)), group(file_owner->getGroup("/")) {}
+        explicit SerializationNode(std::unique_ptr<HighFive::File> file) :
+            file_owner(std::move(file)), group(file_owner->getGroup("/")) {}
 
         explicit SerializationNode(HighFive::Group group) : group(std::move(group)) {}
     };

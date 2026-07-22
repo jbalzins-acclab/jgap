@@ -1,0 +1,31 @@
+#include "PolycutoffPairFunctionSerialization.hpp"
+#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "serialization/SerializationNode.hpp"
+#include "io/log/CurrentLogger.hpp"
+
+namespace jgap {
+
+    bool PolycutoffPairFunctionSerialization::serialize(const ValuePtr<TwoBodyTransformation<1>>& obj, SerializationNode& node) const {
+        if (auto derived = obj.as<PolycutoffPairFunction>()) {
+            node.writeAttribute("name", "PolycutoffPairFunction");
+            node.writeAttribute("cutoff", derived->getCutoff());
+            node.writeAttribute("r_min", derived->getRMin());
+            node.writeAttribute("prefactor", derived->getPrefactor());
+            return true;
+        }
+        return false;
+    }
+
+    ValuePtr<TwoBodyTransformation<1>> PolycutoffPairFunctionSerialization::deserialize(const SerializationNode& node) const {
+        if (node.readOptionalAttribute<std::string>("name") != "PolycutoffPairFunction") {
+            return nullptr;
+        }
+        auto cutoff = node.readAttribute<Real>("cutoff");
+        auto r_min = node.readAttribute<Real>("r_min");
+        auto prefactor = node.readAttribute<Real>("prefactor");
+
+        return ValuePtr<TwoBodyTransformation<1>>(PolycutoffPairFunction(cutoff, r_min, prefactor));
+    }
+
+    REGISTER_SERIALIZATION(PolycutoffPairFunctionSerialization, TwoBodyTransformation<1>);
+}

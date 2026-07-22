@@ -1,29 +1,24 @@
 #ifndef ZBLPOTENTIAL_HPP
 #define ZBLPOTENTIAL_HPP
 
-#include <set>
 #include <array>
-#include <map>
-#include <string>
 #include <istream>
+#include <map>
+#include <set>
+#include <string>
 
+#include "core/atomic/Atoms.hpp"
+#include "core/atomic/species/composition/Species2Sorted.hpp"
 #include "core/cutoff/CutoffFunction.hpp"
 #include "core/cutoff/PerriotPolynomialCutoff.hpp"
 #include "core/potentials/Potential.hpp"
-#include "../../../serialization/SerializationRegistry.hpp"
-#include "core/atomic/Atoms.hpp"
-#include "core/atomic/species/SpeciesSet.hpp"
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
     // The built-in screening datasets. When the compiler supports #embed they are baked into the binary;
     // otherwise they are read at runtime from resources/dmol-screening-fit/<dataset>.dat (see the .cpp).
-    enum class EmbeddedZBLCoeffDataset {
-        DMOL,
-        NLH,
-        MP2
-    };
+    enum class EmbeddedZBLCoeffDataset { DMOL, NLH, MP2 };
 
     class ZblPotential : public Potential {
     public:
@@ -35,54 +30,43 @@ namespace jgap {
 
         // Built-in dataset (embedded via #embed, or read from resources/ at runtime when #embed is
         // unavailable; see the .cpp), restricted to the given pairs / to the elements in the training data.
-        ZblPotential(const std::set<SpeciesSet<2, FullSymmetry>>& species,
+        ZblPotential(const std::set<Species2Sorted> &species,
                      EmbeddedZBLCoeffDataset embedded_dataset = EmbeddedZBLCoeffDataset::DMOL,
-                     Real cutoff = DefaultZblCutoff,
-                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+                     Real cutoff = DefaultZblCutoff, Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
-        ZblPotential(const std::vector<Atoms>& training_data,
+        ZblPotential(const std::vector<Atoms> &training_data,
                      EmbeddedZBLCoeffDataset embedded_dataset = EmbeddedZBLCoeffDataset::DMOL,
-                     Real cutoff = DefaultZblCutoff,
-                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+                     Real cutoff = DefaultZblCutoff, Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
-        ZblPotential(std::istream& custom_dataset,
-                     const std::set<SpeciesSet<2, FullSymmetry>>& species,
-                     Real cutoff = DefaultZblCutoff,
-                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+        ZblPotential(std::istream &custom_dataset, const std::set<Species2Sorted> &species,
+                     Real cutoff = DefaultZblCutoff, Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
-        ZblPotential(std::istream& custom_dataset,
-                     const std::vector<Atoms>& training_data,
-                     Real cutoff = DefaultZblCutoff,
-                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+        ZblPotential(std::istream &custom_dataset, const std::vector<Atoms> &training_data,
+                     Real cutoff = DefaultZblCutoff, Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
         // Reads coefficients from a dataset file, keeping only the element pairs present in the training
         // data.
-        ZblPotential(const std::string& dataset_filename,
-                     const std::vector<Atoms>& training_data,
-                     Real cutoff = DefaultZblCutoff,
-                     Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
+        ZblPotential(const std::string &dataset_filename, const std::vector<Atoms> &training_data,
+                     Real cutoff = DefaultZblCutoff, Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
         // z1_z2 and a_inverse are deduced from the species in each pair.
-        ZblPotential(const std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>>& coefficients,
-                     Real cutoff = DefaultZblCutoff,
+        ZblPotential(const std::map<Species2Sorted, std::array<Real, 6>> &coefficients, Real cutoff = DefaultZblCutoff,
                      Real cutoff_transition_width = DefaultZblCutoffTransitionWidth);
 
-        std::map<SpeciesSet<2, FullSymmetry>, std::array<Real, 6>> getCoefficients() const;
+        std::map<Species2Sorted, std::array<Real, 6>> getCoefficients() const;
 
         Real getCutoff() const { return cutoff; }
         Real getCutoffTransitionWidth() const { return cutoff_transition_width; }
 
         AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
 
-        std::array<Real, 2> energyAndDerivative(const SpeciesSet<2, FullSymmetry>& species_pair, Real r) const;
+        std::array<Real, 2> energyAndDerivative(const Species2Sorted &species_pair, Real r) const;
 
         Cutoffs getCutoffs() const override { return {{2u, cutoff}}; }
 
         void fillTables(TabulationData &tables) const override;
 
-        ZblPotential* clone() const override {
-            return new ZblPotential(*this);
-        }
+        ZblPotential *clone() const override { return new ZblPotential(*this); }
 
     private:
         static constexpr Real LowerRLimitForTabulation = 1e-4;
@@ -96,15 +80,15 @@ namespace jgap {
         Real cutoff;
         Real cutoff_transition_width;
 
-        std::map<SpeciesSet<2, FullSymmetry>, ZblParameters> zbl_parameters;
+        std::map<Species2Sorted, ZblParameters> zbl_parameters;
         PerriotPolynomialCutoff cutoff_function;
 
-        void loadDataset(std::istream& dataset, const std::set<SpeciesSet<2, FullSymmetry>>* species_filter = nullptr);
+        void loadDataset(std::istream &dataset, const std::set<Species2Sorted> *species_filter = nullptr);
 
         // Builds the parameters for a pair, deducing z1_z2 and a_inverse from the species' atomic numbers.
-        static ZblParameters makeParameters(const SpeciesSet<2, FullSymmetry>& pair, const std::array<Real, 6>& coeffs);
+        static ZblParameters makeParameters(const Species2Sorted &pair, const std::array<Real, 6> &coeffs);
 
-        std::array<Real, 2> energyAndDerivative(const ZblParameters& params, Real r) const;
+        std::array<Real, 2> energyAndDerivative(const ZblParameters &params, Real r) const;
     };
 }
 

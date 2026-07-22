@@ -1,12 +1,12 @@
 #ifndef JGAP_COMPOSITEPOTENTIAL_HPP
 #define JGAP_COMPOSITEPOTENTIAL_HPP
 
-#include "Potential.hpp"
 #include <map>
-#include <vector>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
+#include "Potential.hpp"
 
 #include "../ValuePtr.hpp"
 
@@ -20,21 +20,19 @@ namespace jgap {
         template<typename... Potentials>
         CompositePotential(Potentials... pots) {
             int i = 0;
-            ( (potentials[std::to_string(i++)] = std::move(pots)), ... );
+            ((potentials[std::to_string(i++)] = std::move(pots)), ...);
         }
 
         Cutoffs getCutoffs() const override;
 
-        AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
+        AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
 
         const std::map<std::string, ValuePtr<Potential>>& getPotentials() const { return potentials; }
         std::map<std::string, ValuePtr<Potential>>& getPotentials() { return potentials; }
 
-        void fillTables(TabulationData &table) const override;
+        void fillTables(TabulationData& table) const override;
 
-        CompositePotential* clone() const override {
-            return new CompositePotential(*this);
-        }
+        CompositePotential* clone() const override { return new CompositePotential(*this); }
 
     private:
         std::map<std::string, ValuePtr<Potential>> potentials;

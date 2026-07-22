@@ -1,23 +1,20 @@
 #include "HermiteCubicSpline.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 #include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    HermiteCubicSpline::HermiteCubicSpline(const Grid<1> &table) {
-        init(table);
-    }
+    HermiteCubicSpline::HermiteCubicSpline(const Grid<1>& table) { init(table); }
 
     InterpolationResults<1> HermiteCubicSpline::interpolate(std::array<Real, 1> pos) const {
         const Real r = pos[0];
         const Real origin = table.origin[0];
         const Real spacing = table.spacing[0];
-        const size_t n = table.dims[0];
+        const size_t n = table.sizes[0];
 
         if (r < origin) return {table({0}), {0.0}};
-        if (r > getCutoff()[0])  return {0.0, {0.0}};
+        if (r > getCutoff()[0]) return {0.0, {0.0}};
 
         size_t i = findInterval(r);
         Real dx = r - (origin + static_cast<Real>(i) * spacing);
@@ -29,12 +26,12 @@ namespace jgap {
     }
 
     std::array<Real, 1> HermiteCubicSpline::getCutoff() const {
-        return {table.origin[0] + static_cast<Real>(table.dims[0] - 1) * table.spacing[0]};
+        return {table.origin[0] + static_cast<Real>(table.sizes[0] - 1) * table.spacing[0]};
     }
 
-    void HermiteCubicSpline::init(const Grid<1> &table_in) {
+    void HermiteCubicSpline::init(const Grid<1>& table_in) {
         table = table_in;
-        const size_t n = table.dims[0];
+        const size_t n = table.sizes[0];
         const Real spacing = table.spacing[0];
         const Real inverse_spacing = 1.0 / spacing;
 
@@ -49,7 +46,7 @@ namespace jgap {
         // Step 1: Compute the local slopes (b) at each point using finite differences
         // Since we have a uniform grid from Table<1>, h_left == h_right == spacing
         for (size_t i = 1; i < n - 1; ++i) {
-            Real delta_left  = (table({i}) - table({i - 1})) * inverse_spacing;
+            Real delta_left = (table({i}) - table({i - 1})) * inverse_spacing;
             Real delta_right = (table({i + 1}) - table({i})) * inverse_spacing;
 
             // Weighted average based on interval sizes (reduces to standard centered difference on uniform grids)
@@ -73,7 +70,7 @@ namespace jgap {
     size_t HermiteCubicSpline::findInterval(Real r) const {
         const Real origin = table.origin[0];
         const Real inverse_spacing = 1.0 / table.spacing[0];
-        const size_t n = table.dims[0];
+        const size_t n = table.sizes[0];
 
         if (r < origin) return 0;
         if (r > getCutoff()[0]) return n - 2;

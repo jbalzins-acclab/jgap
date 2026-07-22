@@ -1,4 +1,5 @@
 #include "Atoms.hpp"
+#include <utility>
 #include <variant>
 #include "io/log/CurrentLogger.hpp"
 #include <sstream>
@@ -7,17 +8,9 @@ namespace jgap {
     Atoms::Atoms(const std::vector<Vector3>& pos,
                  const std::vector<Species>& spec,
                  const std::optional<Lattice>& lat,
-                 std::array<bool, 3> pbc,
-                 const MainXYZPropertyNames& names)
-        : XYZData(names) {
-
-        arrays[main_property_names.positions] = pos;
-        arrays[main_property_names.species] = spec;
-
-        if (lat.has_value()) {
-            info[main_property_names.lattice] = lat.value();
-        }
-        info[main_property_names.pbc] = pbc;
+                 std::array<bool, 3> pbc_val,
+                 MainXYZPropertyNames names)
+        : main_property_names(std::move(names)), positions(pos), species(spec), lattice(lat), pbc(pbc_val) {
 
         if (pos.size() != spec.size()) {
             JGAP_LOG_AND_THROW("Positions and species must have same size");
@@ -26,95 +19,88 @@ namespace jgap {
         wrapPositions();
     }
 
-    Atoms::Atoms(const XYZData& data) : XYZData(data) {
-        validateXYZ();
+    Atoms::Atoms(const XYZData& data) : main_property_names(data.getMainPropertyNames()) {
+        validateXYZ(data);
     }
 
-    Atoms::Atoms(XYZData &&data) : XYZData(data) {
-        validateXYZ();
+    Atoms::Atoms(XYZData &&data) : main_property_names(data.getMainPropertyNames()) {
+        validateXYZ(data);
     }
 
-    Atoms& Atoms::operator<<(const AtomicQuantity& energy_and_derivatives) {
+    XYZData Atoms::toXYZData() const {
+        XYZData data(main_property_names);
+        auto& info = data.getPropertiesForEditing();
+        auto& arrs = data.getArraysForEditing();
+
+        // Copy extra properties first
+        info = extra_info;
+        arrs = extra_arrays;
+
+        // Overwrite core properties
+        arrs[main_property_names.positions] = positions;
+        arrs[main_property_names.species] = species;
+
+        if (lattice) {
+            info[main_property_names.lattice] = *lattice;
+        }
+        info[main_property_names.pbc] = pbc;
+
+        if (energy) {
+            info[main_property_names.energy] = *energy;
+        }
+        if (virials) {
+            info[main_property_names.virials] = *virials;
+        }
+        if (forces) {
+            arrs[main_property_names.forces] = *forces;
+        }
+        if (config_type) {
+            info[main_property_names.config_type] = *config_type;
+        }
+
+        return data;
+    }
+
+    void Atoms::write(const std::string &filename) const {
+        toXYZData().write(filename);
+    }
+
+    void Atoms::write(std::ostream &out_stream) const {
+        toXYZData().write(out_stream);
+    }
+
+    std::string Atoms::write() const {
+        return toXYZData().write();
+    }
+
+    void Atoms::setEnergyAndDerivatives(const AtomicQuantity& energy_and_derivatives) {
         setEnergy(energy_and_derivatives.value);
         setVirials(energy_and_derivatives.virials);
         setForces(energy_and_derivatives.forces);
-        return *this;
     }
 
-    std::optional<Lattice> Atoms::lookupLattice() const {
-        if (info.contains(main_property_names.lattice)) {
-
-            if (!std::holds_alternative<Lattice>(info.at(main_property_names.lattice))) {
-                JGAP_LOG_AND_THROW("Lattice was altered incorrectly");
-            }
-
-            return std::get<Lattice>(info.at(main_property_names.lattice));
-        }
-        return std::nullopt;
+    void Atoms::setEnergyAndDerivatives(Real e) {
+        setEnergy(e);
+        eraseVirials();
+        eraseForces();
     }
 
-    void Atoms::setLattice(const std::optional<Lattice>& lat) {
-        if (lat) {
-            info[main_property_names.lattice] = *lat;
-        } else {
-            info.erase(main_property_names.lattice);
-        }
-    }
-
-    std::array<bool, 3> Atoms::lookupPbc() const {
-        if (info.contains(main_property_names.pbc)) {
-
-            if (!std::holds_alternative<std::array<bool, 3>>(info.at(main_property_names.pbc))) {
-                JGAP_LOG_AND_THROW("PBC property was altered incorrectly");
-            }
-
-            return std::get<std::array<bool, 3>>(info.at(main_property_names.pbc));
-        }
-        return {false, false, false};
-    }
-
-    void Atoms::setPbc(const std::array<bool, 3>& pbc) {
-        info[main_property_names.pbc] = pbc;
-    }
-
-    const std::vector<Vector3>& Atoms::lookupPositions() const {
-        if (!arrays.contains(main_property_names.positions)
-            || !std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.positions))) {
-            JGAP_LOG_AND_THROW("Positions were deleted or altered incorrectly");
-            }
-        return std::get<std::vector<Vector3>>(arrays.at(main_property_names.positions));
-    }
-
-    std::vector<Vector3>& Atoms::lookupPositions() {
-        if (!arrays.contains(main_property_names.positions)
-            || !std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.positions))) {
-            JGAP_LOG_AND_THROW("Positions were deleted or altered incorrectly");
-        }
-        return std::get<std::vector<Vector3>>(arrays[main_property_names.positions]);
-    }
-
-    const std::vector<Species>& Atoms::lookupSpecies() const {
-        if (!arrays.contains(main_property_names.species)
-            || !std::holds_alternative<std::vector<Species>>(arrays.at(main_property_names.species))) {
-            JGAP_LOG_AND_THROW("Species were deleted or altered incorrectly");
-            }
-        return std::get<std::vector<Species>>(arrays.at(main_property_names.species));
-    }
-
-    std::vector<Species>& Atoms::lookupSpecies() {
-        if (!arrays.contains(main_property_names.species)
-            || !std::holds_alternative<std::vector<Species>>(arrays.at(main_property_names.species))) {
-            JGAP_LOG_AND_THROW("Species were deleted or altered incorrectly");
-            }
-        return std::get<std::vector<Species>>(arrays[main_property_names.species]);
-    }
-
-    void Atoms::addAtom(const std::map<std::string, PerAtomPropery>& atom_data) {
+    void Atoms::addAtom(const std::map<std::string, PerAtomProperty>& atom_data) {
         if (!atom_data.contains(main_property_names.positions) || !atom_data.contains(main_property_names.species)) {
             JGAP_LOG_AND_THROW("addAtom requires positions and species arrays");
         }
 
-        for (auto& [name, array] : arrays) {
+        positions.push_back(std::get<Vector3>(atom_data.at(main_property_names.positions)));
+        species.push_back(std::get<Species>(atom_data.at(main_property_names.species)));
+
+        if (forces) {
+            if (!atom_data.contains(main_property_names.forces)) {
+                JGAP_LOG_AND_THROW("Missing data for forces when adding atom");
+            }
+            forces->push_back(std::get<Vector3>(atom_data.at(main_property_names.forces)));
+        }
+
+        for (auto& [name, array] : extra_arrays) {
             if (!atom_data.contains(name)) {
                 JGAP_LOG_AND_THROW("Missing data for array: {} when adding atom", name);
             }
@@ -131,7 +117,14 @@ namespace jgap {
     }
 
     void Atoms::removeAtom(size_t index) {
-        for (auto& [name, array] : arrays) {
+        positions.erase(positions.begin() + index);
+        species.erase(species.begin() + index);
+        
+        if (forces) {
+            forces->erase(forces->begin() + index);
+        }
+
+        for (auto& [name, array] : extra_arrays) {
             std::visit([index](auto&& arg) {
                 arg.erase(arg.begin() + index);
             }, array);
@@ -142,75 +135,17 @@ namespace jgap {
         if (name == main_property_names.positions || name == main_property_names.species) {
             JGAP_LOG_AND_THROW("Cannot remove core arrays: pos and species");
         }
-        arrays.erase(name);
-    }
-
-    std::optional<Real> Atoms::lookupEnergy() const {
-        if (info.contains(main_property_names.energy)) {
-
-            if (!std::holds_alternative<Real>(info.at(main_property_names.energy))) {
-                JGAP_LOG_AND_THROW("Energy were altered incorrectly");
-            }
-
-            return std::get<Real>(info.at(main_property_names.energy));
+        if (name == main_property_names.forces) {
+            forces = std::nullopt;
+            return;
         }
-        return std::nullopt;
+        extra_arrays.erase(name);
     }
 
-    void Atoms::setEnergy(Real e) {
-        info[main_property_names.energy] = e;
-    }
+    void Atoms::validateXYZ(const XYZData& data) {
+        const auto& arrays = data.getArrays();
+        const auto& info = data.getProperties();
 
-    std::optional<Virials> Atoms::lookupVirials() const {
-        if (info.contains(main_property_names.virials)) {
-
-            if (!std::holds_alternative<Virials>(info.at(main_property_names.virials))) {
-                JGAP_LOG_AND_THROW("Virials were altered incorrectly");
-            }
-
-            return std::get<Virials>(info.at(main_property_names.virials));
-        }
-        return std::nullopt;
-    }
-
-    void Atoms::setVirials(const Virials& v) {
-        info[main_property_names.virials] = v;
-    }
-
-    std::optional<std::vector<Vector3>> Atoms::lookupForces() const {
-        if (arrays.contains(main_property_names.forces)) {
-
-            if (!std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.forces))) {
-                JGAP_LOG_AND_THROW("Forces were altered incorrectly");
-            }
-
-            return std::get<std::vector<Vector3>>(arrays.at(main_property_names.forces));
-        }
-        return std::nullopt;
-    }
-
-    void Atoms::setForces(const std::vector<Vector3>& f) {
-        if (f.size() != nAtoms()) {
-            JGAP_LOG_AND_THROW("Forces size must match number of atoms");
-        }
-        arrays[main_property_names.forces] = f;
-    }
-
-    std::optional<std::string> Atoms::lookupConfigType() const {
-        if (info.contains(main_property_names.config_type)) {
-            if (!std::holds_alternative<std::string>(info.at(main_property_names.config_type))) {
-                JGAP_LOG_AND_THROW("Config type was altered incorrectly");
-            }
-            return std::get<std::string>(info.at(main_property_names.config_type));
-        }
-        return std::nullopt;
-    }
-
-    void Atoms::setConfigType(const std::string& config_type) {
-        info[main_property_names.config_type] = config_type;
-    }
-
-    void Atoms::validateXYZ() {
         bool has_pos = arrays.contains(main_property_names.positions)
             && std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.positions));
         bool has_species = arrays.contains(main_property_names.species)
@@ -226,13 +161,67 @@ namespace jgap {
             JGAP_LOG_AND_THROW(oss.str());
         }
 
+        positions = std::get<std::vector<Vector3>>(arrays.at(main_property_names.positions));
+        species = std::get<std::vector<Species>>(arrays.at(main_property_names.species));
+
+        if (info.contains(main_property_names.lattice) && std::holds_alternative<Lattice>(info.at(main_property_names.lattice))) {
+            lattice = std::get<Lattice>(info.at(main_property_names.lattice));
+        }
+
+        if (info.contains(main_property_names.pbc) && std::holds_alternative<std::array<bool, 3>>(info.at(main_property_names.pbc))) {
+            pbc = std::get<std::array<bool, 3>>(info.at(main_property_names.pbc));
+        }
+
+        if (info.contains(main_property_names.energy) && std::holds_alternative<Real>(info.at(main_property_names.energy))) {
+            energy = std::get<Real>(info.at(main_property_names.energy));
+        }
+
+        if (info.contains(main_property_names.virials) && std::holds_alternative<Virials>(info.at(main_property_names.virials))) {
+            virials = std::get<Virials>(info.at(main_property_names.virials));
+        }
+
+        if (arrays.contains(main_property_names.forces) && std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.forces))) {
+            forces = std::get<std::vector<Vector3>>(arrays.at(main_property_names.forces));
+        }
+
+        if (info.contains(main_property_names.config_type) && std::holds_alternative<std::string>(info.at(main_property_names.config_type))) {
+            config_type = std::get<std::string>(info.at(main_property_names.config_type));
+        }
+
+        // Copy extra arrays
+        for (const auto& [name, array] : arrays) {
+            if (name != main_property_names.positions &&
+                name != main_property_names.species &&
+                name != main_property_names.forces) {
+                extra_arrays[name] = array;
+            }
+        }
+
+        // Copy extra info
+        for (const auto& [name, val] : info) {
+            if (name != main_property_names.lattice &&
+                name != main_property_names.pbc &&
+                name != main_property_names.energy &&
+                name != main_property_names.virials &&
+                name != main_property_names.config_type) {
+                extra_info[name] = val;
+            }
+        }
+
         validateSizes();
         wrapPositions();
     }
 
     void Atoms::validateSizes() const {
-        size_t n = lookupPositions().size();
-        for (const auto& [name, array] : arrays) {
+        size_t n = positions.size();
+        if (species.size() != n) {
+            JGAP_LOG_AND_THROW("Size mismatch in Atoms: species has size {} but expected {}", species.size(), n);
+        }
+        if (forces && forces->size() != n) {
+            JGAP_LOG_AND_THROW("Size mismatch in Atoms: forces has size {} but expected {}", forces->size(), n);
+        }
+
+        for (const auto& [name, array] : extra_arrays) {
             size_t current_size = 0;
             std::visit([&current_size](auto&& arg) { current_size = arg.size(); }, array);
             if (n != current_size) {
@@ -242,15 +231,13 @@ namespace jgap {
     }
 
     void Atoms::wrapPositions() {
-        auto pbc = lookupPbc();
         if (!pbc[0] && !pbc[1] && !pbc[2]) return;
 
-        auto lat_opt = lookupLattice();
-        if (!lat_opt) {
+        if (!lattice) {
             JGAP_LOG_AND_THROW("PBC is true but no lattice is provided.");
         }
 
-        const auto& lat = *lat_opt;
+        const auto& lat = *lattice;
         Real V = lat.volume();
 
         if (std::abs(V) < 1e-12) {
@@ -262,7 +249,7 @@ namespace jgap {
         Vector3 r1 = lat.c.cross(lat.a) / V; // => .b = 1
         Vector3 r2 = lat.a.cross(lat.b) / V; // => .c = 1
 
-        for (auto& pos: lookupPositions()) {
+        for (auto& pos: positions) {
             // Convert to fractional coordinates
             Real f0 = pos.dot(r0);
             Real f1 = pos.dot(r1);

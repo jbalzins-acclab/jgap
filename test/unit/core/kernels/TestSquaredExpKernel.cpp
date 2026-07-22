@@ -1,7 +1,6 @@
+#include <cmath>
 #include <gtest/gtest.h>
 #include "core/kernels/SquaredExpKernel.hpp"
-#include <cmath>
-#include <vector>
 
 using namespace jgap;
 
