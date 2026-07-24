@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "core/atomic/geometry/Cluster.hpp"
-#include "core/cutoff/CutoffFunction.hpp"
-#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/core/atomic/geometry/Cluster.hpp"
+#include "jgap/core/cutoff/CutoffFunction.hpp"
+#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 
 using namespace jgap;
 

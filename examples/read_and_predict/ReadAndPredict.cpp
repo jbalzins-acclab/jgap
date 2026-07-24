@@ -9,12 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "core/atomic/Atoms.hpp"
-#include "core/potentials/Potential.hpp"
-#include "core/ValuePtr.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "utils/Utils.hpp"
-#include "io/log/CurrentLogger.hpp"
+#include "jgap/jgap.hpp"
 
 using namespace jgap;
 
@@ -38,7 +33,7 @@ int main(int argc, char** argv) {
     if (!out.is_open()) {
         JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
     }
-    for (Atoms& atoms : frames) {
+    for (Atoms& atoms: frames) {
         atoms << potential->calculateEnergy(atoms);
         atoms.write(out);
     }

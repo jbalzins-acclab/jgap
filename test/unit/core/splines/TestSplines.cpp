@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
-#include "core/atomic/species/Species.hpp"
-#include "core/atomic/species/composition/Species2Sorted.hpp"
-#include "core/potentials/zbl/ZblPotential.hpp"
-#include "core/splines/CubicBSpline.hpp"
-#include "core/splines/CubicBSpline3D.hpp"
-#include "core/splines/Grid.hpp"
-#include "core/splines/HermiteCubicSpline.hpp"
-#include "core/splines/NaturalCubicSpline.hpp"
+#include "jgap/core/atomic/species/Species.hpp"
+#include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
+#include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/splines/CubicBSpline.hpp"
+#include "jgap/core/splines/CubicBSpline3D.hpp"
+#include "jgap/core/splines/Grid.hpp"
+#include "jgap/core/splines/HermiteCubicSpline.hpp"
+#include "jgap/core/splines/NaturalCubicSpline.hpp"
 
 #include <cmath>
 

@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-#include "core/atomic/Atoms.hpp"
-#include "core/atomic/iteration/AtomicCluster2Expansion.hpp"
-#include "core/atomic/iteration/AtomicCluster3Expansion.hpp"
-#include "core/atomic/iteration/Cluster2Expansion.hpp"
-#include "core/atomic/neighbours/NeighbourLists.hpp"
-#include "experimental/atomic/iteration/Cluster3Expansion.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include "jgap/core/atomic/iteration/AtomicCluster2Expansion.hpp"
+#include "jgap/core/atomic/iteration/AtomicCluster3Expansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster2Expansion.hpp"
+#include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
+#include "jgap/experimental/atomic/iteration/Cluster3Expansion.hpp"
 
 using namespace jgap;
 
@@ -129,4 +129,43 @@ TEST(TestClusterExpansions, Cluster3Expansion) {
     Cluster3Expansion fe_fe_fe(Species3Sorted("Fe,Fe,Fe"));
     auto fe_fe_fe_triplets = fe_fe_fe.find(nl, CalculationType::ValueOnly).clusters;
     EXPECT_EQ(fe_fe_fe_triplets.size(), 1);
+}
+
+TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
+    Atoms atoms({{0, 0, 0}, {1, 0, 0}, {0.5, 0.866025, 0}}, {Species("Fe"), Species("Fe"), Species("Fe")});
+    auto nl = NeighbourLists(atoms, 1.5);
+
+    AtomicCluster3Expansion reduced(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::Reduced);
+    EXPECT_EQ(reduced.getPermutationReductionFactor(), 2.0);
+    auto reduced_clusters = reduced.find(0, nl, CalculationType::WithGradients);
+    EXPECT_EQ(reduced_clusters.clusters.size(), 1);
+
+    AtomicCluster3Expansion permute(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::PermuteSameSpecies);
+    EXPECT_EQ(permute.getPermutationReductionFactor(), 1.0);
+    auto permute_clusters = permute.find(0, nl, CalculationType::WithGradients);
+    EXPECT_EQ(permute_clusters.clusters.size(), 2);
+
+    // The two permuted clusters share the same central atom, but swap neighbor 1 and neighbor 2.
+    const auto& c0 = permute_clusters.clusters[0];
+    const auto& c1 = permute_clusters.clusters[1];
+
+    EXPECT_EQ(c0.atom_indexes[0], c1.atom_indexes[0]);
+    EXPECT_EQ(c0.atom_indexes[1], c1.atom_indexes[2]);
+    EXPECT_EQ(c0.atom_indexes[2], c1.atom_indexes[1]);
+
+    EXPECT_DOUBLE_EQ(c0.separation_magnitudes[0], c1.separation_magnitudes[1]);
+    EXPECT_DOUBLE_EQ(c0.separation_magnitudes[1], c1.separation_magnitudes[0]);
+    EXPECT_DOUBLE_EQ(c0.separation_magnitudes[2], c1.separation_magnitudes[2]);
+
+    // Derivatives for r12 (index 2) point in opposite directions in the permuted cluster
+    const auto& d0 = permute_clusters.derivatives->at(0);
+    const auto& d1 = permute_clusters.derivatives->at(1);
+    EXPECT_DOUBLE_EQ((d0.val[2].direction + d1.val[2].direction).norm(), 0.0);
+
+    // Reduction factor is always 2.0 when nodes are different species (e.g. Fe|Cu,Al)
+    AtomicCluster3Expansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::Reduced);
+    EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);
+    AtomicCluster3Expansion reduced_diff_species2(Species3AtomicSorted("Fe|Al,Cu"),
+                                                  ClusterPermutationMode::PermuteSameSpecies);
+    EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);
 }

@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 
-#include "core/atomic/species/composition/Species3AtomicSorted.hpp"
-#include "core/cutoff/CosCutoff.hpp"
-#include "core/kernels/SquaredExpKernel.hpp"
-#include "core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
-#include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "core/potentials/gap/component/TwoBodyGapComponent.hpp"
-#include "core/transform/manybody/TwoBodySum.hpp"
-#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
-#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
-#include "core/transform/nbody/3b/Angle3bTransformation.hpp"
-#include "serialization/SerializationRegistry.hpp"
+#include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
+#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
+#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
 

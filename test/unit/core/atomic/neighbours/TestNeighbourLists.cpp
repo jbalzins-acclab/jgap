@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "core/atomic/io/XYZData.hpp"
-#include "core/atomic/neighbours/NeighbourLists.hpp"
-#include "core/atomic/Atoms.hpp"
+#include "jgap/core/atomic/io/XYZData.hpp"
+#include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
 
 using namespace jgap;
 

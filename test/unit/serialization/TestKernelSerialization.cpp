@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "core/kernels/SquaredExpKernel.hpp"
-#include "serialization/SerializationNode.hpp"
-#include "serialization/kernels/SquaredExpKernelSerialization.hpp"
+#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/serialization/SerializationNode.hpp"
+#include "jgap/serialization/kernels/SquaredExpKernelSerialization.hpp"
 
 using namespace jgap;
 

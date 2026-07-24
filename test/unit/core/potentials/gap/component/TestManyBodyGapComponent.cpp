@@ -1,13 +1,13 @@
 #include <cmath>
 #include <gtest/gtest.h>
-#include "core/atomic/Atoms.hpp"
-#include "core/atomic/neighbours/NeighbourLists.hpp"
-#include "core/kernels/SquaredExpKernel.hpp"
-#include "core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
+#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 
-#include "core/tabulation/TabulationData.hpp"
-#include "core/transform/manybody/TwoBodySum.hpp"
-#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/core/tabulation/TabulationData.hpp"
+#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 
 using namespace jgap;
 

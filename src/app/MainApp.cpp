@@ -17,15 +17,15 @@
 #include <string>
 #include <vector>
 
-#include "core/ValuePtr.hpp"
-#include "core/atomic/Atoms.hpp"
-#include "core/potentials/Potential.hpp"
-#include "core/potentials/tabgap/TabGapPotential.hpp"
-#include "core/tabulation/TabulationParams.hpp"
-#include "io/tabgap/TabGapIO.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "utils/Utils.hpp"
-#include "io/log/CurrentLogger.hpp"
+#include "jgap/core/ValuePtr.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include "jgap/core/potentials/Potential.hpp"
+#include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
+#include "jgap/core/tabulation/TabulationParams.hpp"
+#include "jgap/io/tabgap/TabGapIO.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
+#include "jgap/utils/Utils.hpp"
+#include "jgap/io/log/CurrentLogger.hpp"
 
 using namespace jgap;
 

@@ -1,0 +1,101 @@
+#ifndef JGAP_TABGAPIO_HPP
+#define JGAP_TABGAPIO_HPP
+
+#include <iosfwd>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "../../core/ValuePtr.hpp"
+#include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
+#include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
+#include "jgap/core/potentials/tabgap/components/EamTGComponent.hpp"
+#include "jgap/core/potentials/tabgap/components/TabGapComponent.hpp"
+#include "jgap/core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"
+#include "jgap/core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
+
+namespace HighFive {
+    class File;
+    class Group;
+}
+
+namespace jgap {
+
+    using Filenames = std::vector<std::string>;
+
+    /// Reads and writes the externally-defined tabGAP potential format.
+    ///
+    /// Layout of a tabGAP `.h5`:
+    /// <ul>
+    ///   <li>`comment1`/`comment2`: free-form metadata ("UNITS: metal", "pair_style tabgap").</li>
+    ///   <li>`e0`: group of isolated-atom energies, one attribute per element symbol plus "Nelements".</li>
+    ///   <li>`npots`: [n_2b, n_3b] pair/triplet counts (n_2b is reported as 0 when the pair part is
+    ///       folded into the EAM .eam.fs files instead).</li>
+    ///   <li>`<i>-<j>`: one group per 2-body pair (see write2b for the grid encoding).</li>
+    ///   <li>`<i>-<j>-<k>`: one group per 3-body triplet (see write3b).</li>
+    ///   <li>`eam_files`: group of embedded LAMMPS .eam.fs file contents (one string dataset each),
+    ///       present only when the potential has an EAM part.</li>
+    /// </ul>
+    ///
+    /// The EAM part (embedding + density functions, and the pair potentials when EAM is present) lives in
+    /// LAMMPS .eam.fs files. \ref TabGapIO::write emits them as separate files next to the .h5 AND embeds their
+    /// contents under "eam_files"; \ref TabGapIO::read prefers separately-supplied .eam.fs files, but when none
+    /// are given it attempts to read from embedded "eam_files" in the .h5.
+    class TabGapIO {
+    public:
+        /// Reads a tabGAP potential from the given files (one .h5 plus any number of .eam.fs files).
+        ///
+        /// @param filenames the files to read; exactly one must be the .h5. When no .eam.fs files are
+        ///                   supplied, the EAM part is taken from embedded "eam_files" if present.
+        /// @return the assembled potential.
+        static TabGapPotential read(const Filenames& filenames);
+
+        /// Writes a tabGAP potential to disk: an `<prefix>.tabgap.h5` plus, for the EAM part, one or
+        /// more `<prefix>[#i].eam.fs` files. The .eam.fs contents are also embedded inside the .h5.
+        ///
+        /// @param potential the potential to write.
+        /// @param output_filename_prefix prefix for the produced filenames.
+        /// @return the filenames written (the .h5 first, then any .eam.fs files).
+        static Filenames write(const TabGapPotential& potential, const std::string& output_filename_prefix);
+
+    private:
+        friend class TabGapPotentialSerialization;
+
+        /// Writes the whole potential into `root` (e0, 2b/3b groups, embedded EAM .eam.fs contents
+        /// under an "eam_files" group). Writes NO separate .eam.fs files.
+        ///
+        /// @param root the HDF5 group to write into.
+        /// @param potential the potential to write.
+        /// @return the generated .eam.fs file contents, so the file-based writer can also dump them to disk
+        ///         (empty when the potential has no EAM part).
+        static std::vector<std::string> writeToGroup(HighFive::Group& root, const TabGapPotential& potential);
+
+        /// Reads e0 and the 2b/3b groups from `root` into `pot`.
+        ///
+        /// @param root the HDF5 group to read from.
+        /// @param pot the potential to append the read components to.
+        /// @param read_embedded_eam_fs when true, the EAM part is taken from the embedded "eam_files"
+        ///                              datasets rather than from separate .eam.fs files.
+        static void readFromGroup(const HighFive::Group& root, TabGapPotential& pot, bool read_embedded_eam_fs);
+
+        /// Builds a complete TabGapPotential from a single group (with counts recomputed). Convenience for
+        /// callers that have just one group, e.g. TabGapPotentialSerialization.
+        ///
+        /// @param root the HDF5 group to read from.
+        /// @param read_embedded_eam_fs see \ref TabGapIO::readFromGroup.
+        /// @return the assembled potential.
+        static TabGapPotential fromGroup(const HighFive::Group& root, bool read_embedded_eam_fs);
+
+        static void write2b(HighFive::Group& root, const TwoBodyTGComponent& component);
+        static void write3b(HighFive::Group& root, const ThreeBodyTGComponent& component);
+
+        static std::string useSomeComponentsAndGenerateEamFs(
+            const std::vector<Species>& all_species, std::map<Species2Sorted, const TwoBodyTGComponent*>& pair_pots,
+            std::multimap<Species, const EamTGComponent*>& eam_components);
+
+        static void parseEamFs(std::istream& in, TabGapPotential& pot);
+    };
+}
+
+#endif

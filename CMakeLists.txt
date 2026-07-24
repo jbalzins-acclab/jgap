@@ -9,6 +9,14 @@ set(CMAKE_C_STANDARD_REQUIRED OFF)
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
+# Auto-detect pre-installed vcpkg dependencies in build / IDE trees if CMAKE_PREFIX_PATH is not specified
+if (NOT CMAKE_PREFIX_PATH)
+    file(GLOB _vcpkg_trees "${CMAKE_BINARY_DIR}/vcpkg_installed/*" "${CMAKE_SOURCE_DIR}/cmake-build-debug/vcpkg_installed/*")
+    if (_vcpkg_trees)
+        list(APPEND CMAKE_PREFIX_PATH ${_vcpkg_trees})
+    endif ()
+endif ()
+
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 
@@ -79,7 +87,7 @@ list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/app/.*")
 
 # The XML converter depends on pugixml; drop it from the library when pugixml is unavailable.
 if (NOT pugixml_FOUND)
-    list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/io/convert/Quip.*")
+    list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/jgap/io/convert/Quip.*")
 endif ()
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
@@ -87,10 +95,16 @@ set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
 # and runs on load (a static archive would drop the unreferenced translation units), and so type_info is
 # exported once and dynamic_cast (ValuePtr::as<>) works across the library boundary.
 add_library(jgap_lib SHARED ${LIBRARY_SOURCE_FILES})
+add_library(jgap::jgap ALIAS jgap_lib)
 # Emit the library as libjgap (libjgap.so / libjgap.dylib depending on platform; clients link -ljgap);
 # the CMake target stays jgap_lib to avoid clashing with the jgap executable target.
 # OUTPUT_NAME -> libjgap.{so,dylib}; EXPORT_NAME -> the consumable target is jgap::jgap.
-set_target_properties(jgap_lib PROPERTIES OUTPUT_NAME jgap EXPORT_NAME jgap)
+set_target_properties(jgap_lib PROPERTIES
+        OUTPUT_NAME jgap
+        EXPORT_NAME jgap
+        CXX_VISIBILITY_PRESET default
+        VISIBILITY_INLINES_HIDDEN OFF
+)
 
 # Hard guard: jgap MUST be a shared library. The serialization registry (REGISTER_SERIALIZATION static
 # initializers + the per-type registry) and cross-boundary dynamic_cast (ValuePtr::as<>) rely on weak
@@ -113,28 +127,36 @@ add_executable(jgap_custom
         ${PROJECT_SOURCE_DIR}/src/app/CustomApp.cpp
 )
 
-# jgap's public headers include Eigen/TBB/HighFive (and pugixml for the converter), so those are PUBLIC:
-# linking the jgap::jgap / jgap_lib target alone brings in their headers and libraries. BLAS is only used
-# internally (Eigen's BLAS backend in .cpp), so it stays PRIVATE and is omitted when unavailable.
 if (JGAP_BLAS_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
 elseif (OpenMP_CXX_FOUND)
-    # Compiles jgap's sources with -fopenmp so Eigen's built-in routines run multi-threaded.
     target_link_libraries(jgap_lib PRIVATE OpenMP::OpenMP_CXX)
 endif ()
 
-target_link_libraries(jgap_lib PUBLIC
+# Eigen, HighFive, and pugixml are internal implementation details used only in .cpp files;
+# they stay PRIVATE so downstream consumers link against libjgap without needing third-party headers.
+target_link_libraries(jgap_lib PRIVATE
         Eigen3::Eigen
         HighFive
 )
 
 if (pugixml_FOUND)
-    target_link_libraries(jgap_lib PUBLIC pugixml::static pugixml::pugixml)
+    target_link_libraries(jgap_lib PRIVATE pugixml::static pugixml::pugixml)
+endif ()
+
+if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Resolve libc++ symbols required by pre-compiled static dependencies when building with GCC on macOS
+    target_link_libraries(jgap_lib PRIVATE c++)
 endif ()
 
 if (TBB_FOUND)
     target_compile_definitions(jgap_lib PRIVATE HAS_TBB)
     target_link_libraries(jgap_lib PRIVATE TBB::tbb TBB::tbbmalloc)
+endif ()
+
+find_package(ZLIB QUIET)
+if (ZLIB_FOUND)
+    target_link_libraries(jgap_lib PRIVATE ZLIB::ZLIB)
 endif ()
 
 # Public include dirs so consumers of the (installed or in-tree) target get jgap's headers for free.
@@ -153,11 +175,15 @@ target_link_libraries(jgap PRIVATE
         jgap_lib
 )
 
+target_link_libraries(jgap_custom PRIVATE
+        jgap_lib
+)
+
 # QUIP XML -> .h5 converter app, built only when XML support is available (the converter it relies on is
 # compiled into jgap_lib only then).
 if (pugixml_FOUND)
     add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
-    target_link_libraries(jgap_convert PRIVATE jgap_lib)
+    target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::static pugixml::pugixml)
 endif ()
 
 add_custom_command(TARGET jgap_lib POST_BUILD
@@ -176,7 +202,7 @@ add_custom_command(TARGET jgap_lib POST_BUILD
 # Makes jgap consumable as a package: after `cmake --install`, a downstream project only needs
 #   find_package(jgap CONFIG REQUIRED)
 #   target_link_libraries(my_app PRIVATE jgap::jgap)
-# and gets jgap's headers and (transitively) Eigen/TBB/HighFive/pugixml automatically.
+# and gets jgap's headers automatically.
 install(TARGETS jgap_lib EXPORT jgapTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -184,10 +210,10 @@ install(TARGETS jgap_lib EXPORT jgapTargets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/jgap DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
 )
-install(FILES ${CMAKE_BINARY_DIR}/generated/Version.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${CMAKE_BINARY_DIR}/generated/Version.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/jgap)
 
 install(EXPORT jgapTargets
         NAMESPACE jgap::
@@ -204,9 +230,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jgapConfig.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/jgap
 )
 
-# Also export the build tree, so a consumer can `find_package(jgap)` against the BUILD directory
-# (CMAKE_PREFIX_PATH=<jgap_build>) without installing. jgapConfig.cmake (generated above) sits in the
-# build dir next to this jgapTargets.cmake and includes it.
 export(EXPORT jgapTargets
         NAMESPACE jgap::
         FILE ${CMAKE_CURRENT_BINARY_DIR}/jgapTargets.cmake

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "core/atomic/geometry/Cluster2.hpp"
-#include "core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/core/atomic/geometry/Cluster2.hpp"
+#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 
 using namespace jgap;
 

@@ -1,8 +1,8 @@
-#include <core/potentials/zbl/ZblPotential.hpp>
+#include <jgap/core/potentials/zbl/ZblPotential.hpp>
 #include <gtest/gtest.h>
-#include "core/atomic/Atoms.hpp"
-#include "core/atomic/species/Species.hpp"
-#include "core/atomic/species/composition/Species2Sorted.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include "jgap/core/atomic/species/Species.hpp"
+#include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 
 #include <array>
 #include <cmath>

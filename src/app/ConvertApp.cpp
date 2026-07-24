@@ -9,11 +9,11 @@
 #include <iostream>
 #include <string>
 
-#include "io/convert/QuipXmlConverter.hpp"
-#include "core/potentials/Potential.hpp"
-#include "core/ValuePtr.hpp"
-#include "serialization/SerializationRegistry.hpp"
-#include "io/log/CurrentLogger.hpp"
+#include "jgap/io/convert/QuipXmlConverter.hpp"
+#include "jgap/core/potentials/Potential.hpp"
+#include "jgap/core/ValuePtr.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
+#include "jgap/io/log/CurrentLogger.hpp"
 
 using namespace jgap;
 

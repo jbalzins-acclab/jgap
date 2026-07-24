@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <map>
 #include <tuple>
-#include "core/cutoff/CutoffFunction.hpp"
-#include "core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/core/cutoff/CutoffFunction.hpp"
+#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 
 using namespace jgap;
 

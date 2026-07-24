@@ -1,0 +1,42 @@
+#ifndef JGAP_TABGAPPOTENTIAL_HPP
+#define JGAP_TABGAPPOTENTIAL_HPP
+
+#include "components/TabGapComponent.hpp"
+#include "jgap/core/ValuePtr.hpp"
+#include "jgap/core/potentials/Potential.hpp"
+
+namespace jgap {
+
+    class TabGapPotential : public Potential {
+    public:
+        friend class TabGapIO;
+        friend class TabGapPotentialSerialization;
+
+        TabGapPotential(TabulationData energy_tables);
+
+        AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
+
+        Cutoffs getCutoffs() const override;
+
+        void fillTables(TabulationData& table) const override;
+
+        TabGapPotential* clone() const override { return new TabGapPotential(*this); }
+
+    private:
+        size_t n_2b_components{};
+        size_t n_3b_components{};
+        size_t n_eam_components{};
+
+        std::map<Species, Real> isolated_atom_energies;
+        std::vector<ValuePtr<TabGapComponent>> components;
+
+        TabGapPotential(const std::map<Species, Real>& isolated_atom_energies = {},
+                        const std::vector<ValuePtr<TabGapComponent>>& components = {});
+
+        // Recomputes n_2b/n_3b/n_eam from the current components (the reading paths build `components`
+        // directly, so the counts that the writer relies on must be derived afterwards).
+        void recomputeComponentCounts();
+    };
+}
+
+#endif

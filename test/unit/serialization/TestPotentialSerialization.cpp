@@ -1,17 +1,17 @@
 #include <gtest/gtest.h>
 
-#include "core/atomic/Atoms.hpp"
-#include "core/cutoff/CosCutoff.hpp"
-#include "core/kernels/SquaredExpKernel.hpp"
-#include "core/potentials/CompositePotential.hpp"
-#include "core/potentials/gap/GapPotential.hpp"
-#include "core/potentials/gap/component/TwoBodyGapComponent.hpp"
-#include "core/potentials/isolated/IsolatedAtomPotential.hpp"
-#include "core/potentials/spline/SplinePairPotential.hpp"
-#include "core/potentials/tabgap/TabGapPotential.hpp"
-#include "core/potentials/zbl/ZblPotential.hpp"
-#include "core/transform/nbody/2b/PairDistanceTransformation.hpp"
-#include "serialization/SerializationRegistry.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/core/potentials/CompositePotential.hpp"
+#include "jgap/core/potentials/gap/GapPotential.hpp"
+#include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
+#include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
+#include "jgap/core/potentials/spline/SplinePairPotential.hpp"
+#include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
+#include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
 

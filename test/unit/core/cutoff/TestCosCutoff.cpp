@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/cutoff/CosCutoff.hpp"
+#include "jgap/core/cutoff/CosCutoff.hpp"
 #include <cmath>
 
 using namespace jgap;
