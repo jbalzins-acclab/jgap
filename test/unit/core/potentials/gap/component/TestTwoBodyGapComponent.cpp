@@ -44,6 +44,8 @@ namespace {
             res.gradient.fill(0.5);
             return res;
         }
+
+        Kernel<Dim>* clone() const override { return new MockKernel<Dim>(); }
     };
 }
 
@@ -88,7 +90,7 @@ TEST(TestTwoBodyGapComponent, RealTwoBody) {
     Atoms atoms({{0, 0, 0}, {4, 0, 0}}, {Species("Fe"), Species("Ni")});
     auto nl = NeighbourLists(atoms, 6.0);
     ValuePtr<TwoBodyTransformation<2>> trans = PairDistanceTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0});
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0_r});
     Real expected_cutoff_val = 0.5;
     std::vector<Descriptor<2>> sparse_points = {{4.0, expected_cutoff_val}};
     auto component = TwoBodyGapComponent(Species2Sorted("Fe", "Ni"), trans, kernel, sparse_points);
@@ -108,7 +110,7 @@ TEST(TestTwoBodyGapComponent, RealTwoBody) {
 
 TEST(TestTwoBodyGapComponent, TabulationTwoBody) {
     ValuePtr<TwoBodyTransformation<2>> trans = PairDistanceTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0});
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{1.0_r});
     std::vector<Descriptor<2>> sparse_points = {{4.0, 0.5}, {3.5, 0.5}};
     std::vector<Real> coeffs = {2.0, -1.0};
     Species2Sorted species{"Fe", "Ni"};

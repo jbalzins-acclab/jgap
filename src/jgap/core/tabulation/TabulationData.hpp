@@ -25,25 +25,32 @@ namespace jgap {
         std::vector<ManyBodyGrids2<1, 1>> eam_grids_vec{};
 
         TabGapData(const TabulationParams& params) :
-            params(params), two_body_grids({0.0}, {params.max_cutoffs.forDim(2) / static_cast<Real>(params.n_grid_2b)},
-                                           {params.n_grid_2b}),
-            three_body_grids({params.r_min_3b, params.r_min_3b, -1.0},
-                             {params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[0]),
-                              params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[1]),
-                              2.0 / static_cast<Real>(params.n_grid_3b[2])},
-                             params.n_grid_3b) {}
+            params(params),
+            two_body_grids(
+                {0.0_r}, {params.max_cutoffs.forDim(2) / static_cast<Real>(params.n_grid_2b)}, {params.n_grid_2b}
+            ),
+            three_body_grids(
+                {params.r_min_3b, params.r_min_3b, -1.0_r},
+                {params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[0]),
+                 params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[1]),
+                 2.0_r / static_cast<Real>(params.n_grid_3b[2])},
+                params.n_grid_3b
+            ) {}
 
         ManyBodyGrids2<1, 1>& newEamGrid(const Species& central_atom_species) {
             AtomicTwoBodyGrids<1> aggregator_grids(
-                    {0.0}, {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b)},
-                    {params.n_grid_2b});
+                {0.0_r}, {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b)},
+                {params.n_grid_2b}
+            );
 
-            eam_grids_vec.emplace_back(central_atom_species, aggregator_grids,
-                                       Grid<1>{
-                                               std::array{params.n_grid_2b},
-                                               std::array{params.max_eam_density / static_cast<Real>(params.n_grid_2b)},
-                                               std::array{0.0},
-                                       });
+            eam_grids_vec.emplace_back(
+                central_atom_species, aggregator_grids,
+                Grid<1>{
+                    std::array{params.n_grid_2b},
+                    std::array{params.max_eam_density / static_cast<Real>(params.n_grid_2b)},
+                    std::array{0.0_r},
+                }
+            );
             return eam_grids_vec.back();
         }
     };

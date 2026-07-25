@@ -10,3 +10,5 @@ vcpkg_installed/*
 /test-local/*
 build*/*
 .cache/*
+test/reference/install-dependencies/*install/*
+*.log

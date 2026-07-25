@@ -1,9 +1,9 @@
 #ifndef JGAP_TWOBODYDESCRIPTOR_HPP
 #define JGAP_TWOBODYDESCRIPTOR_HPP
 
+#include <array>
 #include "Descriptor.hpp"
 #include "jgap/core/atomic/geometry/Cluster2.hpp"
-#include <array>
 
 namespace jgap {
 
@@ -22,8 +22,8 @@ namespace jgap {
         TwoBodyDerivatives<Dim> derivatives{};
 
         operator Descriptor<Dim>() { return value; }
-        operator Descriptor<Dim> &() { return value; }
-        operator const Descriptor<Dim> &() { return value; }
+        operator Descriptor<Dim>&() { return value; }
+        operator const Descriptor<Dim>&() { return value; }
     };
 
 } // namespace jgap

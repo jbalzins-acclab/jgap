@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 INSTALL_DIR="$(pwd)/gap_data"
 
@@ -20,6 +19,8 @@ git remote add origin https://gitlab.com/acclab/gap-data.git
 echo "Fetching specific commit 3072bbea41b636689580ce939ae76785904102ff..."
 git fetch origin 3072bbea41b636689580ce939ae76785904102ff
 git reset --hard FETCH_HEAD
+
+cd ..
 
 echo "=================================================="
 echo "gap-data cloned successfully to $INSTALL_DIR"

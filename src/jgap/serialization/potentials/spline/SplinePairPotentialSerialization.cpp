@@ -49,8 +49,8 @@ namespace jgap {
             Species s1 = species_set.nodes[0];
             Species s2 = species_set.nodes[1];
 
-            auto r_vec = spline_group.readDoubleVectorDataSet("r_vec");
-            auto energies = spline_group.readDoubleVectorDataSet("energies");
+            auto r_vec = spline_group.readRealVectorDataSet("r_vec");
+            auto energies = spline_group.readRealVectorDataSet("energies");
 
             potential->extend(s1, s2, r_vec, energies);
         }

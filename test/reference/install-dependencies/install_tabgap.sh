@@ -30,6 +30,8 @@ echo "Checking out TabGAP to specific commit cbdf7532f3ca29c0aa5a5ae668122ad0a1b
 git fetch origin
 git checkout cbdf7532f3ca29c0aa5a5ae668122ad0a1b7fa1f
 
+cd ..
+
 echo "=================================================="
 echo "TabGAP cloned successfully to $TABGAP_ROOT"
 echo "=================================================="

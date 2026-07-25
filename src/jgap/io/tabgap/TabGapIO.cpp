@@ -19,8 +19,9 @@ namespace jgap {
         bool eam_fs_provided = false;
         for (auto& filename: filenames) {
             if (filename.ends_with(".h5") && found_h5++ > 1) {
-                JGAP_LOG_AND_THROW("Multiple .h5 files detected when reading single tabulation data: {}",
-                                   vectorToString(filenames));
+                JGAP_LOG_AND_THROW(
+                    "Multiple .h5 files detected when reading single tabulation data: {}", vectorToString(filenames)
+                );
             }
             if (filename.ends_with(".eam.fs")) {
                 eam_fs_provided = true;
@@ -114,12 +115,14 @@ namespace jgap {
                     species_2b_and_eam.insert(casted2b->getSpeciesPair().nodes[1]);
                 }
 
-            } else if (const auto* casted3b = dynamic_cast<const ThreeBodyTGComponent*>(component.get());
-                       casted3b != nullptr) {
+            } else if (
+                const auto* casted3b = dynamic_cast<const ThreeBodyTGComponent*>(component.get()); casted3b != nullptr
+            ) {
                 write3b(root, *casted3b);
 
-            } else if (const auto* casted_eam = dynamic_cast<const EamTGComponent*>(component.get());
-                       casted_eam != nullptr) {
+            } else if (
+                const auto* casted_eam = dynamic_cast<const EamTGComponent*>(component.get()); casted_eam != nullptr
+            ) {
                 eam_components.insert({casted_eam->getSplineNBodyAggregator().getCentralSpecies(), casted_eam});
 
                 for (Species s: casted_eam->getSplineNBodyAggregator().getAllSpecies()) {
@@ -137,13 +140,15 @@ namespace jgap {
 
             while (!pair_pots.empty() || !eam_components.empty()) {
                 eam_fs_contents.push_back(
-                    useSomeComponentsAndGenerateEamFs(species_2b_and_eam_vec, pair_pots, eam_components));
+                    useSomeComponentsAndGenerateEamFs(species_2b_and_eam_vec, pair_pots, eam_components)
+                );
             }
 
-            // Embed the .eam.fs contents in the group so the potential is self-contained in the .h5.
-            auto eam_files_group = root.createGroup("eam_files");
+            // Embed the .eam.fs contents as root attributes so the potential is self-contained in the .h5
+            // without adding top-level groups that third-party tabgap Python tools iterate over.
+            root.createAttribute("Neam_files", eam_fs_contents.size());
             for (size_t index{}; index < eam_fs_contents.size(); index++) {
-                eam_files_group.createDataSet(std::to_string(index), eam_fs_contents[index]);
+                root.createAttribute(std::format("eam_file_{}", index), eam_fs_contents[index]);
             }
         }
 
@@ -201,7 +206,8 @@ namespace jgap {
         auto [root_species, node_species] = component.getSpeciesTriplet();
 
         auto triplet_group = root.createGroup(
-            std::format("{}-{}-{}", root_species.symbol(), node_species[0].symbol(), node_species[1].symbol()));
+            std::format("{}-{}-{}", root_species.symbol(), node_species[0].symbol(), node_species[1].symbol())
+        );
 
         triplet_group.createAttribute("element_i", root_species.symbol());
         triplet_group.createAttribute("element_j", node_species[0].symbol());
@@ -213,14 +219,20 @@ namespace jgap {
         // (origin + (dims - 1) * spacing). See readFromGroup for the matching reconstruction.
         triplet_group.createDataSet(
             "grid_limits",
-            std::array{coeff_grid.origin[0] + coeff_grid.spacing[0], coeff_grid.origin[1] + coeff_grid.spacing[1],
-                       coeff_grid.origin[2] + coeff_grid.spacing[2], coeff_grid.getCutoff()[0],
-                       coeff_grid.getCutoff()[1], coeff_grid.getCutoff()[2]});
+            std::array{
+                coeff_grid.origin[0] + coeff_grid.spacing[0], coeff_grid.origin[1] + coeff_grid.spacing[1],
+                coeff_grid.origin[2] + coeff_grid.spacing[2], coeff_grid.getCutoff()[0], coeff_grid.getCutoff()[1],
+                coeff_grid.getCutoff()[2]
+            }
+        );
 
         triplet_group.createDataSet(
             "N",
-            std::array{// original grid point counts, not coeff counts
-                       coeff_grid.sizes[0] - 2, coeff_grid.sizes[1] - 2, coeff_grid.sizes[2] - 2});
+            std::array{
+                // original grid point counts, not coeff counts
+                coeff_grid.sizes[0] - 2, coeff_grid.sizes[1] - 2, coeff_grid.sizes[2] - 2
+            }
+        );
 
         triplet_group.createDataSet("energies", coeff_grid.data_flat);
     }
@@ -241,7 +253,8 @@ namespace jgap {
     /// @return the text of one .eam.fs file.
     std::string TabGapIO::useSomeComponentsAndGenerateEamFs(
         const std::vector<Species>& all_species, std::map<Species2Sorted, const TwoBodyTGComponent*>& pair_pots,
-        std::multimap<Species, const EamTGComponent*>& eam_components) {
+        std::multimap<Species, const EamTGComponent*>& eam_components
+    ) {
         ////////// Pre-process ///////////
         if (eam_components.empty()) {
             JGAP_LOG_AND_THROW("Unexpected behaviour while writing .eam.fs");
@@ -392,7 +405,7 @@ namespace jgap {
             // Read all attributes except Nelements
             for (const auto& attr_name: e0_group.listAttributeNames()) {
                 if (attr_name == "Nelements") continue;
-                double val;
+                Real val;
                 e0_group.getAttribute(attr_name).read(val);
                 pot.isolated_atom_energies[attr_name] += val;
             }
@@ -414,7 +427,7 @@ namespace jgap {
                 group.getAttribute("element_j").read(species_j);
                 Species2Sorted pair{species_i, species_j};
 
-                std::array<double, 2> limits{}; // origin, cutoff
+                std::array<Real, 2> limits{}; // origin, cutoff
                 group.getDataSet("grid_limits").read(limits);
 
                 size_t n_original_grid;
@@ -422,9 +435,9 @@ namespace jgap {
 
                 // Exact inverse of write2b: it stored N = dims - 2, lower = origin + spacing,
                 // upper = origin + (dims - 1) * spacing, so spacing = (upper - lower) / N.
-                double lower = limits.at(0);
-                double upper = limits.at(1);
-                double spacing = (upper - lower) / static_cast<double>(n_original_grid);
+                Real lower = limits.at(0);
+                Real upper = limits.at(1);
+                Real spacing = (upper - lower) / static_cast<Real>(n_original_grid);
                 Grid<1> spline_grid{{n_original_grid + 2}, {spacing}, {lower - spacing}};
 
                 group.getDataSet("energies").read(spline_grid.data_flat);
@@ -446,7 +459,7 @@ namespace jgap {
                 std::array<size_t, 3> n_original{}; // original grid point counts (see write3b)
                 group.getDataSet("N").read(n_original);
 
-                std::array<double, 6> grid_limits{}; // lower xyz, then upper xyz
+                std::array<Real, 6> grid_limits{}; // lower xyz, then upper xyz
                 group.getDataSet("grid_limits").read(grid_limits);
 
                 // Inverse of write3b (mirrors the 2b reconstruction per axis): the stored upper limit is
@@ -455,17 +468,21 @@ namespace jgap {
                 // below the original origin.
                 std::array lower{grid_limits[0], grid_limits[1], grid_limits[2]};
                 std::array upper{grid_limits[3], grid_limits[4], grid_limits[5]};
-                std::array spacing{(upper[0] - lower[0]) / static_cast<double>(n_original[0]),
-                                   (upper[1] - lower[1]) / static_cast<double>(n_original[1]),
-                                   (upper[2] - lower[2]) / static_cast<double>(n_original[2])};
+                std::array spacing{
+                    (upper[0] - lower[0]) / static_cast<Real>(n_original[0]),
+                    (upper[1] - lower[1]) / static_cast<Real>(n_original[1]),
+                    (upper[2] - lower[2]) / static_cast<Real>(n_original[2])
+                };
                 std::array<size_t, 3> spline_dims{n_original[0] + 2, n_original[1] + 2, n_original[2] + 2};
                 std::array spline_grid_origin{lower[0] - spacing[0], lower[1] - spacing[1], lower[2] - spacing[2]};
 
-                std::vector<double> spline_coeffs{};
+                std::vector<Real> spline_coeffs{};
                 group.getDataSet("energies").read(spline_coeffs);
 
-                assert(spline_coeffs.size() == spline_dims[0] * spline_dims[1] * spline_dims[2] &&
-                       "Number of coefficients mis-matches grid size");
+                assert(
+                    spline_coeffs.size() == spline_dims[0] * spline_dims[1] * spline_dims[2] &&
+                    "Number of coefficients mis-matches grid size"
+                );
 
                 Grid spline_grid{spline_dims, spacing, spline_grid_origin, spline_coeffs};
 
@@ -473,14 +490,25 @@ namespace jgap {
             }
         }
 
-        // EAM part: take it from the embedded .eam.fs datasets when asked to.
-        if (read_embedded_eam_fs && root.exist("eam_files")) {
-            auto eam_files_group = root.getGroup("eam_files");
-            for (const auto& eam_fs_name: eam_files_group.listObjectNames()) {
-                std::string eam_fs_content;
-                eam_files_group.getDataSet(eam_fs_name).read(eam_fs_content);
-                std::istringstream eam_fs_stream(eam_fs_content);
-                parseEamFs(eam_fs_stream, pot);
+        // EAM part: take it from embedded root attributes when asked to.
+        if (read_embedded_eam_fs) {
+            if (root.hasAttribute("Neam_files")) {
+                size_t n_eam_files{};
+                root.getAttribute("Neam_files").read(n_eam_files);
+                for (size_t index = 0; index < n_eam_files; index++) {
+                    std::string eam_fs_content;
+                    root.getAttribute(std::format("eam_file_{}", index)).read(eam_fs_content);
+                    std::istringstream eam_fs_stream(eam_fs_content);
+                    parseEamFs(eam_fs_stream, pot);
+                }
+            } else if (root.exist("eam_files")) {
+                auto eam_files_group = root.getGroup("eam_files");
+                for (const auto& eam_fs_name: eam_files_group.listObjectNames()) {
+                    std::string eam_fs_content;
+                    eam_files_group.getDataSet(eam_fs_name).read(eam_fs_content);
+                    std::istringstream eam_fs_stream(eam_fs_content);
+                    parseEamFs(eam_fs_stream, pot);
+                }
             }
         }
     }
@@ -521,7 +549,7 @@ namespace jgap {
         if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing grid spec line");
 
         size_t n_rho, n_r;
-        double drho, dr, cutoff;
+        Real drho, dr, cutoff;
         iss = std::istringstream(line);
         iss >> n_rho >> drho >> n_r >> dr >> cutoff;
 
@@ -567,10 +595,13 @@ namespace jgap {
         }
 
         for (auto central_species: elements) {
-            pot.components.emplace_back(
-                EamTGComponent(ManyBodyGrids2<1, 1>{.central_atom_species = central_species,
-                                                    .aggregator_grids = std::move(density_grids.at(central_species)),
-                                                    .value_grid = std::move(embedding_energies[central_species])}));
+            pot.components.emplace_back(EamTGComponent(
+                ManyBodyGrids2<1, 1>{
+                    .central_atom_species = central_species,
+                    .aggregator_grids = std::move(density_grids.at(central_species)),
+                    .value_grid = std::move(embedding_energies[central_species])
+                }
+            ));
         }
 
         // Pair potential tables for i >= j
@@ -581,12 +612,12 @@ namespace jgap {
                 Species2Sorted species_pair{elements[i], elements[j]};
                 Grid<1> energy_grid({n_r}, {dr}, {0.0});
 
-                double r{};
+                Real r{};
                 for (size_t k = 0; k < n_r; k++, r += dr) {
                     if (!getLine(file, line)) {
                         JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete pair potential table");
                     }
-                    double phi = std::stod(line);
+                    Real phi = std::stod(line);
                     energy_grid.data_flat[k] = (r > 0.0 ? phi / r : 0.0);
                 }
 

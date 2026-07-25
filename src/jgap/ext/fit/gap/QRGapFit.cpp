@@ -1,24 +1,20 @@
-#include "jgap/ext/fit/gap/QRGapFit.hpp"
-
-#include <atomic>
-#include <cassert>
-#include <random>
+#include "QRGapFit.hpp"
 
 #include <Eigen/Dense>
+#include <atomic>
+#include <cassert>
 
 #include "jgap/core/UnseqFor.hpp"
-#include "jgap/io/log/StdoutLogger.hpp"
-#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
 
     using EigenMatrixCol = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
     using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 
-    std::vector<Real> QRGapFit::findCoefficients(std::vector<ValuePtr<GapComponent>>& gap_components,
-                                                 const std::vector<Atoms>& training_data,
-                                                 std::vector<EnergyData>& energies_without_external,
-                                                 std::vector<Regularization>& sigmas_inverse) {
+    std::vector<Real> QRGapFit::findCoefficients(
+        std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
+        std::vector<EnergyData>& energies_without_external, std::vector<Regularization>& sigmas_inverse
+    ) {
         JGAP_LOG_INFO("Forming matrix A");
         auto A = formMatrixA(gap_components, training_data, energies_without_external, sigmas_inverse);
 
@@ -50,13 +46,19 @@ namespace jgap {
         JGAP_LOG_DEBUG("R^-1 * Q^t_b");
         EigenVectorCol c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
 
+        Real b_norm = b_map.norm();
+        if (b_norm > 0.0_r && A.nRows() > A.nColumns()) {
+            Real rel_err = Qt_b.tail(A.nRows() - A.nColumns()).norm() / b_norm;
+            JGAP_LOG_INFO("QR solver finished: relative error = {}", rel_err);
+        }
+
         return std::vector<Real>{c.data(), c.data() + c.size()};
     }
 
-    Matrix<ColumnMajor> QRGapFit::formMatrixA(const std::vector<ValuePtr<GapComponent>>& gap_components,
-                                              const std::vector<Atoms>& training_data,
-                                              const std::vector<EnergyData>& energy_data,
-                                              const std::vector<Regularization>& sigmas_inverse) const {
+    Matrix<ColumnMajor> QRGapFit::formMatrixA(
+        const std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
+        const std::vector<EnergyData>& energy_data, const std::vector<Regularization>& sigmas_inverse
+    ) const {
         struct StructureData {
             const Atoms& atoms;
             const EnergyData& energy_data;
@@ -79,39 +81,49 @@ namespace jgap {
             c += gap_components[i]->nSparsePoints();
         }
 
-        JGAP_LOG_INFO("Forming in-memory {}x{}(~{}GB) A matrix", r + c, c,
-                      (r + c) * c * sizeof(double) / 1024.0 / 1024.0 / 1024.0);
+        JGAP_LOG_INFO(
+            "Forming in-memory {}x{}(~{}GB) A matrix", r + c, c, (r + c) * c * sizeof(double) / 1024.0 / 1024.0 / 1024.0
+        );
         Matrix<ColumnMajor> resulting_A(r + c, c);
 
         std::atomic counter(0);
-        unseqForEach(starting_rows_K_nm.begin(), starting_rows_K_nm.end(),
-                     [&](const std::pair<size_t, StructureData>& structId) {
-                         auto& [starting_row, struct_data] = structId;
+        unseqForEach(
+            starting_rows_K_nm.begin(), starting_rows_K_nm.end(),
+            [&](const std::pair<size_t, StructureData>& structId) {
+                auto& [starting_row, struct_data] = structId;
 
-                         size_t progress = ++counter;
-                         if (progress % std::max(starting_rows_K_nm.size() / 100, 1uz) == 0) {
-                             JGAP_LOG_INFO("K_nm matrix formation progress: {} of {} ({}%)", progress,
-                                           starting_rows_K_nm.size(), progress * 100 / starting_rows_K_nm.size());
-                         }
+                size_t progress = ++counter;
+                if (progress % std::max(starting_rows_K_nm.size() / 100, 1uz) == 0) {
+                    JGAP_LOG_INFO(
+                        "K_nm matrix formation progress: {} of {} ({}%)", progress, starting_rows_K_nm.size(),
+                        progress * 100 / starting_rows_K_nm.size()
+                    );
+                }
 
-                         fillInverseSigmaK_nm(gap_components, struct_data.atoms, struct_data.energy_data,
-                                              struct_data.sigmas_inverse, resulting_A, starting_row);
-                     });
+                fillInverseSigmaK_nm(
+                    gap_components, struct_data.atoms, struct_data.energy_data, struct_data.sigmas_inverse, resulting_A,
+                    starting_row
+                );
+            }
+        );
 
-        unseqForEach(starting_points_K_mm.begin(), starting_points_K_mm.end(),
-                     [&](const std::array<size_t, 3>& rc_and_descriptor_id) {
-                         auto& [starting_row, starting_col, descriptor_id] = rc_and_descriptor_id;
+        unseqForEach(
+            starting_points_K_mm.begin(), starting_points_K_mm.end(),
+            [&](const std::array<size_t, 3>& rc_and_descriptor_id) {
+                auto& [starting_row, starting_col, descriptor_id] = rc_and_descriptor_id;
 
-                         JGAP_LOG_INFO("K_mm for descriptor {}", descriptor_id);
-                         fillU_mm(starting_row, starting_col, gap_components[descriptor_id], resulting_A);
-                     });
+                JGAP_LOG_INFO("K_mm for descriptor {}", descriptor_id);
+                fillU_mm(starting_row, starting_col, gap_components[descriptor_id], resulting_A);
+            }
+        );
 
         return resulting_A;
     }
 
-    std::vector<Real> QRGapFit::formVectorB(const std::vector<ValuePtr<GapComponent>>& components,
-                                            const std::vector<EnergyData>& energy_data,
-                                            const std::vector<Regularization>& sigmas_inverse) {
+    std::vector<Real> QRGapFit::formVectorB(
+        const std::vector<ValuePtr<GapComponent>>& components, const std::vector<EnergyData>& energy_data,
+        const std::vector<Regularization>& sigmas_inverse
+    ) {
         std::vector<Real> b;
         for (size_t i = 0; i < energy_data.size(); i++) {
             if (energy_data[i].energy.has_value()) {
@@ -132,28 +144,26 @@ namespace jgap {
 
             if (energy_data[i].virials.has_value()) {
                 assert(sigmas_inverse[i].virials.has_value());
-
                 b.push_back(energy_data[i].virials->xx * sigmas_inverse[i].virials->xx);
                 b.push_back(energy_data[i].virials->xy * sigmas_inverse[i].virials->xy);
                 b.push_back(energy_data[i].virials->xz * sigmas_inverse[i].virials->xz);
-
                 b.push_back(energy_data[i].virials->yy * sigmas_inverse[i].virials->yy);
                 b.push_back(energy_data[i].virials->yz * sigmas_inverse[i].virials->yz);
-
                 b.push_back(energy_data[i].virials->zz * sigmas_inverse[i].virials->zz);
             }
         }
 
         for (auto& component: components) {
-            b.resize(b.size() + component->nSparsePoints(), 0.0);
+            b.resize(b.size() + component->nSparsePoints(), 0.0_r);
         }
 
         return b;
     }
 
-    void QRGapFit::fillInverseSigmaK_nm(const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms,
-                                        const EnergyData& energy_data, const Regularization& sigmas_inverse,
-                                        Matrix<ColumnMajor>& A, size_t starting_row) {
+    void QRGapFit::fillInverseSigmaK_nm(
+        const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms, const EnergyData& energy_data,
+        const Regularization& sigmas_inverse, Matrix<ColumnMajor>& A, size_t starting_row
+    ) {
         std::map<Real, NeighbourLists> neighbour_lists;
         for (const auto& gap_component: gap_components) {
             Real cutoff = gap_component->getCutoff();
@@ -212,8 +222,10 @@ namespace jgap {
         }
     }
 
-    void QRGapFit::fillU_mm(const size_t starting_row, const size_t starting_col,
-                            const ValuePtr<GapComponent>& gap_component, Matrix<ColumnMajor>& A) const {
+    void QRGapFit::fillU_mm(
+        const size_t starting_row, const size_t starting_col, const ValuePtr<GapComponent>& gap_component,
+        Matrix<ColumnMajor>& A
+    ) const {
         auto K_mm_block = gap_component->sparseToSparseCovariance();
 
         const size_t n = K_mm_block.nRows();

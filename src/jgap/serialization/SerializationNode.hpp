@@ -64,7 +64,7 @@ namespace jgap {
         // --- DataSet Writes ---
         void writeDataSet(const std::string& name, const std::vector<int>& data);
         void writeDataSet(const std::string& name, const std::vector<size_t>& data);
-        void writeDataSet(const std::string& name, const std::vector<double>& data);
+        void writeDataSet(const std::string& name, const std::vector<Real>& data);
         void writeDataSet(const std::string& name, const std::vector<std::string>& data);
         void writeDataSet(const std::string& name, const std::string& data);
 
@@ -102,12 +102,12 @@ namespace jgap {
         }
 
         // --- DataSet Reads ---
-        std::optional<std::vector<double>> readOptionalDoubleVectorDataSet(const std::string& name) const;
-        std::vector<double> readDoubleVectorDataSet(const std::string& name) const;
+        std::optional<std::vector<Real>> readOptionalRealVectorDataSet(const std::string& name) const;
+        std::vector<Real> readRealVectorDataSet(const std::string& name) const;
 
         template<size_t N>
         std::optional<std::array<Real, N>> readOptionalDoubleArrayDataSet(const std::string& name) const {
-            auto opt = readOptionalDoubleVectorDataSet(name);
+            auto opt = readOptionalRealVectorDataSet(name);
             if (!opt) return std::nullopt;
             const auto& vec = opt.value();
             if (vec.size() != N) {

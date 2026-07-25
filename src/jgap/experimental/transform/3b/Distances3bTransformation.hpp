@@ -37,27 +37,29 @@ namespace jgap {
                         r12,
                         f_cut_01 * f_cut_02,
                     },
-                .derivatives = {std::array{
-                                    // wrt r_01
-                                    1.0,
-                                    0.0,
-                                    0.0,
-                                    df_cut_01 * f_cut_02,
-                                },
-                                std::array{
-                                    // wrt r_02
-                                    0.0,
-                                    1.0,
-                                    0.0,
-                                    df_cut_02 * f_cut_01,
-                                },
-                                std::array{
-                                    // wrt r_12
-                                    0.0,
-                                    0.0,
-                                    1.0,
-                                    0.0,
-                                }},
+                .derivatives = {
+                    std::array{
+                        // wrt r_01
+                        1.0_r,
+                        0.0_r,
+                        0.0_r,
+                        df_cut_01 * f_cut_02,
+                    },
+                    std::array{
+                        // wrt r_02
+                        0.0_r,
+                        1.0_r,
+                        0.0_r,
+                        df_cut_02 * f_cut_01,
+                    },
+                    std::array{
+                        // wrt r_12
+                        0.0_r,
+                        0.0_r,
+                        1.0_r,
+                        0.0_r,
+                    }
+                },
             };
         }
 

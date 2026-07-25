@@ -15,11 +15,12 @@ namespace jgap {
     template<size_t Dim>
     class HistogramUniformSparsifier : public Sparsifier<Dim> {
     public:
-        HistogramUniformSparsifier(size_t seed, size_t n_sparse_points,
-                                   std::optional<std::array<bool, Dim>> is_dim_active = std::nullopt,
-                                   std::optional<std::array<size_t, Dim>> grid_dimensions = std::nullopt,
-                                   std::optional<Descriptor<Dim>> min_point = std::nullopt,
-                                   std::optional<Descriptor<Dim>> max_point = std::nullopt) :
+        HistogramUniformSparsifier(
+            size_t seed, size_t n_sparse_points, std::optional<std::array<bool, Dim>> is_dim_active = std::nullopt,
+            std::optional<std::array<size_t, Dim>> grid_dimensions = std::nullopt,
+            std::optional<Descriptor<Dim>> min_point = std::nullopt,
+            std::optional<Descriptor<Dim>> max_point = std::nullopt
+        ) :
             seed(seed),
             n_sparse_points(n_sparse_points),
             is_dim_active(std::move(is_dim_active)),
@@ -40,7 +41,8 @@ namespace jgap {
 
     template<size_t Dim>
     inline std::vector<Descriptor<Dim>> HistogramUniformSparsifier<Dim>::selectSparsePoints(
-        const std::vector<Descriptor<Dim>>& descriptors) const {
+        const std::vector<Descriptor<Dim>>& descriptors
+    ) const {
         if (descriptors.empty()) {
             return {};
         }
@@ -61,7 +63,7 @@ namespace jgap {
 
             size_t active_grid_dim =
                 active_dims > 0
-                    ? static_cast<size_t>(std::ceil(std::pow(n_sparse_points, 1.0 / static_cast<Real>(active_dims))))
+                    ? static_cast<size_t>(std::ceil(std::pow(n_sparse_points, 1.0_r / static_cast<Real>(active_dims))))
                     : 1;
 
             for (size_t d = 0; d < Dim; d++) {
@@ -88,16 +90,17 @@ namespace jgap {
             } else {
                 max_point_[d] = std::numeric_limits<Real>::lowest();
                 for (size_t i = 0; i < descriptors.size(); ++i) {
-                    max_point_[d] = std::max(max_point_[d], descriptors[i][d] + 0.0001 /*keep all points in bounds*/);
+                    max_point_[d] = std::max(max_point_[d], descriptors[i][d] + 0.0001_r /*keep all points in bounds*/);
                 }
             }
             step[d] = (max_point_[d] - min_point_[d]) / static_cast<Real>(grid_dimensions_[d]);
         }
 
-        JGAP_LOG_INFO("{}d histogram in range {} - {} with {} long bins:", Dim,
-                      iteratorToString(min_point_.begin(), min_point_.end()),
-                      iteratorToString(max_point_.begin(), max_point_.end()),
-                      iteratorToString(step.begin(), step.end()));
+        JGAP_LOG_INFO(
+            "{}d histogram in range {} - {} with {} long bins:", Dim,
+            iteratorToString(min_point_.begin(), min_point_.end()),
+            iteratorToString(max_point_.begin(), max_point_.end()), iteratorToString(step.begin(), step.end())
+        );
 
         std::vector<Descriptor<Dim>> sparse_points;
         std::map<std::array<size_t, Dim>, std::vector<size_t>> useful_grid_slots;
@@ -120,7 +123,8 @@ namespace jgap {
         JGAP_LOG_DEBUG(
             "Found {} grid slots containing some points -> attempting to sample each {} times / {} assigned "
             "randomly",
-            useful_grid_slots.size(), reps, leftover);
+            useful_grid_slots.size(), reps, leftover
+        );
 
         std::mt19937 gen(seed);
         std::vector<std::array<size_t, Dim>> useful_grid_slots_arr = {};

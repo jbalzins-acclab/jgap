@@ -30,20 +30,26 @@ namespace jgap {
         // ====================================================================================
         if (params.n_sparse2 > 0) {
             auto trans2 = PairDistanceTransformation(CosCutoff(params.cutoff2, params.cutoff2_width));
-            auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
+            auto kernel2 = SquaredExpKernel<1, 1>(10.0_r, {1.0_r});
             auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
-            potential.addComponents(TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>::createComponents(
-                training_data, trans2, kernel2, sparsifier2));
+            potential.addComponents(
+                TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>::createComponents(
+                    training_data, trans2, kernel2, sparsifier2
+                )
+            );
         }
 
         // ====================================================================================
         // ManyBodyGapComponent with EAM Pair Function
         // ====================================================================================
         if (params.eam_n_sparse > 0) {
-            auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
+            auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
             auto sparsifier_eam = HistogramUniformSparsifier<1>(params.seed, params.eam_n_sparse);
-            potential.addComponents(EamPairFunction::createComponents(params.eam_pf, kernel_eam, sparsifier_eam,
-                                                                      training_data, params.eam_mode));
+            potential.addComponents(
+                EamPairFunction::createComponents(
+                    params.eam_pf, kernel_eam, sparsifier_eam, training_data, params.eam_mode
+                )
+            );
         }
 
         // ====================================================================================
@@ -51,11 +57,14 @@ namespace jgap {
         // ====================================================================================
         if (params.n_sparse3 > 0) {
             auto trans3 = Angle3bTransformation(CosCutoff(params.cutoff3, params.cutoff3_width));
-            auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
+            auto kernel3 = SquaredExpKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
             auto sparsifier3 =
                 HistogramUniformSparsifier<4>(params.seed, params.n_sparse3, std::array{true, true, true, false});
-            potential.addComponents(AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>::createComponents(
-                training_data, trans3, kernel3, sparsifier3));
+            potential.addComponents(
+                AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>::createComponents(
+                    training_data, trans3, kernel3, sparsifier3
+                )
+            );
         }
 
         IsolatedAtomPotential isolated_atom_pot{training_data};

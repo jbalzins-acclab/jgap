@@ -11,14 +11,16 @@
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
-#include "jgap/serialization/kernels/SquaredExpKernelSerialization.hpp"
+#include "jgap/core/kernels/Kernel.hpp"
+#include "jgap/serialization/Serialization.hpp"
+#include "jgap/serialization/SerializationNode.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
 
 namespace jgap {
 
     template<size_t Dim, typename TKernel>
     class AtomicThreeBodyGapComponentSerialization : public Serialization<GapComponent> {
         using ComponentT = AtomicThreeBodyGapComponent<Dim, TKernel>;
-        using KernelSerialization = SquaredExpKernelSerialization<TKernel::ExpDim, TKernel::CutoffDim>;
 
     public:
         bool serialize(const ValuePtr<GapComponent>& obj, SerializationNode& node) const override {
@@ -33,7 +35,8 @@ namespace jgap {
             node.writeAttribute("species_set", derived->getSpecies().toString());
 
             auto kernel_group = node.createGroup("kernel");
-            KernelSerialization::serialize(derived->getKernel(), kernel_group);
+            ValuePtr<Kernel<Dim>> kernel_ptr = derived->getKernel();
+            SerializationRegistry<Kernel<Dim>>::serialize(kernel_ptr, kernel_group);
 
             auto transformation_group = node.createGroup("transformation");
             SerializationRegistry<ThreeBodyTransformation<Dim>>::serialize(derived->getTransformation(),
@@ -61,7 +64,13 @@ namespace jgap {
             auto kernel_group_opt = node.getGroup("kernel");
             if (!kernel_group_opt)
                 JGAP_LOG_AND_THROW("Missing 'kernel' group in AtomicThreeBodyGapComponent serialization");
-            TKernel kernel = KernelSerialization::deserialize(kernel_group_opt.value());
+            auto kernel_ptr =
+                SerializationRegistry<Kernel<Dim>>::deserialize(kernel_group_opt.value());
+            auto* kernel_typed = kernel_ptr.template as<TKernel>();
+            if (!kernel_typed) {
+                JGAP_LOG_AND_THROW("Deserialized kernel is not of expected type {}", typeName<TKernel>());
+            }
+            TKernel kernel = *kernel_typed;
 
             auto transformation_group_opt = node.getGroup("transformation");
             if (!transformation_group_opt)
@@ -71,7 +80,7 @@ namespace jgap {
 
             auto sparse_points = node.readDescriptors<Dim>("sparse_points");
             auto coefficients =
-                node.readOptionalDoubleVectorDataSet("coefficients").value_or(std::vector<Real>{});
+                node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<Real>{});
 
             return ValuePtr<GapComponent>(ComponentT(species_set, transformation, kernel, sparse_points, coefficients));
         }

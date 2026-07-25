@@ -6,6 +6,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
+AlignAfterOpenBracket: BlockIndent
 BraceWrapping: 
   AfterCaseLabel: false
   AfterClass: false

@@ -2,18 +2,19 @@
 #define JGAP_SQUAREDEXPKERNELSERIALIZATION_HPP
 
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 
 namespace jgap {
 
-    // SquaredExpKernel is used as a value type parameterised by its dimensions rather than through a
-    // Cloneable polymorphic base, so it is serialized directly instead of via SerializationRegistry.
-    // Explicit instantiations live in the .cpp; add one there for every dimension combination used.
     template<size_t ExpDimensions, size_t CutoffDimension>
-    class SquaredExpKernelSerialization {
+    class SquaredExpKernelSerialization : public Serialization<Kernel<ExpDimensions + CutoffDimension>> {
     public:
-        static void serialize(const SquaredExpKernel<ExpDimensions, CutoffDimension>& kernel, SerializationNode& node);
-        static SquaredExpKernel<ExpDimensions, CutoffDimension> deserialize(const SerializationNode& node);
+        static constexpr size_t Dim = ExpDimensions + CutoffDimension;
+        using KernelT = SquaredExpKernel<ExpDimensions, CutoffDimension>;
+
+        bool serialize(const ValuePtr<Kernel<Dim>>& obj, SerializationNode& node) const override;
+        ValuePtr<Kernel<Dim>> deserialize(const SerializationNode& node) const override;
     };
 }
 

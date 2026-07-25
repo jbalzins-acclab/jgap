@@ -14,35 +14,15 @@
 
 #include <chrono>
 #include <iostream>
+#include <jgap/ext/fit/gap/QRGapFit.hpp>
 #include <set>
 #include <string>
 
-#include "jgap/core/ValuePtr.hpp"
-#include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/core/atomic/neighbours/NeighbourList.hpp"
-#include "jgap/core/atomic/species/Species.hpp"
-#include "jgap/core/atomic/species/SpeciesSet.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
-#include "jgap/ext/fit/gap/QRGapFit.hpp"
+#include "jgap/core/UnseqFor.hpp"
+#include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
-#include "jgap/core/fit/gap/regularization/SimpleRegularizationRules.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/core/potentials/CompositePotential.hpp"
-#include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
-#include "jgap/core/potentials/gap/component/NBodyGapComponent.hpp"
-#include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
-#include "jgap/core/potentials/zbl/ZblPotential.hpp"
-#include "jgap/core/sparsification/HistogramUniformSparsifier.hpp"
-#include "jgap/core/transform/nbody/2b/TwoBodyTransformation.hpp"
-#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
-#include "jgap/core/transform/aggregated/NBodyAggregatorImpl.hpp"
-#include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
-#include "jgap/serialization/SerializationRegistry.hpp"
-#include "jgap/utils/Utils.hpp"
+#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
+#include "jgap/jgap.hpp"
 
 using namespace jgap;
 
@@ -67,7 +47,7 @@ namespace {
     bool isNi(const Species& s) { return s.symbol() == "Ni"; }
 
     /// Picks a different EAM pair (density) function per element pair, to exercise all three kinds.
-    ValuePtr<NBodyTransformation<1, 2>> makeEamPairFunction(const Species& central, const Species& contributor) {
+    ValuePtr<EamPairFunction> makeEamPairFunction(const Species& central, const Species& contributor) {
         const int n_ni = (isNi(central) ? 1 : 0) + (isNi(contributor) ? 1 : 0);
         if (n_ni == 0) {
             return FSGenPairFunction(EAM_CUTOFF, /*degree=*/3.0); // Fe-Fe
@@ -82,8 +62,8 @@ namespace {
 int main(int argc, char** argv) {
     CurrentLogger::initDefault({.stdout_log_debug = true});
 
-    const std::string training_file = argc > 1 ? argv[1] : "resources/xyz-samples/feni-train.xyz";
-    const std::string output_prefix = argc > 2 ? argv[2] : "feni-custom";
+    const std::string training_file = argc > 1 ? argv[1] : "../../resources/xyz-samples/feni-train.xyz";
+    const std::string output_prefix = argc > 2 ? argv[2] : "feni-lsmr";
 
     const auto start = std::chrono::steady_clock::now();
 
@@ -93,7 +73,7 @@ int main(int argc, char** argv) {
     // Elements present in the training data.
     std::set<Species> elements;
     for (const auto& atoms: training_data) {
-        for (const auto& s: atoms.lookupSpecies()) {
+        for (const auto& s: atoms.getSpecies()) {
             elements.insert(s);
         }
     }
@@ -108,35 +88,39 @@ int main(int argc, char** argv) {
         for (const Species& contributor: elements) {
             aggregator->extend({central, contributor}, makeEamPairFunction(central, contributor));
         }
-        potential.addComponent(ManyBodyGapComponent(ValuePtr<NBodyAggregator<1>>(std::move(aggregator)), eam_kernel,
-                                                    eam_sparsifier, training_data));
+        potential.addComponent(ManyBodyGapComponent(
+            ValuePtr<NBodyAggregator<1>>(std::move(aggregator)), eam_kernel, eam_sparsifier, training_data
+        ));
     }
 
-    // ===== 3-body: per-triplet energy scale (grows slightly with the Ni count) =====
-    const ValuePtr<NBodyTransformation<4, 3>> trans3 = Angle3bTransformation(CosCutoff(CUTOFF_3B, WIDTH_3B));
+    // ===== 3-body: per-triplet energy scale (grows slightly with the number of Ni atoms in the triplet) =====
+    const ValuePtr<ThreeBodyTransformation<4>> trans3 = Angle3bTransformation(CosCutoff(CUTOFF_3B, WIDTH_3B));
     const HistogramUniformSparsifier<4> sparsifier3(SEED, N_SPARSE_3B, std::array{true, true, true, false});
 
-    std::set<SpeciesSet<3, HasCentralAtom>> triplets;
+    std::set<Species3AtomicSorted> triplets;
     for (const auto& atoms: training_data) {
-        NeighbourList nl(atoms, trans3->getCutoffs().maxOverall());
-        auto sets = nl.getSpeciesSets<3, HasCentralAtom>();
+        NeighbourLists nl(atoms, trans3->getCutoffs().maxOverall());
+        auto sets = Species3AtomicSorted::getAll(nl);
         triplets.insert(sets.begin(), sets.end());
     }
     for (const auto& triplet: triplets) {
-        const int n_ni = (isNi(triplet.getRoot()) ? 1 : 0) + (isNi(triplet.getNodes()[0]) ? 1 : 0) +
-                         (isNi(triplet.getNodes()[1]) ? 1 : 0);
+        const int n_ni =
+            (isNi(triplet.root) ? 1 : 0) + (isNi(triplet.nodes[0]) ? 1 : 0) + (isNi(triplet.nodes[1]) ? 1 : 0);
         const Real energy_scale = ENERGY_SCALE_3B * (1.0 + 0.1 * static_cast<Real>(n_ni)); // mild Ni boost
         const auto kernel3 = SquaredExpKernel<3, 1>(energy_scale, {1.0, 1.0, 1.0});
 
-        potential.addComponent(NBodyGapComponent(triplet, trans3, kernel3, sparsifier3, training_data));
+        potential.addComponent(
+            AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(triplet, trans3, kernel3, sparsifier3, training_data)
+        );
     }
 
     // ===== 2-body: one shared setup (as in the standard fit) =====
-    const ValuePtr<NBodyTransformation<2, 2>> trans2 = TwoBodyTransformation(CosCutoff(CUTOFF_2B, WIDTH_2B));
+    const ValuePtr<TwoBodyTransformation<2>> trans2 = PairDistanceTransformation(CosCutoff(CUTOFF_2B, WIDTH_2B));
     const auto kernel2 = SquaredExpKernel<1, 1>(ENERGY_SCALE_2B, {1.0});
     const HistogramUniformSparsifier<2> sparsifier2(SEED, N_SPARSE_2B, std::array{true, false});
-    potential.addComponents(NBodyGapComponent<2, 2, FullSymmetry, SquaredExpKernel<1, 1>>::createComponents(
-        training_data, trans2, kernel2, sparsifier2));
+    potential.addComponents(
+        TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>::createComponents(training_data, trans2, kernel2, sparsifier2)
+    );
 
     // ===== external: isolated-atom energies + ZBL repulsion =====
     potential.optional_external_potential = CompositePotential{{
@@ -151,15 +135,24 @@ int main(int argc, char** argv) {
         "short_range:0.01:0.5:2.0:0.0:liquid_surface_100:0.01:0.5:2.0:0.0:"
         "liquid_surface_110:0.01:0.5:2.0:0.0:liquid_surface_111:0.01:0.5:2.0:0.0:"
         "gamma_surface:0.002:0.08:0.5:0.0:liquid_high:0.02:0.8:5.0:0.0:"
-        "binary_alloy_melting:0.01:0.5:2.0:0.0:binary_alloy_short_range:0.01:0.5:2.0:0.0");
+        "binary_alloy_melting:0.01:0.5:2.0:0.0:binary_alloy_short_range:0.01:0.5:2.0:0.0"
+    );
 
     // ===== fit =====
-    QRGapFit fitter;
+    StreamingQrGapFit fitter(1e-8, 1000);
     fitter.fit(potential, training_data, regularization);
 
     const std::string potential_file = output_prefix + ".jgap.h5";
     SerializationRegistry<Potential>::serialize(potential, potential_file);
     JGAP_LOG_INFO("Saved fitted potential to {}", potential_file);
+
+    TabulationData tabulation_data = potential.tabulate(
+        {.max_cutoffs = potential.getCutoffs(), .max_eam_density = 10.0, .n_grid_2b = 5000, .n_grid_3b = {80, 80, 80}}
+    );
+    TabGapPotential tabgap{tabulation_data};
+
+    const Filenames tabgap_files = TabGapIO::write(tabgap, output_prefix);
+    JGAP_LOG_INFO("Saved tabGAP to: {}", vectorToString(tabgap_files));
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;
     return 0;

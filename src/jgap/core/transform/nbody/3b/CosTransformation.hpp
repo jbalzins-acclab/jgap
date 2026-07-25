@@ -11,7 +11,7 @@ namespace jgap {
             Real r02 = cluster.separationBetween(0, 2);
             Real r12 = cluster.separationBetween(1, 2);
 
-            Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) / (2.0 * r01 * r02);
+            Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) / (2.0_r * r01 * r02);
 
             return {r01, r02, cos12};
         }
@@ -21,9 +21,9 @@ namespace jgap {
             Real r02 = cluster.separationBetween(0, 2);
             Real r12 = cluster.separationBetween(1, 2);
 
-            Real inv_r01 = 1.0 / r01;
-            Real inv_r02 = 1.0 / r02;
-            Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) * (0.5 * inv_r01 * inv_r02);
+            Real inv_r01 = 1.0_r / r01;
+            Real inv_r02 = 1.0_r / r02;
+            Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) * (0.5_r * inv_r01 * inv_r02);
 
             // clang-format off
             return {
@@ -34,18 +34,18 @@ namespace jgap {
                 },
                 .derivatives = {
                     std::array{ // wrt r_01
-                        1.0,
-                        0.0,
+                        1.0_r,
+                        0.0_r,
                         inv_r02 - cos12 * inv_r01
                     },
                     std::array{ // wrt r_02
-                        0.0,
-                        1.0,
+                        0.0_r,
+                        1.0_r,
                         inv_r01 - cos12 * inv_r02
                     },
                     std::array{ // wrt r_12
-                        0.0,
-                        0.0,
+                        0.0_r,
+                        0.0_r,
                         -r12 * inv_r01 * inv_r02
                     }
                 }

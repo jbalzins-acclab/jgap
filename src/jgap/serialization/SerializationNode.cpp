@@ -168,7 +168,7 @@ namespace jgap {
     void SerializationNode::writeDataSet(const std::string& name, const std::vector<size_t>& data) {
         impl->group.createDataSet(name, data);
     }
-    void SerializationNode::writeDataSet(const std::string& name, const std::vector<double>& data) {
+    void SerializationNode::writeDataSet(const std::string& name, const std::vector<Real>& data) {
         impl->group.createDataSet(name, data);
     }
     void SerializationNode::writeDataSet(const std::string& name, const std::vector<std::string>& data) {
@@ -194,11 +194,11 @@ namespace jgap {
         auto dims = dataset.getSpace().getDimensions();
         assert(dims.size() == 2);
         assert(dims[1] == dim);
-        std::vector<double> flat_data(dims[0] * dims[1]);
+        std::vector<Real> flat_data(dims[0] * dims[1]);
         if (dims[0] > 0) {
             dataset.read_raw(flat_data.data());
         }
-        return DynamicDescriptors(std::move(flat_data), dim);
+        return DynamicDescriptors{std::move(flat_data), dim};
     }
 
     std::optional<DynamicDescriptors> SerializationNode::readOptionalDescriptors(const std::string& name, size_t dim) const {
@@ -209,14 +209,14 @@ namespace jgap {
     }
 
     // --- DataSet Reads ---
-    std::optional<std::vector<double>> SerializationNode::readOptionalDoubleVectorDataSet(const std::string& name) const {
+    std::optional<std::vector<Real>> SerializationNode::readOptionalRealVectorDataSet(const std::string& name) const {
         if (!impl->group.exist(name)) return std::nullopt;
-        std::vector<double> data;
+        std::vector<Real> data;
         impl->group.getDataSet(name).read(data);
         return data;
     }
-    std::vector<double> SerializationNode::readDoubleVectorDataSet(const std::string& name) const {
-        auto opt = readOptionalDoubleVectorDataSet(name);
+    std::vector<Real> SerializationNode::readRealVectorDataSet(const std::string& name) const {
+        auto opt = readOptionalRealVectorDataSet(name);
         if (!opt) JGAP_LOG_AND_THROW("Required dataset '{}' not found.", name);
         return opt.value();
     }

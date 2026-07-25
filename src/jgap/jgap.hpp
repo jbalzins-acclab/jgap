@@ -2,6 +2,7 @@
 #define JGAP_JGAP_HPP
 
 #include "jgap/core/Real.hpp"
+#include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/Vector3.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/energy/AtomicQuantities.hpp"
@@ -18,6 +19,15 @@
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
+#include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
+#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
+#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/experimental/fit/gap/IterativeGapFit.hpp"
+#include "jgap/experimental/fit/gap/QRKernelFit.hpp"
+#include "jgap/experimental/kernels/CauchyKernel.hpp"
+#include "jgap/experimental/kernels/WendlandKernel.hpp"
+#include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"

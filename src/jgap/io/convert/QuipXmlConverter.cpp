@@ -104,7 +104,7 @@ namespace jgap {
             Species species1 = type_to_species.at(perPairNode.attribute("type1").as_string());
             Species species2 = type_to_species.at(perPairNode.attribute("type2").as_string());
 
-            std::vector<double> r, E;
+            std::vector<Real> r, E;
             for (pugi::xml_node pointNode: perPairNode.child("potential_pair").children("point")) {
                 r.push_back(pointNode.attribute("r").as_double());
                 E.push_back(pointNode.attribute("E").as_double());
@@ -135,7 +135,7 @@ namespace jgap {
 
     IsolatedAtomPotential QuipXmlConverter::transformIsolatedAtomParams(
         const pugi::xml_node& quip_isolated_atom_params) {
-        std::map<Species, double> isolated_atom_energies;
+        std::map<Species, Real> isolated_atom_energies;
 
         for (pugi::xml_node isolated_atom_node: quip_isolated_atom_params.children("e0")) {
             if (isolated_atom_node.attribute("value").as_double() != 0.0) {
@@ -184,16 +184,16 @@ namespace jgap {
 
             auto property_map = parseHeaderLine(descriptor_param_string);
 
-            double delta = std::stod(property_map["delta"]);
-            double theta = std::stod(property_map["theta_uniform"]);
-            double cutoff = std::stod(property_map["cutoff"]);
+            Real delta = std::stod(property_map["delta"]);
+            Real theta = std::stod(property_map["theta_uniform"]);
+            Real cutoff = std::stod(property_map["cutoff"]);
 
-            std::optional<double> rMin;
+            std::optional<Real> rMin;
             if (property_map.contains("rmin")) {
                 rMin = std::stod(property_map["rmin"]);
             }
 
-            std::optional<double> cutoffTransitionWidth;
+            std::optional<Real> cutoffTransitionWidth;
             if (property_map.contains("cutoff_transition_width")) {
                 cutoffTransitionWidth = std::stod(property_map["cutoff_transition_width"]);
             }
@@ -208,7 +208,7 @@ namespace jgap {
                 mode = property_map["mode"];
             }
 
-            std::optional<double> order;
+            std::optional<Real> order;
             if (property_map.contains("order")) {
                 order = std::stod(property_map["order"]);
             }
@@ -252,7 +252,7 @@ namespace jgap {
     ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData& main_data,
                                                                  const pugi::xml_node& distance_2b_node,
                                                                  const std::filesystem::path& base_dir) {
-        double cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
+        Real cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();
 
         std::string descriptor_param_string = distance_2b_node.child("descriptor").first_child().value();
@@ -270,7 +270,7 @@ namespace jgap {
         std::vector<Descriptor<2>> sparse_points;
         std::vector<Real> coeffs;
 
-        double r;
+        Real r;
         std::string points_filename =
             resolveSparseX(base_dir, distance_2b_node.attribute("sparseX_filename").as_string());
         std::ifstream fin(points_filename);
@@ -280,8 +280,8 @@ namespace jgap {
         CosCutoff precalc_cutoff(main_data.cutoff, cutoff_transition_width);
         for (pugi::xml_node pt: distance_2b_node.children("sparseX")) {
             fin >> r;
-            double coeff = pt.attribute("alpha").as_double();
-            double sparse_cutoff = pt.attribute("sparseCutoff").as_double();
+            Real coeff = pt.attribute("alpha").as_double();
+            Real sparse_cutoff = pt.attribute("sparseCutoff").as_double();
             sparse_points.push_back({r, sparse_cutoff});
             coeffs.push_back(coeff);
         }
@@ -293,7 +293,7 @@ namespace jgap {
     ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData& mainData,
                                                               const pugi::xml_node& angle3b_node,
                                                               const std::filesystem::path& base_dir) {
-        double r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
+        Real r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
         if (mainData.r_min.has_value()) r_min = mainData.r_min.value();
 
         std::string descriptor_param_string = angle3b_node.child("descriptor").first_child().value();
@@ -322,8 +322,8 @@ namespace jgap {
         }
         CosCutoff precalc_cutoff(mainData.cutoff, mainData.cutoff - r_min);
         for (pugi::xml_node pt: angle3b_node.children("sparseX")) {
-            double coeff = pt.attribute("alpha").as_double();
-            double f_cut_prod = pt.attribute("sparseCutoff").as_double();
+            Real coeff = pt.attribute("alpha").as_double();
+            Real f_cut_prod = pt.attribute("sparseCutoff").as_double();
 
             fin >> q.x >> q.y >> q.z;
 
@@ -340,8 +340,8 @@ namespace jgap {
                                                           const pugi::xml_node& eam_node,
                                                           const std::set<Species>& species_encountered,
                                                           const std::filesystem::path& base_dir) {
-        std::optional<double> rMin =
-            main_data.cutoff_transition_width.transform([&](double val) -> double { return main_data.cutoff - val; });
+        std::optional<Real> rMin =
+            main_data.cutoff_transition_width.transform([&](Real val) -> Real { return main_data.cutoff - val; });
         if (main_data.r_min.has_value()) rMin = main_data.r_min.value();
 
         if (!main_data.pair_function.has_value()) {
@@ -366,7 +366,7 @@ namespace jgap {
         auto aggregator = TwoBodySum<1>(central_species);
 
         for (Species contributor_species: species_encountered) {
-            double prefactor = 1.0;
+            Real prefactor = 1.0;
             if (main_data.mode.value_or("blind") == "FSsym") {
                 prefactor = std::sqrt(Z_center * contributor_species.atomicNumber().value()) / 40.0;
             } else if (main_data.mode.value_or("blind") == "FSgen") {
@@ -392,11 +392,11 @@ namespace jgap {
             JGAP_LOG_AND_THROW("Could not open file " + points_filename);
         }
 
-        double density;
+        Real density;
         for (auto point_node: eam_node.children("sparseX")) {
             fin >> density;
 
-            double coeff = point_node.attribute("alpha").as_double();
+            Real coeff = point_node.attribute("alpha").as_double();
 
             sparse_points.push_back({density});
             coeffs.push_back(coeff);
@@ -407,7 +407,7 @@ namespace jgap {
     }
 
     ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(const QuipDescriptorData& main_data,
-                                                                   std::optional<double> r_min, double prefactor) {
+                                                                   std::optional<Real> r_min, Real prefactor) {
         if (main_data.pair_function.value() == "FSgen") {
             return FSGenPairFunction(main_data.cutoff, main_data.order.value(), prefactor);
         }

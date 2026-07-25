@@ -11,6 +11,11 @@ namespace jgap {
     /// yet the testing I ran showed not much benefit from such transition with a standard QR fit
     /// (no notable speedup, yet nonsense coefficients).
     using Real = double;
+
+    inline namespace literals {
+        constexpr Real operator""_r(long double val) { return static_cast<Real>(val); }
+        constexpr Real operator""_r(unsigned long long val) { return static_cast<Real>(val); }
+    }
 }
 
 // Just in case

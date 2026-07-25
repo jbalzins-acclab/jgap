@@ -28,9 +28,9 @@ namespace jgap {
         }
 
         auto dims_vec = node.readSizeVectorDataSet("dims");
-        auto spacing_vec = node.readDoubleVectorDataSet("spacing");
-        auto origin_vec = node.readDoubleVectorDataSet("origin");
-        auto data_flat = node.readDoubleVectorDataSet("data_flat");
+        auto spacing_vec = node.readRealVectorDataSet("spacing");
+        auto origin_vec = node.readRealVectorDataSet("origin");
+        auto data_flat = node.readRealVectorDataSet("data_flat");
 
         std::array<size_t, 1> dims = {dims_vec[0]};
         std::array<Real, 1> spacing = {spacing_vec[0]};

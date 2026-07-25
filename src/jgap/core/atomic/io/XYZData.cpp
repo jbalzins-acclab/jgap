@@ -1,16 +1,17 @@
 #include "XYZData.hpp"
-#include "jgap/utils/Utils.hpp"
-#include "jgap/core/atomic/geometry/Lattice.hpp"
+#include <format>
+#include <iomanip>
+#include <sstream>
+#include <variant>
 #include "jgap/core/atomic/energy/Virials.hpp"
+#include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/io/log/CurrentLogger.hpp"
-#include <sstream>
-#include <iomanip>
-#include <variant>
+#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
 
-    std::vector<XYZData> XYZData::read(const std::string &filename, const MainXYZPropertyNames& main_props) {
+    std::vector<XYZData> XYZData::read(const std::string& filename, const MainXYZPropertyNames& main_props) {
         std::ifstream in(filename);
 
         if (!in.is_open()) {
@@ -20,7 +21,7 @@ namespace jgap {
         return read(in, main_props);
     }
 
-    std::vector<XYZData> XYZData::read(std::istream &in_stream, const MainXYZPropertyNames& main_props) {
+    std::vector<XYZData> XYZData::read(std::istream& in_stream, const MainXYZPropertyNames& main_props) {
         std::vector<XYZData> frames;
 
         while (true) {
@@ -39,7 +40,7 @@ namespace jgap {
 
             auto raw_properties = parseHeaderLine(line);
 
-            for (auto const& [k, v] : raw_properties) {
+            for (auto const& [k, v]: raw_properties) {
                 if (k == "Properties") continue;
 
                 if (k == main_props.pbc) {
@@ -64,16 +65,11 @@ namespace jgap {
                 if (k == main_props.lattice) {
                     if (vals.size() == 9) {
                         data.info[k] = Lattice{
-                            Vector3{vals[0], vals[1], vals[2]},
-                            Vector3{vals[3], vals[4], vals[5]},
+                            Vector3{vals[0], vals[1], vals[2]}, Vector3{vals[3], vals[4], vals[5]},
                             Vector3{vals[6], vals[7], vals[8]}
                         };
                     } else if (vals.size() == 3) {
-                        data.info[k] = Lattice{
-                            Vector3{vals[0], 0, 0},
-                            Vector3{0, vals[1], 0},
-                            Vector3{0, 0, vals[2]}
-                        };
+                        data.info[k] = Lattice{Vector3{vals[0], 0, 0}, Vector3{0, vals[1], 0}, Vector3{0, 0, vals[2]}};
                     } else {
                         JGAP_LOG_AND_THROW("Lattice is defined in a wrong format: {}", v);
                     }
@@ -82,7 +78,7 @@ namespace jgap {
 
                 if (k == main_props.energy) {
                     try {
-                        data.info[k] = std::stod(v);
+                        data.info[k] = static_cast<Real>(std::stod(v));
                     } catch (...) {
                         JGAP_LOG_AND_THROW("Energy must be a real number")
                     }
@@ -90,9 +86,8 @@ namespace jgap {
                 }
 
                 if (k == main_props.virials) {
-                    if (vals.size() == 9 && std::abs(vals[1] - vals[3]) < 1e-9
-                                         && std::abs(vals[2] - vals[6]) < 1e-9
-                                         && std::abs(vals[5] - vals[7]) < 1e-9) {
+                    if (vals.size() == 9 && std::abs(vals[1] - vals[3]) < 1e-9 && std::abs(vals[2] - vals[6]) < 1e-9 &&
+                        std::abs(vals[5] - vals[7]) < 1e-9) {
 
                         data.info[k] = Virials{vals[0], vals[1], vals[2], vals[4], vals[5], vals[8]};
                         continue;
@@ -114,7 +109,7 @@ namespace jgap {
                 std::string props_str = raw_properties["Properties"];
                 auto tokens = split(props_str, ':');
                 for (size_t i = 0; i < tokens.size(); i += 3) {
-                    prop_infos.push_back({tokens[i], tokens[i+1][0], std::stoi(tokens[i+2])});
+                    prop_infos.push_back({tokens[i], tokens[i + 1][0], std::stoi(tokens[i + 2])});
                 }
             } else {
                 prop_infos.push_back({"species", 'S', 1});
@@ -126,16 +121,18 @@ namespace jgap {
                     JGAP_LOG_AND_THROW("Unexpected end of file at atom #{}", i);
                 }
                 std::istringstream iss(line);
-                for (const auto& info : prop_infos) {
+                for (const auto& info: prop_infos) {
                     if (info.type == 'R') {
                         if (info.count == 3) {
                             Vector3 v;
                             if (!(iss >> v.x >> v.y >> v.z)) {
-                                JGAP_LOG_AND_THROW("Failed to read as Vector3 for property {} at atom {}", info.name, i);
+                                JGAP_LOG_AND_THROW(
+                                    "Failed to read as Vector3 for property {} at atom {}", info.name, i
+                                );
                             }
                             if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Vector3>();
                             std::get<std::vector<Vector3>>(data.arrays[info.name]).push_back(v);
-                        } else if (info.count == 1)  {
+                        } else if (info.count == 1) {
                             if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Real>();
 
                             Real r;
@@ -197,7 +194,7 @@ namespace jgap {
         return frames;
     }
 
-    void XYZData::write(const std::string &filename) const {
+    void XYZData::write(const std::string& filename) const {
         std::ofstream out(filename);
         write(out);
     }
@@ -232,71 +229,85 @@ namespace jgap {
         return info;
     }
 
-    void XYZData::write(std::ostream &out_stream) const {
+    void XYZData::write(std::ostream& out_stream) const {
         size_t n_atoms = 0;
-        for (auto const& [name, val] : arrays) {
-             size_t current_size = 0;
-             std::visit([&current_size](auto&& arg) { current_size = arg.size(); }, val);
-             if (n_atoms == 0) n_atoms = current_size;
-             else if (n_atoms != current_size) {
-                 JGAP_LOG_AND_THROW("Array sizes mismatch in XYZData::write: {} has size {} but expected {}",
-                                    name, current_size, n_atoms);
-             }
+        for (auto const& [name, val]: arrays) {
+            size_t current_size = 0;
+            std::visit([&current_size](auto&& arg) { current_size = arg.size(); }, val);
+            if (n_atoms == 0)
+                n_atoms = current_size;
+            else if (n_atoms != current_size) {
+                JGAP_LOG_AND_THROW(
+                    "Array sizes mismatch in XYZData::write: {} has size {} but expected {}", name, current_size,
+                    n_atoms
+                );
+            }
         }
 
         out_stream << n_atoms << "\n";
 
         std::vector<std::string> meta_parts;
-        for (auto const& [k, v] : info) {
+        for (auto const& [k, v]: info) {
             std::string key = k;
 
             std::string part = key + "=";
             std::string val_str;
-            std::visit([&val_str](auto&& arg) {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, std::string>) {
-                    val_str = arg;
-                } else if constexpr (std::is_same_v<T, int>) {
-                    val_str = std::to_string(arg);
-                } else if constexpr (std::is_same_v<T, Real>) {
-                    val_str = std::to_string(arg);
-                } else if constexpr (std::is_same_v<T, Vector3>) {
-                    val_str = std::format("{} {} {}", arg.x, arg.y, arg.z);
-                } else if constexpr (std::is_same_v<T, Virials>) {
-                    std::ostringstream oss;
-                    oss << arg.xx << " " << arg.xy << " " << arg.xz << " "
-                        << arg.xy << " " << arg.yy << " " << arg.yz << " "
-                        << arg.xz << " " << arg.yz << " " << arg.zz;
-                    val_str = oss.str();
-                } else if constexpr (std::is_same_v<T, Lattice>) {
-                    std::ostringstream oss;
-                    oss << arg.a.x << " " << arg.a.y << " " << arg.a.z << " "
-                        << arg.b.x << " " << arg.b.y << " " << arg.b.z << " "
-                        << arg.c.x << " " << arg.c.y << " " << arg.c.z;
-                    val_str = oss.str();
-                } else if constexpr (std::is_same_v<T, std::array<bool, 3>>) {
-                    std::ostringstream oss;
-                    oss << (arg[0] ? "T" : "F") << " " << (arg[1] ? "T" : "F") << " " << (arg[2] ? "T" : "F");
-                    val_str = oss.str();
-                }
-            }, v);
+            std::visit(
+                [&val_str](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, std::string>) {
+                        val_str = arg;
+                    } else if constexpr (std::is_same_v<T, int>) {
+                        val_str = std::to_string(arg);
+                    } else if constexpr (std::is_same_v<T, Real>) {
+                        val_str = std::format("{:.16g}", arg);
+                    } else if constexpr (std::is_same_v<T, Vector3>) {
+                        val_str = std::format("{:.16g} {:.16g} {:.16g}", arg.x, arg.y, arg.z);
+                    } else if constexpr (std::is_same_v<T, Virials>) {
+                        val_str = std::format(
+                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}", arg.xx, arg.xy,
+                            arg.xz, arg.xy, arg.yy, arg.yz, arg.xz, arg.yz, arg.zz
+                        );
+                    } else if constexpr (std::is_same_v<T, Lattice>) {
+                        val_str = std::format(
+                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}", arg.a.x, arg.a.y,
+                            arg.a.z, arg.b.x, arg.b.y, arg.b.z, arg.c.x, arg.c.y, arg.c.z
+                        );
+                    } else if constexpr (std::is_same_v<T, std::array<bool, 3>>) {
+                        std::ostringstream oss;
+                        oss << (arg[0] ? "T" : "F") << " " << (arg[1] ? "T" : "F") << " " << (arg[2] ? "T" : "F");
+                        val_str = oss.str();
+                    }
+                },
+                v
+            );
 
-            if (val_str.find(' ') != std::string::npos || val_str.empty()) part += "\"" + val_str + "\"";
-            else part += val_str;
+            if (val_str.find(' ') != std::string::npos || val_str.empty())
+                part += "\"" + val_str + "\"";
+            else
+                part += val_str;
             meta_parts.push_back(part);
         }
 
         std::vector<std::string> prop_tokens;
 
-        for (const auto& [name, val] : arrays) {
-            std::visit([&prop_tokens, &name](auto&& arg) {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, std::vector<int>>) prop_tokens.push_back(name + ":I:1");
-                else if constexpr (std::is_same_v<T, std::vector<Real>>) prop_tokens.push_back(name + ":R:1");
-                else if constexpr (std::is_same_v<T, std::vector<Vector3>>) prop_tokens.push_back(name + ":R:3");
-                else if constexpr (std::is_same_v<T, std::vector<std::string>>) prop_tokens.push_back(name + ":S:1");
-                else if constexpr (std::is_same_v<T, std::vector<Species>>) prop_tokens.push_back(name + ":S:1");
-            }, val);
+        for (const auto& [name, val]: arrays) {
+            std::visit(
+                [&prop_tokens, &name](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, std::vector<int>>)
+                        prop_tokens.push_back(name + ":I:1");
+                    else if constexpr (std::is_same_v<T, std::vector<Real>>)
+                        prop_tokens.push_back(name + ":R:1");
+                    else if constexpr (std::is_same_v<T, std::vector<Vector3>>)
+                        prop_tokens.push_back(name + ":R:3");
+                    else if constexpr (std::is_same_v<T, std::vector<std::string>>)
+                        prop_tokens.push_back(name + ":S:1");
+                    else if constexpr (std::is_same_v<T, std::vector<Species>>)
+                        prop_tokens.push_back(name + ":S:1");
+                },
+                val
+            );
         }
 
         meta_parts.push_back("Properties=" + join(prop_tokens, ':'));
@@ -304,21 +315,26 @@ namespace jgap {
 
         for (size_t i = 0; i < n_atoms; ++i) {
             std::vector<std::string> line_tokens;
-            for (const auto& [name, val] : arrays) {
-                std::visit([&line_tokens, i](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, std::vector<Vector3>>) {
-                        line_tokens.push_back(std::to_string(arg[i].x));
-                        line_tokens.push_back(std::to_string(arg[i].y));
-                        line_tokens.push_back(std::to_string(arg[i].z));
-                    } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-                        line_tokens.push_back(arg[i]);
-                    } else if constexpr (std::is_same_v<T, std::vector<Species>>) {
-                        line_tokens.push_back(static_cast<Species>(arg[i]).symbol());
-                    } else {
-                        line_tokens.push_back(std::to_string(arg[i]));
-                    }
-                }, val);
+            for (const auto& [name, val]: arrays) {
+                std::visit(
+                    [&line_tokens, i](auto&& arg) {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, std::vector<Vector3>>) {
+                            line_tokens.push_back(std::format("{:.16g}", arg[i].x));
+                            line_tokens.push_back(std::format("{:.16g}", arg[i].y));
+                            line_tokens.push_back(std::format("{:.16g}", arg[i].z));
+                        } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                            line_tokens.push_back(arg[i]);
+                        } else if constexpr (std::is_same_v<T, std::vector<Species>>) {
+                            line_tokens.push_back(static_cast<Species>(arg[i]).symbol());
+                        } else if constexpr (std::is_same_v<T, std::vector<int>>) {
+                            line_tokens.push_back(std::to_string(arg[i]));
+                        } else {
+                            line_tokens.push_back(std::format("{:.16g}", arg[i]));
+                        }
+                    },
+                    val
+                );
             }
             out_stream << join(line_tokens, ' ') << "\n";
         }

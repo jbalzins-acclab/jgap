@@ -3,9 +3,9 @@
 Small standalone programs that use the jgap library. Each is its own CMake project that just does
 `find_package(jgap)` + links `jgap::jgap`.
 
-- **`standard_fit/`** — `standard_fit <training.xyz> <output_prefix>`: fits a 2b+3b+EAM GAP, serializes it
-  to `<output_prefix>.jgap.h5`, and tabulates it to `<output_prefix>.tabgap.h5` + `<output_prefix>.eam.fs`
-  (logging where they were written).
+- **`standard_fit/`** — `standard_fit <training.xyz> <output_prefix>`: fits a 2b+3b+EAM GAP (with SquaredExpKernel), serializes it
+  to `<output_prefix>.jgap.h5`, and tabulates it to `<output_prefix>.tabgap.h5` + `<output_prefix>.eam.fs`.
+- **`basic_fit/`** — `basic_fit <training.xyz> <output_prefix>`: fits a 2b+3b+EAM GAP using `QuadraticBumpKernel` with explicit parameters, serializes it, and tabulates it.
 - **`read_and_predict/`** — `read_and_predict <pot.h5> <in.xyz> <out.xyz>`: loads any serialized potential
   and writes per-frame predictions.
 - **`CustomFit/`** — `custom_fit [training.xyz] [output_prefix]`: a hand-built FeNi fit (instead of

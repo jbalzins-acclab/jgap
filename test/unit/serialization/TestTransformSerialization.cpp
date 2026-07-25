@@ -10,6 +10,7 @@
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
@@ -48,6 +49,23 @@ TEST(TestTransformSerialization, Angle3bTransformation) {
     ASSERT_NE(cutoff, nullptr);
     EXPECT_DOUBLE_EQ(cutoff->getCutoff(), 4.0);
     EXPECT_DOUBLE_EQ(cutoff->getCutoffTransitionWidth(), 0.5);
+}
+
+TEST(TestTransformSerialization, CutoffJK3bTransformation) {
+    auto restored = roundTrip<ThreeBodyTransformation<4>>(
+        CutoffJK3bTransformation(CosCutoff(4.0, 0.5), CosCutoff(3.0, 0.2)), tmpFile("cutoff_jk3b.h5")
+    );
+
+    auto casted = restored.as<CutoffJK3bTransformation>();
+    ASSERT_NE(casted, nullptr);
+
+    auto main_cut = casted->getMainCutoffFunction().as<CosCutoff>();
+    ASSERT_NE(main_cut, nullptr);
+    EXPECT_DOUBLE_EQ(main_cut->getCutoff(), 4.0);
+
+    auto cut_12 = casted->getCutoff12Function().as<CosCutoff>();
+    ASSERT_NE(cut_12, nullptr);
+    EXPECT_DOUBLE_EQ(cut_12->getCutoff(), 3.0);
 }
 
 TEST(TestTransformSerialization, FSGenPairFunction) {

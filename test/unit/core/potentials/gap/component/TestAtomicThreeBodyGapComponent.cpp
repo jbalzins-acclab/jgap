@@ -49,6 +49,8 @@ namespace {
             res.gradient.fill(0.5);
             return res;
         }
+
+        Kernel<Dim>* clone() const override { return new MockKernel<Dim>(); }
     };
 }
 
@@ -117,7 +119,7 @@ TEST(TestAtomicThreeBodyGapComponent, RealThreeBody) {
     Atoms atoms({{0, 0, 0}, {3, 0, 0}, {0, 4, 0}}, {Species("Fe"), Species("Fe"), Species("Ni")});
     auto nl = NeighbourLists(atoms, 6.0);
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
+    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
     auto component = AtomicThreeBodyGapComponent(Species3AtomicSorted("Fe", "Fe", "Ni"), trans, kernel, sparse_points);
 
@@ -138,7 +140,7 @@ TEST(TestAtomicThreeBodyGapComponent, RealThreeBody) {
 
 TEST(TestAtomicThreeBodyGapComponent, TabulationThreeBody) {
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
+    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
     std::vector<Real> coeffs = {0.5};
     Species3AtomicSorted species{"Fe", "Fe", "Ni"};

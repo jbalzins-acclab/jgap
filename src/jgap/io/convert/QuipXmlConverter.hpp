@@ -21,14 +21,14 @@ namespace jgap {
     private:
         struct QuipDescriptorData {
             std::string type;
-            double delta;
-            double theta;
-            double cutoff;
+            Real delta;
+            Real theta;
+            Real cutoff;
 
-            std::optional<double> r_min;
-            std::optional<double> cutoff_transition_width;
+            std::optional<Real> r_min;
+            std::optional<Real> cutoff_transition_width;
             std::optional<std::string> pair_function;
-            std::optional<double> order;
+            std::optional<Real> order;
             std::optional<std::string> mode;
         };
 
@@ -75,7 +75,7 @@ namespace jgap {
         /// Selects the EAM base pair (density) function (FSGen / Polycutoff / Coscutoff / spline) from the
         /// descriptor's `pair_function`/`order`/`mode` fields.
         static ValuePtr<EamPairFunction> selectPairFunction(const QuipDescriptorData& main_data,
-                                                            std::optional<double> r_min, double prefactor);
+                                                            std::optional<Real> r_min, Real prefactor);
     };
 }
 

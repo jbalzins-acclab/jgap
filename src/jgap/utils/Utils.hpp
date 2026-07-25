@@ -17,9 +17,21 @@ namespace jgap {
     class Atoms;
 
 #if defined(__GNUC__) || defined(__clang__)
-    inline void sincos(Real angle, Real* sin_val, Real* cos_val) { __builtin_sincos(angle, sin_val, cos_val); }
+    inline void sincos(float angle, float* sin_val, float* cos_val) { __builtin_sincosf(angle, sin_val, cos_val); }
+    inline void sincos(double angle, double* sin_val, double* cos_val) { __builtin_sincos(angle, sin_val, cos_val); }
+    inline void sincos(long double angle, long double* sin_val, long double* cos_val) {
+        __builtin_sincosl(angle, sin_val, cos_val);
+    }
 #else
-    inline void sincos(Real angle, Real* sin_val, Real* cos_val) {
+    inline void sincos(float angle, float* sin_val, float* cos_val) {
+        *sin_val = std::sin(angle);
+        *cos_val = std::cos(angle);
+    }
+    inline void sincos(double angle, double* sin_val, double* cos_val) {
+        *sin_val = std::sin(angle);
+        *cos_val = std::cos(angle);
+    }
+    inline void sincos(long double angle, long double* sin_val, long double* cos_val) {
         *sin_val = std::sin(angle);
         *cos_val = std::cos(angle);
     }
@@ -88,7 +100,8 @@ namespace jgap {
         const auto value_start = start + 4;
         const auto value_end = name.find_first_of(";]", value_start);
         return std::string(name.substr(
-            value_start, value_end == std::string_view::npos ? std::string_view::npos : value_end - value_start));
+            value_start, value_end == std::string_view::npos ? std::string_view::npos : value_end - value_start
+        ));
 #elif defined(_MSC_VER)
         std::string_view name = __FUNCSIG__;
         constexpr std::string_view prefix = "typeName<";

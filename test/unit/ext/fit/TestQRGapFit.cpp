@@ -136,7 +136,7 @@ TEST(TestQRGapFit, twoAtomsWithForceQuipCompatibility5) {
     ASSERT_NEAR(coeffs[2], 0.38697171383300527, 1e-6);
 }
 
-GapPotential createEamPotential(double theta, double delta, double r_min, double cutoff,
+GapPotential createEamPotential(Real theta, Real delta, Real r_min, Real cutoff,
                                 const std::vector<Real>& sparse_pts) {
     auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
@@ -187,7 +187,7 @@ TEST(TestQRGapFit, eamQuipCompatibilityRealBox) {
     ASSERT_NEAR(coeffs[2], -0.16117464517539212, 1e-6);
 }
 
-GapPotential create3bPotential(double theta, double delta, double cutoff_transition_width, double cutoff,
+GapPotential create3bPotential(Real theta, Real delta, Real cutoff_transition_width, Real cutoff,
                                const std::vector<Vector3>& sparsePts) {
     auto trans = Angle3bTransformation(CosCutoff(cutoff, cutoff_transition_width));
     auto kernel = SquaredExpKernel<3, 1>(delta, std::array<Real, 3>{theta, theta, theta});

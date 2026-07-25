@@ -63,7 +63,7 @@ namespace jgap {
     }
 
     Cutoffs SplinePairPotential::getCutoffs() const {
-        double cutoff = 0.0;
+        Real cutoff = 0.0;
         for (const auto& interpolator: per_species_interpolators | std::views::values) {
             cutoff = std::max(cutoff, interpolator.getCutoff()[0]);
         }

@@ -13,8 +13,8 @@ namespace jgap {
         const Real inverse_spacing = 1.0 / spacing;
         const Real inverse_spacing_sq = inverse_spacing * inverse_spacing;
         std::vector<std::array<Real, 4>> bands(n_coefficients);
-        bands[0] = {inverse_spacing_sq, -2.0 * inverse_spacing_sq, inverse_spacing_sq, 0.0};
-        bands[n_coefficients - 1] = {inverse_spacing_sq, -2.0 * inverse_spacing_sq, inverse_spacing_sq, 0.0};
+        bands[0] = {inverse_spacing_sq, -2.0_r * inverse_spacing_sq, inverse_spacing_sq, 0.0};
+        bands[n_coefficients - 1] = {inverse_spacing_sq, -2.0_r * inverse_spacing_sq, inverse_spacing_sq, 0.0};
 
         for (size_t i = 1; i < n_coefficients - 1; i++) {
             bands[i][0] = basis[0];

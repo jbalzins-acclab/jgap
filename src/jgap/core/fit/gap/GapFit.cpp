@@ -19,15 +19,15 @@ namespace jgap {
         for (size_t i = 0; i < training_data.size(); i++) {
             regularization_rules.fillSigmas(sigmas_inverse[i], training_data[i]);
 
-            sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform([](Real val) -> Real { return 1.0 / val; });
+            sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform([](Real val) -> Real { return 1.0_r / val; });
             sigmas_inverse[i].virials = sigmas_inverse[i].virials.transform([](const Virials& val) -> Virials {
-                return Virials{1.0 / val.xx, 1.0 / val.xy, 1.0 / val.xz, 1.0 / val.yy, 1.0 / val.yz, 1.0 / val.zz};
+                return Virials{1.0_r / val.xx, 1.0_r / val.xy, 1.0_r / val.xz, 1.0_r / val.yy, 1.0_r / val.yz, 1.0_r / val.zz};
             });
             sigmas_inverse[i].forces =
                 sigmas_inverse[i].forces.transform([](const std::vector<Vector3>& val) -> std::vector<Vector3> {
                     std::vector<Vector3> result(val.size());
                     for (size_t j = 0; j < val.size(); j++) {
-                        result[j] = Vector3{1.0 / val[j].x, 1.0 / val[j].y, 1.0 / val[j].z};
+                        result[j] = Vector3{1.0_r / val[j].x, 1.0_r / val[j].y, 1.0_r / val[j].z};
                     }
 
                     return result;

@@ -5,7 +5,7 @@
 #include "jgap/io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    NaturalCubicSpline::NaturalCubicSpline(const std::vector<double>& r_vec_in, const std::vector<double>& e_vec_in) {
+    NaturalCubicSpline::NaturalCubicSpline(const std::vector<Real>& r_vec_in, const std::vector<Real>& e_vec_in) {
         init(r_vec_in, e_vec_in);
     }
 
@@ -23,7 +23,7 @@ namespace jgap {
         return {value, {derivative}};
     }
 
-    void NaturalCubicSpline::init(const std::vector<double>& r, const std::vector<double>& e) {
+    void NaturalCubicSpline::init(const std::vector<Real>& r, const std::vector<Real>& e) {
         if (r.size() != e.size() || r.size() < 2) {
             JGAP_LOG_ERROR("Spline reference vectors must be the same size and have at least 2 points.", true);
         }
@@ -67,7 +67,7 @@ namespace jgap {
         }
     }
 
-    size_t NaturalCubicSpline::findInterval(double r) const {
+    size_t NaturalCubicSpline::findInterval(Real r) const {
         const auto it = std::ranges::upper_bound(r_vec, r);
         const size_t idx = std::max(size_t{}, static_cast<size_t>(it - r_vec.begin()) - 1);
         return std::min(idx, r_vec.size() - 2);

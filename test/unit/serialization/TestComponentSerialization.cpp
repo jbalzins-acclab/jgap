@@ -36,9 +36,10 @@ TEST(TestComponentSerialization, NBodyTwoBody) {
     std::vector<Real> coefficients = {0.5, -0.3};
 
     auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
-    TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> component(Species2Sorted(Species("Fe"), Species("Fe")),
-                                                             transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}),
-                                                             sparse_points, coefficients);
+    TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> component(
+        Species2Sorted(Species("Fe"), Species("Fe")), transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}), sparse_points,
+        coefficients
+    );
 
     auto rt = roundTrip(component, tmpFile("nbody_2b.h5"));
     auto restored = rt.as<TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>>();
@@ -57,14 +58,16 @@ TEST(TestComponentSerialization, NBodyTwoBody) {
 
 TEST(TestComponentSerialization, ManyBodyEam) {
     TwoBodySum<1> aggregator("Fe");
-    aggregator.extend(Species2Atomic("Fe|Ni"),
-                      ValuePtr<TwoBodyTransformation<1>>(PolycutoffPairFunction(4.0, 1.0, 2.0)));
+    aggregator.extend(
+        Species2Atomic("Fe|Ni"), ValuePtr<TwoBodyTransformation<1>>(PolycutoffPairFunction(4.0, 1.0, 2.0))
+    );
 
     std::vector<Descriptor<1>> sparse_points = {Descriptor<1>{{1.5}}};
     std::vector<Real> coefficients = {0.42};
 
-    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> component(aggregator, SquaredExpKernel<1, 0>(1.0, {1.0}),
-                                                              sparse_points, coefficients);
+    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> component(
+        aggregator, SquaredExpKernel<1, 0>(1.0, {1.0}), sparse_points, coefficients
+    );
 
     auto rt = roundTrip(component, tmpFile("manybody_eam.h5"));
     auto restored = rt.as<ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>>();
@@ -81,14 +84,16 @@ TEST(TestComponentSerialization, ManyBodyEam) {
 }
 
 TEST(TestComponentSerialization, AtomicThreeBody) {
-    std::vector<Descriptor<4>> sparse_points = {Descriptor<4>{{6.0, 0.0, 3.0, 1.0}},
-                                                Descriptor<4>{{5.0, 0.5, 2.5, 0.8}}};
+    std::vector<Descriptor<4>> sparse_points = {
+        Descriptor<4>{{6.0, 0.0, 3.0, 1.0}}, Descriptor<4>{{5.0, 0.5, 2.5, 0.8}}
+    };
     std::vector<Real> coefficients = {0.15, -0.25};
 
     auto transform_ptr = ValuePtr<ThreeBodyTransformation<4>>(Angle3bTransformation(CosCutoff(6.0, 1.0)));
-    AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(Species3AtomicSorted("Fe|Fe,Ni"), transform_ptr,
-                                                                     SquaredExpKernel<3, 1>(5.0, {1.0, 1.5, 2.0}),
-                                                                     sparse_points, coefficients);
+    AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(
+        Species3AtomicSorted("Fe|Fe,Ni"), transform_ptr, SquaredExpKernel<3, 1>(5.0, {1.0, 1.5, 2.0}), sparse_points,
+        coefficients
+    );
 
     auto rt = roundTrip(component, tmpFile("atomic_3b.h5"));
     auto restored = rt.as<AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>>();

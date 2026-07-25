@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12)
+if (POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif ()
 project(jgap)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -27,9 +30,7 @@ else ()
     message(STATUS "TBB not found: multi-core parallelization won't be enabled")
 endif ()
 
-# BLAS only accelerates Eigen (EIGEN_USE_BLAS) and is OPTIONAL. Prefer an OpenBLAS CMake config (vcpkg /
-# conda / spack ship one); otherwise fall back to CMake's generic BLAS finder (Homebrew / system /
-# Accelerate / MKL); if nothing is found, Eigen uses its own (slower) routines.
+# BLAS accelerates Eigen (EIGEN_USE_BLAS) when available.
 find_package(OpenBLAS CONFIG QUIET)
 if (OpenBLAS_FOUND)
     set(JGAP_BLAS_LIBS OpenBLAS::OpenBLAS)
@@ -42,15 +43,38 @@ endif ()
 if (JGAP_BLAS_LIBS)
     message(STATUS "BLAS acceleration enabled (${JGAP_BLAS_LIBS})")
 else ()
-    # No BLAS: Eigen uses its own routines. Enable Eigen's OpenMP multi-threading so they are at least
-    # parallel (a BLAS such as OpenBLAS is still strongly recommended for best performance).
+    # No BLAS: enable Eigen's OpenMP multi-threading if available
+    if (APPLE AND NOT OpenMP_CXX_FOUND)
+        if (EXISTS "/opt/homebrew/opt/libomp")
+            set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp")
+        elseif (EXISTS "/usr/local/opt/libomp")
+            set(OpenMP_ROOT "/usr/local/opt/libomp")
+            list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/libomp")
+        endif ()
+    endif ()
+
     find_package(OpenMP QUIET)
+
+    # Fallback hints for Apple Clang with Homebrew libomp
+    if (APPLE AND NOT OpenMP_CXX_FOUND)
+        if (EXISTS "/opt/homebrew/opt/libomp")
+            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include")
+            set(OpenMP_CXX_LIB_NAMES "omp")
+            set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+            find_package(OpenMP QUIET)
+        elseif (EXISTS "/usr/local/opt/libomp")
+            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
+            set(OpenMP_CXX_LIB_NAMES "omp")
+            set(OpenMP_omp_LIBRARY "/usr/local/opt/libomp/lib/libomp.dylib")
+            find_package(OpenMP QUIET)
+        endif ()
+    endif ()
+
     if (OpenMP_CXX_FOUND)
-        message(STATUS "No BLAS found: using Eigen's built-in routines with OpenMP multi-threading "
-                       "(installing OpenBLAS is strongly recommended for better performance)")
+        message(STATUS "No BLAS found: using Eigen's built-in routines with OpenMP multi-threading")
     else ()
-        message(WARNING "No BLAS and no OpenMP found: Eigen will run single-threaded (slow). "
-                        "Installing OpenBLAS (or enabling OpenMP) is strongly recommended.")
+        message(STATUS "No BLAS and no OpenMP found: Eigen will run single-threaded")
     endif ()
 endif ()
 
@@ -129,8 +153,6 @@ add_executable(jgap_custom
 
 if (JGAP_BLAS_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
-elseif (OpenMP_CXX_FOUND)
-    target_link_libraries(jgap_lib PRIVATE OpenMP::OpenMP_CXX)
 endif ()
 
 # Eigen, HighFive, and pugixml are internal implementation details used only in .cpp files;

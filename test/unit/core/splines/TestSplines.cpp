@@ -86,7 +86,7 @@ TEST(SplineTest, CubicBSplineCutoff) {
     EXPECT_NEAR(spline_cutoff, 5.0, 1e-9);
 
     // Test just inside the cutoff
-    auto result_inside_cutoff = b_spline.interpolate({spline_cutoff - 1e-9});
+    auto result_inside_cutoff = b_spline.interpolate({spline_cutoff - 1e-9_r});
     EXPECT_NEAR(result_inside_cutoff.value, 0.0, 2e-9);
 
     // Test at the cutoff (should be zero due to boundary check)
@@ -95,7 +95,7 @@ TEST(SplineTest, CubicBSplineCutoff) {
     EXPECT_NEAR(result_at_cutoff.gradient[0], 0.0, 1e-9);
 
     // Test beyond the cutoff
-    auto result_beyond_cutoff = b_spline.interpolate({spline_cutoff + 1.0});
+    auto result_beyond_cutoff = b_spline.interpolate({spline_cutoff + 1.0_r});
     EXPECT_NEAR(result_beyond_cutoff.value, 0.0, 1e-9);
     EXPECT_NEAR(result_beyond_cutoff.gradient[0], 0.0, 1e-9);
 }

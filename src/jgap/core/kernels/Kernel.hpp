@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
+#include "jgap/core/ValuePtr.hpp"
 
 namespace jgap {
 
@@ -26,7 +27,12 @@ namespace jgap {
 
         virtual KernelValueAndGradient valueAndGradient(const Descriptor<Dim> &sparse_point,
                                                         const Descriptor<Dim> &q) const = 0;
+
+        virtual Kernel<NDim>* clone() const = 0;
     };
+
+    static_assert(Cloneable<Kernel<1>>);
+    static_assert(Cloneable<Kernel<2>>);
 
     template<typename T>
     concept CKernel = std::derived_from<T, Kernel<T::Dim>>;

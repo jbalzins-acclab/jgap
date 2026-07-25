@@ -116,7 +116,7 @@ namespace jgap {
         Real z1 = s1.atomicNumber().value();
         Real z2 = s2.atomicNumber().value();
 
-        return {coeffs, z1 * z2, (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848};
+        return {coeffs, z1 * z2, (std::pow(z1, 0.23_r) + std::pow(z2, 0.23_r)) / 0.46848_r};
     }
 
     ZblPotential::ZblPotential(const std::set<Species2Sorted>& species, EmbeddedZBLCoeffDataset embedded_dataset,

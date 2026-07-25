@@ -112,6 +112,10 @@ namespace jgap {
                 values[descriptor_index][d] += contribution.value[d];
             }
 
+            if (contribution.derivatives.empty()) {
+                return;
+            }
+
             const auto& separation = cluster_derivatives.dr01;
             const auto& derivs = contribution.derivatives;
 
@@ -128,6 +132,10 @@ namespace jgap {
                  const ThreeBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 values[descriptor_index][d] += contribution.value[d];
+            }
+
+            if (contribution.derivatives.empty()) {
+                return;
             }
 
             for (size_t i = 0; i < 3; i++) {

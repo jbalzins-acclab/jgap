@@ -40,24 +40,24 @@ namespace jgap {
                 .derivatives = {
                     std::array{
                         // wrt r_01
-                        1.0,
-                        2.0 * (r01 - r02),
-                        0.0,
+                        1.0_r,
+                        2.0_r * (r01 - r02),
+                        0.0_r,
                         df_cut_01 * f_cut_02,
                     },
                     std::array{
                         // wrt r_02
-                        1.0,
-                        2.0 * (r02 - r01),
-                        0.0,
+                        1.0_r,
+                        2.0_r * (r02 - r01),
+                        0.0_r,
                         df_cut_02 * f_cut_01,
                     },
                     std::array{
                         // wrt r_12
-                        0.0,
-                        0.0,
-                        1.0,
-                        0.0,
+                        0.0_r,
+                        0.0_r,
+                        1.0_r,
+                        0.0_r,
                     },
                 }
             };

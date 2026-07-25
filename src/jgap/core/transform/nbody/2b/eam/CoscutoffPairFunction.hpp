@@ -9,42 +9,38 @@
 namespace jgap {
     class CoscutoffPairFunction final : public EamPairFunction {
     public:
-
-        CoscutoffPairFunction(const Real cutoff, const Real r_min, const Real prefactor = 1.0)
-            : EamPairFunction(cutoff, prefactor), r_min(r_min) {
-            interval_inverse = 1.0 / (cutoff - r_min);
+        CoscutoffPairFunction(const Real cutoff, const Real r_min, const Real prefactor = 1.0_r) :
+            EamPairFunction(cutoff, prefactor), r_min(r_min) {
+            interval_inverse = 1.0_r / (cutoff - r_min);
         }
 
         Descriptor<1> evaluate(const Cluster2& pair) const override {
             Real distance = pair.r01;
-            if (distance >= cutoff) return {{0.0}};
+            if (distance >= cutoff) return {{0.0_r}};
             if (distance <= r_min) return {{prefactor}};
 
             const Real chi = (distance - r_min) * interval_inverse;
-            return {{prefactor * 0.5 * (1.0 + std::cos(M_PI * chi))}};
+            return {{prefactor * 0.5_r * (1.0_r + std::cos(static_cast<Real>(M_PI) * chi))}};
         }
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override {
             Real distance = pair.r01;
-            if (distance >= cutoff) return {{{0.0}}, {}};
-            if (distance <= r_min) return {{{prefactor}}, {}};
+            if (distance >= cutoff) return {.value = {0.0_r}, .derivatives = {0.0_r}};
+            if (distance <= r_min) return {.value = {prefactor}, .derivatives = {0.0_r}};
 
             const Real chi = (distance - r_min) * interval_inverse;
             const Real dchi_dr = interval_inverse;
 
-            Real val = prefactor * 0.5 * (1.0 + std::cos(M_PI * chi));
-            Real deriv = -prefactor * dchi_dr * 0.5 * M_PI * std::sin(M_PI * chi);
+            Real val = prefactor * 0.5_r * (1.0_r + std::cos(static_cast<Real>(M_PI) * chi));
+            Real deriv =
+                -prefactor * dchi_dr * 0.5_r * static_cast<Real>(M_PI) * std::sin(static_cast<Real>(M_PI) * chi);
 
-            return {{std::array{val}}, {std::array{deriv}}};
+            return {.value = {val}, .derivatives = {deriv}};
         }
 
-        CoscutoffPairFunction* clone() const override {
-            return new CoscutoffPairFunction(*this);
-        }
+        CoscutoffPairFunction* clone() const override { return new CoscutoffPairFunction(*this); }
 
-        Real getRMin() const {
-            return r_min;
-        }
+        Real getRMin() const { return r_min; }
 
     private:
         Real r_min;

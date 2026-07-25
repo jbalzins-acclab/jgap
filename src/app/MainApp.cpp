@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/potentials/Potential.hpp"
@@ -83,12 +84,15 @@ namespace {
 
         std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
 
+        unseqForEach(frames.begin(), frames.end(), [&](Atoms& atoms) {
+            atoms.setEnergyAndDerivatives(potential->calculateEnergy(atoms));
+        });
+
         std::ofstream out(out_xyz);
         if (!out.is_open()) {
             JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
         }
-        for (Atoms& atoms : frames) {
-            atoms.setEnergyAndDerivatives(potential->calculateEnergy(atoms));
+        for (const Atoms& atoms : frames) {
             atoms.write(out);
         }
 
