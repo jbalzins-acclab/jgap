@@ -84,7 +84,9 @@ namespace jgap {
 
         for (int d = 0; d < 3; ++d) {
             u[d] = (pos[d] - (origin[d] + spacing[d])) / spacing[d];
-            ii[d] = static_cast<int>(std::floor(u[d]));
+            int i0 = static_cast<int>(std::floor(u[d]));
+            int imax = static_cast<int>(coefficients.sizes[d]) - 4;
+            ii[d] = std::clamp(i0, 0, imax);
             t[d] = u[d] - ii[d];
         }
 
@@ -123,7 +125,7 @@ namespace jgap {
 
                 const Real pc = Phi[2][0] * cptr[0] + Phi[2][1] * cptr[1] + Phi[2][2] * cptr[2] + Phi[2][3] * cptr[3];
                 const Real dpc =
-                        dPhi[2][0] * cptr[0] + dPhi[2][1] * cptr[1] + dPhi[2][2] * cptr[2] + dPhi[2][3] * cptr[3];
+                    dPhi[2][0] * cptr[0] + dPhi[2][1] * cptr[1] + dPhi[2][2] * cptr[2] + dPhi[2][3] * cptr[3];
 
                 ppc += Phi[1][j] * pc;
                 dpp1 += dPhi[1][j] * pc;
@@ -140,6 +142,8 @@ namespace jgap {
     }
 
     std::array<Real, 3> CubicBSpline3D::getCutoff() const {
+        // Original grid data_origin = origin + spacing, data_points N = sizes - 2.
+        // Cutoff is exact upper bound: data_origin + (N - 1) * spacing.
         std::array<Real, 3> cutoff;
         for (int d = 0; d < 3; ++d) {
             const Real data_points = static_cast<Real>(coefficients.sizes[d] - 2);

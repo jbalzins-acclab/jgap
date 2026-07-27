@@ -24,22 +24,25 @@ namespace jgap {
 
         std::vector<ManyBodyGrids2<1, 1>> eam_grids_vec{};
 
+        // Grid spacings use (N - 1) intervals so that N grid points exactly span [min, max].
+        // For example, for 3B radial axis: spacing = (cutoff - r_min_3b) / (n_grid_3b[0] - 1).
         TabGapData(const TabulationParams& params) :
             params(params),
             two_body_grids(
-                {0.0_r}, {params.max_cutoffs.forDim(2) / static_cast<Real>(params.n_grid_2b)}, {params.n_grid_2b}
+                {0.0_r}, {params.max_cutoffs.forDim(2) / static_cast<Real>(params.n_grid_2b - 1)}, {params.n_grid_2b}
             ),
             three_body_grids(
                 {params.r_min_3b, params.r_min_3b, -1.0_r},
-                {params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[0]),
-                 params.max_cutoffs.forDim(3) / static_cast<Real>(params.n_grid_3b[1]),
-                 2.0_r / static_cast<Real>(params.n_grid_3b[2])},
+                {(params.max_cutoffs.forDim(3) - params.r_min_3b) / static_cast<Real>(params.n_grid_3b[0] - 1),
+                 (params.max_cutoffs.forDim(3) - params.r_min_3b) / static_cast<Real>(params.n_grid_3b[1] - 1),
+                 2.0_r / static_cast<Real>(params.n_grid_3b[2] - 1)},
                 params.n_grid_3b
             ) {}
 
         ManyBodyGrids2<1, 1>& newEamGrid(const Species& central_atom_species) {
+            // Aggregator and EAM density value grids use (n_grid_2b - 1) intervals.
             AtomicTwoBodyGrids<1> aggregator_grids(
-                {0.0_r}, {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b)},
+                {0.0_r}, {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b - 1)},
                 {params.n_grid_2b}
             );
 
@@ -47,7 +50,7 @@ namespace jgap {
                 central_atom_species, aggregator_grids,
                 Grid<1>{
                     std::array{params.n_grid_2b},
-                    std::array{params.max_eam_density / static_cast<Real>(params.n_grid_2b)},
+                    std::array{params.max_eam_density / static_cast<Real>(params.n_grid_2b - 1)},
                     std::array{0.0_r},
                 }
             );
@@ -74,8 +77,9 @@ namespace jgap {
         Real r01 = grid_pos[0];
         Real r02 = grid_pos[1];
 
-        Real cos12 = grid_pos[2];
-        Real r12 = sqrt(r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12);
+        Real cos12 = std::clamp(grid_pos[2], -1.0_r, 1.0_r);
+        Real term = r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12;
+        Real r12 = sqrt(std::max(0.0_r, term));
 
         res.separationBetween(0, 1) = r01;
         res.separationBetween(0, 2) = r02;

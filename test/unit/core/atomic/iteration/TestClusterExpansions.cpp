@@ -9,8 +9,10 @@
 using namespace jgap;
 
 TEST(TestClusterExpansions, PBC1AtomCell) {
-    Atoms atoms({{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
-                {true, false, false});
+    Atoms atoms(
+        {{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
+        {true, false, false}
+    );
     // cutoff 2.5 means it will see its own periodic images at +2.0 and -2.0.
     auto nl = NeighbourLists(atoms, 2.5);
 
@@ -24,8 +26,10 @@ TEST(TestClusterExpansions, PBC1AtomCell) {
 }
 
 TEST(TestClusterExpansions, PBC1AtomCellCluster3) {
-    Atoms atoms({{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
-                {true, true, false});
+    Atoms atoms(
+        {{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
+        {true, true, false}
+    );
 
     auto nl = NeighbourLists(atoms, 2.5);
 
@@ -41,8 +45,9 @@ TEST(TestClusterExpansions, PBC1AtomCellCluster3) {
 TEST(TestClusterExpansions, Cluster2Expansion) {
     // A square of 4 atoms. Side length 10. Diagonal is ~14.14.
     // Cutoff is 11, so adjacent atoms are neighbors, but diagonal ones are not.
-    Atoms atoms({{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}},
-                {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")});
+    Atoms atoms(
+        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+    );
     auto nl = NeighbourLists(atoms, 11.0);
 
     // Each atom has 2 neighbors. Total pairs = 4 atoms * 2 neighbors / 2 = 4 unique pairs.
@@ -63,11 +68,26 @@ TEST(TestClusterExpansions, Cluster2Expansion) {
     EXPECT_EQ(fe_ni_pairs.size(), 2);
 }
 
+TEST(TestClusterExpansions, Cluster2Expansion_HeterogeneousIndexOrder) {
+    // If the atom of the second species has a smaller index than the first species,
+    // it used to be skipped due to an overzealous j > i check.
+    // Let's make Ni(0) and Fe(1) with distance 10.
+    Atoms atoms({{0, 0, 0}, {10, 0, 0}}, {Species("Ni"), Species("Fe")});
+    auto nl = NeighbourLists(atoms, 11.0);
+
+    // Fe-Ni pair: Fe(1)-Ni(0)
+    // Fe is sorted first in Species2Sorted("Fe,Ni")
+    Cluster2Expansion fe_ni(Species2Sorted("Fe,Ni"));
+    auto fe_ni_pairs = fe_ni.find(nl, CalculationType::ValueOnly).clusters;
+    EXPECT_EQ(fe_ni_pairs.size(), 1);
+}
+
 TEST(TestClusterExpansions, AtomicCluster2Expansion) {
     // A square of 4 atoms. Side length 10. Diagonal is ~14.14.
     // Cutoff is 11, so adjacent atoms are neighbors, but diagonal ones are not.
-    Atoms atoms({{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}},
-                {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")});
+    Atoms atoms(
+        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+    );
     auto nl = NeighbourLists(atoms, 11.0);
 
     // Atom-centric pairs are formed from a central atom and its neighbors.
@@ -93,8 +113,9 @@ TEST(TestClusterExpansions, AtomicCluster2Expansion) {
 
 TEST(TestClusterExpansions, AtomicCluster3Expansion) {
     // Same square of 4 atoms.
-    Atoms atoms({{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}},
-                {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")});
+    Atoms atoms(
+        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+    );
     auto nl = NeighbourLists(atoms, 11.0);
 
     // Triplets are formed from a central atom and two of its neighbors.
@@ -165,7 +186,8 @@ TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
     // Reduction factor is always 2.0 when nodes are different species (e.g. Fe|Cu,Al)
     AtomicCluster3Expansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::Reduced);
     EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);
-    AtomicCluster3Expansion reduced_diff_species2(Species3AtomicSorted("Fe|Al,Cu"),
-                                                  ClusterPermutationMode::PermuteSameSpecies);
+    AtomicCluster3Expansion reduced_diff_species2(
+        Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::PermuteSameSpecies
+    );
     EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);
 }

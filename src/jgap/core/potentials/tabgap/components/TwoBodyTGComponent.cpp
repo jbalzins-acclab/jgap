@@ -8,7 +8,6 @@ namespace jgap {
     AtomicQuantity TwoBodyTGComponent::energy(const NeighbourLists& nl) const {
         AtomicQuantity result(nl.nAtoms());
 
-
         auto expansion_result = expansion.find(nl, CalculationType::WithGradients);
         assert(expansion_result.derivatives.has_value());
 

@@ -186,9 +186,15 @@ namespace jgap {
         }
 
         const auto& coeff_grid = spline_cast->getCoefficients();
+        const auto original_grid_size = static_cast<Real>(coeff_grid.sizes[0] - 2);
+
+        // Original grid bounds: lower = origin + spacing, upper = origin + (sizes - 2) * spacing
         pair_group.createDataSet(/*Original grid, not spline coeffs*/
                                  "grid_limits",
-                                 std::vector{coeff_grid.origin[0] + coeff_grid.spacing[0], coeff_grid.getCutoff()[0]});
+                                 std::vector{
+                                     coeff_grid.origin[0] + coeff_grid.spacing[0],
+                                     coeff_grid.origin[0] + original_grid_size * coeff_grid.spacing[0]
+                                 });
 
         pair_group.createAttribute("N", coeff_grid.sizes[0] - 2 /*Original grid, not spline coeffs*/);
         pair_group.createDataSet("energies", coeff_grid.data_flat);
@@ -198,7 +204,7 @@ namespace jgap {
     /// per axis, `N` is the original grid point count (= coeff dims - 2) and `grid_limits`
     /// stores the original-grid extent [origin, cutoff] derived from the coefficient grid; `energies`
     /// holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
-    /// "&lt;i&gt;-&lt;j&gt;-&lt;k&gt;" so readers can tell 2b (one '-') from 3b (two '-') groups.
+    /// "<i>-<j>-<k>" so readers can tell 2b (one '-') from 3b (two '-') groups.
     ///
     /// @param root the HDF5 group to add the triplet group to.
     /// @param component the 3-body component to write.
@@ -214,24 +220,29 @@ namespace jgap {
         triplet_group.createAttribute("element_k", node_species[1].symbol());
 
         const auto& coeff_grid = component.getSpline().getCoefficients();
+        const auto original_grid_sizes = std::array{
+            static_cast<Real>(coeff_grid.sizes[0] - 2),
+            static_cast<Real>(coeff_grid.sizes[1] - 2),
+            static_cast<Real>(coeff_grid.sizes[2] - 2),
+        };
 
-        // Original-grid lower limit = coeff origin + spacing; upper limit = coeff-grid cutoff
-        // (origin + (dims - 1) * spacing). See readFromGroup for the matching reconstruction.
+        // Original-grid lower limit = coeff origin + spacing; upper limit = coeff origin + (sizes - 2) * spacing
         triplet_group.createDataSet(
-            "grid_limits",
-            std::array{
-                coeff_grid.origin[0] + coeff_grid.spacing[0], coeff_grid.origin[1] + coeff_grid.spacing[1],
-                coeff_grid.origin[2] + coeff_grid.spacing[2], coeff_grid.getCutoff()[0], coeff_grid.getCutoff()[1],
-                coeff_grid.getCutoff()[2]
-            }
+            "grid_limits", std::array{
+                               coeff_grid.origin[0] + coeff_grid.spacing[0],
+                               coeff_grid.origin[1] + coeff_grid.spacing[1],
+                               coeff_grid.origin[2] + coeff_grid.spacing[2],
+                               coeff_grid.origin[0] + original_grid_sizes[0] * coeff_grid.spacing[0],
+                               coeff_grid.origin[1] + original_grid_sizes[1] * coeff_grid.spacing[1],
+                               coeff_grid.origin[2] + original_grid_sizes[2] * coeff_grid.spacing[2],
+                           }
         );
 
         triplet_group.createDataSet(
-            "N",
-            std::array{
-                // original grid point counts, not coeff counts
-                coeff_grid.sizes[0] - 2, coeff_grid.sizes[1] - 2, coeff_grid.sizes[2] - 2
-            }
+            "N", std::array{
+                     // original grid point counts N, not coeff counts (coeff count = N + 2)
+                     coeff_grid.sizes[0] - 2, coeff_grid.sizes[1] - 2, coeff_grid.sizes[2] - 2
+                 }
         );
 
         triplet_group.createDataSet("energies", coeff_grid.data_flat);
@@ -433,11 +444,12 @@ namespace jgap {
                 size_t n_original_grid;
                 group.getAttribute("N").read(n_original_grid);
 
-                // Exact inverse of write2b: it stored N = dims - 2, lower = origin + spacing,
-                // upper = origin + (dims - 1) * spacing, so spacing = (upper - lower) / N.
+                // Inverse of write2b: limits store original grid bounds [lower, upper] = [r_min, r_max].
+                // Original grid has N points spanning [lower, upper], so spacing = (upper - lower) / (N - 1).
+                // Spline grid has N + 2 coefficient points with origin shifted back by 1 spacing (lower - spacing).
                 Real lower = limits.at(0);
                 Real upper = limits.at(1);
-                Real spacing = (upper - lower) / static_cast<Real>(n_original_grid);
+                Real spacing = (upper - lower) / static_cast<Real>(n_original_grid - 1);
                 Grid<1> spline_grid{{n_original_grid + 2}, {spacing}, {lower - spacing}};
 
                 group.getDataSet("energies").read(spline_grid.data_flat);
@@ -456,22 +468,21 @@ namespace jgap {
 
                 Species3AtomicSorted triplet{species_i, species_j, species_k};
 
-                std::array<size_t, 3> n_original{}; // original grid point counts (see write3b)
+                std::array<size_t, 3> n_original{}; // original grid point counts N per axis (see write3b)
                 group.getDataSet("N").read(n_original);
 
                 std::array<Real, 6> grid_limits{}; // lower xyz, then upper xyz
                 group.getDataSet("grid_limits").read(grid_limits);
 
-                // Inverse of write3b (mirrors the 2b reconstruction per axis): the stored upper limit is
-                // the coefficient grid's cutoff (one spacing past the last original point), so
-                // spacing = (upper - lower) / N, the coeff grid has N + 2 points and starts one spacing
-                // below the original origin.
+                // Inverse of write3b: limits store original grid bounds [lower, upper] per axis.
+                // Original grid has N points spanning [lower, upper], so spacing = (upper - lower) / (N - 1).
+                // Spline grid has N + 2 coefficient points with origin shifted back by 1 spacing (lower - spacing).
                 std::array lower{grid_limits[0], grid_limits[1], grid_limits[2]};
                 std::array upper{grid_limits[3], grid_limits[4], grid_limits[5]};
                 std::array spacing{
-                    (upper[0] - lower[0]) / static_cast<Real>(n_original[0]),
-                    (upper[1] - lower[1]) / static_cast<Real>(n_original[1]),
-                    (upper[2] - lower[2]) / static_cast<Real>(n_original[2])
+                    (upper[0] - lower[0]) / static_cast<Real>(n_original[0] - 1),
+                    (upper[1] - lower[1]) / static_cast<Real>(n_original[1] - 1),
+                    (upper[2] - lower[2]) / static_cast<Real>(n_original[2] - 1)
                 };
                 std::array<size_t, 3> spline_dims{n_original[0] + 2, n_original[1] + 2, n_original[2] + 2};
                 std::array spline_grid_origin{lower[0] - spacing[0], lower[1] - spacing[1], lower[2] - spacing[2]};

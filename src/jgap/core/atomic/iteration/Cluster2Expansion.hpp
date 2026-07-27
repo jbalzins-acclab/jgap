@@ -15,17 +15,17 @@ namespace jgap {
     public:
         static constexpr size_t ClusterPermutationsAvailable = factorial(2);
 
-        Cluster2Expansion(const Species2Sorted &species_set) : species_set(species_set) {}
+        Cluster2Expansion(const Species2Sorted& species_set) : species_set(species_set) {}
 
-        Cluster2ExpansionResult find(const NeighbourLists &neighbour_list, CalculationType calc_type) const {
+        Cluster2ExpansionResult find(const NeighbourLists& neighbour_list, CalculationType calc_type) const {
             Cluster2ExpansionResult result(calc_type);
 
-            for (auto &species: species_set.nodes) {
+            for (auto& species: species_set.nodes) {
                 if (!neighbour_list.atoms_by_species.contains(species)) return result;
             }
 
-            const auto &species1 = species_set.nodes[0];
-            const auto &species2 = species_set.nodes[1];
+            const auto& species1 = species_set.nodes[0];
+            const auto& species2 = species_set.nodes[1];
 
             for (size_t i: neighbour_list.atoms_by_species.at(species1)) {
                 auto atom_neighbours = neighbour_list.neighbours_per_atom[i].find(species2);
@@ -35,12 +35,17 @@ namespace jgap {
                 result.reserve(result.clusters.size() + atom_neighbours->second.size());
 
                 for (auto neigh_data: atom_neighbours->second) {
-                    if (neigh_data.neighbour_index == i) [[unlikely]] {
-                        if (neigh_data.separation.derivatives.direction.isPositive()) {
+                    if (species1 == species2) {
+                        if (neigh_data.neighbour_index == i) [[unlikely]] {
+                            if (neigh_data.separation.derivatives.direction.isPositive()) {
+                                std::array neigh_array{neigh_data};
+                                result.add(i, neigh_array);
+                            }
+                        } else if (neigh_data.neighbour_index > i) {
                             std::array neigh_array{neigh_data};
                             result.add(i, neigh_array);
                         }
-                    } else if (neigh_data.neighbour_index > i) {
+                    } else {
                         std::array neigh_array{neigh_data};
                         result.add(i, neigh_array);
                     }

@@ -85,7 +85,10 @@ namespace jgap {
         }
 
         const Real u = (r - data_origin) / h;
-        const int i = static_cast<int>(std::floor(u));
+        // Maximum allowed starting index: coeff sizes - 4 ensures reading i..i+3 remains within valid memory [0,
+        // sizes-1]
+        const int imax = static_cast<int>(coefficients.sizes[0]) - 4;
+        const int i = std::clamp(static_cast<int>(std::floor(u)), 0, imax);
         const Real t = u - i;
 
         const Real t2 = t * t;
@@ -115,8 +118,8 @@ namespace jgap {
     }
 
     std::array<Real, 1> CubicBSpline::getCutoff() const {
-        // The valid data range is from the original grid's origin to its last point.
-        // The coefficient grid has 2 extra points.
+        // The valid data range is from the original grid's origin (data_origin = coefficients.origin[0] + h)
+        // to its last point at data_origin + (N - 1) * h, where N = coefficients.sizes[0] - 2.
         const Real data_points = static_cast<Real>(coefficients.sizes[0] - 2);
         const Real data_origin = coefficients.origin[0] + coefficients.spacing[0];
         return {data_origin + (data_points - 1) * coefficients.spacing[0]};

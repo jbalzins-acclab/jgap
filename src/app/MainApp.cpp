@@ -12,6 +12,7 @@
 //       as three comma-separated counts, e.g. n_grid_3b=80,80,80).
 
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -23,10 +24,10 @@
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/tabulation/TabulationParams.hpp"
+#include "jgap/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/Utils.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
 
 using namespace jgap;
 
@@ -35,7 +36,8 @@ namespace {
     void printUsage(const char* exe) {
         std::cerr << "Usage:\n"
                   << "  " << exe << " --predict  <pot.h5> <in.xyz> <out.xyz>\n"
-                  << "  " << exe << " --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..]"
+                  << "  " << exe
+                  << " --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..]"
                      " [n_grid_2b=..] [n_grid_3b=a,b,c]\n";
     }
 
@@ -71,16 +73,63 @@ namespace {
         return out;
     }
 
+    ValuePtr<Potential> loadPotential(const std::string& pot_path) {
+        namespace fs = std::filesystem;
+        fs::path p(pot_path);
+        const bool has_extension = p.has_extension();
+
+        if (!has_extension) {
+            std::vector<std::string> tabgap_files;
+            const std::string tabgap_h5 = pot_path + ".tabgap.h5";
+            const std::string eam_fs = pot_path + ".eam.fs";
+
+            if (fs::exists(tabgap_h5)) {
+                tabgap_files.push_back(tabgap_h5);
+            }
+            if (fs::exists(eam_fs)) {
+                tabgap_files.push_back(eam_fs);
+            }
+
+            if (!fs::exists(eam_fs)) {
+                const fs::path dir = p.parent_path().empty() ? "." : p.parent_path();
+                if (fs::exists(dir) && fs::is_directory(dir)) {
+                    const std::string stem = p.filename().string();
+                    for (const auto& entry: fs::directory_iterator(dir)) {
+                        const std::string fname = entry.path().filename().string();
+                        if (fname.starts_with(stem) && fname.ends_with(".eam.fs") && fname != eam_fs) {
+                            tabgap_files.push_back(entry.path().string());
+                        }
+                    }
+                }
+            }
+
+            if (!tabgap_files.empty()) {
+                JGAP_LOG_INFO("Loading tabGAP potential from files: {}", vectorToString(tabgap_files));
+                return TabGapIO::read(tabgap_files);
+            }
+
+            if (fs::exists(pot_path + ".jgap.h5")) {
+                return SerializationRegistry<Potential>::deserialize(pot_path + ".jgap.h5");
+            }
+            if (fs::exists(pot_path + ".h5")) {
+                return SerializationRegistry<Potential>::deserialize(pot_path + ".h5");
+            }
+        }
+
+
+        return SerializationRegistry<Potential>::deserialize(pot_path);
+    }
+
     int predict(const std::vector<std::string>& args) {
         if (args.size() != 3) {
-            std::cerr << "--predict expects: <pot.h5> <in.xyz> <out.xyz>\n";
+            std::cerr << "--predict expects: <pot_file> <in.xyz> <out.xyz>\n";
             return 1;
         }
         const std::string& pot_file = args[0];
         const std::string& in_xyz = args[1];
         const std::string& out_xyz = args[2];
 
-        const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(pot_file);
+        const ValuePtr<Potential> potential = loadPotential(pot_file);
 
         std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
 
@@ -92,7 +141,7 @@ namespace {
         if (!out.is_open()) {
             JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
         }
-        for (const Atoms& atoms : frames) {
+        for (const Atoms& atoms: frames) {
             atoms.write(out);
         }
 

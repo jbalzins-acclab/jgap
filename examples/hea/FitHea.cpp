@@ -21,9 +21,9 @@ int main(int argc, char** argv) {
     CurrentLogger::initDefault({});
     const auto start = std::chrono::steady_clock::now();
 
-    const std::string xml_filename = (argc > 1) ? argv[1] : "potential_xml_files/gap_HEA.xml";
-    const std::string train_xyz = (argc > 2) ? argv[2] : "db/train.xyz";
-    const std::string output_prefix = (argc > 3) ? argv[3] : "hea";
+    const std::string xml_filename = (argc > 1) ? argv[1] : "gap_xml_files/gp_WTaCrV.xml";
+    const std::string train_xyz = (argc > 2) ? argv[2] : "db_WTaCrV.xyz";
+    const std::string output_prefix = (argc > 3) ? argv[3] : "WTaCrV";
 
     JGAP_LOG_INFO("Loading QUIP XML template from: {}", xml_filename);
     ValuePtr<Potential> pot = QuipXmlConverter::transform(xml_filename);
@@ -40,11 +40,19 @@ int main(int argc, char** argv) {
     // ===== setup regularization from QUIP command line parameters =====
     const PerConfigTypeRegularizationRules regularization(
         ConfigSigmas(0.002, 0.1, 0.2),
-        "isolated_atom:0.0001:0.04:0.04:0.0:liquid:0.01:0.5:2.0:0.0:dimer:0.01:0.5:2.0:0.0:"
-        "short_range:0.01:0.5:2.0:0.0:liquid_surface_100:0.01:0.5:2.0:0.0:"
-        "liquid_surface_110:0.01:0.5:2.0:0.0:liquid_surface_111:0.01:0.5:2.0:0.0:"
-        "gamma_surface:0.002:0.08:0.5:0.0:liquid_high:0.02:0.8:5.0:0.0:"
-        "HEA_liquid:0.01:0.5:2.0:0.0:HEA_short_range:0.01:0.5:2.0:0.0"
+        "isolated_atom:0.0001:0.04:0.01:0.0:liquid:0.01:0.5:2.0:0.0:"
+        "liquid_composition:0.01:0.5:2.0:0.0:liquid_quaternary:0.01:0.5:2.0:0.0:"
+        "surf_liquid:0.01:0.4:0.2:0.0:dimer:0.1:1.0:1.0:0.0:short_range:0.05:0.8:0.8:0.0:"
+        "composition:0.005:0.1:0.5:0.0:binary_alloys:0.005:0.1:0.5:0.0:"
+        "alloy_ints:0.005:0.1:0.5:0.0:quaternary_composition:0.005:0.1:0.5:0.0:"
+        "vac_saddle_alloy:0.005:0.1:0.5:0.0:alloy_vacs:0.005:0.1:0.5:0.0:"
+        "alloy_edge:0.005:0.1:0.5:0.0:mcmd:0.005:0.1:0.5:0.0:mcmd_ints:0.005:0.1:0.5:0.0:"
+        "mcmd_vacs:0.005:0.1:0.5:0.0:alloy_surf:0.01:0.4:0.5:0.0:"
+        "bcc_distorted_dense:0.005:0.1:0.5:0.0:fcc:0.01:0.1:0.5:0.0:hcp:0.01:0.1:0.5:0.0:"
+        "C15:0.01:0.1:0.5:0.0:sc:0.01:0.1:0.5:0.0:dia:0.01:0.1:0.5:0.0:"
+        "surface_100:0.005:0.1:0.5:0.0:surface_110:0.005:0.1:0.5:0.0:surface_111:0.005:0.1:0.5:0.0:"
+        "surface_112:0.005:0.1:0.5:0.0:damian_binaries:0.005:0.1:0.5:0.0:binary_A15:0.01:0.1:1.0:0.0:"
+        "binary_C14:0.01:0.1:1.0:0.0:binary_C15:0.01:0.1:1.0:0.0:binary_C36:0.01:0.1:1.0:0.0"
     );
 
     // ===== fit using Streaming QR =====

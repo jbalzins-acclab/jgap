@@ -9,27 +9,31 @@
 #include "jgap/core/Matrix.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
 #include "jgap/core/transform/manybody/NBodyAggregator.hpp"
+#include "jgap/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
     class ManyBodyGapComponent final : public GapComponent {
     public:
-        ManyBodyGapComponent(const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel,
-                             std::vector<Descriptor<Dim>> sparse_points,
-                             const std::vector<Real>& optional_coeffs = {}) :
+        ManyBodyGapComponent(
+            const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel,
+            std::vector<Descriptor<Dim>> sparse_points, const std::vector<Real>& optional_coeffs = {}
+        ) :
             aggregator(aggregator), kernel(kernel), sparse_points(std::move(sparse_points)) {
             if (!optional_coeffs.empty()) {
                 this->setCoefficients(optional_coeffs);
             }
         }
 
-        ManyBodyGapComponent(const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel,
-                             const Sparsifier<Dim>& sparsifier, const std::vector<Atoms>& training_data,
-                             const std::vector<Real>& optional_coeffs = {}) :
-            ManyBodyGapComponent(aggregator, kernel,
-                                 sparsifier.selectSparsePoints(getAllDescriptors(training_data, aggregator)),
-                                 optional_coeffs) {}
+        ManyBodyGapComponent(
+            const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel, const Sparsifier<Dim>& sparsifier,
+            const std::vector<Atoms>& training_data, const std::vector<Real>& optional_coeffs = {}
+        ) :
+            ManyBodyGapComponent(
+                aggregator, kernel, sparsifier.selectSparsePoints(getAllDescriptors(training_data, aggregator)),
+                optional_coeffs
+            ) {}
 
         std::optional<AtomicQuantities> covariate(const NeighbourLists& nl) const override {
             auto aggregated_descriptors = aggregator->aggregate(nl);
@@ -95,6 +99,23 @@ namespace jgap {
                 aggregator->tabulateNewManyBodyGrid(tables);
                 auto& eam_grids = tables.eam_grids_vec.back();
 
+                Real max_sparse = 0.0;
+                if (!sparse_points.empty()) {
+                    max_sparse = sparse_points[0][0];
+                    for (const auto& sp: sparse_points) {
+                        if (sp[0] > max_sparse) {
+                            max_sparse = sp[0];
+                        }
+                    }
+                }
+
+                if (max_sparse < tables.params.max_eam_density) {
+                    JGAP_LOG_WARN(
+                        "Max sparse point ({}) is less than max EAM density ({}) during tabulation", max_sparse,
+                        tables.params.max_eam_density
+                    );
+                }
+
                 for (auto cell: eam_grids.value_grid) {
                     for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
                         cell.value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], cell.pos);
@@ -107,8 +128,9 @@ namespace jgap {
         }
 
     private:
-        static std::vector<Descriptor<Dim>> getAllDescriptors(const std::vector<Atoms>& training_data,
-                                                              const ValuePtr<NBodyAggregator<Dim>>& aggregator) {
+        static std::vector<Descriptor<Dim>> getAllDescriptors(
+            const std::vector<Atoms>& training_data, const ValuePtr<NBodyAggregator<Dim>>& aggregator
+        ) {
             std::vector<Descriptor<Dim>> all_descriptors;
             Real cutoff = aggregator->getCutoffs().maxOverall();
             for (const auto& atoms: training_data) {

@@ -206,26 +206,10 @@ namespace jgap {
     }
 
     std::map<std::string, XYZArrayType>& XYZData::getArraysForEditing() {
-
-        static bool first_edit = true;
-
-        if (first_edit) {
-            first_edit = false;
-            JGAP_LOG_WARN("Manual XYZData-array editing detected. Be careful with types!");
-        }
-
         return arrays;
     }
 
     std::map<std::string, XYZInfoType>& XYZData::getPropertiesForEditing() {
-
-        static bool first_edit = true;
-
-        if (first_edit) {
-            first_edit = false;
-            JGAP_LOG_WARN("Manual XYZData-property editing detected. Be careful with types!");
-        }
-
         return info;
     }
 

@@ -8,8 +8,9 @@ namespace jgap {
         energy_spline(HermiteCubicSpline{grids_for_element.value_grid}),
         spline_density_aggregator{grids_for_element.central_atom_species} {
         for (auto& [species_pair, eam_pf_grid]: grids_for_element.aggregator_grids.value_grids) {
-            spline_density_aggregator.extend(species_pair,
-                                             SplinePairTransformation(HermiteCubicSpline(std::move(eam_pf_grid))));
+            spline_density_aggregator.extend(
+                species_pair, SplinePairTransformation(HermiteCubicSpline(std::move(eam_pf_grid)))
+            );
         }
     }
 

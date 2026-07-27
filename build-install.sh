@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+set -e
 
 PREFIX="${PREFIX:-$HOME/.local}"
 BUILD_DIR="${BUILD_DIR:-build}"
