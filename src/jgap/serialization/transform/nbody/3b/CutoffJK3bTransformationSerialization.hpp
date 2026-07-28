@@ -13,7 +13,6 @@ namespace jgap {
         bool serialize(const ValuePtr<ThreeBodyTransformation<4>>& obj, SerializationNode& node) const override;
         ValuePtr<ThreeBodyTransformation<4>> deserialize(const SerializationNode& node) const override;
     };
-
 }
 
 #endif

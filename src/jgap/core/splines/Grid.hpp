@@ -28,8 +28,11 @@ namespace jgap {
         Grid& operator=(const Grid&) = default;
         Grid& operator=(Grid&&) noexcept = default;
 
-        Grid(const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
-             const std::array<Real, Dim>& origin) : sizes(sizes), spacing(spacing), origin(origin) {
+        Grid(
+            const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
+            const std::array<Real, Dim>& origin
+        ) :
+            sizes(sizes), spacing(spacing), origin(origin) {
             size_t total_size = 1;
             for (size_t dim: sizes) {
                 total_size *= dim;
@@ -38,8 +41,10 @@ namespace jgap {
             calculateStrides();
         }
 
-        Grid(const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
-             const std::array<Real, Dim>& origin, const std::vector<Real>& data_flat) :
+        Grid(
+            const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
+            const std::array<Real, Dim>& origin, const std::vector<Real>& data_flat
+        ) :
             sizes(sizes), spacing(spacing), origin(origin), data_flat(data_flat) {
             size_t total_size = 1;
             for (size_t dim: sizes) {
@@ -118,10 +123,39 @@ namespace jgap {
         }
 
         // --- Iterator support ---
+        struct AccumulatorRef {
+            Real& ref;
+
+            AccumulatorRef& operator=(const AccumulatorRef&) = default;
+            AccumulatorRef& operator=(AccumulatorRef&&) = default;
+            AccumulatorRef& operator=(Real) = delete;
+
+            void setValue(Real v) { ref = v; }
+
+            const AccumulatorRef& operator+=(Real v) const {
+                ref += v;
+                return *this;
+            }
+            const AccumulatorRef& operator-=(Real v) const {
+                ref -= v;
+                return *this;
+            }
+            const AccumulatorRef& operator*=(Real v) const {
+                ref *= v;
+                return *this;
+            }
+            const AccumulatorRef& operator/=(Real v) const {
+                ref /= v;
+                return *this;
+            }
+
+            operator Real() const { return ref; }
+        };
+
         struct CellRef {
             std::array<size_t, Dim> index;
             std::array<Real, Dim> pos;
-            Real& value;
+            AccumulatorRef value;
         };
 
         struct ConstCellRef {

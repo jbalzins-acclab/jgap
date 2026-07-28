@@ -27,7 +27,8 @@ namespace jgap {
         }
 
         TabGapPotential pot = TabGapIO::fromGroup(*h5_group, /*read_embedded_eam_fs=*/true);
-        if (pot.components.empty() && pot.isolated_atom_energies.empty()) {
+        if (pot.getTwoBodyComponents().empty() && pot.getThreeBodyComponents().empty() &&
+            pot.getEamComponents().empty() && pot.getIsolatedAtomEnergies().empty()) {
             return nullptr;
         }
 

@@ -1,5 +1,5 @@
 #include "CubicBSpline3D.hpp"
-#include "CubicBSpline.hpp" // For toSplineCoefficients
+#include "CubicBSpline.hpp"
 
 #include <cmath>
 
@@ -17,7 +17,7 @@ namespace jgap {
         const size_t Nz = Mz + 2;
 
         std::array<Real, 3> new_origin = values.origin;
-        for (int i = 0; i < 3; ++i) {
+        for (size_t i = 0; i < 3; i++) {
             new_origin[i] -= values.spacing[i];
         }
 
@@ -73,8 +73,10 @@ namespace jgap {
         const auto& origin = coefficients.origin;
         const auto cutoff = getCutoff();
 
-        for (int d = 0; d < 3; ++d) {
-            if (pos[d] < (origin[d] + spacing[d]) || pos[d] >= cutoff[d]) {
+        for (size_t d = 0; d < 3; d++) {
+            const Real data_origin = origin[d] + spacing[d];
+            const Real data_upper = data_origin + static_cast<Real>(dims[d] - 3) * spacing[d];
+            if (pos[d] < (data_origin - 1e-9) || pos[d] > (data_upper + 1e-9)) {
                 return {0.0, {0.0, 0.0, 0.0}};
             }
         }
@@ -82,16 +84,17 @@ namespace jgap {
         Real u[3], t[3];
         int ii[3];
 
-        for (int d = 0; d < 3; ++d) {
-            u[d] = (pos[d] - (origin[d] + spacing[d])) / spacing[d];
+        for (size_t d = 0; d < 3; d++) {
+            const Real data_origin = origin[d] + spacing[d];
+            u[d] = (pos[d] - data_origin) / spacing[d];
             int i0 = static_cast<int>(std::floor(u[d]));
-            int imax = static_cast<int>(coefficients.sizes[d]) - 4;
+            int imax = static_cast<int>(dims[d]) - 4;
             ii[d] = std::clamp(i0, 0, imax);
             t[d] = u[d] - ii[d];
         }
 
         Real Phi[3][4], dPhi[3][4];
-        for (int d = 0; d < 3; ++d) {
+        for (size_t d = 0; d < 3; ++d) {
             const Real t2 = t[d] * t[d];
             const Real t3 = t2 * t[d];
             const Real dinv = 1.0 / spacing[d];
@@ -145,7 +148,7 @@ namespace jgap {
         // Original grid data_origin = origin + spacing, data_points N = sizes - 2.
         // Cutoff is exact upper bound: data_origin + (N - 1) * spacing.
         std::array<Real, 3> cutoff;
-        for (int d = 0; d < 3; ++d) {
+        for (size_t d = 0; d < 3; d++) {
             const Real data_points = static_cast<Real>(coefficients.sizes[d] - 2);
             const Real data_origin = coefficients.origin[d] + coefficients.spacing[d];
             cutoff[d] = data_origin + (data_points - 1) * coefficients.spacing[d];

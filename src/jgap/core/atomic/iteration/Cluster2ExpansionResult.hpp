@@ -42,6 +42,6 @@ namespace jgap {
         }
     };
 
-} // namespace jgap
+}
 
-#endif // JGAP_CLUSTER2EXPANSIONRESULT_HPP
+#endif

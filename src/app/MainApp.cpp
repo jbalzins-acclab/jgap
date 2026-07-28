@@ -31,156 +31,153 @@
 
 using namespace jgap;
 
-namespace {
+void printUsage(const char* exe) {
+    std::cerr << "Usage:\n"
+              << "  " << exe << " --predict  <pot.h5> <in.xyz> <out.xyz>\n"
+              << "  " << exe
+              << " --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..]"
+                 " [n_grid_2b=..] [n_grid_3b=a,b,c]\n";
+}
 
-    void printUsage(const char* exe) {
-        std::cerr << "Usage:\n"
-                  << "  " << exe << " --predict  <pot.h5> <in.xyz> <out.xyz>\n"
-                  << "  " << exe
-                  << " --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..]"
-                     " [n_grid_2b=..] [n_grid_3b=a,b,c]\n";
+/// Strips a trailing ".h5" so e.g. "pot.h5" -> "pot" (the prefix TabGapIO::write extends).
+std::string potentialPrefix(std::string path) {
+    if (path.ends_with(".h5")) {
+        path.resize(path.size() - 3);
     }
+    return path;
+}
 
-    /// Strips a trailing ".h5" so e.g. "pot.h5" -> "pot" (the prefix TabGapIO::write extends).
-    std::string potentialPrefix(std::string path) {
-        if (path.ends_with(".h5")) {
-            path.resize(path.size() - 3);
+/// Splits "key=value" into its parts; value is empty when there is no '='.
+std::pair<std::string, std::string> splitKeyValue(const std::string& arg) {
+    const auto eq = arg.find('=');
+    if (eq == std::string::npos) {
+        return {arg, ""};
+    }
+    return {arg.substr(0, eq), arg.substr(eq + 1)};
+}
+
+std::array<size_t, 3> parseTriple(const std::string& value) {
+    std::array<size_t, 3> out{};
+    size_t start = 0;
+    for (size_t i = 0; i < 3; i++) {
+        const auto comma = value.find(',', start);
+        out[i] = std::stoul(value.substr(start, comma - start));
+        if (comma == std::string::npos) {
+            if (i != 2) JGAP_LOG_AND_THROW("n_grid_3b needs three comma-separated values: {}", value);
+            break;
         }
-        return path;
+        start = comma + 1;
     }
+    return out;
+}
 
-    /// Splits "key=value" into its parts; value is empty when there is no '='.
-    std::pair<std::string, std::string> splitKeyValue(const std::string& arg) {
-        const auto eq = arg.find('=');
-        if (eq == std::string::npos) {
-            return {arg, ""};
+ValuePtr<Potential> loadPotential(const std::string& pot_path) {
+    namespace fs = std::filesystem;
+    fs::path p(pot_path);
+    const bool has_extension = p.has_extension();
+
+    if (!has_extension) {
+        std::vector<std::string> tabgap_files;
+        const std::string tabgap_h5 = pot_path + ".tabgap.h5";
+        const std::string eam_fs = pot_path + ".eam.fs";
+
+        if (fs::exists(tabgap_h5)) {
+            tabgap_files.push_back(tabgap_h5);
         }
-        return {arg.substr(0, eq), arg.substr(eq + 1)};
-    }
-
-    std::array<size_t, 3> parseTriple(const std::string& value) {
-        std::array<size_t, 3> out{};
-        size_t start = 0;
-        for (size_t i = 0; i < 3; i++) {
-            const auto comma = value.find(',', start);
-            out[i] = std::stoul(value.substr(start, comma - start));
-            if (comma == std::string::npos) {
-                if (i != 2) JGAP_LOG_AND_THROW("n_grid_3b needs three comma-separated values: {}", value);
-                break;
-            }
-            start = comma + 1;
+        if (fs::exists(eam_fs)) {
+            tabgap_files.push_back(eam_fs);
         }
-        return out;
-    }
 
-    ValuePtr<Potential> loadPotential(const std::string& pot_path) {
-        namespace fs = std::filesystem;
-        fs::path p(pot_path);
-        const bool has_extension = p.has_extension();
-
-        if (!has_extension) {
-            std::vector<std::string> tabgap_files;
-            const std::string tabgap_h5 = pot_path + ".tabgap.h5";
-            const std::string eam_fs = pot_path + ".eam.fs";
-
-            if (fs::exists(tabgap_h5)) {
-                tabgap_files.push_back(tabgap_h5);
-            }
-            if (fs::exists(eam_fs)) {
-                tabgap_files.push_back(eam_fs);
-            }
-
-            if (!fs::exists(eam_fs)) {
-                const fs::path dir = p.parent_path().empty() ? "." : p.parent_path();
-                if (fs::exists(dir) && fs::is_directory(dir)) {
-                    const std::string stem = p.filename().string();
-                    for (const auto& entry: fs::directory_iterator(dir)) {
-                        const std::string fname = entry.path().filename().string();
-                        if (fname.starts_with(stem) && fname.ends_with(".eam.fs") && fname != eam_fs) {
-                            tabgap_files.push_back(entry.path().string());
-                        }
+        if (!fs::exists(eam_fs)) {
+            const fs::path dir = p.parent_path().empty() ? "." : p.parent_path();
+            if (fs::exists(dir) && fs::is_directory(dir)) {
+                const std::string stem = p.filename().string();
+                for (const auto& entry: fs::directory_iterator(dir)) {
+                    const std::string fname = entry.path().filename().string();
+                    if (fname.starts_with(stem) && fname.ends_with(".eam.fs") && fname != eam_fs) {
+                        tabgap_files.push_back(entry.path().string());
                     }
                 }
             }
-
-            if (!tabgap_files.empty()) {
-                JGAP_LOG_INFO("Loading tabGAP potential from files: {}", vectorToString(tabgap_files));
-                return TabGapIO::read(tabgap_files);
-            }
-
-            if (fs::exists(pot_path + ".jgap.h5")) {
-                return SerializationRegistry<Potential>::deserialize(pot_path + ".jgap.h5");
-            }
-            if (fs::exists(pot_path + ".h5")) {
-                return SerializationRegistry<Potential>::deserialize(pot_path + ".h5");
-            }
         }
 
+        if (!tabgap_files.empty()) {
+            JGAP_LOG_INFO("Loading tabGAP potential from files: {}", vectorToString(tabgap_files));
+            return TabGapIO::read(tabgap_files);
+        }
 
-        return SerializationRegistry<Potential>::deserialize(pot_path);
+        if (fs::exists(pot_path + ".jgap.h5")) {
+            return SerializationRegistry<Potential>::deserialize(pot_path + ".jgap.h5");
+        }
+        if (fs::exists(pot_path + ".h5")) {
+            return SerializationRegistry<Potential>::deserialize(pot_path + ".h5");
+        }
     }
 
-    int predict(const std::vector<std::string>& args) {
-        if (args.size() != 3) {
-            std::cerr << "--predict expects: <pot_file> <in.xyz> <out.xyz>\n";
-            return 1;
-        }
-        const std::string& pot_file = args[0];
-        const std::string& in_xyz = args[1];
-        const std::string& out_xyz = args[2];
 
-        const ValuePtr<Potential> potential = loadPotential(pot_file);
+    return SerializationRegistry<Potential>::deserialize(pot_path);
+}
 
-        std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
+int predict(const std::vector<std::string>& args) {
+    if (args.size() != 3) {
+        std::cerr << "--predict expects: <pot_file> <in.xyz> <out.xyz>\n";
+        return 1;
+    }
+    const std::string& pot_file = args[0];
+    const std::string& in_xyz = args[1];
+    const std::string& out_xyz = args[2];
 
-        unseqForEach(frames.begin(), frames.end(), [&](Atoms& atoms) {
-            atoms.setEnergyAndDerivatives(potential->calculateEnergy(atoms));
-        });
+    const ValuePtr<Potential> potential = loadPotential(pot_file);
 
-        std::ofstream out(out_xyz);
-        if (!out.is_open()) {
-            JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
-        }
-        for (const Atoms& atoms: frames) {
-            atoms.write(out);
-        }
+    std::vector<Atoms> frames = Atoms::readAtoms(in_xyz);
 
-        JGAP_LOG_INFO("Wrote predictions for {} frame(s) to {}", frames.size(), out_xyz);
-        return 0;
+    unseqForEach(frames.begin(), frames.end(), [&](Atoms& atoms) {
+        atoms.setEnergyAndDerivatives(potential->calculateEnergy(atoms));
+    });
+
+    std::ofstream out(out_xyz);
+    if (!out.is_open()) {
+        JGAP_LOG_AND_THROW("Could not open {} for writing", out_xyz);
+    }
+    for (const Atoms& atoms: frames) {
+        atoms.write(out);
     }
 
-    int tabulate(const std::vector<std::string>& args) {
-        if (args.empty()) {
-            std::cerr << "--tabulate expects: <pot.h5> [key=value ...]\n";
-            return 1;
-        }
-        const std::string& pot_file = args[0];
+    JGAP_LOG_INFO("Wrote predictions for {} frame(s) to {}", frames.size(), out_xyz);
+    return 0;
+}
 
-        const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(pot_file);
-
-        // Default tabulation params, with cutoffs taken from the potential; override the rest from args.
-        TabulationParams params;
-        params.max_cutoffs = potential->getCutoffs();
-
-        for (size_t i = 1; i < args.size(); i++) {
-            const auto [key, value] = splitKeyValue(args[i]);
-            if (key == "r_min_3b") {
-                params.r_min_3b = std::stod(value);
-            } else if (key == "max_eam_density") {
-                params.max_eam_density = std::stod(value);
-            } else if (key == "n_grid_2b") {
-                params.n_grid_2b = std::stoul(value);
-            } else if (key == "n_grid_3b") {
-                params.n_grid_3b = parseTriple(value);
-            } else {
-                JGAP_LOG_AND_THROW("Unknown tabulation parameter '{}'", key);
-            }
-        }
-
-        const TabGapPotential tabgap{potential->tabulate(params)};
-        TabGapIO::write(tabgap, potentialPrefix(pot_file));
-        return 0;
+int tabulate(const std::vector<std::string>& args) {
+    if (args.empty()) {
+        std::cerr << "--tabulate expects: <pot.h5> [key=value ...]\n";
+        return 1;
     }
+    const std::string& pot_file = args[0];
+
+    const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(pot_file);
+
+    // Default tabulation params, with cutoffs taken from the potential; override the rest from args.
+    TabulationParams params;
+    params.max_cutoffs = potential->getCutoffs();
+
+    for (size_t i = 1; i < args.size(); i++) {
+        const auto [key, value] = splitKeyValue(args[i]);
+        if (key == "r_min_3b") {
+            params.r_min_3b = std::stod(value);
+        } else if (key == "max_eam_density") {
+            params.max_eam_density = std::stod(value);
+        } else if (key == "n_grid_2b") {
+            params.n_grid_2b = std::stoul(value);
+        } else if (key == "n_grid_3b") {
+            params.n_grid_3b = parseTriple(value);
+        } else {
+            JGAP_LOG_AND_THROW("Unknown tabulation parameter '{}'", key);
+        }
+    }
+
+    const TabGapPotential tabgap{potential->tabulate(params)};
+    TabGapIO::write(tabgap, potentialPrefix(pot_file));
+    return 0;
 }
 
 int main(int argc, char** argv) {

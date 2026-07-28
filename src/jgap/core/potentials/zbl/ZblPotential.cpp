@@ -186,7 +186,6 @@ namespace jgap {
         return coefficients;
     }
 
-
     void ZblPotential::fillTables(TabulationData& tables) const {
         for (const auto& [species_pair, params]: zbl_parameters) {
             auto& table = tables.two_body_grids.getValueGrid(species_pair);

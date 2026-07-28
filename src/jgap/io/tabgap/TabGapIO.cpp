@@ -48,7 +48,6 @@ namespace jgap {
             }
         }
 
-        potential.recomputeComponentCounts();
         return potential;
     }
 
@@ -91,51 +90,46 @@ namespace jgap {
         root.createDataSet<std::string>("comment2", comment2);
 
         auto e0Group = root.createGroup("e0");
-        e0Group.createAttribute("Nelements", potential.isolated_atom_energies.size());
-        for (const auto& [element, value]: potential.isolated_atom_energies) {
+        e0Group.createAttribute("Nelements", potential.getIsolatedAtomEnergies().size());
+        for (const auto& [element, value]: potential.getIsolatedAtomEnergies()) {
             e0Group.createAttribute(element.symbol(), value);
         }
 
-        if (potential.n_eam_components == 0) {
-            root.createDataSet("npots", std::array{potential.n_2b_components, potential.n_3b_components});
+        if (potential.getEamComponents().empty()) {
+            root.createDataSet(
+                "npots", std::array{potential.getTwoBodyComponents().size(), potential.getThreeBodyComponents().size()}
+            );
         } else {
-            root.createDataSet("npots", std::array{size_t{0}, potential.n_3b_components});
+            root.createDataSet("npots", std::array{size_t{0}, potential.getThreeBodyComponents().size()});
         }
 
         std::set<Species> species_2b_and_eam;
         std::map<Species2Sorted, const TwoBodyTGComponent*> pair_pots;
         std::multimap<Species, const EamTGComponent*> eam_components;
-        for (auto& component: potential.components) {
-            if (const auto* casted2b = dynamic_cast<const TwoBodyTGComponent*>(component.get()); casted2b != nullptr) {
-                if (potential.n_eam_components == 0) {
-                    write2b(root, *casted2b);
-                } else {
-                    pair_pots.insert({casted2b->getSpeciesPair(), casted2b});
-                    species_2b_and_eam.insert(casted2b->getSpeciesPair().nodes[0]);
-                    species_2b_and_eam.insert(casted2b->getSpeciesPair().nodes[1]);
-                }
 
-            } else if (
-                const auto* casted3b = dynamic_cast<const ThreeBodyTGComponent*>(component.get()); casted3b != nullptr
-            ) {
-                write3b(root, *casted3b);
-
-            } else if (
-                const auto* casted_eam = dynamic_cast<const EamTGComponent*>(component.get()); casted_eam != nullptr
-            ) {
-                eam_components.insert({casted_eam->getSplineNBodyAggregator().getCentralSpecies(), casted_eam});
-
-                for (Species s: casted_eam->getSplineNBodyAggregator().getAllSpecies()) {
-                    species_2b_and_eam.insert(s);
-                }
-
+        for (const auto& [species_pair, component]: potential.getTwoBodyComponents()) {
+            if (potential.getEamComponents().empty()) {
+                write2b(root, component);
             } else {
-                JGAP_LOG_AND_THROW("tabGAP component of type not supported for serialization");
+                pair_pots.insert({species_pair, &component});
+                species_2b_and_eam.insert(species_pair.nodes[0]);
+                species_2b_and_eam.insert(species_pair.nodes[1]);
+            }
+        }
+
+        for (const auto& [species_triplet, component]: potential.getThreeBodyComponents()) {
+            write3b(root, component);
+        }
+
+        for (const auto& [central, component]: potential.getEamComponents()) {
+            eam_components.insert({central, &component});
+            for (Species s: component.getSplineNBodyAggregator().getAllSpecies()) {
+                species_2b_and_eam.insert(s);
             }
         }
 
         std::vector<std::string> eam_fs_contents;
-        if (potential.n_eam_components) {
+        if (!potential.getEamComponents().empty()) {
             std::vector species_2b_and_eam_vec(species_2b_and_eam.begin(), species_2b_and_eam.end());
 
             while (!pair_pots.empty() || !eam_components.empty()) {
@@ -405,11 +399,15 @@ namespace jgap {
     TabGapPotential TabGapIO::fromGroup(const HighFive::Group& root, bool read_embedded_eam_fs) {
         TabGapPotential pot{};
         readFromGroup(root, pot, read_embedded_eam_fs);
-        pot.recomputeComponentCounts();
         return pot;
     }
 
     void TabGapIO::readFromGroup(const HighFive::Group& root, TabGapPotential& pot, bool read_embedded_eam_fs) {
+        std::map<Species, Real> isolated_energies = pot.getIsolatedAtomEnergies();
+        std::map<Species2Sorted, TwoBodyTGComponent> two_body_components = pot.getTwoBodyComponents();
+        std::map<Species3AtomicSorted, ThreeBodyTGComponent> three_body_components = pot.getThreeBodyComponents();
+        std::multimap<Species, EamTGComponent> eam_components = pot.getEamComponents();
+
         // Read isolated atom energies
         if (root.exist("e0")) {
             auto e0_group = root.getGroup("e0");
@@ -418,7 +416,7 @@ namespace jgap {
                 if (attr_name == "Nelements") continue;
                 Real val;
                 e0_group.getAttribute(attr_name).read(val);
-                pot.isolated_atom_energies[attr_name] += val;
+                isolated_energies[attr_name] += val;
             }
         }
 
@@ -457,7 +455,7 @@ namespace jgap {
                     JGAP_LOG_AND_THROW("Invalid H5 pair data size for {}-{}", species_i, species_j);
                 }
 
-                pot.components.emplace_back(TwoBodyTGComponent{pair, CubicBSpline(spline_grid)});
+                two_body_components.insert_or_assign(pair, TwoBodyTGComponent{pair, CubicBSpline(spline_grid)});
 
             } else if (dash_count == 2) {
                 // Triplet group: element_i, element_j, element_k
@@ -497,9 +495,16 @@ namespace jgap {
 
                 Grid spline_grid{spline_dims, spacing, spline_grid_origin, spline_coeffs};
 
-                pot.components.emplace_back(ThreeBodyTGComponent(triplet, CubicBSpline3D(spline_grid)));
+                three_body_components.insert_or_assign(
+                    triplet, ThreeBodyTGComponent(triplet, CubicBSpline3D(spline_grid))
+                );
             }
         }
+
+        pot = TabGapPotential(
+            std::move(isolated_energies), std::move(two_body_components), std::move(three_body_components),
+            std::move(eam_components)
+        );
 
         // EAM part: take it from embedded root attributes when asked to.
         if (read_embedded_eam_fs) {
@@ -605,14 +610,21 @@ namespace jgap {
             }
         }
 
+        std::map<Species, Real> iso_energies = pot.getIsolatedAtomEnergies();
+        std::map<Species2Sorted, TwoBodyTGComponent> two_body = pot.getTwoBodyComponents();
+        std::map<Species3AtomicSorted, ThreeBodyTGComponent> three_body = pot.getThreeBodyComponents();
+        std::multimap<Species, EamTGComponent> eam = pot.getEamComponents();
+
         for (auto central_species: elements) {
-            pot.components.emplace_back(EamTGComponent(
-                ManyBodyGrids2<1, 1>{
-                    .central_atom_species = central_species,
-                    .aggregator_grids = std::move(density_grids.at(central_species)),
-                    .value_grid = std::move(embedding_energies[central_species])
-                }
-            ));
+            eam.emplace(
+                central_species, EamTGComponent(
+                                     ManyBodyGrids2<1, 1>{
+                                         .central_atom_species = central_species,
+                                         .aggregator_grids = std::move(density_grids.at(central_species)),
+                                         .value_grid = std::move(embedding_energies[central_species])
+                                     }
+                                 )
+            );
         }
 
         // Pair potential tables for i >= j
@@ -632,8 +644,12 @@ namespace jgap {
                     energy_grid.data_flat[k] = (r > 0.0 ? phi / r : 0.0);
                 }
 
-                pot.components.emplace_back(TwoBodyTGComponent{species_pair, HermiteCubicSpline{energy_grid}});
+                two_body.insert_or_assign(
+                    species_pair, TwoBodyTGComponent{species_pair, HermiteCubicSpline{energy_grid}}
+                );
             }
         }
+
+        pot = TabGapPotential(std::move(iso_energies), std::move(two_body), std::move(three_body), std::move(eam));
     }
 }

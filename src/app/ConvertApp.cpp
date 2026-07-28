@@ -17,13 +17,11 @@
 
 using namespace jgap;
 
-namespace {
-    std::string defaultOutput(std::string path) {
-        if (path.ends_with(".xml")) {
-            path.resize(path.size() - 4);
-        }
-        return path + ".h5";
+std::string defaultOutput(std::string path) {
+    if (path.ends_with(".xml")) {
+        path.resize(path.size() - 4);
     }
+    return path + ".h5";
 }
 
 int main(int argc, char** argv) {

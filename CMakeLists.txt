@@ -147,10 +147,6 @@ add_executable(jgap
         ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
 )
 
-add_executable(jgap_custom
-        ${PROJECT_SOURCE_DIR}/src/app/CustomApp.cpp
-)
-
 if (JGAP_BLAS_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
 endif ()
@@ -194,10 +190,6 @@ if (JGAP_BLAS_LIBS)
 endif ()
 
 target_link_libraries(jgap PRIVATE
-        jgap_lib
-)
-
-target_link_libraries(jgap_custom PRIVATE
         jgap_lib
 )
 

@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     }
     params.eam_pf = FSGenPairFunction(4.5, 3.0);
     params.eam_mode = EamMode::Blind;
-    params.n_sparse3 = 1000;
+    params.n_sparse3 = 500;
     params.regularization_rules = SimpleRegularizationRules();
 
     auto potential = standardGapFit(training_data, params);

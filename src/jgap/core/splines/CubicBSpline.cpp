@@ -78,9 +78,8 @@ namespace jgap {
         const Real r = pos[0];
         const Real h = coefficients.spacing[0];
         const Real data_origin = coefficients.origin[0] + h;
-        const Real cutoff = getCutoff()[0];
-
-        if (r < data_origin || r >= cutoff) {
+        const Real data_upper = data_origin + static_cast<Real>(coefficients.sizes[0] - 3) * h;
+        if (r < (data_origin - 1e-9) || r > (data_upper + 1e-9)) {
             return {0.0, {0.0}};
         }
 

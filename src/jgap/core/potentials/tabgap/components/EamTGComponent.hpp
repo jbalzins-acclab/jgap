@@ -19,6 +19,8 @@ namespace jgap {
 
         EamTGComponent* clone() const override { return new EamTGComponent(*this); }
 
+        Species getCentralSpecies() const { return spline_density_aggregator.getCentralSpecies(); }
+
         auto getSplineNBodyAggregator() const { return spline_density_aggregator; }
 
         auto getEnergySpline() const { return energy_spline; }

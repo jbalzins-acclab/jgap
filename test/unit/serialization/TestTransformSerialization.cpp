@@ -59,11 +59,13 @@ TEST(TestTransformSerialization, CutoffJK3bTransformation) {
     auto casted = restored.as<CutoffJK3bTransformation>();
     ASSERT_NE(casted, nullptr);
 
-    auto main_cut = casted->getMainCutoffFunction().as<CosCutoff>();
+    auto main_cut_ptr = casted->getMainCutoffFunction();
+    auto main_cut = main_cut_ptr.as<CosCutoff>();
     ASSERT_NE(main_cut, nullptr);
     EXPECT_DOUBLE_EQ(main_cut->getCutoff(), 4.0);
 
-    auto cut_12 = casted->getCutoff12Function().as<CosCutoff>();
+    auto cut_12_ptr = casted->getCutoff12Function();
+    auto cut_12 = cut_12_ptr.as<CosCutoff>();
     ASSERT_NE(cut_12, nullptr);
     EXPECT_DOUBLE_EQ(cut_12->getCutoff(), 3.0);
 }
