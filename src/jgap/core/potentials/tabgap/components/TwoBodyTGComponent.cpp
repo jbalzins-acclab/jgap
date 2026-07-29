@@ -8,21 +8,17 @@ namespace jgap {
     AtomicQuantity TwoBodyTGComponent::energy(const NeighbourLists& nl) const {
         AtomicQuantity result(nl.nAtoms());
 
-        auto expansion_result = expansion.find(nl, CalculationType::WithGradients);
-        assert(expansion_result.derivatives.has_value());
-
-        for (const auto& [cluster, cluster_derivs]:
-             std::views::zip(expansion_result.clusters, *expansion_result.derivatives)) {
-            auto [val, deriv] = spline->interpolate({cluster.r01});
+        expansion.forEach(nl, [&](const Cluster2& cluster) {
+            auto [val, deriv] = spline->interpolate({cluster.separation01.magnitude});
 
             result.value += val;
 
-            result.virials += cluster_derivs.dr01.virials * deriv[0];
+            result.virials += cluster.separation01.virials() * deriv[0];
 
-            Vector3 f10 = cluster_derivs.dr01.direction * deriv[0];
-            result.forces[cluster.atom_indexes[0]] += f10;
-            result.forces[cluster.atom_indexes[1]] -= f10;
-        }
+            Vector3 f10 = cluster.separation01.direction * deriv[0];
+            result.forces[cluster.idx0] += f10;
+            result.forces[cluster.idx1] -= f10;
+        });
 
         return result;
     }

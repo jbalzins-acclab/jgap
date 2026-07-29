@@ -35,24 +35,8 @@ namespace jgap {
             return length_scales;
         }
 
-        Real value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
-            Real dist_sq = 0.0_r;
-            for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q1[dim] - q2[dim];
-                dist_sq += diff * diff * inverse_length_scales_squared[dim];
-            }
-            Real base_val = prefactor / (1.0_r + dist_sq);
-
-            if constexpr (CutoffDimensions == 1) {
-                base_val *= q1[ExpDimensions] * q2[ExpDimensions];
-            }
-
-            return base_val;
-        }
-
-        KernelValueAndGradient valueAndGradient(
-            const Descriptor<TotalDimensions>& sparse_point, const Descriptor<TotalDimensions>& q
-        ) const override {
+        KernelValueAndGradient valueAndGradient(const Descriptor<TotalDimensions>& sparse_point,
+                                                const Descriptor<TotalDimensions>& q) const override {
             Real dist_sq = 0.0_r;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
                 Real diff = q[dim] - sparse_point[dim];

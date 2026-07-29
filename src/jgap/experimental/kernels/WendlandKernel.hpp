@@ -36,30 +36,6 @@ namespace jgap {
             return length_scales;
         }
 
-        Real value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
-            Real dist_sq = 0.0_r;
-            for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q1[dim] - q2[dim];
-                dist_sq += diff * diff * inverse_length_scales_squared[dim];
-            }
-
-            if (dist_sq >= 1.0_r) {
-                return 0.0_r;
-            }
-
-            Real r = std::sqrt(dist_sq);
-            Real omr = 1.0_r - r;
-            Real omr2 = omr * omr;
-            Real omr4 = omr2 * omr2;
-            Real val = prefactor * omr4 * (1.0_r + 4.0_r * r);
-
-            if constexpr (CutoffDimensions == 1) {
-                val *= q1[ExpDimensions] * q2[ExpDimensions];
-            }
-
-            return val;
-        }
-
         KernelValueAndGradient valueAndGradient(
             const Descriptor<TotalDimensions>& sparse_point, const Descriptor<TotalDimensions>& q
         ) const override {

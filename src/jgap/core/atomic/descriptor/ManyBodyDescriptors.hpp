@@ -8,8 +8,6 @@
 #include "TwoBodyDescriptor.hpp"
 #include "jgap/core/Vector3.hpp"
 #include "jgap/core/atomic/geometry/Cluster.hpp"
-#include "jgap/core/atomic/geometry/Cluster2Derivatives.hpp"
-#include "jgap/core/atomic/geometry/Cluster3Derivatives.hpp"
 
 namespace jgap {
 
@@ -106,8 +104,7 @@ namespace jgap {
             return total;
         }
 
-        void add(size_t descriptor_index, const Cluster2& cluster, const Cluster2Derivatives& cluster_derivatives,
-                 const TwoBodyDescriptor<Dim>& contribution) {
+        void add(size_t descriptor_index, const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 values[descriptor_index][d] += contribution.value[d];
             }
@@ -116,20 +113,19 @@ namespace jgap {
                 return;
             }
 
-            const auto& separation = cluster_derivatives.dr01;
+            const auto& separation = cluster.separation01;
             const auto& derivs = contribution.derivatives;
 
             for (size_t dim = 0; dim < Dim; dim++) {
                 Vector3 force_contrib = separation.direction * derivs[dim];
-                forces[descriptor_index * n_atoms + cluster.atom_indexes[0]][dim] += force_contrib;
-                forces[descriptor_index * n_atoms + cluster.atom_indexes[1]][dim] -= force_contrib;
+                forces[descriptor_index * n_atoms + cluster.idx0][dim] += force_contrib;
+                forces[descriptor_index * n_atoms + cluster.idx1][dim] -= force_contrib;
 
-                virials[descriptor_index][dim] += separation.virials * derivs[dim];
+                virials[descriptor_index][dim] += separation.virials() * derivs[dim];
             }
         }
 
-        void add(size_t descriptor_index, const Cluster3& cluster, const Cluster3Derivatives& cluster_derivatives,
-                 const ThreeBodyDescriptor<Dim>& contribution) {
+        void add(size_t descriptor_index, const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 values[descriptor_index][d] += contribution.value[d];
             }
@@ -141,7 +137,7 @@ namespace jgap {
             for (size_t i = 0; i < 3; i++) {
                 for (size_t j = i + 1; j < 3; j++) {
                     const auto sep_idx = flattenedIndex(i, j);
-                    const auto& separation = cluster_derivatives.derivativesBetween(i, j);
+                    const auto& separation = cluster.separation(sep_idx);
                     const auto& derivs = contribution.derivatives[sep_idx];
 
                     for (size_t dim = 0; dim < Dim; dim++) {
@@ -149,7 +145,7 @@ namespace jgap {
                         forces[descriptor_index * n_atoms + cluster.atom_indexes[i]][dim] += force_contrib;
                         forces[descriptor_index * n_atoms + cluster.atom_indexes[j]][dim] -= force_contrib;
 
-                        virials[descriptor_index][dim] += separation.virials * derivs[dim];
+                        virials[descriptor_index][dim] += separation.virials() * derivs[dim];
                     }
                 }
             }

@@ -8,17 +8,15 @@
 namespace jgap {
     class SplinePairTransformation final : public TwoBodyTransformation<1> {
     public:
-        SplinePairTransformation(const SplinePairTransformation &other) = default;
+        SplinePairTransformation(const SplinePairTransformation& other) = default;
         SplinePairTransformation(HermiteCubicSpline spline) : spline(std::move(spline)) {}
 
-        Descriptor<1> evaluate(const Cluster2 &cluster) const override {
-            Real r01 = cluster.r01;
-
-            return {spline.interpolate({r01}).value};
+        Descriptor<1> evaluate(const Cluster2& cluster) const override {
+            return TwoBodyTransformation<1>::evaluate(cluster);
         }
 
-        TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2 &cluster) const override {
-            Real r01 = cluster.r01;
+        TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& cluster) const override final {
+            Real r01 = cluster.separation01.magnitude;
 
             auto [val, derivative] = spline.interpolate({r01});
 
@@ -27,9 +25,9 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override { return {{2u, spline.getCutoff()[0]}}; }
 
-        SplinePairTransformation *clone() const override { return new SplinePairTransformation(*this); }
+        SplinePairTransformation* clone() const override { return new SplinePairTransformation(*this); }
 
-        const auto &getSpline() const { return spline; }
+        const auto& getSpline() const { return spline; }
 
     private:
         HermiteCubicSpline spline;

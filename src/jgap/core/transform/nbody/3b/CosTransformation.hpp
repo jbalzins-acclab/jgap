@@ -7,19 +7,13 @@ namespace jgap {
     class CosTransformation final : public ThreeBodyTransformation<3> {
     public:
         Descriptor<3> evaluate(const Cluster3& cluster) const override {
-            Real r01 = cluster.separationBetween(0, 1);
-            Real r02 = cluster.separationBetween(0, 2);
-            Real r12 = cluster.separationBetween(1, 2);
-
-            Real cos12 = (r01 * r01 + r02 * r02 - r12 * r12) / (2.0_r * r01 * r02);
-
-            return {r01, r02, cos12};
+            return ThreeBodyTransformation<3>::evaluate(cluster);
         }
 
-        ThreeBodyDescriptor<3> evaluateAndDifferentiate(const Cluster3& cluster) const override {
-            Real r01 = cluster.separationBetween(0, 1);
-            Real r02 = cluster.separationBetween(0, 2);
-            Real r12 = cluster.separationBetween(1, 2);
+        ThreeBodyDescriptor<3> evaluateAndDifferentiate(const Cluster3& cluster) const override final {
+            Real r01 = cluster.separation01().magnitude;
+            Real r02 = cluster.separation02().magnitude;
+            Real r12 = cluster.separation12().magnitude;
 
             Real inv_r01 = 1.0_r / r01;
             Real inv_r02 = 1.0_r / r02;

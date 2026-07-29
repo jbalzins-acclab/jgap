@@ -18,21 +18,13 @@ namespace jgap {
             main_cutoff(main_cutoff), cutoff_12(cutoff_12_opt.value_or(main_cutoff)) {}
 
         Descriptor<4> evaluate(const Cluster3& triplet) const override {
-            Real r01 = triplet.separationBetween(0, 1);
-            Real r02 = triplet.separationBetween(0, 2);
-            Real r12 = triplet.separationBetween(1, 2);
-
-            Real f_cut_01 = main_cutoff->evaluate(r01);
-            Real f_cut_02 = main_cutoff->evaluate(r02);
-            Real f_cut_12 = cutoff_12->evaluate(r12);
-
-            return {r01 + r02, (r01 - r02) * (r01 - r02), r12, f_cut_01 * f_cut_02 * f_cut_12};
+            return ThreeBodyTransformation<4>::evaluate(triplet);
         }
 
-        ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override {
-            Real r01 = triplet.separationBetween(0, 1);
-            Real r02 = triplet.separationBetween(0, 2);
-            Real r12 = triplet.separationBetween(1, 2);
+        ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override final {
+            Real r01 = triplet.separation01().magnitude;
+            Real r02 = triplet.separation02().magnitude;
+            Real r12 = triplet.separation12().magnitude;
 
             auto [f_cut_01, df_cut_01] = main_cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = main_cutoff->evaluateAndDifferentiate(r02);

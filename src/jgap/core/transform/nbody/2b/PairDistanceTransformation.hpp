@@ -10,16 +10,12 @@ namespace jgap {
     public:
         PairDistanceTransformation(const ValuePtr<CutoffFunction>& cutoff) : cutoff(cutoff) {}
 
-        Descriptor<2> evaluate(const Cluster2& pair) const override {
-            Real r = pair.r01;
-            Real f_cut = cutoff->evaluate(r);
-            return {{r, f_cut}};
-        }
+        Descriptor<2> evaluate(const Cluster2& pair) const override { return TwoBodyTransformation<2>::evaluate(pair); }
 
-        TwoBodyDescriptor<2> evaluateAndDifferentiate(const Cluster2& pair) const override {
-            Real r = pair.r01;
+        TwoBodyDescriptor<2> evaluateAndDifferentiate(const Cluster2& pair) const override final {
+            Real r = pair.separation01.magnitude;
             auto [f_cut, df_cut] = cutoff->evaluateAndDifferentiate(r);
-            return {{{r, f_cut}}, {std::array{1.0_r, df_cut}}};
+            return {{r, f_cut}, std::array{1.0_r, df_cut}};
         }
 
         Cutoffs getCutoffs() const override { return Cutoffs{{2, cutoff->getCutoff()}}; }

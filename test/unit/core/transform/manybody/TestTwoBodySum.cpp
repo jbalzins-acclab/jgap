@@ -19,7 +19,7 @@ namespace {
         Descriptor<1> evaluate(const Cluster2& pair) const override { return {{value_to_return_}}; }
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override {
-            Real deriv = pair.r01 * deriv_factor_;
+            Real deriv = pair.separation01.magnitude * deriv_factor_;
             return {{{value_to_return_}}, {std::array<Real, 1>{deriv}}};
         }
 

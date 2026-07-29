@@ -64,7 +64,7 @@ namespace jgap {
 
     inline Cluster2 TabulationData::gridPosAsCluster2(std::array<Real, 1> grid_pos) {
         Cluster2 res{};
-        res.r01 = grid_pos[0];
+        res.separation01.magnitude = grid_pos[0];
         return res;
     }
 
@@ -78,9 +78,9 @@ namespace jgap {
         Real term = r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12;
         Real r12 = sqrt(std::max(0.0_r, term));
 
-        res.separationBetween(0, 1) = r01;
-        res.separationBetween(0, 2) = r02;
-        res.separationBetween(1, 2) = r12;
+        res.separation01().magnitude = r01;
+        res.separation02().magnitude = r02;
+        res.separation12().magnitude = r12;
         return res;
     }
 }

@@ -57,9 +57,9 @@ TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     Angle3bTransformation trans(mock_cutoff);
 
     Cluster3 triplet;
-    triplet.separationBetween(0, 1) = r01;
-    triplet.separationBetween(0, 2) = r02;
-    triplet.separationBetween(1, 2) = r12;
+    triplet.separation01().magnitude = r01;
+    triplet.separation02().magnitude = r02;
+    triplet.separation12().magnitude = r12;
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(triplet);

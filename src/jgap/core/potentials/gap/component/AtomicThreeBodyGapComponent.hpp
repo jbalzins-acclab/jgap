@@ -20,48 +20,32 @@ namespace jgap {
     public:
         static constexpr size_t Dependencies = 3;
 
-        static std::vector<AtomicThreeBodyGapComponent> createComponents(
-            const std::vector<Atoms>& training_data, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
-            const TKernel& kernel, const Sparsifier<Dim>& sparsifier) {
-            std::set<Species3AtomicSorted> all_species_sets;
-            Real cutoff = transformation->getCutoffs().maxOverall();
-
-            for (const auto& atoms: training_data) {
-                NeighbourLists nl(atoms, cutoff);
-                auto sets = Species3AtomicSorted::getAll(nl);
-                all_species_sets.insert(sets.begin(), sets.end());
-            }
-
-            std::vector<AtomicThreeBodyGapComponent> components;
-            for (const auto& species_set: all_species_sets) {
-                components.emplace_back(species_set, transformation, kernel, sparsifier, training_data);
-            }
-
-            return components;
-        }
-
-        AtomicThreeBodyGapComponent(const Species3AtomicSorted species,
-                                    const ValuePtr<ThreeBodyTransformation<Dim>>& transformation, const TKernel& kernel,
-                                    const std::vector<Descriptor<Dim>>& sparse_points,
-                                    const std::vector<Real>& optional_coeffs = {}) :
+        AtomicThreeBodyGapComponent(
+            const Species3AtomicSorted species, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
+            const TKernel& kernel, const std::vector<Descriptor<Dim>>& sparse_points,
+            const std::vector<Real>& optional_coeffs = {}
+        ) :
             species(species),
             transformation(transformation),
             kernel(kernel),
             sparse_points(sparse_points),
             expansion(
-                species,
-                transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced : ClusterPermutationMode::PermuteSameSpecies) {
+                species, transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
+                                                               : ClusterPermutationMode::PermuteSameSpecies
+            ) {
             if (!optional_coeffs.empty()) {
                 this->setCoefficients(optional_coeffs);
             }
         }
 
-        AtomicThreeBodyGapComponent(const Species3AtomicSorted species,
-                                    const ValuePtr<ThreeBodyTransformation<Dim>>& transformation, const TKernel& kernel,
-                                    const Sparsifier<Dim>& sparsifier, const std::vector<Atoms>& training_data) :
+        AtomicThreeBodyGapComponent(
+            const Species3AtomicSorted species, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
+            const TKernel& kernel, const Sparsifier<Dim>& sparsifier, const std::vector<Atoms>& training_data
+        ) :
             AtomicThreeBodyGapComponent(
                 species, transformation, kernel,
-                sparsifier.selectSparsePoints(getAllDescriptors(training_data, species, transformation))) {}
+                sparsifier.selectSparsePoints(getAllDescriptors(training_data, species, transformation))
+            ) {}
 
         std::optional<AtomicQuantities> covariate(const NeighbourLists& neighbour_list) const override {
             AtomicQuantities result(nSparsePoints(), neighbour_list.nAtoms());
@@ -70,7 +54,7 @@ namespace jgap {
             auto it = neighbour_list.atoms_by_species.find(species.root);
             if (it != neighbour_list.atoms_by_species.end()) {
                 for (size_t atom_index: it->second) {
-                    if (covariate_atom(atom_index, neighbour_list, result)) {
+                    if (covariateAtom(atom_index, neighbour_list, result)) {
                         found_any = true;
                     }
                 }
@@ -135,17 +119,8 @@ namespace jgap {
         }
 
     private:
-        bool covariate_atom(size_t atom_index, const NeighbourLists& neighbour_list, AtomicQuantities& result) const {
-            auto expansion_result = expansion.find(atom_index, neighbour_list, CalculationType::WithGradients);
-            const auto& clusters = expansion_result.clusters;
-
-            if (clusters.empty()) {
-                return false;
-            }
-
-            assert(expansion_result.derivatives.has_value());
-
-            for (const auto& [cluster, cluster_derivs]: std::views::zip(clusters, *expansion_result.derivatives)) {
+        bool covariateAtom(size_t atom_index, const NeighbourLists& neighbour_list, AtomicQuantities& result) const {
+            return expansion.forEach(atom_index, neighbour_list, [&](const Cluster3& cluster) {
                 auto descriptor = transformation->evaluateAndDifferentiate(cluster);
 
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
@@ -153,33 +128,29 @@ namespace jgap {
 
                     result.energy(sparse_idx) += K;
 
-                    for (size_t i = 0; i < 3; i++) {
-                        for (size_t j = i + 1; j < 3; j++) {
-                            const auto sep_idx = flattenedIndex(i, j);
-                            const auto& separation_derivatives = cluster_derivs.derivativesBetween(i, j);
-                            const auto& derivatives_wrt_r_norms = descriptor.derivatives[sep_idx];
+                    for (size_t sep_idx = 0; sep_idx < 3; sep_idx++) {
+                        const auto& separation_ij = cluster.separation(sep_idx);
+                        const auto& derivatives_wrt_r_norms = descriptor.derivatives[sep_idx];
+                        const auto [atom_i, atom_j] = cluster.atomIndexes(sep_idx);
 
-                            Real dK_drnorm = 0.0;
-                            for (size_t dim = 0; dim < Dim; dim++) {
-                                dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
-                            }
-
-                            result.force(sparse_idx, cluster.atom_indexes[i]) +=
-                                separation_derivatives.direction * dK_drnorm;
-                            result.force(sparse_idx, cluster.atom_indexes[j]) -=
-                                separation_derivatives.direction * dK_drnorm;
-
-                            result.virials(sparse_idx) += separation_derivatives.virials * dK_drnorm;
+                        Real dK_drnorm = 0.0;
+                        for (size_t dim = 0; dim < Dim; dim++) {
+                            dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                         }
+
+                        result.force(sparse_idx, atom_i) += separation_ij.direction * dK_drnorm;
+                        result.force(sparse_idx, atom_j) -= separation_ij.direction * dK_drnorm;
+
+                        result.virials(sparse_idx) += separation_ij.virials() * dK_drnorm;
                     }
                 }
-            }
-            return true;
+            });
         }
 
         static std::vector<Descriptor<Dim>> getAllDescriptors(
             const std::vector<Atoms>& training_data, const Species3AtomicSorted& species,
-            const ValuePtr<ThreeBodyTransformation<Dim>>& transformation) {
+            const ValuePtr<ThreeBodyTransformation<Dim>>& transformation
+        ) {
             std::vector<Descriptor<Dim>> all_descriptors;
             const auto mode = transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
                                                                     : ClusterPermutationMode::PermuteSameSpecies;
@@ -187,15 +158,9 @@ namespace jgap {
             for (const auto& atoms: training_data) {
                 NeighbourLists nl(atoms, transformation->getCutoffs().maxOverall());
 
-                auto it = nl.atoms_by_species.find(species.root);
-                if (it != nl.atoms_by_species.end()) {
-                    for (size_t atom_index: it->second) {
-                        auto clusters = exp.find(atom_index, nl, CalculationType::ValueOnly).clusters;
-                        for (const auto& cluster: clusters) {
-                            all_descriptors.push_back(transformation->evaluate(cluster));
-                        }
-                    }
-                }
+                exp.forEach(nl, [&](const Cluster3& cluster) {
+                    all_descriptors.push_back(transformation->evaluate(cluster));
+                });
             }
             return all_descriptors;
         }

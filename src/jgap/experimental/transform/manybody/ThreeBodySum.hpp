@@ -27,7 +27,8 @@ namespace jgap {
             if (species_set.root != central_atom_species) {
                 JGAP_LOG_AND_THROW(
                     "Transformation intended for a cluster "
-                    "whose root doesn't match central atom species");
+                    "whose root doesn't match central atom species"
+                );
             }
             transformations.insert({species_set, std::move(transformation)});
         }
@@ -43,17 +44,14 @@ namespace jgap {
             for (size_t descriptor_index = 0; descriptor_index < atom_indexes.size(); ++descriptor_index) {
                 size_t atom_index = atom_indexes[descriptor_index];
                 for (const auto& [species_set, transformation]: transformations) {
-                    const auto mode = transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
-                                                                            : ClusterPermutationMode::PermuteSameSpecies;
+                    const auto mode = transformation->isSwapInvariant(1, 2)
+                                          ? ClusterPermutationMode::Reduced
+                                          : ClusterPermutationMode::PermuteSameSpecies;
                     AtomicCluster3Expansion expansion(species_set, mode);
-                    auto expansion_result = expansion.find(atom_index, nl, CalculationType::WithGradients);
-                    assert(expansion_result.derivatives.has_value());
-
-                    for (const auto& [cluster, cluster_derivs]:
-                         std::views::zip(expansion_result.clusters, *expansion_result.derivatives)) {
+                    expansion.forEach(atom_index, nl, [&](const Cluster3& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);
-                        aggregated_descriptors.add(descriptor_index, cluster, cluster_derivs, contribution);
-                    }
+                        aggregated_descriptors.add(descriptor_index, cluster, contribution);
+                    });
                 }
             }
             return aggregated_descriptors;

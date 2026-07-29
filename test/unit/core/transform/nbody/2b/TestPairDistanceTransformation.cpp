@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "jgap/core/atomic/geometry/Cluster.hpp"
+#include "jgap/core/atomic/geometry/Cluster2.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 
@@ -49,7 +49,7 @@ TEST(TestPairDistanceTransformation, CorrectlyUsesCutoff) {
     PairDistanceTransformation trans(mock_cutoff);
 
     Cluster2 pair;
-    pair.r01 = test_dist;
+    pair.separation01.magnitude = test_dist;
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(pair);

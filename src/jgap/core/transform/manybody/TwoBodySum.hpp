@@ -26,7 +26,8 @@ namespace jgap {
             if (species_set.root != central_atom_species) {
                 JGAP_LOG_AND_THROW(
                     "Transformation intended for a cluster "
-                    "whose root doesnt match central atom species");
+                    "whose root doesnt match central atom species"
+                );
             }
             transformations.insert({species_set, std::move(transformation)});
         }
@@ -42,15 +43,10 @@ namespace jgap {
                 size_t atom_index = atom_indexes[descriptor_index];
                 for (const auto& [species_set, transformation]: transformations) {
                     AtomicCluster2Expansion expansion(species_set);
-                    auto expansion_result = expansion.find(atom_index, nl, CalculationType::WithGradients);
-                    assert(expansion_result.derivatives.has_value());
-
-                    for (const auto& [cluster, cluster_derivs]:
-                         std::views::zip(expansion_result.clusters, *expansion_result.derivatives)) {
+                    expansion.forEach(atom_index, nl, [&](const Cluster2& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);
-
-                        aggregated_descriptors.add(descriptor_index, cluster, cluster_derivs, contribution);
-                    }
+                        aggregated_descriptors.add(descriptor_index, cluster, contribution);
+                    });
                 }
             }
 
@@ -76,7 +72,7 @@ namespace jgap {
 
                     for (auto cell: grid) {
                         Cluster2 as_cluster{};
-                        as_cluster.r01 = cell.pos[0];
+                        as_cluster.separation01.magnitude = cell.pos[0];
                         cell.value += transformation->evaluate(as_cluster)[0];
                     }
                 }

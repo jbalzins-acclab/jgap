@@ -11,7 +11,14 @@ namespace jgap {
     class ThreeBodyTransformation {
     public:
         virtual ~ThreeBodyTransformation() = default;
-        virtual Descriptor<Dim> evaluate(const Cluster3& cluster) const = 0;
+
+        /// @note In derived classes, overriding evaluate by calling ThreeBodyTransformation::evaluate(cluster)
+        /// (e.g. `Descriptor<Dim> evaluate(const Cluster3& cluster) const override { return ThreeBodyTransformation::evaluate(cluster); }`)
+        /// forces devirtualization of evaluateAndDifferentiate for compiler optimizations.
+        virtual Descriptor<Dim> evaluate(const Cluster3& cluster) const {
+            return evaluateAndDifferentiate(cluster).value;
+        }
+
         virtual ThreeBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster3& cluster) const = 0;
         virtual Cutoffs getCutoffs() const = 0;
         virtual bool isSwapInvariant(size_t idx1, size_t idx2) const = 0;

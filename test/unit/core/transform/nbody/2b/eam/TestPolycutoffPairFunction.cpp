@@ -7,7 +7,8 @@ using namespace jgap;
 
 TEST(TestPolycutoffPairFunction, BelowRange) {
     PolycutoffPairFunction func(5.0, 2.0, 1.5); // cutoff, r_min, prefactor
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 1.0};
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 1.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc[0], 1.5);
@@ -19,7 +20,8 @@ TEST(TestPolycutoffPairFunction, BelowRange) {
 
 TEST(TestPolycutoffPairFunction, AboveRange) {
     PolycutoffPairFunction func(5.0, 2.0, 1.5);
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 6.0};
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 6.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc[0], 0.0);
@@ -31,7 +33,8 @@ TEST(TestPolycutoffPairFunction, AboveRange) {
 
 TEST(TestPolycutoffPairFunction, InsideRange) {
     PolycutoffPairFunction func(5.0, 2.0, 1.5); // r_min=2, cutoff=5, width=3
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 3.5}; // midpoint, chi = 0.5
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 3.5; // midpoint, chi = 0.5
 
     // val = prefactor * (1.0 - chi^3 * (6*chi^2 - 15*chi + 10))
     // chi = 0.5 -> poly part is 0.5 (as proven in Perriot test)

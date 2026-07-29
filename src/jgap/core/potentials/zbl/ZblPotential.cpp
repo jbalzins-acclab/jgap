@@ -53,7 +53,8 @@ namespace jgap {
                     "  - rebuild jgap with a #embed-capable compiler (GCC 15+ / Clang 19+), or\n"
                     "  - pass an explicit ZBL dataset file (ZblPotential(filename, training_data), or the "
                     "fit's zbl_dataset_file option).",
-                    path);
+                    path
+                );
             }
             std::ostringstream contents;
             contents << file.rdbuf();
@@ -101,8 +102,9 @@ namespace jgap {
         }
     }
 
-    ZblPotential::ZblParameters ZblPotential::makeParameters(const Species2Sorted& pair,
-                                                             const std::array<Real, 6>& coeffs) {
+    ZblPotential::ZblParameters ZblPotential::makeParameters(
+        const Species2Sorted& pair, const std::array<Real, 6>& coeffs
+    ) {
         const Species& s1 = pair.nodes[0];
         const Species& s2 = pair.nodes[1];
 
@@ -119,8 +121,10 @@ namespace jgap {
         return {coeffs, z1 * z2, (std::pow(z1, 0.23_r) + std::pow(z2, 0.23_r)) / 0.46848_r};
     }
 
-    ZblPotential::ZblPotential(const std::set<Species2Sorted>& species, EmbeddedZBLCoeffDataset embedded_dataset,
-                               Real cutoff, Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        const std::set<Species2Sorted>& species, EmbeddedZBLCoeffDataset embedded_dataset, Real cutoff,
+        Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
@@ -128,8 +132,10 @@ namespace jgap {
         loadDataset(dataset_stream, &species);
     }
 
-    ZblPotential::ZblPotential(const std::vector<Atoms>& training_data, EmbeddedZBLCoeffDataset embedded_dataset,
-                               Real cutoff, Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        const std::vector<Atoms>& training_data, EmbeddedZBLCoeffDataset embedded_dataset, Real cutoff,
+        Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
@@ -138,8 +144,10 @@ namespace jgap {
         loadDataset(dataset_stream, &pairs);
     }
 
-    ZblPotential::ZblPotential(const std::string& dataset_filename, const std::vector<Atoms>& training_data,
-                               Real cutoff, Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        const std::string& dataset_filename, const std::vector<Atoms>& training_data, Real cutoff,
+        Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
@@ -151,16 +159,18 @@ namespace jgap {
         loadDataset(dataset_file, &pairs);
     }
 
-    ZblPotential::ZblPotential(std::istream& custom_dataset, const std::set<Species2Sorted>& species, Real cutoff,
-                               Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        std::istream& custom_dataset, const std::set<Species2Sorted>& species, Real cutoff, Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
         loadDataset(custom_dataset, &species);
     }
 
-    ZblPotential::ZblPotential(std::istream& custom_dataset, const std::vector<Atoms>& training_data, Real cutoff,
-                               Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        std::istream& custom_dataset, const std::vector<Atoms>& training_data, Real cutoff, Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
@@ -168,8 +178,9 @@ namespace jgap {
         loadDataset(custom_dataset, &pairs);
     }
 
-    ZblPotential::ZblPotential(const std::map<Species2Sorted, std::array<Real, 6>>& coefficients, Real cutoff,
-                               Real cutoff_transition_width) :
+    ZblPotential::ZblPotential(
+        const std::map<Species2Sorted, std::array<Real, 6>>& coefficients, Real cutoff, Real cutoff_transition_width
+    ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
         cutoff_function(cutoff, cutoff_transition_width) {
@@ -203,25 +214,16 @@ namespace jgap {
 
         for (const auto& [species_pair, params]: zbl_parameters) {
             Cluster2Expansion expansion(species_pair);
-            auto expansion_result = expansion.find(nl, CalculationType::WithGradients);
-
-            assert(expansion_result.derivatives.has_value());
-
-            for (const auto& [cluster, cluster_derivs]:
-                 std::views::zip(expansion_result.clusters, *expansion_result.derivatives)) {
-                const Real& separation_magnitude = cluster.r01;
-                const SeparationDerivatives& separation_deriv = cluster_derivs.dr01;
-
-                auto [e, dE_dr] = energyAndDerivative(params, separation_magnitude);
+            expansion.forEach(nl, [&](const Cluster2& cluster) {
+                auto [e, dE_dr] = energyAndDerivative(params, cluster.separation01.magnitude);
 
                 result.value += e;
+                result.virials += cluster.separation01.virials() * dE_dr;
 
-                result.virials += separation_deriv.virials * dE_dr;
-
-                Vector3 f01 = separation_deriv.direction * dE_dr;
-                result.forces[cluster.atom_indexes[1]] -= f01;
-                result.forces[cluster.atom_indexes[0]] += f01;
-            }
+                Vector3 f01 = cluster.separation01.direction * dE_dr;
+                result.forces[cluster.idx1] -= f01;
+                result.forces[cluster.idx0] += f01;
+            });
         }
 
         return result;

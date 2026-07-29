@@ -16,6 +16,7 @@
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
+#include "jgap/utils/gap/GapComponentUtils.hpp"
 
 namespace jgap {
     inline GapPotential standardGapFit(const std::vector<Atoms>& training_data, const StandardGapParams& params) {
@@ -33,7 +34,7 @@ namespace jgap {
             auto kernel2 = SquaredExpKernel<1, 1>(10.0_r, {1.0_r});
             auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
             potential.addComponents(
-                TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>::createComponents(
+                createTwoBodyComponents<2, SquaredExpKernel<1, 1>>(
                     training_data, trans2, kernel2, sparsifier2
                 )
             );
@@ -46,7 +47,7 @@ namespace jgap {
             auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
             auto sparsifier_eam = HistogramUniformSparsifier<1>(params.seed, params.eam_n_sparse);
             potential.addComponents(
-                EamPairFunction::createComponents(
+                createEamComponents<SquaredExpKernel<1, 0>>(
                     params.eam_pf, kernel_eam, sparsifier_eam, training_data, params.eam_mode
                 )
             );
@@ -61,7 +62,7 @@ namespace jgap {
             auto sparsifier3 =
                 HistogramUniformSparsifier<4>(params.seed, params.n_sparse3, std::array{true, true, true, false});
             potential.addComponents(
-                AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>::createComponents(
+                createThreeBodyComponents<4, SquaredExpKernel<3, 1>>(
                     training_data, trans3, kernel3, sparsifier3
                 )
             );

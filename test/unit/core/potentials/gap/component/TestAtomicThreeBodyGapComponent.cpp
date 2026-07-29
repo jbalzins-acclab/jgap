@@ -27,9 +27,7 @@ namespace {
         }
         Cutoffs getCutoffs() const override { return Cutoffs{{3, 15.0}}; }
         Descriptor<Dim> evaluate(const Cluster3& cluster) const override {
-            Descriptor<Dim> res;
-            res[0] = 1.0;
-            return res;
+            return ThreeBodyTransformation<Dim>::evaluate(cluster);
         }
         bool isSwapInvariant(size_t idx1, size_t idx2) const override {
             return (idx1 == 1 && idx2 == 2) || (idx1 == 2 && idx2 == 1);
@@ -41,9 +39,12 @@ namespace {
     class MockKernel : public Kernel<Dim> {
     public:
         using KernelValueAndGradient = typename Kernel<Dim>::KernelValueAndGradient;
-        Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override { return 2.0; }
-        KernelValueAndGradient valueAndGradient(const Descriptor<Dim>& sparse_point,
-                                                const Descriptor<Dim>& q) const override {
+        Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
+            return Kernel<Dim>::value(q1, q2);
+        }
+        KernelValueAndGradient valueAndGradient(
+            const Descriptor<Dim>& sparse_point, const Descriptor<Dim>& q
+        ) const override {
             KernelValueAndGradient res;
             res.value = 2.0;
             res.gradient.fill(0.5);
@@ -55,12 +56,14 @@ namespace {
 }
 
 TEST(TestAtomicThreeBodyGapComponent, MockThreeBody) {
-    Atoms atoms({{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}},
-                {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")});
+    Atoms atoms(
+        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+    );
     auto nl = NeighbourLists(atoms, 11.0);
 
     auto component = AtomicThreeBodyGapComponent<1, MockKernel<1>>(
-        Species3AtomicSorted("Fe", "Fe", "Ni"), MockThreeBodyTransformation<1>(), MockKernel<1>(), {{1.0}});
+        Species3AtomicSorted("Fe", "Fe", "Ni"), MockThreeBodyTransformation<1>(), MockKernel<1>(), {{1.0}}
+    );
 
     auto result = component.covariate(nl);
     ASSERT_TRUE(result.has_value());
@@ -78,35 +81,35 @@ TEST(TestAtomicThreeBodyGapComponent, MockThreeBody) {
 
     // Triplet (0,2,1)
     Separation sep02(atoms.getPositions()[0], atoms.getPositions()[2]);
-    force0 += sep02.derivatives.direction * 0.1;
-    force2 -= sep02.derivatives.direction * 0.1;
-    virials += sep02.derivatives.virials * 0.1;
+    force0 += sep02.direction * 0.1;
+    force2 -= sep02.direction * 0.1;
+    virials += sep02.virials() * 0.1;
 
     Separation sep01(atoms.getPositions()[0], atoms.getPositions()[1]);
-    force0 += sep01.derivatives.direction * 0.1;
-    force1 -= sep01.derivatives.direction * 0.1;
-    virials += sep01.derivatives.virials * 0.1;
+    force0 += sep01.direction * 0.1;
+    force1 -= sep01.direction * 0.1;
+    virials += sep01.virials() * 0.1;
 
     Separation sep21(atoms.getPositions()[2], atoms.getPositions()[1]);
-    force2 += sep21.derivatives.direction * 0.1;
-    force1 -= sep21.derivatives.direction * 0.1;
-    virials += sep21.derivatives.virials * 0.1;
+    force2 += sep21.direction * 0.1;
+    force1 -= sep21.direction * 0.1;
+    virials += sep21.virials() * 0.1;
 
     // Triplet (2,0,3)
     Separation sep20(atoms.getPositions()[2], atoms.getPositions()[0]);
-    force2 += sep20.derivatives.direction * 0.1;
-    force0 -= sep20.derivatives.direction * 0.1;
-    virials += sep20.derivatives.virials * 0.1;
+    force2 += sep20.direction * 0.1;
+    force0 -= sep20.direction * 0.1;
+    virials += sep20.virials() * 0.1;
 
     Separation sep23(atoms.getPositions()[2], atoms.getPositions()[3]);
-    force2 += sep23.derivatives.direction * 0.1;
-    force3 -= sep23.derivatives.direction * 0.1;
-    virials += sep23.derivatives.virials * 0.1;
+    force2 += sep23.direction * 0.1;
+    force3 -= sep23.direction * 0.1;
+    virials += sep23.virials() * 0.1;
 
     Separation sep03(atoms.getPositions()[0], atoms.getPositions()[3]);
-    force0 += sep03.derivatives.direction * 0.1;
-    force3 -= sep03.derivatives.direction * 0.1;
-    virials += sep03.derivatives.virials * 0.1;
+    force0 += sep03.direction * 0.1;
+    force3 -= sep03.direction * 0.1;
+    virials += sep03.virials() * 0.1;
 
     EXPECT_NEAR(quantities.force(0, 0).x, force0.x, 1e-9);
     EXPECT_NEAR(quantities.force(0, 1).x, force1.x, 1e-9);

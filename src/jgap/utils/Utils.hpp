@@ -61,18 +61,10 @@ namespace jgap {
         return std::to_string(min) + "m " + std::to_string(rem_sec) + "s";
     }
 
-    constexpr double factorialD(size_t n) {
-        double result = 1.0;
+    constexpr Real factorial(size_t n) {
+        Real result = 1.0;
         for (size_t i = 2; i <= n; i++) {
             result *= static_cast<Real>(i);
-        }
-        return result;
-    }
-
-    constexpr size_t factorial(size_t n) {
-        size_t result = 1;
-        for (size_t i = 2; i <= n; i++) {
-            result *= i;
         }
         return result;
     }

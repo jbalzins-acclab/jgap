@@ -17,12 +17,7 @@ namespace jgap {
         Real getCutoffTransitionWidth() const { return cutoff - r_min; }
 
         Real evaluate(Real r) const override {
-            if (r <= r_min) return 1.0_r;
-            if (r >= cutoff) [[unlikely]]
-                return 0.0_r;
-
-            const Real chi = (r - r_min) * cutoff_width_inverse;
-            return 1.0_r - chi * chi * chi * (10.0_r - 15.0_r * chi + 6.0_r * chi * chi);
+            return CutoffFunction::evaluate(r);
         }
 
         std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override {

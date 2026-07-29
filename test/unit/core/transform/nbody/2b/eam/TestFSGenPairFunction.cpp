@@ -8,7 +8,8 @@ using namespace jgap;
 
 TEST(TestFSGenPairFunction, AtOrigin) {
     FSGenPairFunction func(5.0, 3.0, 1.5); // cutoff, degree, prefactor
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 0.0};
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 0.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc[0], 1.5); // prefactor * (1 - 0)^3
@@ -22,7 +23,8 @@ TEST(TestFSGenPairFunction, AtOrigin) {
 
 TEST(TestFSGenPairFunction, AboveCutoff) {
     FSGenPairFunction func(5.0, 3.0, 1.5);
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 6.0};
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 6.0;
 
     auto desc = func.evaluate(pair);
     EXPECT_DOUBLE_EQ(desc[0], 0.0);
@@ -34,7 +36,8 @@ TEST(TestFSGenPairFunction, AboveCutoff) {
 
 TEST(TestFSGenPairFunction, InsideRange) {
     FSGenPairFunction func(5.0, 3.0, 1.5);
-    Cluster2 pair{.atom_indexes = {0, 1}, .r01 = 2.5}; // midpoint, distance * cutoff_inverse = 0.5
+    Cluster2 pair{.idx0 = 0, .idx1 = 1};
+    pair.separation01.magnitude = 2.5; // midpoint, distance * cutoff_inverse = 0.5
 
     // val = prefactor * (1 - 0.5)^3 = 1.5 * 0.125 = 0.1875
     auto desc = func.evaluate(pair);

@@ -15,16 +15,11 @@ namespace jgap {
         }
 
         Descriptor<1> evaluate(const Cluster2& pair) const override {
-            Real distance = pair.r01;
-            if (distance >= cutoff) return {{0.0_r}};
-            if (distance <= r_min) return {{prefactor}};
-
-            const Real chi = (distance - r_min) * interval_inverse;
-            return {{prefactor * (1.0_r - chi * chi * chi * (6.0_r * chi * chi - 15.0_r * chi + 10.0_r))}};
+            return TwoBodyTransformation<1>::evaluate(pair);
         }
 
-        TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override {
-            Real distance = pair.r01;
+        TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override final {
+            Real distance = pair.separation01.magnitude;
             if (distance >= cutoff) return {.value = {0.0_r}, .derivatives = {0.0_r}};
             if (distance <= r_min) return {.value = {prefactor}, .derivatives = {0.0_r}};
 

@@ -3,8 +3,7 @@
 
 #include <vector>
 
-#include "Cluster2ExpansionResult.hpp"
-#include "jgap/core/CalculationType.hpp"
+#include "jgap/core/atomic/geometry/Cluster2.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/utils/Utils.hpp"
@@ -17,45 +16,61 @@ namespace jgap {
 
         Cluster2Expansion(const Species2Sorted& species_set) : species_set(species_set) {}
 
-        Cluster2ExpansionResult find(const NeighbourLists& neighbour_list, CalculationType calc_type) const {
-            Cluster2ExpansionResult result(calc_type);
-
+        bool forEach(const NeighbourLists& neighbour_list, Cluster2Callback auto&& callback) const {
             for (auto& species: species_set.nodes) {
-                if (!neighbour_list.atoms_by_species.contains(species)) return result;
+                if (!neighbour_list.atoms_by_species.contains(species)) return false;
             }
 
             const auto& species1 = species_set.nodes[0];
             const auto& species2 = species_set.nodes[1];
+            const auto& atoms = neighbour_list.atoms_by_species.at(species1);
+            if (atoms.empty()) return false;
 
-            for (size_t i: neighbour_list.atoms_by_species.at(species1)) {
+            for (size_t i: atoms) {
                 auto atom_neighbours = neighbour_list.neighbours_per_atom[i].find(species2);
 
                 if (atom_neighbours == neighbour_list.neighbours_per_atom[i].end()) continue;
 
-                result.reserve(result.clusters.size() + atom_neighbours->second.size());
-
                 for (auto neigh_data: atom_neighbours->second) {
                     if (species1 == species2) {
                         if (neigh_data.neighbour_index == i) [[unlikely]] {
-                            if (neigh_data.separation.derivatives.direction.isPositive()) {
-                                std::array neigh_array{neigh_data};
-                                result.add(i, neigh_array);
+                            if (neigh_data.separation.direction.isPositive()) {
+                                callback(
+                                    Cluster2{
+                                        .idx0 = i,
+                                        .idx1 = neigh_data.neighbour_index,
+                                        .separation01 = neigh_data.separation
+                                    }
+                                );
                             }
                         } else if (neigh_data.neighbour_index > i) {
-                            std::array neigh_array{neigh_data};
-                            result.add(i, neigh_array);
+                            callback(
+                                Cluster2{
+                                    .idx0 = i, .idx1 = neigh_data.neighbour_index, .separation01 = neigh_data.separation
+                                }
+                            );
                         }
                     } else {
-                        std::array neigh_array{neigh_data};
-                        result.add(i, neigh_array);
+                        callback(
+                            Cluster2{
+                                .idx0 = i, .idx1 = neigh_data.neighbour_index, .separation01 = neigh_data.separation
+                            }
+                        );
                     }
                 }
             }
+            return true;
+        }
+
+        std::vector<Cluster2> expand(const NeighbourLists& neighbour_list) const {
+            std::vector<Cluster2> result;
+
+            forEach(neighbour_list, [&](const Cluster2& cluster) { result.emplace_back(cluster); });
 
             return result;
         }
 
-        const Species2Sorted& getSpecies() const { return species_set; }
+        Species2Sorted getSpecies() const { return species_set; }
 
     private:
         Species2Sorted species_set;

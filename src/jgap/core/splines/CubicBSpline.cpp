@@ -90,27 +90,50 @@ namespace jgap {
         const int i = std::clamp(static_cast<int>(std::floor(u)), 0, imax);
         const Real t = u - i;
 
-        const Real t2 = t * t;
-        const Real t3 = t2 * t;
-
-        Real w[4];
-        w[0] = (1 - 3 * t + 3 * t2 - t3) / 6.0;
-        w[1] = (4 - 6 * t2 + 3 * t3) / 6.0;
-        w[2] = (1 + 3 * t + 3 * t2 - 3 * t3) / 6.0;
-        w[3] = t3 / 6.0;
-
-        Real dw[4];
+        Real Phi[4], dPhi[4];
         const Real dinv = 1.0 / h;
-        dw[0] = (-3 + 6 * t - 3 * t2) * dinv / 6.0;
-        dw[1] = (-12 * t + 9 * t2) * dinv / 6.0;
-        dw[2] = (3 + 6 * t - 9 * t2) * dinv / 6.0;
-        dw[3] = (3 * t2) * dinv / 6.0;
+
+        if (t < 0.0) {
+            Phi[0] = 1.0 / 6.0 - 0.5 * t;
+            Phi[1] = 4.0 / 6.0;
+            Phi[2] = 1.0 / 6.0 + 0.5 * t;
+            Phi[3] = 0.0;
+
+            dPhi[0] = -0.5 * dinv;
+            dPhi[1] = 0.0;
+            dPhi[2] = 0.5 * dinv;
+            dPhi[3] = 0.0;
+        } else if (t > 1.0) {
+            const Real dt = t - 1.0;
+            Phi[0] = 0.0;
+            Phi[1] = 1.0 / 6.0 - 0.5 * dt;
+            Phi[2] = 4.0 / 6.0;
+            Phi[3] = 1.0 / 6.0 + 0.5 * dt;
+
+            dPhi[0] = 0.0;
+            dPhi[1] = -0.5 * dinv;
+            dPhi[2] = 0.0;
+            dPhi[3] = 0.5 * dinv;
+        } else {
+            const Real t2 = t * t;
+            const Real t3 = t2 * t;
+
+            Phi[0] = (1 - 3 * t + 3 * t2 - t3) / 6.0;
+            Phi[1] = (4 - 6 * t2 + 3 * t3) / 6.0;
+            Phi[2] = (1 + 3 * t + 3 * t2 - 3 * t3) / 6.0;
+            Phi[3] = t3 / 6.0;
+
+            dPhi[0] = (-3 + 6 * t - 3 * t2) * dinv / 6.0;
+            dPhi[1] = (-12 * t + 9 * t2) * dinv / 6.0;
+            dPhi[2] = (3 + 6 * t - 9 * t2) * dinv / 6.0;
+            dPhi[3] = (3 * t2) * dinv / 6.0;
+        }
 
         Real value = 0.0;
         Real derivative = 0.0;
         for (int k = 0; k < 4; ++k) {
-            value += coefficients.data_flat[i + k] * w[k];
-            derivative += coefficients.data_flat[i + k] * dw[k];
+            value += coefficients.data_flat[i + k] * Phi[k];
+            derivative += coefficients.data_flat[i + k] * dPhi[k];
         }
 
         return {value, {derivative}};

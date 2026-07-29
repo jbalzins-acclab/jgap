@@ -13,7 +13,7 @@ namespace jgap {
     using TwoBodyDerivatives = std::array<Real, Dim>;
 
     /// Generalized real degrees of freedom of a local atomic descriptor
-    /// derived injectively from a single \ref Cluster2,
+    /// derived injectively from a single @ref Cluster2,
     /// as well as their derivatives wrt each separation in the cluster.
     template<size_t Dim>
         requires(Dim > 0)
@@ -26,6 +26,6 @@ namespace jgap {
         operator const Descriptor<Dim>&() { return value; }
     };
 
-} // namespace jgap
+}
 
 #endif

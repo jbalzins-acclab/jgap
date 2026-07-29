@@ -12,7 +12,14 @@ namespace jgap {
     class TwoBodyTransformation {
     public:
         virtual ~TwoBodyTransformation() = default;
-        virtual Descriptor<Dim> evaluate(const Cluster2& pair) const = 0;
+
+        /// @note In derived classes, overriding evaluate by calling TwoBodyTransformation::evaluate(pair)
+        /// (e.g. `Descriptor<Dim> evaluate(const Cluster2& pair) const override { return TwoBodyTransformation::evaluate(pair); }`)
+        /// forces devirtualization of evaluateAndDifferentiate for compiler optimizations.
+        virtual Descriptor<Dim> evaluate(const Cluster2& pair) const {
+            return evaluateAndDifferentiate(pair).value;
+        }
+
         virtual TwoBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster2& pair) const = 0;
         virtual Cutoffs getCutoffs() const = 0;
         virtual TwoBodyTransformation<Dim>* clone() const = 0;

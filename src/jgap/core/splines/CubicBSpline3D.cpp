@@ -95,19 +95,43 @@ namespace jgap {
 
         Real Phi[3][4], dPhi[3][4];
         for (size_t d = 0; d < 3; ++d) {
-            const Real t2 = t[d] * t[d];
-            const Real t3 = t2 * t[d];
             const Real dinv = 1.0 / spacing[d];
 
-            Phi[d][0] = (1 - 3 * t[d] + 3 * t2 - t3) / 6.0;
-            Phi[d][1] = (4 - 6 * t2 + 3 * t3) / 6.0;
-            Phi[d][2] = (1 + 3 * t[d] + 3 * t2 - 3 * t3) / 6.0;
-            Phi[d][3] = t3 / 6.0;
+            if (t[d] < 0.0) {
+                Phi[d][0] = 1.0 / 6.0 - 0.5 * t[d];
+                Phi[d][1] = 4.0 / 6.0;
+                Phi[d][2] = 1.0 / 6.0 + 0.5 * t[d];
+                Phi[d][3] = 0.0;
 
-            dPhi[d][0] = (-3 + 6 * t[d] - 3 * t2) * dinv / 6.0;
-            dPhi[d][1] = (-12 * t[d] + 9 * t2) * dinv / 6.0;
-            dPhi[d][2] = (3 + 6 * t[d] - 9 * t2) * dinv / 6.0;
-            dPhi[d][3] = (3 * t2) * dinv / 6.0;
+                dPhi[d][0] = -0.5 * dinv;
+                dPhi[d][1] = 0.0;
+                dPhi[d][2] = 0.5 * dinv;
+                dPhi[d][3] = 0.0;
+            } else if (t[d] > 1.0) {
+                const Real dt = t[d] - 1.0;
+                Phi[d][0] = 0.0;
+                Phi[d][1] = 1.0 / 6.0 - 0.5 * dt;
+                Phi[d][2] = 4.0 / 6.0;
+                Phi[d][3] = 1.0 / 6.0 + 0.5 * dt;
+
+                dPhi[d][0] = 0.0;
+                dPhi[d][1] = -0.5 * dinv;
+                dPhi[d][2] = 0.0;
+                dPhi[d][3] = 0.5 * dinv;
+            } else {
+                const Real t2 = t[d] * t[d];
+                const Real t3 = t2 * t[d];
+
+                Phi[d][0] = (1 - 3 * t[d] + 3 * t2 - t3) / 6.0;
+                Phi[d][1] = (4 - 6 * t2 + 3 * t3) / 6.0;
+                Phi[d][2] = (1 + 3 * t[d] + 3 * t2 - 3 * t3) / 6.0;
+                Phi[d][3] = t3 / 6.0;
+
+                dPhi[d][0] = (-3 + 6 * t[d] - 3 * t2) * dinv / 6.0;
+                dPhi[d][1] = (-12 * t[d] + 9 * t2) * dinv / 6.0;
+                dPhi[d][2] = (3 + 6 * t[d] - 9 * t2) * dinv / 6.0;
+                dPhi[d][3] = (3 * t2) * dinv / 6.0;
+            }
         }
 
         const int N1 = dims[1];

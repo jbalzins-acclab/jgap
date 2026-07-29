@@ -8,7 +8,7 @@ namespace jgap {
 
     template<size_t ExpDimensions, size_t CutoffDimensions>
         requires(CutoffDimensions <= 1)
-    class SquaredExpKernel : public Kernel<ExpDimensions + CutoffDimensions> {
+    class SquaredExpKernel final : public Kernel<ExpDimensions + CutoffDimensions> {
     public:
         static constexpr size_t ExpDim = ExpDimensions;
         static constexpr size_t CutoffDim = CutoffDimensions;
@@ -36,18 +36,7 @@ namespace jgap {
         }
 
         Real value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
-            Real exp_argument = 0.0_r;
-            for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q1[dim] - q2[dim];
-                exp_argument += diff * diff * inverse_length_scales_squared[dim];
-            }
-            Real val = prefactor * std::exp(-0.5_r * exp_argument);
-
-            if constexpr (CutoffDimensions == 1) {
-                val *= q1[ExpDimensions] * q2[ExpDimensions];
-            }
-
-            return val;
+            return Kernel<TotalDimensions>::value(q1, q2);
         }
 
         KernelValueAndGradient valueAndGradient(
