@@ -37,8 +37,9 @@ namespace jgap {
                     return;
                 }
             }
-            JGAP_LOG_AND_THROW("Could not find an appropriate serializer for {}. Check the registry.",
-                               typeName<TBase>());
+            JGAP_LOG_AND_THROW(
+                "Could not find an appropriate serializer for {}. Check the registry.", typeName<TBase>()
+            );
         }
 
         static ValuePtr<TBase> deserialize(const SerializationNode& node) {
@@ -49,8 +50,9 @@ namespace jgap {
                 }
             }
 
-            JGAP_LOG_AND_THROW("Could not find an appropriate deserializer for {}. Check the registry.",
-                               typeName<TBase>());
+            JGAP_LOG_AND_THROW(
+                "Could not find an appropriate deserializer for {}. Check the registry.", typeName<TBase>()
+            );
         }
 
         static void serialize(const ValuePtr<TBase>& obj, const std::string& filename) {
@@ -69,7 +71,7 @@ namespace jgap {
 #define CONCAT(a, b) CONCAT_IMPL(a, b)
 
 /// Registers a serializer class with the SerializationRegistry for the specified base type(s).
-/// Uses `__attribute__((used))` to prevent compiler/linker dead-code elimination (especially under
+/// @note Uses `__attribute__((used))` to prevent compiler/linker dead-code elimination (especially under
 /// -O3 or LTO) from stripping static registration variables in anonymous namespaces.
 #define REGISTER_SERIALIZATION(Serialization, ...)                                                                    \
     namespace {                                                                                                       \
@@ -78,8 +80,9 @@ namespace jgap {
                 jgap::SerializationRegistry<__VA_ARGS__>::getRegistry().push_back(std::make_unique<Serialization>()); \
             }                                                                                                         \
         };                                                                                                            \
-        [[maybe_unused]] __attribute__((used)) static CONCAT(SerializationRegister, __LINE__)                         \
-            CONCAT(SerializationRegisterInstance, __LINE__);                                                          \
+        [[maybe_unused]] __attribute__((used)) static CONCAT(SerializationRegister, __LINE__) CONCAT(                 \
+            SerializationRegisterInstance, __LINE__                                                                   \
+        );                                                                                                            \
     }
 
 #endif
