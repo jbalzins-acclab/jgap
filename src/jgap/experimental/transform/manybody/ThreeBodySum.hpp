@@ -48,8 +48,20 @@ namespace jgap {
                                           ? ClusterPermutationMode::Reduced
                                           : ClusterPermutationMode::PermuteSameSpecies;
                     AtomicCluster3Expansion expansion(species_set, mode);
+                    Real factor = expansion.getPermutationReductionFactor();
+                    
                     expansion.forEach(atom_index, nl, [&](const Cluster3& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);
+                        /*
+                        if (factor != 1.0_r) {
+                            for (size_t i = 0; i < Dim; ++i) {
+                                contribution.value[i] *= factor;
+                                contribution.derivatives[0][i] *= factor;
+                                contribution.derivatives[1][i] *= factor;
+                                contribution.derivatives[2][i] *= factor;
+                            }
+                        }
+                        */
                         aggregated_descriptors.add(descriptor_index, cluster, contribution);
                     });
                 }

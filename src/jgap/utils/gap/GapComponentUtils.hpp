@@ -13,7 +13,9 @@
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
 #include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
+#include "jgap/experimental/transform/nbody/3b/MeamTransformation.hpp"
 #include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/experimental/transform/manybody/ThreeBodySum.hpp"
 
 namespace jgap {
 
@@ -114,6 +116,51 @@ namespace jgap {
     ) {
         auto aggregators = createCoordinationAggregators<Dim>(base_transform, training_data);
         std::vector<ManyBodyGapComponent<Dim, TKernel>> components;
+
+        for (auto& [central_species, aggregator]: aggregators) {
+            components.emplace_back(std::move(aggregator), kernel, sparsifier, training_data, optional_coeffs);
+        }
+
+        return components;
+    }
+
+    std::map<Species, ValuePtr<NBodyAggregator<3>>> createMeamAggregators(
+        const ValuePtr<MeamTransformation>& base_transform, const std::vector<Atoms>& training_data
+    ) {
+        std::map<Species, ValuePtr<NBodyAggregator<3>>> aggregators;
+
+        std::set<Species> all_species;
+        for (const auto& atoms: training_data) {
+            for (const auto& species: atoms.getSpecies()) {
+                all_species.insert(species);
+            }
+        }
+
+        for (const auto& central_species: all_species) {
+            auto aggregator = ThreeBodySum<3>(central_species);
+
+            for (const auto& contributor_species1: all_species) {
+                for (const auto& contributor_species2: all_species) {
+                    auto transform_clone = base_transform;
+                    aggregator.extend(
+                        {central_species, contributor_species1, contributor_species2},
+                        std::move(transform_clone)
+                    );
+                }
+            }
+            aggregators.emplace(central_species, std::move(aggregator));
+        }
+
+        return aggregators;
+    }
+
+    template<CKernelOfDim<3> TKernel>
+    std::vector<ManyBodyGapComponent<3, TKernel>> createMeamComponents(
+        const ValuePtr<MeamTransformation>& base_transform, const TKernel& kernel, const Sparsifier<3>& sparsifier,
+        const std::vector<Atoms>& training_data, const std::vector<Real>& optional_coeffs = {}
+    ) {
+        auto aggregators = createMeamAggregators(base_transform, training_data);
+        std::vector<ManyBodyGapComponent<3, TKernel>> components;
 
         for (auto& [central_species, aggregator]: aggregators) {
             components.emplace_back(std::move(aggregator), kernel, sparsifier, training_data, optional_coeffs);
