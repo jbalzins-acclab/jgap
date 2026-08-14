@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/core/atomic/iteration/AtomicCluster2Expansion.hpp"
-#include "jgap/core/atomic/iteration/AtomicCluster3Expansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster2AtomicExpansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
 #include "jgap/core/atomic/iteration/Cluster2Expansion.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
 #include "jgap/experimental/atomic/iteration/Cluster3Expansion.hpp"
@@ -21,7 +21,7 @@ TEST(TestClusterExpansions, PBC1AtomCell) {
     EXPECT_EQ(c2e.expand(nl).size(), 1);
 
     // AtomicCluster2Expansion gives 2 atom-centric pairs (both directions).
-    AtomicCluster2Expansion ac2e(Species2Atomic("Fe|Fe"));
+    Cluster2AtomicExpansion ac2e(Species2Atomic("Fe|Fe"));
     EXPECT_EQ(ac2e.expand(0, nl).size(), 2);
 }
 
@@ -38,7 +38,7 @@ TEST(TestClusterExpansions, PBC1AtomCellCluster3) {
     EXPECT_EQ(c3e.expand(nl).size(), 0);
 
     // AtomicCluster3Expansion gives 4 atom-centric triplets
-    AtomicCluster3Expansion ac3e(Species3AtomicSorted("Fe|Fe,Fe"));
+    Cluster3AtomicExpansion ac3e(Species3AtomicSorted("Fe|Fe,Fe"));
     EXPECT_EQ(ac3e.expand(0, nl).size(), 6);
 }
 
@@ -94,19 +94,19 @@ TEST(TestClusterExpansions, AtomicCluster2Expansion) {
 
     // {"Fe", "Fe"}:
     // Centered on Fe(0), neighbor is Fe(2).
-    AtomicCluster2Expansion fe_fe(Species2Atomic("Fe|Fe"));
+    Cluster2AtomicExpansion fe_fe(Species2Atomic("Fe|Fe"));
     auto fe_fe_pairs = fe_fe.expand(0, nl);
     EXPECT_EQ(fe_fe_pairs.size(), 1);
 
     // {"Fe", "Ni"}:
     // Centered on Fe(0), neighbor is Ni(1).
-    AtomicCluster2Expansion fe_ni(Species2Atomic("Fe|Ni"));
+    Cluster2AtomicExpansion fe_ni(Species2Atomic("Fe|Ni"));
     auto fe_ni_pairs = fe_ni.expand(0, nl);
     EXPECT_EQ(fe_ni_pairs.size(), 1);
 
     // {"Ni", "Fe"}:
     // Centered on Ni(1), neighbor is Fe(0).
-    AtomicCluster2Expansion ni_fe(Species2Atomic("Ni|Fe"));
+    Cluster2AtomicExpansion ni_fe(Species2Atomic("Ni|Fe"));
     auto ni_fe_pairs = ni_fe.expand(1, nl);
     EXPECT_EQ(ni_fe_pairs.size(), 1);
 }
@@ -123,19 +123,19 @@ TEST(TestClusterExpansions, AtomicCluster3Expansion) {
     // {"Fe", "Fe", "Ni"}:
     // Centered on Fe(0), neighbors are Fe(2) and Ni(1). Forms triplet (0,2,1).
     // Centered on Fe(2), neighbors are Fe(0) and Ni(3). Forms triplet (2,0,3).
-    AtomicCluster3Expansion fe_fe_ni(Species3AtomicSorted("Fe|Fe,Ni"));
+    Cluster3AtomicExpansion fe_fe_ni(Species3AtomicSorted("Fe|Fe,Ni"));
     auto fe_fe_ni_triplets = fe_fe_ni.expand(nl);
     EXPECT_EQ(fe_fe_ni_triplets.size(), 2);
 
     // {"Ni", "Ni", "Fe"}:
     // Centered on Ni(1), neighbors are Ni(3) and Fe(0). Forms triplet (1,3,0).
     // Centered on Ni(3), neighbors are Ni(1) and Fe(2). Forms triplet (3,1,2).
-    AtomicCluster3Expansion ni_ni_fe(Species3AtomicSorted("Ni|Fe,Ni"));
+    Cluster3AtomicExpansion ni_ni_fe(Species3AtomicSorted("Ni|Fe,Ni"));
     auto ni_ni_fe_triplets = ni_ni_fe.expand(nl);
     EXPECT_EQ(ni_ni_fe_triplets.size(), 2);
 
     // Other combinations like {"Fe", "Ni", "Ni"} are impossible as no Fe has two Ni neighbors.
-    AtomicCluster3Expansion fe_ni_ni(Species3AtomicSorted("Fe|Ni,Ni"));
+    Cluster3AtomicExpansion fe_ni_ni(Species3AtomicSorted("Fe|Ni,Ni"));
     auto fe_ni_ni_triplets = fe_ni_ni.expand(nl);
     EXPECT_EQ(fe_ni_ni_triplets.size(), 0);
 }
@@ -156,12 +156,12 @@ TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
     Atoms atoms({{0, 0, 0}, {1, 0, 0}, {0.5, 0.866025, 0}}, {Species("Fe"), Species("Fe"), Species("Fe")});
     auto nl = NeighbourLists(atoms, 1.5);
 
-    AtomicCluster3Expansion reduced(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::Reduced);
+    Cluster3AtomicExpansion reduced(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::Reduced);
     EXPECT_EQ(reduced.getPermutationReductionFactor(), 2.0);
     auto reduced_clusters = reduced.expand(0, nl);
     EXPECT_EQ(reduced_clusters.size(), 1);
 
-    AtomicCluster3Expansion permute(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::PermuteSameSpecies);
+    Cluster3AtomicExpansion permute(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::PermuteSameSpecies);
     EXPECT_EQ(permute.getPermutationReductionFactor(), 1.0);
     auto permute_clusters = permute.expand(0, nl);
     EXPECT_EQ(permute_clusters.size(), 2);
@@ -182,9 +182,9 @@ TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
     EXPECT_DOUBLE_EQ((c0.separation12().direction + c1.separation12().direction).norm(), 0.0);
 
     // Reduction factor is always 2.0 when nodes are different species (e.g. Fe|Cu,Al)
-    AtomicCluster3Expansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::Reduced);
+    Cluster3AtomicExpansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::Reduced);
     EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);
-    AtomicCluster3Expansion reduced_diff_species2(
+    Cluster3AtomicExpansion reduced_diff_species2(
         Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::PermuteSameSpecies
     );
     EXPECT_EQ(reduced_diff_species.getPermutationReductionFactor(), 2.0);

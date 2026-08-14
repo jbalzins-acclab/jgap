@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "Real.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
@@ -12,9 +12,7 @@ namespace jgap {
     using MatrixLayout::ColumnMajor;
     using MatrixLayout::RowMajor;
 
-    /// Simple wrapper for a matrix stored in a single memory block, in a row-major order.
-    /// Intended to be used outside the code blocks directly doing the linear algebra
-    /// (essentially for \ref GapComponent to provide Sparse-Sparse K_MM matrix blocks).
+    /// Simple wrapper for a matrix stored in a single memory block.
     template<MatrixLayout Layout>
     class Matrix {
     public:
@@ -34,7 +32,6 @@ namespace jgap {
             return data[j * rows + i];
         }
 
-        /// \note Emphasizing in name the backend matrix storage layout chosen.
         std::vector<Real>& flatData() { return data; }
 
         size_t nRows() const { return rows; }

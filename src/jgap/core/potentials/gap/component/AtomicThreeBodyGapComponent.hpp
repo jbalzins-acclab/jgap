@@ -8,7 +8,7 @@
 #include "GapComponent.hpp"
 #include "jgap/core/Matrix.hpp"
 #include "jgap/core/atomic/energy/AtomicQuantities.hpp"
-#include "jgap/core/atomic/iteration/AtomicCluster3Expansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
@@ -154,7 +154,7 @@ namespace jgap {
             std::vector<Descriptor<Dim>> all_descriptors;
             const auto mode = transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
                                                                     : ClusterPermutationMode::PermuteSameSpecies;
-            AtomicCluster3Expansion exp(species, mode);
+            Cluster3AtomicExpansion exp(species, mode);
             for (const auto& atoms: training_data) {
                 NeighbourLists nl(atoms, transformation->getCutoffs().maxOverall());
 
@@ -169,7 +169,7 @@ namespace jgap {
         ValuePtr<ThreeBodyTransformation<Dim>> transformation;
         TKernel kernel;
         std::vector<Descriptor<Dim>> sparse_points;
-        AtomicCluster3Expansion expansion;
+        Cluster3AtomicExpansion expansion;
     };
 }
 

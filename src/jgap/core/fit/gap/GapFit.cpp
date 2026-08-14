@@ -1,5 +1,5 @@
 #include "GapFit.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../io/log/CurrentLogger.hpp"
 
 #include "jgap/core/UnseqFor.hpp"
 

@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     CurrentLogger::initDefault({.stdout_log_debug = true});
 
     if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [zbl_dataset_file]\n";
+        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file]\n";
         return 1;
     }
     const std::string training_file = argv[1];
@@ -51,9 +51,9 @@ int main(int argc, char** argv) {
     JGAP_LOG_INFO("Fitting on {}", training_file);
     auto training_data = Atoms::readAtoms(training_file);
 
-    std::optional<std::string> zbl_dataset_file;
+    std::optional<std::string> screened_coulomb_dataset_file;
     if (argc == 4) {
-        zbl_dataset_file = argv[3];
+        screened_coulomb_dataset_file = argv[3];
     }
 
     GapPotential potential;
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     }
 
     // EAM Components
-    if (true) {
+    if (false) {
         auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
         auto sparsifier_eam = HistogramUniformSparsifier<1>(120, 20);
         potential.addComponents(
@@ -125,12 +125,12 @@ int main(int argc, char** argv) {
     }
 
     IsolatedAtomPotential isolated_atom_pot{training_data};
-    ZblPotential zbp_pot =
-        zbl_dataset_file ? ZblPotential{*zbl_dataset_file, training_data} : ZblPotential{training_data};
+    ScreenedCoulombPotential sc_pot =
+        screened_coulomb_dataset_file ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data} : ScreenedCoulombPotential{training_data};
 
     CompositePotential external{{
         {"isolated", isolated_atom_pot},
-        {"zbl", zbp_pot},
+        {"screened_coulomb", sc_pot},
     }};
 
     potential.optional_external_potential = external;

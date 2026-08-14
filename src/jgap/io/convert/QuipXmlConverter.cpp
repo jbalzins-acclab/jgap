@@ -13,7 +13,7 @@
 #include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../core/io/log/CurrentLogger.hpp"
 
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"

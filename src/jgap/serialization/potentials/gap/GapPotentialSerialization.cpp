@@ -1,7 +1,7 @@
 #include "GapPotentialSerialization.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/gap/component/GapComponent.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 

@@ -122,10 +122,10 @@ int main(int argc, char** argv) {
         TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>::createComponents(training_data, trans2, kernel2, sparsifier2)
     );
 
-    // ===== external: isolated-atom energies + ZBL repulsion =====
+    // ===== external: isolated-atom energies + ScreenedCoulomb repulsion =====
     potential.optional_external_potential = CompositePotential{{
         {"isolated", IsolatedAtomPotential{training_data}},
-        {"zbl", ZblPotential{training_data}},
+        {"screened_coulomb", ScreenedCoulombPotential{training_data}},
     }};
 
     // ===== setup regularization =====

@@ -1,7 +1,7 @@
 #include "Atoms.hpp"
 #include <utility>
 #include <variant>
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../io/log/CurrentLogger.hpp"
 #include <sstream>
 
 namespace jgap {
@@ -77,12 +77,6 @@ namespace jgap {
         setEnergy(energy_and_derivatives.value);
         setVirials(energy_and_derivatives.virials);
         setForces(energy_and_derivatives.forces);
-    }
-
-    void Atoms::setEnergyAndDerivatives(Real e) {
-        setEnergy(e);
-        eraseVirials();
-        eraseForces();
     }
 
     void Atoms::addAtom(const std::map<std::string, PerAtomProperty>& atom_data) {

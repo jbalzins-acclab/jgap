@@ -7,7 +7,7 @@
 #include <set>
 
 #include "Sparsifier.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../io/log/CurrentLogger.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {

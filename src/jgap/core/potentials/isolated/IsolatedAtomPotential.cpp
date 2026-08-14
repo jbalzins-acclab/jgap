@@ -1,7 +1,7 @@
 #include "IsolatedAtomPotential.hpp"
 
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/io/log/StdoutLogger.hpp"
+#include "../../io/log/StdoutLogger.hpp"
 
 namespace jgap {
     IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, Real> &isolated_atom_energies)

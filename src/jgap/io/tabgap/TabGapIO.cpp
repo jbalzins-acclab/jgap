@@ -10,7 +10,7 @@
 #include "jgap/core/potentials/tabgap/components/TwoBodyTGComponent.hpp"
 #include "jgap/core/splines/CubicBSpline.hpp"
 #include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

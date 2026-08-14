@@ -11,7 +11,7 @@
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
-#include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/sparsification/HistogramUniformSparsifier.hpp"
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
@@ -69,12 +69,13 @@ namespace jgap {
         }
 
         IsolatedAtomPotential isolated_atom_pot{training_data};
-        ZblPotential zbp_pot = params.zbl_dataset_file ? ZblPotential{*params.zbl_dataset_file, training_data}
-                                                       : ZblPotential{training_data};
+        ScreenedCoulombPotential sc_pot = params.screened_coulomb_dataset_file
+                                             ? ScreenedCoulombPotential{*params.screened_coulomb_dataset_file, training_data}
+                                             : ScreenedCoulombPotential{training_data};
 
         CompositePotential external{{
             {"isolated", isolated_atom_pot},
-            {"zbl", zbp_pot},
+            {"screened_coulomb", sc_pot},
         }};
 
         potential.optional_external_potential = external;

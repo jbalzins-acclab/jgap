@@ -13,9 +13,9 @@
 #include <string>
 #include <unistd.h>
 
-#include "../core/atomic/io/XYZData.hpp"
+#include "../core/io/xyz/XYZData.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
     bool getLine(std::istream &file, std::string &line) {

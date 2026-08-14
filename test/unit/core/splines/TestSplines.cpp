@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
-#include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/splines/CubicBSpline.hpp"
 #include "jgap/core/splines/CubicBSpline3D.hpp"
 #include "jgap/core/splines/Grid.hpp"
@@ -14,7 +14,7 @@ using namespace jgap;
 
 TEST(SplineTest, OneDimensionalSplines) {
     Species si("Si");
-    ZblPotential zbl({Species2Sorted(si, si)});
+    ScreenedCoulombPotential sc({Species2Sorted(si, si)});
 
     std::vector<Real> r_vec;
     std::vector<Real> e_vec;
@@ -24,7 +24,7 @@ TEST(SplineTest, OneDimensionalSplines) {
     Real spacing = 0.001;
     for (Real r = 0.1; r <= cutoff + 1e-9; r += spacing) {
         r_vec.push_back(r);
-        auto ed = zbl.energyAndDerivative(Species2Sorted(si, si), r);
+        auto ed = sc.energyAndDerivative(Species2Sorted(si, si), r);
         e_vec.push_back(ed[0]);
         de_vec.push_back(ed[1]);
     }
@@ -38,41 +38,41 @@ TEST(SplineTest, OneDimensionalSplines) {
 
     for (size_t i = 0; i < r_vec.size(); ++i) {
         Real r = r_vec[i];
-        Real zbl_e = e_vec[i];
-        Real zbl_de = de_vec[i];
+        Real sc_e = e_vec[i];
+        Real sc_de = de_vec[i];
 
         auto natural_res = natural_cubic_spline.interpolate({r});
         auto hermite_res = hermite_cubic_spline.interpolate({r});
         auto b_spline_res = b_spline.interpolate({r});
 
-        EXPECT_NEAR(zbl_e, natural_res.value, 1e-9);
-        EXPECT_NEAR(zbl_e, hermite_res.value, 1e-9);
-        EXPECT_NEAR(zbl_e, b_spline_res.value, 1e-9);
+        EXPECT_NEAR(sc_e, natural_res.value, 1e-9);
+        EXPECT_NEAR(sc_e, hermite_res.value, 1e-9);
+        EXPECT_NEAR(sc_e, b_spline_res.value, 1e-9);
 
-        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(zbl_de) * 1.2e-2);
-        EXPECT_NEAR(zbl_de, natural_res.gradient[0], de_tolerance);
-        EXPECT_NEAR(zbl_de, hermite_res.gradient[0], de_tolerance);
-        EXPECT_NEAR(zbl_de, b_spline_res.gradient[0], de_tolerance);
+        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1.2e-2);
+        EXPECT_NEAR(sc_de, natural_res.gradient[0], de_tolerance);
+        EXPECT_NEAR(sc_de, hermite_res.gradient[0], de_tolerance);
+        EXPECT_NEAR(sc_de, b_spline_res.gradient[0], de_tolerance);
     }
 
     for (Real r = 0.1005; r < cutoff; r += spacing) {
-        auto ed = zbl.energyAndDerivative(Species2Sorted(si, si), r);
-        Real zbl_e = ed[0];
-        Real zbl_de = ed[1];
+        auto ed = sc.energyAndDerivative(Species2Sorted(si, si), r);
+        Real sc_e = ed[0];
+        Real sc_de = ed[1];
 
         auto natural_res = natural_cubic_spline.interpolate({r});
         auto hermite_res = hermite_cubic_spline.interpolate({r});
         auto b_spline_res = b_spline.interpolate({r});
 
-        Real e_tolerance = 1e-9 + std::abs(zbl_e) * 1e-3;
-        EXPECT_NEAR(natural_res.value, zbl_e, e_tolerance);
-        EXPECT_NEAR(hermite_res.value, zbl_e, e_tolerance);
-        EXPECT_NEAR(b_spline_res.value, zbl_e, e_tolerance);
+        Real e_tolerance = 1e-9 + std::abs(sc_e) * 1e-3;
+        EXPECT_NEAR(natural_res.value, sc_e, e_tolerance);
+        EXPECT_NEAR(hermite_res.value, sc_e, e_tolerance);
+        EXPECT_NEAR(b_spline_res.value, sc_e, e_tolerance);
 
-        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(zbl_de) * 1e-2);
-        EXPECT_NEAR(natural_res.gradient[0], zbl_de, de_tolerance);
-        EXPECT_NEAR(hermite_res.gradient[0], zbl_de, de_tolerance);
-        EXPECT_NEAR(b_spline_res.gradient[0], zbl_de, de_tolerance);
+        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1e-2);
+        EXPECT_NEAR(natural_res.gradient[0], sc_de, de_tolerance);
+        EXPECT_NEAR(hermite_res.gradient[0], sc_de, de_tolerance);
+        EXPECT_NEAR(b_spline_res.gradient[0], sc_de, de_tolerance);
     }
 }
 

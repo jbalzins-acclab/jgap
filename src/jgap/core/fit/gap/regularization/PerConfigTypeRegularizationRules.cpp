@@ -3,7 +3,7 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
     PerConfigTypeRegularizationRules::PerConfigTypeRegularizationRules(Real energy_sigma_per_atom,

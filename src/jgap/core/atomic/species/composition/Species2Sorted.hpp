@@ -10,7 +10,7 @@
 #include <ranges>
 #include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
     struct Species2Sorted {

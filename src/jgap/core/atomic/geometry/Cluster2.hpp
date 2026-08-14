@@ -6,9 +6,9 @@
 
 namespace jgap {
     struct Cluster2 {
-        size_t idx0;
-        size_t idx1;
-        Separation separation01;
+        size_t idx0{};
+        size_t idx1{};
+        Separation separation01{};
     };
 
     template<typename Func>

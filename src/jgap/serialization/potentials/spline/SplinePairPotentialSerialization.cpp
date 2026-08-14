@@ -1,6 +1,6 @@
 #include "SplinePairPotentialSerialization.hpp"
 #include "jgap/core/potentials/spline/SplinePairPotential.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 
 namespace jgap {

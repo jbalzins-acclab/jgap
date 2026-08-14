@@ -6,7 +6,7 @@
 #include <set>
 
 #include "jgap/core/UnseqFor.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

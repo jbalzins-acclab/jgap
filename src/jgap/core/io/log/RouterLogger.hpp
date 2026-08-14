@@ -3,9 +3,9 @@
 
 #include <memory>
 #include "jgap/io/log/Logger.hpp"
-#include "jgap/io/log/LogConfig.hpp"
+#include "LogConfig.hpp"
 #include "jgap/io/log/StdoutLogger.hpp"
-#include "jgap/io/log/FileLogger.hpp"
+#include "FileLogger.hpp"
 
 namespace jgap {
     class RouterLogger : public Logger {

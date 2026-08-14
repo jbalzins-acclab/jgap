@@ -27,11 +27,9 @@ def screened_coulomb_ev(Z1, Z2, r, c1, c2, c3, c4, c5, c6):
     eps = 8.854187817e-12
     e = 1.60217657e-19
 
-    a = 0.46848 / (Z1**0.23 + Z2**0.23)
-    x = r / a
-    phi = c1 * np.exp(-c2 * x) + c3 * np.exp(-c4 * x) + c5 * np.exp(-c6 * x)
-    r = r * 1e-10  # Å --> m
-    E = Z1 * Z2 * e * phi / (4.0 * np.pi * eps * r) # not e**2 => eV
+    phi = c1 * np.exp(-c2 * r) + c3 * np.exp(-c4 * r) + c5 * np.exp(-c6 * r)
+    r_m = r * 1e-10  # Å --> m
+    E = Z1 * Z2 * e * phi / (4.0 * np.pi * eps * r_m) # not e**2 => eV
     return E
 
 def read_and_sort_energies(filepath, energy_col, hartree=False):
@@ -51,13 +49,6 @@ def read_and_sort_energies(filepath, energy_col, hartree=False):
     data.sort() # Sort by distance
     r = [item[0] for item in data]
     E = [item[1] for item in data]
-    return r, E
-
-def read_energies_zbl(filepath):
-    r, E = read_and_sort_energies(filepath, 1)
-    if len(r) > 0 and E[0] < 1.0:
-        del r[0]
-        del E[0]
     return r, E
 
 def read_energies_dmol(filepath):
@@ -81,14 +72,6 @@ def read_energies_mp2(filepath):
 
 def read_energies_all(base_dir):
     res = {}
-    # ZBL
-    zbl_dir = os.path.join(base_dir, 'nlh_potentials_opendata/zbl/energies')
-    if os.path.isdir(zbl_dir):
-        for fn in os.listdir(zbl_dir):
-            if not fn.startswith('energies_'): continue
-            parts = fn.replace('.dat', '').split('_')
-            Z1, Z2 = int(parts[1]), int(parts[2])
-            res[('zbl', Z1, Z2)] = read_energies_zbl(os.path.join(zbl_dir, fn))
 
     # DMol
     dmol_dir = os.path.join(base_dir, 'nlh_potentials_opendata/dmol/original_data')
@@ -136,7 +119,7 @@ def fit(Z1, Z2, r, energies, fit_interval):
         return None
 
 def fit_all_and_save(energies_per_pair, fit_interval):
-    results = {'zbl': [], 'dmol': [], 'mp2': []}
+    results = {'dmol': [], 'mp2': []}
 
     total = len(energies_per_pair)
     count = 0
@@ -155,8 +138,7 @@ def fit_all_and_save(energies_per_pair, fit_interval):
             last_printed_percent = current_percent
 
     for source, lines in results.items():
-        source_ = source if source != 'zbl' else 'nlh'
-        with open(f'{source_}.dat', 'w') as f:
+        with open(f'{source}.dat', 'w') as f:
             f.write("\n".join(lines))
 
 def download_nlh_data():
@@ -191,8 +173,6 @@ def plot_fit(elem1, elem2, fit_file, original_data_path):
     r_orig, E_orig = [], []
     if "dmol" in original_data_path:
         r_orig, E_orig = read_energies_dmol(original_data_path)
-    elif "zbl" in original_data_path:
-        r_orig, E_orig = read_energies_zbl(original_data_path)
     elif "mp2" in original_data_path:
         r_orig, E_orig = read_energies_mp2(original_data_path)
     else:
@@ -233,12 +213,13 @@ def main():
 
     energies_per_pair = read_energies_all(base_dir)
     fit_all_and_save(energies_per_pair, fit_interval)
-    print("Fitting complete. Results saved to nlh.dat, dmol.dat, and mp2.dat")
+    print("Fitting complete. Results saved to dmol.dat and mp2.dat")
 
 if __name__ == '__main__':
     # To run fitting:
-    #main()
+    main()
 
+    # Testing specific energy
     c_fe_ni = [
         0.32818750683529224, 1.2763590338471473,
         0.5319935400634741,  0.4920242580140316,
@@ -249,6 +230,5 @@ if __name__ == '__main__':
 
     # To plot a fit:
     #plot_fit('Fe', 'Fe', 'dmol.dat', 'nlh_potentials_opendata/dmol/original_data/energies.26.26')
-    #plot_fit('Fe', 'Fe', 'nlh.dat', 'nlh_potentials_opendata/zbl/energies/energies_26_26.dat')
     #plot_fit('Al', 'Al', 'mp2.dat', 'nlh_potentials_opendata/mp2/original_data/Al_Al_unc-pc-2.dat')
     pass

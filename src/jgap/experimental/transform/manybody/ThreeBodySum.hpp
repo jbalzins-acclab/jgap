@@ -7,7 +7,7 @@
 #include <set>
 
 #include "jgap/core/atomic/descriptor/ManyBodyDescriptors.hpp"
-#include "jgap/core/atomic/iteration/AtomicCluster3Expansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
@@ -47,7 +47,7 @@ namespace jgap {
                     const auto mode = transformation->isSwapInvariant(1, 2)
                                           ? ClusterPermutationMode::Reduced
                                           : ClusterPermutationMode::PermuteSameSpecies;
-                    AtomicCluster3Expansion expansion(species_set, mode);
+                    Cluster3AtomicExpansion expansion(species_set, mode);
                     Real factor = expansion.getPermutationReductionFactor();
                     
                     expansion.forEach(atom_index, nl, [&](const Cluster3& cluster) {

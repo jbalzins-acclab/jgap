@@ -5,11 +5,11 @@
 #include "jgap/core/kernels/Kernel.hpp"
 
 #include <memory>
+#include "../../../io/log/CurrentLogger.hpp"
 #include "GapComponent.hpp"
 #include "jgap/core/Matrix.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
 #include "jgap/core/transform/manybody/NBodyAggregator.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
@@ -53,14 +53,21 @@ namespace jgap {
                     result.energy(sparse_idx) += K;
 
                     // Final chain rule combining gradK_wrt_q with the accumulated per-dimension forces and virials
+
+                    // Separate variable for accumulation to help enable auto-vectorization for large Dim.
+                    Virials virials_i{};
                     for (size_t dim = 0; dim < Dim; dim++) {
-                        result.virials(sparse_idx) += aggregated_descriptors.virials[i][dim] * gradK_wrt_q[dim];
+                        virials_i += aggregated_descriptors.virials[i][dim] * gradK_wrt_q[dim];
                     }
+                    result.virials(sparse_idx) += virials_i;
 
                     for (size_t j = 0; j < nl.nAtoms(); j++) {
+                        // Separate variable for accumulation to help enable auto-vectorization for large Dim.
+                        Vector3 force_j{0.0, 0.0, 0.0};
                         for (size_t dim = 0; dim < Dim; dim++) {
-                            result.force(sparse_idx, j) += aggregated_descriptors.force(i, j)[dim] * gradK_wrt_q[dim];
+                            force_j += aggregated_descriptors.force(i, j)[dim] * gradK_wrt_q[dim];
                         }
+                        result.force(sparse_idx, j) += force_j;
                     }
                 }
             }

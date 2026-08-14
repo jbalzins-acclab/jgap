@@ -10,7 +10,7 @@
 #include <string>
 
 #include "../../Real.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

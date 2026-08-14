@@ -3,9 +3,8 @@
 
 #include <string_view>
 #include <string>
-#include <format>   // C++20
+#include <format>
 #include <stdexcept>
-
 
 namespace jgap {
     enum class LogLevel { Debug, Info, Warn, Error };

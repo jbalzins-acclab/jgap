@@ -4,7 +4,7 @@
 #include "jgap/core/splines/HermiteCubicSpline.hpp"
 #include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

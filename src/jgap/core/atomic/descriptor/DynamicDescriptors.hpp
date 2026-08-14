@@ -10,6 +10,7 @@
 
 namespace jgap {
 
+    /// @brief Store an array of descriptor without knowing their dimensions at compile-time.
     class DynamicDescriptors {
     public:
         DynamicDescriptors(size_t n_descriptors, size_t dim)

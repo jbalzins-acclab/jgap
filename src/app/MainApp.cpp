@@ -24,7 +24,7 @@
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/tabulation/TabulationParams.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/Utils.hpp"

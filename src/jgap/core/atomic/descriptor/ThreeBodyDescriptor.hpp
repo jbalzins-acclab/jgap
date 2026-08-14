@@ -7,14 +7,11 @@
 
 namespace jgap {
 
-    /// Derivatives of \ref ThreeBodyDescriptor with respect to each separation
-    /// in the \ref Cluster3 from which the descriptor was generated.
+    /// @brief Derivatives of Descriptor<Dim>(r_ij, r_ik, r_jk) wrt (r_ij, r_ik, r_jk).
     template<size_t Dim>
     using ThreeBodyDerivatives = std::array<std::array<Real, Dim>, 3>;
 
-    /// Generalized real degrees of freedom of a local atomic descriptor
-    /// derived injectively from a single \ref Cluster3,
-    /// as well as their derivatives wrt each separation in the cluster.
+    /// @brief Dim-dimensional 3-body descriptor, and derivatives wrt (r_ij, r_ik, r_jk) in each dimension.
     template<size_t Dim>
         requires(Dim > 0)
     struct ThreeBodyDescriptor {

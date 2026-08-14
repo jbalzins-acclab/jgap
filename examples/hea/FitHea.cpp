@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/core/atomic/io/XYZData.hpp"
+#include "../../src/jgap/io/xyz/XYZData.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"

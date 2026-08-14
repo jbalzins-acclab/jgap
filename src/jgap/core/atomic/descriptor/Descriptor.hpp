@@ -7,11 +7,7 @@
 
 namespace jgap {
 
-    /// Generalized real degrees of freedom of a local atomic descriptor,
-    /// without their derivatives.
-    ///
-    /// \tparam Dim dimensions of the descriptor, not necessarily independent.
-    /// \note Just a wrapper around a fixed-sized array, aimed at emphasizing that the array contains descriptor info.
+    /// @brief A wrapper around a fixed-sized array, aimed at emphasizing that the array contains descriptor info.
     template<size_t Dim>
     requires (Dim > 0)
     using Descriptor = std::array<Real, Dim>;

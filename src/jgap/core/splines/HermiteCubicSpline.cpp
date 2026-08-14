@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../io/log/CurrentLogger.hpp"
 
 namespace jgap {
     HermiteCubicSpline::HermiteCubicSpline(const Grid<1>& table) { init(table); }

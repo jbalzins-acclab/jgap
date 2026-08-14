@@ -4,12 +4,13 @@
 #include <type_traits>
 
 namespace jgap {
-    /// Type Alias for the floating point number type.
-    /// Meant to SIMPLIFY transition from double to float if such is needed in the future.
-    /// However, further adjustments in the code will be needed,
-    /// as I found putting static_cast everywhere quite annoying,
-    /// yet the testing I ran showed not much benefit from such transition with a standard QR fit
-    /// (no notable speedup, yet nonsense coefficients).
+    /// @brief Type Alias for the floating point number type.
+    /// @note Meant to SIMPLIFY transition from double to float if such is needed in the future,
+    /// it is not guaranteed to work by simple switching.
+    /// @note Initial testing of floats showed ~10%-20% speedup on a small single element potential,
+    /// returning NaNs as a result. It's probably not worth any further testing,
+    /// except using floats to store the covariance matrix but using doubles for operations when finding least squares
+    /// (like in QRGapFit) may work.
     using Real = double;
 
     inline namespace literals {

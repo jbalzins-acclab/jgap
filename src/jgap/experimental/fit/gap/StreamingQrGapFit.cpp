@@ -4,7 +4,7 @@
 #include <Eigen/QR>
 
 #include "jgap/core/UnseqFor.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
     StreamingQrGapFit::StreamingQrGapFit(const Real jitter, const size_t target_chunk_rows) :

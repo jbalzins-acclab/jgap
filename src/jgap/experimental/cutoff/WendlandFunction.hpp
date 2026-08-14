@@ -2,7 +2,7 @@
 #define JGAP_WENDLANDFUNCTION_HPP
 
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

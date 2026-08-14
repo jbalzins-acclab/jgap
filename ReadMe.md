@@ -6,10 +6,10 @@
 ### Prerequisites
 - CMake 3.11+
 - A C++23 compiler. **GCC 15+ is recommended**: jgap uses `#embed` (GCC 15 / Clang ≥ 19) to bake the
-  built-in ZBL screening datasets into the binary. Older C++23 compilers (GCC 14, AppleClang) still build
+  built-in screening datasets into the binary. Older C++23 compilers (GCC 14, AppleClang) still build
   and fit — without `#embed` those datasets are instead read at runtime from
   `resources/dmol-screening-fit/`, so you must run with the `resources/` folder present (or pass an
-  explicit ZBL dataset file; see `standard_fit`'s optional argument and `StandardGapParams::zbl_dataset_file`).
+  explicit screening dataset file; see `standard_fit`'s optional argument and `StandardGapParams::screened_coulomb_dataset_file`).
   Get a suitable compiler if needed:
   - Puhti / HPC modules: `module load gcc/15` (or the newest available)
   - Homebrew: `brew install gcc` then `export CC=gcc-15 CXX=g++-15` (the default `c++` on macOS is

@@ -1,7 +1,7 @@
 #include "CompositePotentialSerialization.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

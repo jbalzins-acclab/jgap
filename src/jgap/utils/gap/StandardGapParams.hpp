@@ -14,8 +14,8 @@ namespace jgap {
 
         size_t seed;
 
-        // External ZBL: read its coefficients from this file if set, otherwise use the built-in dataset.
-        std::optional<std::string> zbl_dataset_file{};
+        // External ScreenedCoulomb: read its coefficients from this file if set, otherwise use the built-in dataset.
+        std::optional<std::string> screened_coulomb_dataset_file{};
 
         // 2-body params
         Real cutoff2 = 4.5;

@@ -1,5 +1,5 @@
 #include "SquaredExpKernelSerialization.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 namespace jgap {

@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <vector>
 
+#include "../../io/log/CurrentLogger.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/iteration/Cluster2Expansion.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {

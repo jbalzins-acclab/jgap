@@ -9,8 +9,8 @@
 
 namespace jgap {
     struct Cluster3 {
-        std::array<size_t, 3> atom_indexes;
-        std::array<Separation, 3> separations;
+        std::array<size_t, 3> atom_indexes{};
+        std::array<Separation, 3> separations{};
 
         Separation& separation01() { return separations[0]; }
         Separation& separation02() { return separations[1]; }

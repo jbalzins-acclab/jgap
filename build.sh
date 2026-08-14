@@ -15,6 +15,9 @@ if [[ -n "${CXX:-}" ]]; then
     COMPILER_OPTS+=("-DCMAKE_CXX_COMPILER=${CXX}")
 fi
 
+echo "==> Ensuring Python pybind11 dependency is installed..."
+python3 -m pip install pybind11 --break-system-packages 2>/dev/null || python3 -m pip install pybind11 || true
+
 echo "==> Configuring Release build in '${BUILD_DIR}'..."
 cmake -B "${BUILD_DIR}" "${NINJA_OPT[@]}" "${COMPILER_OPTS[@]}" -DCMAKE_BUILD_TYPE=Release "$@"
 

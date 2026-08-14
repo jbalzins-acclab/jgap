@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     CurrentLogger::initDefault({.stdout_log_debug = true});
 
     if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [zbl_dataset_file]\n";
+        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file]\n";
         return 1;
     }
     const std::string training_file = argv[1];
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 
     StandardGapParams params{.seed = 120};
     if (argc == 4) {
-        params.zbl_dataset_file = argv[3]; // otherwise the built-in ZBL dataset is used
+        params.screened_coulomb_dataset_file = argv[3]; // otherwise the built-in screening dataset is used
     }
     params.eam_pf = FSGenPairFunction(4.5, 3.0);
     params.eam_mode = EamMode::Blind;

@@ -9,13 +9,12 @@
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/utils/Utils.hpp"
 
-#include <any>
-#include <typeinfo>
+#include <string_view>
 
 namespace jgap {
 
     namespace detail {
-        std::any& getRegistryAny(const std::type_info& type);
+        void*& getRegistryPtr(std::string_view type_name);
     }
 
     template<Cloneable TBase>
@@ -24,11 +23,11 @@ namespace jgap {
         using Registry = std::vector<std::unique_ptr<Serialization<TBase>>>;
 
         static Registry& getRegistry() {
-            std::any& storage = detail::getRegistryAny(typeid(TBase));
-            if (!storage.has_value()) {
-                storage = std::make_shared<Registry>();
+            void*& ptr = detail::getRegistryPtr(typeid(TBase).name());
+            if (!ptr) {
+                ptr = new Registry();
             }
-            return *std::any_cast<std::shared_ptr<Registry>>(storage);
+            return *static_cast<Registry*>(ptr);
         }
 
         static void serialize(const ValuePtr<TBase>& obj, SerializationNode& node) {
@@ -70,9 +69,12 @@ namespace jgap {
 #define CONCAT_IMPL(a, b) a##b
 #define CONCAT(a, b) CONCAT_IMPL(a, b)
 
-/// Registers a serializer class with the SerializationRegistry for the specified base type(s).
-/// @note Uses `__attribute__((used))` to prevent compiler/linker dead-code elimination (especially under
-/// -O3 or LTO) from stripping static registration variables in anonymous namespaces.
+#if defined(__GNUC__) || defined(__clang__)
+#define REGISTER_SERIALIZATION(Serialization, ...)                                                            \
+    __attribute__((constructor)) static void CONCAT(SerializationRegisterFunc_, __LINE__)() {                 \
+        jgap::SerializationRegistry<__VA_ARGS__>::getRegistry().push_back(std::make_unique<Serialization>()); \
+    }
+#else
 #define REGISTER_SERIALIZATION(Serialization, ...)                                                                    \
     namespace {                                                                                                       \
         struct CONCAT(SerializationRegister, __LINE__) {                                                              \
@@ -84,5 +86,6 @@ namespace jgap {
             SerializationRegisterInstance, __LINE__                                                                   \
         );                                                                                                            \
     }
+#endif
 
 #endif

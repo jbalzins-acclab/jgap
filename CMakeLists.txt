@@ -1,7 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
-if (POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW)
-endif ()
+cmake_minimum_required(VERSION 3.20)
 project(jgap)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -106,8 +103,9 @@ include_directories(${CMAKE_BINARY_DIR}/generated)
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE ALL_SRC_C "${PROJECT_SOURCE_DIR}/src/*.c")
 
-# The src/app/* executables are not part of the library.
+# The src/app/* executables and src/pybind/* modules are not part of the library.
 list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/app/.*")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/pybind/.*")
 
 # The XML converter depends on pugixml; drop it from the library when pugixml is unavailable.
 if (NOT pugixml_FOUND)
@@ -198,6 +196,41 @@ target_link_libraries(jgap PRIVATE
 if (pugixml_FOUND)
     add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
     target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::static pugixml::pugixml)
+endif ()
+
+## PYTHON / PYBIND11 MODULE (jgap_ase)
+execute_process(
+    COMMAND python3 -m pybind11 --cmakedir
+    OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if (PYBIND11_CMAKE_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
+endif ()
+
+find_package(pybind11 CONFIG QUIET)
+if (pybind11_FOUND)
+    message(STATUS "pybind11 found: building jgap_ase Python module")
+    pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/ASE/PyJGAPCalculator.cpp")
+    target_link_libraries(jgap_ase PRIVATE jgap_lib)
+
+    execute_process(
+        COMMAND python3 -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
+        OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if (NOT _PY_SITE_PACKAGES_REL)
+        set(_PY_SITE_PACKAGES_REL "lib/python3/site-packages")
+    endif ()
+
+    install(TARGETS jgap_ase DESTINATION "${_PY_SITE_PACKAGES_REL}")
+    if (EXISTS "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py")
+        install(FILES "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py" DESTINATION "${_PY_SITE_PACKAGES_REL}")
+    endif ()
+else ()
+    message(STATUS "pybind11 not found: skipping jgap_ase Python module build")
 endif ()
 
 add_custom_command(TARGET jgap_lib POST_BUILD

@@ -7,14 +7,14 @@
 
 namespace jgap {
 
-    /// @brief $|r_{ij}|$ and derivatives.
+    /// @brief $|r_{ij}|$, $\hat{r}_{ij}$, and calculating @ref Virials of $|r_{ij}|$.
     ///
-    /// Calculating virial stress tensor of $|r_{ij}|$ here ensures
-    /// no convention related confusion further down the line.
+    /// Provides the best balance in terms of avoiding re-calculation and optimizing memory usage
+    /// when storing positional information between a pair of atoms.
     ///
-    /// @note Direction is practically always needed as without it one can encounter problems
-    /// related to PBC in 2-body symmetric iteration.
-    ///
+    /// @note To avoid any confusion down the line, unless performance critical simplification exists,
+    /// Separation::virials() should be used as a starting point for the chain rule application
+    /// when calculating Virials for e.g. @ref AtomicQuantity or @ref ManyBodyDescriptor.
     struct Separation {
         Real magnitude{};
         Vector3 direction{};

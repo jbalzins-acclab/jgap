@@ -1,5 +1,15 @@
-@see https://gitlab.com/acclab/gap-data
+Sources:
+(1) "Multiscale machine-learning interatomic potentials for ferromagnetic and liquid iron" | https://doi.org/10.1088/1361-648X/ac6f39
+(2)
 
-fe-only.txt: https://doi.org/10.1088/1361-648X/ac6f39
-feni-train.xyz + feni-test.xyz:  "The development and applications of a tabGAP potential for FeNi alloys." - Bachelor's Thesis of Jegors Balzins, which partially includes data from https://doi.org/10.1088/1361-648X/ac6f39 , http://dx.doi.org/10.1103/PhysRevMaterials.9.053807 and https://doi.org/10.1103/tk38-t5rr
-iter-3-3-train.xyz + iter-3-3-test.xyz: Data for currently unpublished/not finished CrMnFeNi potential, partially including data from the above-mentioned sources.
+- fe-only.txt: https://doi.org/10.1088/1361-648X/ac6f39
+
+- feni-train.xyz + feni-test.xyz:
+    "The development and applications of a tabGAP potential for FeNi alloys." - Jegors Balzins' Bachelor's Thesis,
+    which in addition to original data partially includes data from:
+        (1) ,
+        http://dx.doi.org/10.1103/PhysRevMaterials.9.053807 ,
+        https://doi.org/10.1103/tk38-t5rr
+
+- iter-3-3-train.xyz + iter-3-3-test.xyz: Data for currently unpublished/not-finished CrMnFeNi potential,
+                                          partially including data from the above-mentioned sources.

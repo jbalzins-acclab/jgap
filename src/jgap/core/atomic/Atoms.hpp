@@ -1,5 +1,5 @@
-#ifndef JGAP_ATOMICBOX_HPP
-#define JGAP_ATOMICBOX_HPP
+#ifndef JGAP_ATOMS_HPP
+#define JGAP_ATOMS_HPP
 
 #include <array>
 #include <cmath>
@@ -13,7 +13,7 @@
 #include "jgap/core/Real.hpp"
 #include "energy/AtomicQuantity.hpp"
 #include "geometry/Lattice.hpp"
-#include "jgap/core/atomic/io/XYZData.hpp"
+#include "../io/xyz/XYZData.hpp"
 #include "species/Species.hpp"
 #include "jgap/utils/Utils.hpp"
 
@@ -66,9 +66,7 @@ namespace jgap {
         std::string write() const;
 
         /// Set energy, forces and virials.
-        /// @note essentially to simplify updating energies with the result of \ref Potential::calculateEnergy.
         void setEnergyAndDerivatives(const AtomicQuantity& energy_and_derivatives);
-        void setEnergyAndDerivatives(Real energy);
 
         std::optional<Lattice> getLattice() const { return lattice; }
         void setLattice(const Lattice& lat) { lattice = lat; }

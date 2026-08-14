@@ -9,7 +9,7 @@
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
 #include "jgap/core/potentials/spline/SplinePairPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/core/potentials/zbl/ZblPotential.hpp"
+#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
@@ -54,12 +54,12 @@ TEST(TestPotentialSerialization, IsolatedAtomPotential) {
     EXPECT_DOUBLE_EQ(energies.at(Species("Ni")), -2.1);
 }
 
-TEST(TestPotentialSerialization, ZblPotential) {
+TEST(TestPotentialSerialization, ScreenedCoulombPotential) {
     std::map<Species2Sorted, std::array<Real, 6>> coeffs = {{Species2Sorted("Fe,Ni"), {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
-    ZblPotential original(coeffs, 8.0, 1.0);
+    ScreenedCoulombPotential original(coeffs, 8.0, 1.0);
 
-    auto rt = roundTrip(original, tmpFile("zbl.h5"));
-    auto restored = rt.as<ZblPotential>();
+    auto rt = roundTrip(original, tmpFile("screened_coulomb.h5"));
+    auto restored = rt.as<ScreenedCoulombPotential>();
     ASSERT_NE(restored, nullptr);
     EXPECT_DOUBLE_EQ(restored->getCutoff(), 8.0);
     EXPECT_DOUBLE_EQ(restored->getCutoffTransitionWidth(), 1.0);
@@ -95,7 +95,7 @@ TEST(TestPotentialSerialization, SplinePairPotential) {
 TEST(TestPotentialSerialization, CompositePotential) {
     CompositePotential original{std::map<std::string, ValuePtr<Potential>>{
         {"isolated", IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}})},
-        {"zbl", ZblPotential(std::map<Species2Sorted, std::array<Real, 6>>{{Species2Sorted("Fe,Ni"),
+        {"screened_coulomb", ScreenedCoulombPotential(std::map<Species2Sorted, std::array<Real, 6>>{{Species2Sorted("Fe,Ni"),
                                                                             {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
                              8.0, 1.0)},
     }};
@@ -105,7 +105,7 @@ TEST(TestPotentialSerialization, CompositePotential) {
     ASSERT_NE(restored, nullptr);
     ASSERT_EQ(restored->getPotentials().size(), 2u);
     EXPECT_TRUE(restored->getPotentials().contains("isolated"));
-    EXPECT_TRUE(restored->getPotentials().contains("zbl"));
+    EXPECT_TRUE(restored->getPotentials().contains("screened_coulomb"));
 
     expectSameEnergy(original, *rt, feNiPair());
 }

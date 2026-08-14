@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/core/atomic/io/XYZData.hpp"
+#include "../../../../src/jgap/core/io/xyz/XYZData.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
 #include "jgap/core/atomic/species/composition/Species2Atomic.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"

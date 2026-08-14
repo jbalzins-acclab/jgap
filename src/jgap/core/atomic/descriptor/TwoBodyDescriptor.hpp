@@ -7,14 +7,11 @@
 
 namespace jgap {
 
-    /// Derivatives of \ref TwoBodyDescriptor with respect to each separation
-    /// in the \ref Cluster2 from which the descriptor was generated.
+    /// @brief Derivatives of Descriptor<Dim>(r_ij) wrt r_ij.
     template<size_t Dim>
     using TwoBodyDerivatives = std::array<Real, Dim>;
 
-    /// Generalized real degrees of freedom of a local atomic descriptor
-    /// derived injectively from a single @ref Cluster2,
-    /// as well as their derivatives wrt each separation in the cluster.
+    /// @brief Dim-dimensional 2-body descriptor, and derivatives wrt r_ij in each dimension.
     template<size_t Dim>
         requires(Dim > 0)
     struct TwoBodyDescriptor {

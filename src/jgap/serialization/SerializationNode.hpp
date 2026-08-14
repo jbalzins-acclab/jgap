@@ -11,7 +11,7 @@
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
 #include "jgap/core/atomic/descriptor/DescriptorsView.hpp"
 #include "jgap/core/atomic/descriptor/DynamicDescriptors.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../core/io/log/CurrentLogger.hpp"
 
 namespace HighFive {
     class Group;

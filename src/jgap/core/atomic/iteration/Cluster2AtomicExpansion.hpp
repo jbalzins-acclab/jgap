@@ -1,5 +1,5 @@
-#ifndef JGAP_ATOMICCLUSTER2EXPANSION_HPP
-#define JGAP_ATOMICCLUSTER2EXPANSION_HPP
+#ifndef JGAP_CLUSTER2ATOMICEXPANSION_HPP
+#define JGAP_CLUSTER2ATOMICEXPANSION_HPP
 
 #include <vector>
 
@@ -10,11 +10,11 @@
 
 namespace jgap {
 
-    class AtomicCluster2Expansion {
+    class Cluster2AtomicExpansion {
     public:
         static constexpr Real ClusterPermutationsAvailable = 1.0;
 
-        AtomicCluster2Expansion(const Species2Atomic& species_set) : species_set(species_set) {}
+        Cluster2AtomicExpansion(const Species2Atomic& species_set) : species_set(species_set) {}
 
         bool forEach(size_t atom_index, const NeighbourLists& neighbour_list, Cluster2Callback auto&& callback) const {
             const auto& node_species = species_set.node;
@@ -26,7 +26,9 @@ namespace jgap {
             for (const auto& neigh_data: atom_neighbours->second) {
                 callback(
                     Cluster2{
-                        .idx0 = atom_index, .idx1 = neigh_data.neighbour_index, .separation01 = neigh_data.separation
+                        .idx0 = atom_index,
+                        .idx1 = neigh_data.neighbour_index,
+                        .separation01 = neigh_data.separation,
                     }
                 );
             }

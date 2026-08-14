@@ -1,7 +1,7 @@
 #ifndef JGAP_DISTANCES3B_HPP
 #define JGAP_DISTANCES3B_HPP
 
-#include "../../../core/transform/nbody/3b/ThreeBodyTransformation.hpp"
+#include "../../../../core/transform/nbody/3b/ThreeBodyTransformation.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
 
 namespace jgap {

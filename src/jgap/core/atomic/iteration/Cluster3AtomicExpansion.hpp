@@ -1,5 +1,5 @@
-#ifndef JGAP_ATOMICCLUSTER3EXPANSION_HPP
-#define JGAP_ATOMICCLUSTER3EXPANSION_HPP
+#ifndef JGAP_CLUSTER3ATOMICEXPANSION_HPP
+#define JGAP_CLUSTER3ATOMICEXPANSION_HPP
 
 #include <vector>
 
@@ -11,11 +11,11 @@
 
 namespace jgap {
 
-    class AtomicCluster3Expansion {
+    class Cluster3AtomicExpansion {
     public:
         static constexpr Real ClusterPermutationsAvailable = factorial(2u);
 
-        AtomicCluster3Expansion(
+        Cluster3AtomicExpansion(
             const Species3AtomicSorted& species_set, ClusterPermutationMode mode = ClusterPermutationMode::Reduced
         ) :
             species_set(species_set),
@@ -37,16 +37,14 @@ namespace jgap {
             const auto sep_list1_it = neighbour_list.neighbours_per_atom[atom_index].find(species1);
             if (sep_list1_it == neighbour_list.neighbours_per_atom[atom_index].end()) return false;
 
-            const auto sep_list2_it = neighbour_list.neighbours_per_atom[atom_index].find(species2);
-            if (sep_list2_it == neighbour_list.neighbours_per_atom[atom_index].end()) return false;
-
             const auto& sep_list1 = sep_list1_it->second;
-            const auto& sep_list2 = sep_list2_it->second;
-            bool found = false;
+            bool found;
 
             if (species1 == species2) {
-                for (auto it1 = sep_list1.begin(); it1 != sep_list1.end(); ++it1) {
-                    for (auto it2 = std::next(it1); it2 != sep_list2.end(); ++it2) {
+                found = sep_list1.size() >= 2;
+
+                for (auto it1 = sep_list1.begin(); it1 != sep_list1.end(); it1++) {
+                    for (auto it2 = std::next(it1); it2 != sep_list1.end(); it2++) {
                         found = true;
                         callback(
                             Cluster3{
@@ -71,6 +69,14 @@ namespace jgap {
                     }
                 }
             } else {
+
+                const auto sep_list2_it = neighbour_list.neighbours_per_atom[atom_index].find(species2);
+                if (sep_list2_it == neighbour_list.neighbours_per_atom[atom_index].end()) return false;
+
+                const auto& sep_list2 = sep_list2_it->second;
+
+                found = !sep_list1.empty() && !sep_list2.empty();
+
                 for (const auto& it1: sep_list1) {
                     for (const auto& it2: sep_list2) {
                         found = true;

@@ -1,7 +1,7 @@
 #include "FSGenPairFunctionSerialization.hpp"
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 

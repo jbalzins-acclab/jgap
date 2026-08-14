@@ -9,6 +9,7 @@
 
 namespace jgap {
 
+    /// @brief Access an array of Descriptor without knowing their dimensions at compile-time.
     class DescriptorsView {
     public:
         template<size_t Dim>

@@ -7,13 +7,14 @@
 
 #include <any>
 #include <typeindex>
+#include <string_view>
 #include <unordered_map>
 
 namespace jgap {
     namespace detail {
-        std::any& getRegistryAny(const std::type_info& type) {
-            static std::unordered_map<std::type_index, std::any> global_map;
-            return global_map[std::type_index(type)];
+        void*& getRegistryPtr(std::string_view type_name) {
+            static std::unordered_map<std::string_view, void*> global_map;
+            return global_map[type_name];
         }
     }
 

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../io/log/CurrentLogger.hpp"
 
 namespace jgap {
     NaturalCubicSpline::NaturalCubicSpline(const std::vector<Real>& r_vec_in, const std::vector<Real>& e_vec_in) {

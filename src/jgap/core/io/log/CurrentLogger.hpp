@@ -1,8 +1,8 @@
 #ifndef JGAP_CURRENTLOGGER_HPP
 #define JGAP_CURRENTLOGGER_HPP
 
-#include "Logger.hpp"
-#include "RouterLogger.hpp"
+#include "jgap/core/io/log/Logger.hpp"
+#include "jgap/core/io/log/RouterLogger.hpp"
 #include "LogConfig.hpp"
 #include <memory>
 #include <string>
@@ -25,7 +25,7 @@ namespace jgap {
     };
 }
 
-#define JGAP_LOG CurrentLogger::get()
+#define JGAP_LOG jgap::CurrentLogger::get()
 
 // Simple macros that automatically pass source location
 #define JGAP_LOG_DEBUG(fmt, ...) jgap::CurrentLogger::get()->debugSrc(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)

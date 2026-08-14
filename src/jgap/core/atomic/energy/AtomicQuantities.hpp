@@ -8,8 +8,8 @@
 
 namespace jgap {
 
-    /// \brief An array of \ref AtomicQuantity, but with a tighter memory layout.
-    /// \note Avoids having a vector of force vectors when dealing with per-sparse point kernel values.
+    /// @brief An array of @ref AtomicQuantity, but with a tighter memory layout.
+    /// @note Avoids having a vector of pointers (force std::vectors) when dealing with per-sparse point kernel values.
     class AtomicQuantities {
     public:
         AtomicQuantities(size_t n_sparse, size_t n_atoms) :

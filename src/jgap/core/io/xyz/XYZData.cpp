@@ -1,4 +1,5 @@
 #include "XYZData.hpp"
+
 #include <format>
 #include <iomanip>
 #include <sstream>
@@ -6,7 +7,7 @@
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../log/CurrentLogger.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {

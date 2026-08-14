@@ -8,7 +8,7 @@
 
 namespace jgap {
 
-    /// Main structure for storing 3D vectors, implements some basic operations with them.
+    /// Main structure for storing 3D vectors.
     struct Vector3 {
         constexpr Vector3() : x(0.0), y(0.0), z(0.0) {}
         constexpr Vector3(Real x, Real y, Real z) : x(x), y(y), z(z) {}

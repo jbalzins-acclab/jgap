@@ -6,9 +6,9 @@
 namespace jgap {
 
     /// Independent components of a virial stress tensor of positional quantity, following convention: <br>
-    /// V_{ij}(f) = -1 * \partial f / \partial H_ij |(evaluated at) H = 3D Identity matrix,
-    /// where H is a linear transformation of a system's coordinates,
-    /// such that \vec{r}_i = H\vec{r0}_i.
+    /// $V_{ij}(f) = -1 * \partial f / \partial H_{ij}$ |(evaluated at) H = 3D Identity matrix,
+    /// where H is a linear transformation applied to the system's coordinates,
+    /// such that $\vec{r}_i = H\vec{r}^{(0)}_i$.
     ///
     /// @note No volume normalization in this convention (i.e., without 1/V factor).
     /// @warning To avoid all kinds of errors,

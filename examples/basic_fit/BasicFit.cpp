@@ -17,12 +17,12 @@ int main(int argc, char** argv) {
     CurrentLogger::initDefault({.stdout_log_debug = true});
 
     if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [zbl_dataset_file]\n";
+        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file]\n";
         return 1;
     }
     const std::string training_file = argv[1];
     const std::string output_prefix = argv[2];
-    const std::optional<std::string> zbl_dataset_file =
+    const std::optional<std::string> screened_coulomb_dataset_file =
         (argc == 4) ? std::optional<std::string>{argv[3]} : std::nullopt;
 
     const auto start = std::chrono::steady_clock::now();
@@ -89,12 +89,12 @@ int main(int argc, char** argv) {
     }
 
     IsolatedAtomPotential isolated_atom_pot{training_data};
-    ZblPotential zbp_pot =
-        zbl_dataset_file ? ZblPotential{*zbl_dataset_file, training_data} : ZblPotential{training_data};
+    ScreenedCoulombPotential sc_pot =
+        screened_coulomb_dataset_file ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data} : ScreenedCoulombPotential{training_data};
 
     CompositePotential external{{
         {"isolated", isolated_atom_pot},
-        {"zbl", zbp_pot},
+        {"screened_coulomb", sc_pot},
     }};
 
     potential.optional_external_potential = external;

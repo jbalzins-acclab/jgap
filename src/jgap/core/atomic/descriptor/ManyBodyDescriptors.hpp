@@ -11,6 +11,8 @@
 
 namespace jgap {
 
+    /// @brief An array of @ref ManyBodyDescriptor with separate descriptor properties stored in a continuous block.
+    /// @note Helps to avoid strong a vector of pointers (separate force vectors).
     template<size_t Dim>
         requires(Dim > 0)
     struct ManyBodyDescriptors {
@@ -29,14 +31,6 @@ namespace jgap {
         }
 
         const std::array<Vector3, Dim>& force(size_t desc_idx, size_t atom_idx) const {
-            return forces[desc_idx * n_atoms + atom_idx];
-        }
-
-        std::array<Vector3, Dim>& forces_at(size_t desc_idx, size_t atom_idx) {
-            return forces[desc_idx * n_atoms + atom_idx];
-        }
-
-        const std::array<Vector3, Dim>& forces_at(size_t desc_idx, size_t atom_idx) const {
             return forces[desc_idx * n_atoms + atom_idx];
         }
 
@@ -104,6 +98,7 @@ namespace jgap {
             return total;
         }
 
+        /// @brief $\vec{Q}_{descriptor-index} += \vec{q}(r_{ij})$, and update derivatives.
         void add(size_t descriptor_index, const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 values[descriptor_index][d] += contribution.value[d];
@@ -125,6 +120,7 @@ namespace jgap {
             }
         }
 
+        /// @brief $\vec{Q}_{descriptor-index} += \vec{q}(r_{ij}, r_{ik}, r_{jk})$, and update derivatives.
         void add(size_t descriptor_index, const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 values[descriptor_index][d] += contribution.value[d];

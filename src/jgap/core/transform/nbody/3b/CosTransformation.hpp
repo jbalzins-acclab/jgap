@@ -1,7 +1,7 @@
 #ifndef JGAP_COSTRANSFORMATION_HPP
 #define JGAP_COSTRANSFORMATION_HPP
 #include "ThreeBodyTransformation.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
     class CosTransformation final : public ThreeBodyTransformation<3> {

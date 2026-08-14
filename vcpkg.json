@@ -1,6 +1,6 @@
 {
     "name" : "jgap",
-    "version" : "6.0.0",
+    "version" : "7.0.0",
     "dependencies" : [
         {
             "name": "tbb",

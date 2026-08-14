@@ -5,7 +5,7 @@
 #include "jgap/core/fit/gap/GapFit.hpp"
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "../../../core/io/log/CurrentLogger.hpp"
 
 #include <memory>
 #include <vector>

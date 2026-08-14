@@ -9,25 +9,25 @@
 
 namespace jgap {
 
-    /// Generalized real degrees of freedom of a local atomic descriptor
-    /// that contains information from a multitude of \ref Clusters,
-    /// i.e. ~ a sum/some kind of multiplication of \ref NBodyDescriptors
+    /// @brief $\vec{Q} = "\sum" \vec{q}_i(n-body-cluster)$, and all possible positional derivatives.
+    ///
+    /// A local atomic descriptor that may contain information from multiple clusters,
+    /// i.e. a sum (or some kind of generalized multiplication) of @ref Descriptor<Dim>
     /// (e.g. a sum of EAM pair-function contributions).
     ///
-    /// Stores the descriptor itself, as well as its accumulated forces per atom and virials.
+    /// Stores the descriptor itself, as well as its accumulated derivatives:
+    /// forces (negative gradient wrt each atomic position) and @ref Virials.
     ///
-    /// \tparam Dim dimensions of the descriptor
-    ///
-    /// \note The number of clusters from which many-body descriptors are constructed
+    /// @note The number of clusters from which many-body descriptors are constructed
     /// can vary per-atom because of the varying number of neighbours within the cutoff,
-    /// so compile-time knowledge of per-cluster derivative number is impossible.
+    /// so compile-time knowledge of number of per-descriptor derivatives is impossible.
     /// Moreover, a lot of training data usually consists of a very small(2-4) number of atoms,
     /// which, however, corresponds to a rather large number of clusters because of
-    /// the periodic boundary conditions.
+    /// periodic boundary conditions.
     /// In medium-sized(~100) structures, it is quite usual for around a half of atoms to be
     /// within a cutoff of a single atom.
-    /// Hence, accumulating forces/virials is in general more effective than storing a list of
-    /// DescriptorDerivatives per cluster.
+    /// Hence, accumulating forces/virials is, on average, more efficient than storing a list of
+    /// derivatives attributed to each encountered cluster.
     template<size_t Dim>
         requires(Dim > 0)
     struct ManyBodyDescriptor {
@@ -79,7 +79,7 @@ namespace jgap {
             return result;
         }
 
-        /// \usage
+        /// @brief $\vec{Q} += \vec{q}(r_{ij})$, and update derivatives.
         void add(const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 value[d] += contribution.value[d];
@@ -97,6 +97,7 @@ namespace jgap {
             }
         }
 
+        /// @brief $\vec{Q} += \vec{q}(r_{ij}, r_{ik}, r_{jk})$, and update derivatives.
         void add(const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
             for (size_t d = 0; d < Dim; d++) {
                 value[d] += contribution.value[d];
