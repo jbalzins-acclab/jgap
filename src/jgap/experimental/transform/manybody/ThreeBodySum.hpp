@@ -7,7 +7,7 @@
 #include <set>
 
 #include "jgap/core/atomic/descriptor/ManyBodyDescriptors.hpp"
-#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3Expansion.hpp"
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
@@ -45,23 +45,21 @@ namespace jgap {
                 size_t atom_index = atom_indexes[descriptor_index];
                 for (const auto& [species_set, transformation]: transformations) {
                     const auto mode = transformation->isSwapInvariant(1, 2)
-                                          ? ClusterPermutationMode::Reduced
-                                          : ClusterPermutationMode::PermuteSameSpecies;
-                    Cluster3AtomicExpansion expansion(species_set, mode);
+                                          ? ClusterPermutationMode::NoNodePermutation
+                                          : ClusterPermutationMode::PermuteSameSpeciesNodes;
+                    Cluster3Expansion expansion(species_set, mode);
                     Real factor = expansion.getPermutationReductionFactor();
                     
                     expansion.forEach(atom_index, nl, [&](const Cluster3& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);
-                        /*
-                        if (factor != 1.0_r) {
-                            for (size_t i = 0; i < Dim; ++i) {
-                                contribution.value[i] *= factor;
-                                contribution.derivatives[0][i] *= factor;
-                                contribution.derivatives[1][i] *= factor;
-                                contribution.derivatives[2][i] *= factor;
-                            }
+
+                        for (size_t dim = 0; dim < Dim; dim++) {
+                            contribution.value[dim] *= factor;
+                            contribution.derivatives[0][dim] *= factor;
+                            contribution.derivatives[1][dim] *= factor;
+                            contribution.derivatives[2][dim] *= factor;
                         }
-                        */
+
                         aggregated_descriptors.add(descriptor_index, cluster, contribution);
                     });
                 }

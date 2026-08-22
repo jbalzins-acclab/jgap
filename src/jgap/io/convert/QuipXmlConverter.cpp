@@ -6,14 +6,14 @@
 #include <filesystem>
 #include <fstream>
 #include <set>
+#include "../../core/io/log/CurrentLogger.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
-#include "../../core/io/log/CurrentLogger.hpp"
 
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
@@ -36,8 +36,9 @@ namespace jgap {
         return transform(doc.document_element(), xml_filename.parent_path());
     }
 
-    ValuePtr<Potential> QuipXmlConverter::transform(const pugi::xml_node& quip_potential_encoded,
-                                                    const std::filesystem::path& base_dir) {
+    ValuePtr<Potential> QuipXmlConverter::transform(
+        const pugi::xml_node& quip_potential_encoded, const std::filesystem::path& base_dir
+    ) {
         if (quip_potential_encoded.name() == std::string("GAP_params")) {
             return transformGapParams(quip_potential_encoded, base_dir);
         }
@@ -116,8 +117,9 @@ namespace jgap {
         return result;
     }
 
-    ValuePtr<Potential> QuipXmlConverter::transformGapParams(const pugi::xml_node& quip_gap_params,
-                                                             const std::filesystem::path& base_dir) {
+    ValuePtr<Potential> QuipXmlConverter::transformGapParams(
+        const pugi::xml_node& quip_gap_params, const std::filesystem::path& base_dir
+    ) {
         ValuePtr<Potential> isolated_atom_pot = nullptr;
         if (!quip_gap_params.child("GAP_data").empty()) {
             isolated_atom_pot = transformIsolatedAtomParams(quip_gap_params.child("GAP_data"));
@@ -134,7 +136,8 @@ namespace jgap {
     }
 
     IsolatedAtomPotential QuipXmlConverter::transformIsolatedAtomParams(
-        const pugi::xml_node& quip_isolated_atom_params) {
+        const pugi::xml_node& quip_isolated_atom_params
+    ) {
         std::map<Species, Real> isolated_atom_energies;
 
         for (pugi::xml_node isolated_atom_node: quip_isolated_atom_params.children("e0")) {
@@ -148,8 +151,9 @@ namespace jgap {
         return IsolatedAtomPotential(isolated_atom_energies);
     }
 
-    GapPotential QuipXmlConverter::transformSparseData(const pugi::xml_node& quip_sparse_data,
-                                                       const std::filesystem::path& base_dir) {
+    GapPotential QuipXmlConverter::transformSparseData(
+        const pugi::xml_node& quip_sparse_data, const std::filesystem::path& base_dir
+    ) {
         GapPotential result;
 
         std::set<Species> species_encountered;
@@ -249,9 +253,10 @@ namespace jgap {
         return (base_dir / p).string();
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(const QuipDescriptorData& main_data,
-                                                                 const pugi::xml_node& distance_2b_node,
-                                                                 const std::filesystem::path& base_dir) {
+    ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(
+        const QuipDescriptorData& main_data, const pugi::xml_node& distance_2b_node,
+        const std::filesystem::path& base_dir
+    ) {
         Real cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();
 
@@ -290,9 +295,9 @@ namespace jgap {
         return TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(species_set, trans, kernel, sparse_points, coeffs);
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(const QuipDescriptorData& mainData,
-                                                              const pugi::xml_node& angle3b_node,
-                                                              const std::filesystem::path& base_dir) {
+    ValuePtr<GapComponent> QuipXmlConverter::transformAngle3b(
+        const QuipDescriptorData& mainData, const pugi::xml_node& angle3b_node, const std::filesystem::path& base_dir
+    ) {
         Real r_min = mainData.cutoff - mainData.cutoff_transition_width.value_or(0.5);
         if (mainData.r_min.has_value()) r_min = mainData.r_min.value();
 
@@ -332,14 +337,13 @@ namespace jgap {
         }
         fin.close();
 
-        return AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(species_set, trans, kernel, sparse_points,
-                                                                      coeffs);
+        return ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(species_set, trans, kernel, sparse_points, coeffs);
     }
 
-    ValuePtr<GapComponent> QuipXmlConverter::transformEam(const QuipDescriptorData& main_data,
-                                                          const pugi::xml_node& eam_node,
-                                                          const std::set<Species>& species_encountered,
-                                                          const std::filesystem::path& base_dir) {
+    ValuePtr<GapComponent> QuipXmlConverter::transformEam(
+        const QuipDescriptorData& main_data, const pugi::xml_node& eam_node,
+        const std::set<Species>& species_encountered, const std::filesystem::path& base_dir
+    ) {
         std::optional<Real> rMin =
             main_data.cutoff_transition_width.transform([&](Real val) -> Real { return main_data.cutoff - val; });
         if (main_data.r_min.has_value()) rMin = main_data.r_min.value();
@@ -406,8 +410,9 @@ namespace jgap {
         return ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(aggregator, kernel, sparse_points, coeffs);
     }
 
-    ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(const QuipDescriptorData& main_data,
-                                                                   std::optional<Real> r_min, Real prefactor) {
+    ValuePtr<EamPairFunction> QuipXmlConverter::selectPairFunction(
+        const QuipDescriptorData& main_data, std::optional<Real> r_min, Real prefactor
+    ) {
         if (main_data.pair_function.value() == "FSgen") {
             return FSGenPairFunction(main_data.cutoff, main_data.order.value(), prefactor);
         }

@@ -1,5 +1,5 @@
-#ifndef JGAP_ATOMICTHREEBODYGAPCOMPONENT_HPP
-#define JGAP_ATOMICTHREEBODYGAPCOMPONENT_HPP
+#ifndef JGAP_THREEBODYGAPCOMPONENT_HPP
+#define JGAP_THREEBODYGAPCOMPONENT_HPP
 
 #include <cassert>
 #include <ranges>
@@ -8,7 +8,7 @@
 #include "GapComponent.hpp"
 #include "jgap/core/Matrix.hpp"
 #include "jgap/core/atomic/energy/AtomicQuantities.hpp"
-#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3Expansion.hpp"
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
@@ -16,13 +16,15 @@
 namespace jgap {
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
-    class AtomicThreeBodyGapComponent : public GapComponent {
+    class ThreeBodyGapComponent : public GapComponent {
     public:
         static constexpr size_t Dependencies = 3;
 
-        AtomicThreeBodyGapComponent(
-            const Species3AtomicSorted species, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
-            const TKernel& kernel, const std::vector<Descriptor<Dim>>& sparse_points,
+        ThreeBodyGapComponent(
+            const Species3AtomicSorted species,
+            const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
+            const TKernel& kernel,
+            const std::vector<Descriptor<Dim>>& sparse_points,
             const std::vector<Real>& optional_coeffs = {}
         ) :
             species(species),
@@ -30,20 +32,26 @@ namespace jgap {
             kernel(kernel),
             sparse_points(sparse_points),
             expansion(
-                species, transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
-                                                               : ClusterPermutationMode::PermuteSameSpecies
+                species,
+                transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::NoNodePermutation
+                                                      : ClusterPermutationMode::PermuteSameSpeciesNodes
             ) {
             if (!optional_coeffs.empty()) {
                 this->setCoefficients(optional_coeffs);
             }
         }
 
-        AtomicThreeBodyGapComponent(
-            const Species3AtomicSorted species, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
-            const TKernel& kernel, const Sparsifier<Dim>& sparsifier, const std::vector<Atoms>& training_data
+        ThreeBodyGapComponent(
+            const Species3AtomicSorted species,
+            const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
+            const TKernel& kernel,
+            const Sparsifier<Dim>& sparsifier,
+            const std::vector<Atoms>& training_data
         ) :
-            AtomicThreeBodyGapComponent(
-                species, transformation, kernel,
+            ThreeBodyGapComponent(
+                species,
+                transformation,
+                kernel,
                 sparsifier.selectSparsePoints(getAllDescriptors(training_data, species, transformation))
             ) {}
 
@@ -87,7 +95,7 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override { return transformation->getCutoffs(); }
 
-        AtomicThreeBodyGapComponent* clone() const override { return new AtomicThreeBodyGapComponent(*this); }
+        ThreeBodyGapComponent* clone() const override { return new ThreeBodyGapComponent(*this); }
 
         const Species3AtomicSorted& getSpecies() const { return species; }
         const ValuePtr<ThreeBodyTransformation<Dim>>& getTransformation() const { return transformation; }
@@ -112,8 +120,8 @@ namespace jgap {
 
                 Real& value = table.data_flat[i];
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
-                    value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed) *
-                             iteration_reduction_factor;
+                    value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed)
+                             * iteration_reduction_factor;
                 }
             }
         }
@@ -129,7 +137,6 @@ namespace jgap {
                     result.energy(sparse_idx) += K;
 
                     for (size_t sep_idx = 0; sep_idx < 3; sep_idx++) {
-                        const auto& separation_ij = cluster.separation(sep_idx);
                         const auto& derivatives_wrt_r_norms = descriptor.derivatives[sep_idx];
                         const auto [atom_i, atom_j] = cluster.atomIndexes(sep_idx);
 
@@ -138,23 +145,27 @@ namespace jgap {
                             dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                         }
 
-                        result.force(sparse_idx, atom_i) += separation_ij.direction * dK_drnorm;
-                        result.force(sparse_idx, atom_j) -= separation_ij.direction * dK_drnorm;
-
-                        result.virials(sparse_idx) += separation_ij.virials() * dK_drnorm;
+                        accumulatePairDerivatives(
+                            result.force(sparse_idx, atom_i),
+                            result.force(sparse_idx, atom_j),
+                            result.virials(sparse_idx),
+                            dK_drnorm,
+                            cluster.separation(sep_idx)
+                        );
                     }
                 }
             });
         }
 
         static std::vector<Descriptor<Dim>> getAllDescriptors(
-            const std::vector<Atoms>& training_data, const Species3AtomicSorted& species,
+            const std::vector<Atoms>& training_data,
+            const Species3AtomicSorted& species,
             const ValuePtr<ThreeBodyTransformation<Dim>>& transformation
         ) {
             std::vector<Descriptor<Dim>> all_descriptors;
-            const auto mode = transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::Reduced
-                                                                    : ClusterPermutationMode::PermuteSameSpecies;
-            Cluster3AtomicExpansion exp(species, mode);
+            const auto mode = transformation->isSwapInvariant(1, 2) ? ClusterPermutationMode::NoNodePermutation
+                                                                    : ClusterPermutationMode::PermuteSameSpeciesNodes;
+            Cluster3Expansion exp(species, mode);
             for (const auto& atoms: training_data) {
                 NeighbourLists nl(atoms, transformation->getCutoffs().maxOverall());
 
@@ -169,7 +180,7 @@ namespace jgap {
         ValuePtr<ThreeBodyTransformation<Dim>> transformation;
         TKernel kernel;
         std::vector<Descriptor<Dim>> sparse_points;
-        Cluster3AtomicExpansion expansion;
+        Cluster3Expansion expansion;
     };
 }
 

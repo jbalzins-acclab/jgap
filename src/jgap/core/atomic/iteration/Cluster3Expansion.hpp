@@ -1,5 +1,5 @@
-#ifndef JGAP_CLUSTER3ATOMICEXPANSION_HPP
-#define JGAP_CLUSTER3ATOMICEXPANSION_HPP
+#ifndef JGAP_CLUSTER3EXPANSION_HPP
+#define JGAP_CLUSTER3EXPANSION_HPP
 
 #include <vector>
 
@@ -11,17 +11,17 @@
 
 namespace jgap {
 
-    class Cluster3AtomicExpansion {
+    class Cluster3Expansion {
     public:
-        static constexpr Real ClusterPermutationsAvailable = factorial(2u);
+        static constexpr Real ClusterPermutationsAvailable = 2.0;
 
-        Cluster3AtomicExpansion(
-            const Species3AtomicSorted& species_set, ClusterPermutationMode mode = ClusterPermutationMode::Reduced
+        Cluster3Expansion(
+            const Species3AtomicSorted& species_set, ClusterPermutationMode mode = ClusterPermutationMode::NoNodePermutation
         ) :
             species_set(species_set),
             mode(mode),
             factor(
-                (species_set.nodes[0] != species_set.nodes[1] || mode == ClusterPermutationMode::Reduced)
+                (species_set.nodes[0] != species_set.nodes[1] || mode == ClusterPermutationMode::NoNodePermutation)
                     ? static_cast<Real>(ClusterPermutationsAvailable)
                     : 1.0
             ) {}
@@ -55,7 +55,7 @@ namespace jgap {
                                 }
                             }
                         );
-                        if (mode != ClusterPermutationMode::Reduced) {
+                        if (mode != ClusterPermutationMode::NoNodePermutation) {
                             callback(
                                 Cluster3{
                                     .atom_indexes = {atom_index, it2->neighbour_index, it1->neighbour_index},

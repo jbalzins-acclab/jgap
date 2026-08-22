@@ -11,6 +11,9 @@
 #include <vector>
 
 #include "jgap/core/Real.hpp"
+#include "jgap/core/Vector3.hpp"
+#include "jgap/core/atomic/energy/Virials.hpp"
+#include "jgap/core/atomic/geometry/Separation.hpp"
 
 namespace jgap {
     struct MainXYZPropertyNames;
@@ -43,31 +46,11 @@ namespace jgap {
 
     std::string uniqueStamp();
 
-    inline double elapsedMillisSince(const std::chrono::steady_clock::time_point& start) {
-        auto end = std::chrono::steady_clock::now();
-        return std::chrono::duration<double, std::milli>(end - start).count();
-    }
+    double elapsedMillisSince(const std::chrono::steady_clock::time_point& start);
 
-    inline std::string formatDuration(double ms) {
-        if (ms < 1000.0) {
-            return std::to_string(static_cast<int>(ms)) + " ms";
-        }
-        double sec = ms / 1000.0;
-        if (sec < 60.0) {
-            return std::to_string(sec) + " s";
-        }
-        int min = static_cast<int>(sec / 60.0);
-        int rem_sec = static_cast<int>(sec) % 60;
-        return std::to_string(min) + "m " + std::to_string(rem_sec) + "s";
-    }
+    std::string formatDuration(double ms);
 
-    constexpr Real factorial(size_t n) {
-        Real result = 1.0;
-        for (size_t i = 2; i <= n; i++) {
-            result *= static_cast<Real>(i);
-        }
-        return result;
-    }
+    constexpr Real factorial(size_t n);
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);
@@ -79,6 +62,15 @@ namespace jgap {
     std::string vectorToString(const std::vector<double>&);
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
+
+    inline void accumulatePairDerivatives(Vector3& f0, Vector3& f1, Virials& virials,
+                                          const Real dE_dr, const Separation& r01) {
+        virials += r01.virials() * dE_dr;
+
+        Vector3 f10 = r01.direction * dE_dr;
+        f0 += f10;
+        f1 -= f10;
+    }
 
     template<typename T>
     std::string typeName() {

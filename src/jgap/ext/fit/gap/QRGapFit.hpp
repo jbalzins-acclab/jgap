@@ -41,7 +41,7 @@ namespace jgap {
             Matrix<ColumnMajor>& A
         ) const;
 
-        static void fillInverseSigmaK_nm(
+        static void fillInverseSigmaLK_NM(
             const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms,
             const EnergyData& energy_data, const Regularization& sigmas_inverse, Matrix<ColumnMajor>& A,
             size_t starting_row

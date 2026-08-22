@@ -3,21 +3,22 @@
 
 namespace jgap {
     TwoBodyTGComponent::TwoBodyTGComponent(Species2Sorted species_pair, ValuePtr<Spline<1>> spline) :
-        species_pair(species_pair), spline(std::move(spline)), expansion(species_pair) {}
+        species_pair(species_pair), spline(std::move(spline)) {}
 
     AtomicQuantity TwoBodyTGComponent::energy(const NeighbourLists& nl) const {
         AtomicQuantity result(nl.nAtoms());
 
+        Cluster2Expansion expansion(species_pair);
         expansion.forEach(nl, [&](const Cluster2& cluster) {
-            auto [val, deriv] = spline->interpolate({cluster.separation01.magnitude});
+            auto [E_pair, dE_dr_pair] = spline->interpolate({cluster.separation01.magnitude});
 
-            result.value += val;
+            Real E_cluster = 0.5 * E_pair;
+            result.value += E_cluster;
 
-            result.virials += cluster.separation01.virials() * deriv[0];
-
-            Vector3 f10 = cluster.separation01.direction * deriv[0];
-            result.forces[cluster.idx0] += f10;
-            result.forces[cluster.idx1] -= f10;
+            Real dE_dr = 0.5 * dE_dr_pair[0];
+            accumulatePairDerivatives(
+                result.forces[cluster.idx0], result.forces[cluster.idx1], result.virials, dE_dr, cluster.separation01
+            );
         });
 
         return result;

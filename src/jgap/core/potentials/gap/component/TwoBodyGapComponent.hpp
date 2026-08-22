@@ -13,6 +13,7 @@
 #include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
 #include "jgap/core/transform/nbody/2b/TwoBodyTransformation.hpp"
+#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
 
@@ -22,10 +23,13 @@ namespace jgap {
         static constexpr size_t Dependencies = 1;
 
         TwoBodyGapComponent(
-            const Species2Sorted& species, ValuePtr<TwoBodyTransformation<Dim>> transformation, TKernel kernel,
-            std::vector<Descriptor<Dim>> sparse_points, const std::vector<Real>& optional_coeffs = {}
+            const Species2Sorted& species,
+            ValuePtr<TwoBodyTransformation<Dim>> transformation,
+            TKernel kernel,
+            std::vector<Descriptor<Dim>> sparse_points,
+            const std::vector<Real>& optional_coeffs = {}
         ) :
-            expansion(species),
+            species(species),
             transformation(std::move(transformation)),
             kernel(std::move(kernel)),
             sparse_points(std::move(sparse_points)) {
@@ -35,16 +39,21 @@ namespace jgap {
         }
 
         TwoBodyGapComponent(
-            const Species2Sorted species, const ValuePtr<TwoBodyTransformation<Dim>>& transformation,
-            const TKernel& kernel, const Sparsifier<Dim>& sparsifier, const std::vector<Atoms>& training_data
+            const Species2Sorted species,
+            const ValuePtr<TwoBodyTransformation<Dim>>& transformation,
+            const TKernel& kernel,
+            const Sparsifier<Dim>& sparsifier,
+            const std::vector<Atoms>& training_data
         ) :
-            expansion(species), transformation(transformation), kernel(kernel) {
+            species(species), transformation(transformation), kernel(kernel) {
             auto all_descriptors = getAllDescriptors(training_data, species, transformation);
             sparse_points = sparsifier.selectSparsePoints(all_descriptors);
         }
 
         std::optional<AtomicQuantities> covariate(const NeighbourLists& neighbour_list) const override {
             AtomicQuantities result(nSparsePoints(), neighbour_list.nAtoms());
+
+            Cluster2Expansion expansion(species);
 
             bool found = expansion.forEach(neighbour_list, [&](const Cluster2& cluster) {
                 auto descriptor = transformation->evaluateAndDifferentiate(cluster);
@@ -54,7 +63,6 @@ namespace jgap {
 
                     result.energy(sparse_idx) += K;
 
-                    const auto& separation_derivatives = cluster.separation01;
                     const auto& derivatives_wrt_r_norms = descriptor.derivatives;
 
                     Real dK_drnorm = 0.0;
@@ -62,18 +70,19 @@ namespace jgap {
                         dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                     }
 
-                    result.force(sparse_idx, cluster.idx0) += separation_derivatives.direction * dK_drnorm;
-                    result.force(sparse_idx, cluster.idx1) -= separation_derivatives.direction * dK_drnorm;
-
-                    result.virials(sparse_idx) += separation_derivatives.virials() * dK_drnorm;
+                    accumulatePairDerivatives(
+                        result.force(sparse_idx, cluster.idx0),
+                        result.force(sparse_idx, cluster.idx1),
+                        result.virials(sparse_idx),
+                        dK_drnorm,
+                        cluster.separation01
+                    );
                 }
             });
 
             if (!found) {
                 return std::nullopt;
             }
-
-            result *= Cluster2Expansion::ClusterPermutationsAvailable;
 
             return result;
         }
@@ -95,7 +104,7 @@ namespace jgap {
 
         TwoBodyGapComponent* clone() const override { return new TwoBodyGapComponent(*this); }
 
-        Species2Sorted getSpecies() const { return expansion.getSpecies(); }
+        const Species2Sorted& getSpecies() const { return species; }
         const ValuePtr<TwoBodyTransformation<Dim>>& getTransformation() const { return transformation; }
         const TKernel& getKernel() const { return kernel; }
         const std::vector<Descriptor<Dim>>& getSparsePoints() const { return sparse_points; }
@@ -106,7 +115,7 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("Coefficients must be set before tabulation");
             }
 
-            Grid<Dependencies>* table_ref = &tables.two_body_grids.getValueGrid(expansion.getSpecies());
+            Grid<Dependencies>* table_ref = &tables.two_body_grids.getValueGrid(species);
             auto& table = *table_ref;
 
             for (size_t i = 0; i < table.data_flat.size(); ++i) {
@@ -119,30 +128,31 @@ namespace jgap {
                 Real& value = table.data_flat[i];
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
                     constexpr Real iteration_reduction_factor = 2.0;
-                    value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed) *
-                             iteration_reduction_factor;
+                    value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed)
+                             * iteration_reduction_factor;
                 }
             }
         }
 
     private:
         static std::vector<Descriptor<Dim>> getAllDescriptors(
-            const std::vector<Atoms>& training_data, const Species2Sorted& species,
+            const std::vector<Atoms>& training_data,
+            const Species2Sorted& species,
             const ValuePtr<TwoBodyTransformation<Dim>>& transformation
         ) {
             std::vector<Descriptor<Dim>> all_descriptors;
-            Cluster2Expansion expansion(species);
+            Cluster2Expansion exp(species);
 
             for (const auto& atoms: training_data) {
                 NeighbourLists nl(atoms, transformation->getCutoffs().maxOverall());
-                expansion.forEach(nl, [&](const Cluster2& cluster) {
+                exp.forEach(nl, [&](const Cluster2& cluster) {
                     all_descriptors.push_back(transformation->evaluate(cluster));
                 });
             }
             return all_descriptors;
         }
 
-        Cluster2Expansion expansion;
+        Species2Sorted species;
         ValuePtr<TwoBodyTransformation<Dim>> transformation;
         TKernel kernel;
         std::vector<Descriptor<Dim>> sparse_points;

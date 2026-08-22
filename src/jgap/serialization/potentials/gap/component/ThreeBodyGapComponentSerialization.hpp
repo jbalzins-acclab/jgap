@@ -1,26 +1,23 @@
-#ifndef JGAP_ATOMICTHREEBODYGAPCOMPONENTSERIALIZATION_HPP
-#define JGAP_ATOMICTHREEBODYGAPCOMPONENTSERIALIZATION_HPP
+#ifndef JGAP_THREEBODYGAPCOMPONENTSERIALIZATION_HPP
+#define JGAP_THREEBODYGAPCOMPONENTSERIALIZATION_HPP
 
 #include <vector>
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/GapComponent.hpp"
 #include "../../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
-#include "jgap/serialization/Serialization.hpp"
-#include "jgap/serialization/SerializationNode.hpp"
-#include "jgap/serialization/SerializationRegistry.hpp"
 
 namespace jgap {
 
     template<size_t Dim, typename TKernel>
-    class AtomicThreeBodyGapComponentSerialization : public Serialization<GapComponent> {
-        using ComponentT = AtomicThreeBodyGapComponent<Dim, TKernel>;
+    class ThreeBodyGapComponentSerialization : public Serialization<GapComponent> {
+        using ComponentT = ThreeBodyGapComponent<Dim, TKernel>;
 
     public:
         bool serialize(const ValuePtr<GapComponent>& obj, SerializationNode& node) const override {
@@ -29,7 +26,7 @@ namespace jgap {
                 return false;
             }
 
-            node.writeAttribute("name", "AtomicThreeBodyGapComponent");
+            node.writeAttribute("name", "ThreeBodyGapComponent");
             node.writeAttribute("dim", Dim);
 
             node.writeAttribute("species_set", derived->getSpecies().toString());
@@ -53,7 +50,7 @@ namespace jgap {
         }
 
         ValuePtr<GapComponent> deserialize(const SerializationNode& node) const override {
-            if (node.readOptionalStringAttribute("name") != "AtomicThreeBodyGapComponent" ||
+            if (node.readOptionalStringAttribute("name") != "ThreeBodyGapComponent" ||
                 node.readOptionalSizeAttribute("dim") != Dim) {
                 return nullptr;
             }
@@ -63,7 +60,7 @@ namespace jgap {
 
             auto kernel_group_opt = node.getGroup("kernel");
             if (!kernel_group_opt)
-                JGAP_LOG_AND_THROW("Missing 'kernel' group in AtomicThreeBodyGapComponent serialization");
+                JGAP_LOG_AND_THROW("Missing 'kernel' group in ThreeBodyGapComponent serialization");
             auto kernel_ptr =
                 SerializationRegistry<Kernel<Dim>>::deserialize(kernel_group_opt.value());
             auto* kernel_typed = kernel_ptr.template as<TKernel>();
@@ -74,7 +71,7 @@ namespace jgap {
 
             auto transformation_group_opt = node.getGroup("transformation");
             if (!transformation_group_opt)
-                JGAP_LOG_AND_THROW("Missing 'transformation' group in AtomicThreeBodyGapComponent serialization");
+                JGAP_LOG_AND_THROW("Missing 'transformation' group in ThreeBodyGapComponent serialization");
             auto transformation =
                 SerializationRegistry<ThreeBodyTransformation<Dim>>::deserialize(transformation_group_opt.value());
 

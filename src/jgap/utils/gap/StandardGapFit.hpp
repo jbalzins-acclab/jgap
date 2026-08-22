@@ -7,7 +7,7 @@
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
@@ -45,7 +45,13 @@ namespace jgap {
         // ====================================================================================
         if (params.eam_n_sparse > 0) {
             auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
-            auto sparsifier_eam = HistogramUniformSparsifier<1>(params.seed, params.eam_n_sparse);
+            auto sparsifier_eam = HistogramUniformSparsifier<1>(
+                params.seed,
+                params.eam_n_sparse,
+                std::nullopt,
+                std::nullopt,
+                Descriptor<1>{params.eam_min_density}
+            );
             potential.addComponents(
                 createEamComponents<SquaredExpKernel<1, 0>>(
                     params.eam_pf, kernel_eam, sparsifier_eam, training_data, params.eam_mode

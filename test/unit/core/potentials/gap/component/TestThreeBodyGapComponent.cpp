@@ -6,7 +6,7 @@
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/core/transform/nbody/3b/ThreeBodyTransformation.hpp"
@@ -55,13 +55,13 @@ namespace {
     };
 }
 
-TEST(TestAtomicThreeBodyGapComponent, MockThreeBody) {
+TEST(TestThreeBodyGapComponent, MockThreeBody) {
     Atoms atoms(
         {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
     );
     auto nl = NeighbourLists(atoms, 11.0);
 
-    auto component = AtomicThreeBodyGapComponent<1, MockKernel<1>>(
+    auto component = ThreeBodyGapComponent<1, MockKernel<1>>(
         Species3AtomicSorted("Fe", "Fe", "Ni"), MockThreeBodyTransformation<1>(), MockKernel<1>(), {{1.0}}
     );
 
@@ -118,13 +118,13 @@ TEST(TestAtomicThreeBodyGapComponent, MockThreeBody) {
     EXPECT_NEAR(quantities.virials(0).xx, virials.xx, 1e-9);
 }
 
-TEST(TestAtomicThreeBodyGapComponent, RealThreeBody) {
+TEST(TestThreeBodyGapComponent, RealThreeBody) {
     Atoms atoms({{0, 0, 0}, {3, 0, 0}, {0, 4, 0}}, {Species("Fe"), Species("Fe"), Species("Ni")});
     auto nl = NeighbourLists(atoms, 6.0);
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
     auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
-    auto component = AtomicThreeBodyGapComponent(Species3AtomicSorted("Fe", "Fe", "Ni"), trans, kernel, sparse_points);
+    auto component = ThreeBodyGapComponent(Species3AtomicSorted("Fe", "Fe", "Ni"), trans, kernel, sparse_points);
 
     auto result = component.covariate(nl);
     ASSERT_TRUE(result.has_value());
@@ -141,13 +141,13 @@ TEST(TestAtomicThreeBodyGapComponent, RealThreeBody) {
     EXPECT_NEAR(quantities.energy(0), 0.25, 1e-9);
 }
 
-TEST(TestAtomicThreeBodyGapComponent, TabulationThreeBody) {
+TEST(TestThreeBodyGapComponent, TabulationThreeBody) {
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
     auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
     std::vector<Real> coeffs = {0.5};
     Species3AtomicSorted species{"Fe", "Fe", "Ni"};
-    auto component = AtomicThreeBodyGapComponent(species, trans, kernel, sparse_points);
+    auto component = ThreeBodyGapComponent(species, trans, kernel, sparse_points);
 
     TabulationParams params;
     params.n_grid_3b = {5, 5, 5};

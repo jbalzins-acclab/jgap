@@ -26,6 +26,7 @@ namespace jgap {
         EamMode eam_mode = EamMode::Blind;
         ValuePtr<EamPairFunction> eam_pf = FSGenPairFunction(4.5, 3.0);
         size_t eam_n_sparse = 20;
+        Real eam_min_density = 0.05;
 
         // 3-body params
         Real cutoff3 = 3.7;

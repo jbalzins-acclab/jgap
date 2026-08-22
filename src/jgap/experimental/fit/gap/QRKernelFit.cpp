@@ -12,10 +12,12 @@ namespace jgap {
     using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 
     std::vector<Real> QRKernelFit::findCoefficients(
-        std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
-        std::vector<EnergyData>& energies_without_external, std::vector<Regularization>& sigmas_inverse
+        std::vector<ValuePtr<GapComponent>>& gap_components,
+        const std::vector<Atoms>& training_data,
+        std::vector<EnergyData>& energies_without_external,
+        std::vector<Regularization>& sigmas_inverse
     ) {
-        JGAP_LOG_INFO("Forming matrix A (K_nm)");
+        JGAP_LOG_INFO("Forming matrix A (LK_NM)");
         auto A = formMatrixA(gap_components, training_data, energies_without_external, sigmas_inverse);
 
         JGAP_LOG_INFO("Forming feature vector b");
@@ -47,8 +49,10 @@ namespace jgap {
     }
 
     Matrix<ColumnMajor> QRKernelFit::formMatrixA(
-        const std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
-        const std::vector<EnergyData>& energy_data, const std::vector<Regularization>& sigmas_inverse
+        const std::vector<ValuePtr<GapComponent>>& gap_components,
+        const std::vector<Atoms>& training_data,
+        const std::vector<EnergyData>& energy_data,
+        const std::vector<Regularization>& sigmas_inverse
     ) const {
         struct StructureData {
             const Atoms& atoms;
@@ -57,9 +61,9 @@ namespace jgap {
         };
 
         size_t r = 0;
-        std::vector<std::pair<size_t, StructureData>> starting_rows_K_nm;
+        std::vector<std::pair<size_t, StructureData>> starting_rows_LK_NM;
         for (size_t i = 0; i < training_data.size(); i++) {
-            starting_rows_K_nm.emplace_back(r, StructureData{training_data[i], energy_data[i], sigmas_inverse[i]});
+            starting_rows_LK_NM.emplace_back(r, StructureData{training_data[i], energy_data[i], sigmas_inverse[i]});
             if (energy_data[i].energy.has_value()) r += 1;
             if (energy_data[i].forces.has_value()) r += 3 * energy_data[i].forces->size();
             if (energy_data[i].virials.has_value()) r += 6;
@@ -77,20 +81,27 @@ namespace jgap {
 
         std::atomic counter(0);
         unseqForEach(
-            starting_rows_K_nm.begin(), starting_rows_K_nm.end(),
+            starting_rows_LK_NM.begin(),
+            starting_rows_LK_NM.end(),
             [&](const std::pair<size_t, StructureData>& structId) {
                 auto& [starting_row, struct_data] = structId;
 
                 size_t progress = ++counter;
-                if (progress % std::max(starting_rows_K_nm.size() / 100, 1uz) == 0) {
+                if (progress % std::max(starting_rows_LK_NM.size() / 100, 1uz) == 0) {
                     JGAP_LOG_INFO(
-                        "K_nm matrix formation progress: {} of {} ({}%)", progress, starting_rows_K_nm.size(),
-                        progress * 100 / starting_rows_K_nm.size()
+                        "LK_NM matrix formation progress: {} of {} ({}%)",
+                        progress,
+                        starting_rows_LK_NM.size(),
+                        progress * 100 / starting_rows_LK_NM.size()
                     );
                 }
 
-                fillInverseSigmaK_nm(
-                    gap_components, struct_data.atoms, struct_data.energy_data, struct_data.sigmas_inverse, resulting_A,
+                fillInverseSigmaLK_NM(
+                    gap_components,
+                    struct_data.atoms,
+                    struct_data.energy_data,
+                    struct_data.sigmas_inverse,
+                    resulting_A,
                     starting_row
                 );
             }
@@ -100,7 +111,8 @@ namespace jgap {
     }
 
     std::vector<Real> QRKernelFit::formVectorB(
-        const std::vector<ValuePtr<GapComponent>>& components, const std::vector<EnergyData>& energy_data,
+        const std::vector<ValuePtr<GapComponent>>& components,
+        const std::vector<EnergyData>& energy_data,
         const std::vector<Regularization>& sigmas_inverse
     ) {
         std::vector<Real> b;
@@ -135,9 +147,13 @@ namespace jgap {
         return b;
     }
 
-    void QRKernelFit::fillInverseSigmaK_nm(
-        const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms, const EnergyData& energy_data,
-        const Regularization& sigmas_inverse, Matrix<ColumnMajor>& A, size_t starting_row
+    void QRKernelFit::fillInverseSigmaLK_NM(
+        const std::vector<ValuePtr<GapComponent>>& gap_components,
+        const Atoms& atoms,
+        const EnergyData& energy_data,
+        const Regularization& sigmas_inverse,
+        Matrix<ColumnMajor>& A,
+        size_t starting_row
     ) {
         std::map<Real, NeighbourLists> neighbour_lists;
         for (const auto& gap_component: gap_components) {

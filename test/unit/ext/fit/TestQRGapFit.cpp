@@ -10,7 +10,7 @@
 #include "jgap/core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/transform/manybody/TwoBodySum.hpp"
@@ -195,7 +195,7 @@ GapPotential create3bPotential(Real theta, Real delta, Real cutoff_transition_wi
     for (const auto& q: sparsePts) {
         sparse_points.push_back({q.x, q.y, q.z, 1.0});
     }
-    auto component = AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
+    auto component = ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
         Species3AtomicSorted("Fe", "Fe", "Fe"), std::move(trans), std::move(kernel), sparse_points);
 
     return GapPotential({component});

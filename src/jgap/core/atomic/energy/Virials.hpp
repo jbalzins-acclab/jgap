@@ -20,42 +20,57 @@ namespace jgap {
         Real xx{0}, xy{0}, xz{0}, yy{0}, yz{0}, zz{0};
 
         Virials operator+(const Virials& other) const {
-            return {xx + other.xx, xy + other.xy, xz + other.xz,
-                    yy + other.yy, yz + other.yz, zz + other.zz};
+            return {xx + other.xx, xy + other.xy, xz + other.xz, yy + other.yy, yz + other.yz, zz + other.zz};
         }
 
         Virials operator-(const Virials& other) const {
-            return {xx - other.xx, xy - other.xy, xz - other.xz,
-                    yy - other.yy, yz - other.yz, zz - other.zz};
+            return {xx - other.xx, xy - other.xy, xz - other.xz, yy - other.yy, yz - other.yz, zz - other.zz};
         }
 
         Virials& operator+=(const Virials& other) {
-            xx += other.xx; xy += other.xy; xz += other.xz;
-            yy += other.yy; yz += other.yz; zz += other.zz;
+            xx += other.xx;
+            xy += other.xy;
+            xz += other.xz;
+            yy += other.yy;
+            yz += other.yz;
+            zz += other.zz;
             return *this;
         }
 
         Virials& operator-=(const Virials& other) {
-            xx -= other.xx; xy -= other.xy; xz -= other.xz;
-            yy -= other.yy; yz -= other.yz; zz -= other.zz;
+            xx -= other.xx;
+            xy -= other.xy;
+            xz -= other.xz;
+            yy -= other.yy;
+            yz -= other.yz;
+            zz -= other.zz;
             return *this;
         }
 
         Virials operator*(Real scalar) const {
-            return {xx * scalar, xy * scalar, xz * scalar,
-                    yy * scalar, yz * scalar, zz * scalar};
+            return {xx * scalar, xy * scalar, xz * scalar, yy * scalar, yz * scalar, zz * scalar};
         }
 
+        friend Virials operator*(Real scalar, const Virials& v) { return v * scalar; }
+
         Virials& operator*=(Real scalar) {
-            xx *= scalar; xy *= scalar; xz *= scalar;
-            yy *= scalar; yz *= scalar; zz *= scalar;
+            xx *= scalar;
+            xy *= scalar;
+            xz *= scalar;
+            yy *= scalar;
+            yz *= scalar;
+            zz *= scalar;
             return *this;
         }
 
         Virials& operator/=(Real scalar) {
             Real inv = 1.0 / scalar;
-            xx *= inv; xy *= inv; xz *= inv;
-            yy *= inv; yz *= inv; zz *= inv;
+            xx *= inv;
+            xy *= inv;
+            xz *= inv;
+            yy *= inv;
+            yz *= inv;
+            zz *= inv;
             return *this;
         }
     };

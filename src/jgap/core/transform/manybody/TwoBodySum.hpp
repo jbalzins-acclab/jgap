@@ -8,7 +8,7 @@
 
 #include "NBodyAggregator.hpp"
 #include "jgap/core/atomic/descriptor/ManyBodyDescriptors.hpp"
-#include "jgap/core/atomic/iteration/Cluster2AtomicExpansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster2Expansion.hpp"
 #include "jgap/core/atomic/species/composition/Species2Atomic.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
 #include "jgap/core/transform/nbody/2b/TwoBodyTransformation.hpp"
@@ -42,7 +42,7 @@ namespace jgap {
             for (size_t descriptor_index = 0; descriptor_index < atom_indexes.size(); ++descriptor_index) {
                 size_t atom_index = atom_indexes[descriptor_index];
                 for (const auto& [species_set, transformation]: transformations) {
-                    Cluster2AtomicExpansion expansion(species_set);
+                    Cluster2Expansion expansion(species_set);
                     expansion.forEach(atom_index, nl, [&](const Cluster2& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);
                         aggregated_descriptors.add(descriptor_index, cluster, contribution);

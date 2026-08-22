@@ -44,13 +44,13 @@ int main(int argc, char** argv) {
     SerializationRegistry<Potential>::serialize(potential, potential_file);
     JGAP_LOG_INFO("Saved fitted potential to {}", potential_file);
 
-    TabulationData tabulation_data = potential.tabulate(
+    /*TabulationData tabulation_data = potential.tabulate(
         {.max_cutoffs = potential.getCutoffs(), .max_eam_density = 10.0, .n_grid_2b = 5000, .n_grid_3b = {80, 80, 80}}
     );
     TabGapPotential tabgap{tabulation_data};
 
     const Filenames tabgap_files = TabGapIO::write(tabgap, output_prefix);
-    JGAP_LOG_INFO("Saved tabGAP to: {}", vectorToString(tabgap_files));
+    JGAP_LOG_INFO("Saved tabGAP to: {}", vectorToString(tabgap_files));*/
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;
     return 0;

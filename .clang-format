@@ -7,6 +7,9 @@ AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
 AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBinaryOperators: NonAssignment
 BraceWrapping: 
   AfterCaseLabel: false
   AfterClass: false

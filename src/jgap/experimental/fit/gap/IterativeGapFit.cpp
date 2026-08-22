@@ -71,18 +71,18 @@ namespace jgap {
         };
 
         size_t r = 0;
-        std::vector<std::pair<size_t, StructureData>> starting_rows_K_nm;
+        std::vector<std::pair<size_t, StructureData>> starting_rows_LK_NM;
         for (size_t i = 0; i < training_data.size(); i++) {
-            starting_rows_K_nm.emplace_back(r, StructureData{training_data[i], energy_data[i], sigmas_inverse[i]});
+            starting_rows_LK_NM.emplace_back(r, StructureData{training_data[i], energy_data[i], sigmas_inverse[i]});
             if (energy_data[i].energy.has_value()) r += 1;
             if (energy_data[i].forces.has_value()) r += 3 * energy_data[i].forces->size();
             if (energy_data[i].virials.has_value()) r += 6;
         }
 
-        std::vector<std::array<size_t, 3>> starting_points_K_mm;
+        std::vector<std::array<size_t, 3>> starting_points_K_MM;
         size_t c = 0;
         for (size_t i = 0; i < gap_components.size(); i++) {
-            starting_points_K_mm.push_back({r + c, c, i});
+            starting_points_K_MM.push_back({r + c, c, i});
             c += gap_components[i]->nSparsePoints();
         }
 
@@ -94,19 +94,19 @@ namespace jgap {
 
         std::atomic<size_t> counter(0);
         unseqForEach(
-            starting_rows_K_nm.begin(), starting_rows_K_nm.end(),
+            starting_rows_LK_NM.begin(), starting_rows_LK_NM.end(),
             [&](const std::pair<size_t, StructureData>& structId) {
                 auto& [starting_row, struct_data] = structId;
 
                 size_t progress = ++counter;
-                if (progress % std::max(starting_rows_K_nm.size() / 100, 1uz) == 0) {
+                if (progress % std::max(starting_rows_LK_NM.size() / 100, 1uz) == 0) {
                     JGAP_LOG_INFO(
-                        "K_nm matrix formation progress: {} of {} ({}%)", progress, starting_rows_K_nm.size(),
-                        progress * 100 / starting_rows_K_nm.size()
+                        "LK_NM matrix formation progress: {} of {} ({}%)", progress, starting_rows_LK_NM.size(),
+                        progress * 100 / starting_rows_LK_NM.size()
                     );
                 }
 
-                fillInverseSigmaK_nm(
+                fillInverseSigmaLK_NM(
                     gap_components, struct_data.atoms, struct_data.energy_data, struct_data.sigmas_inverse, resulting_A,
                     starting_row
                 );
@@ -114,11 +114,11 @@ namespace jgap {
         );
 
         unseqForEach(
-            starting_points_K_mm.begin(), starting_points_K_mm.end(),
+            starting_points_K_MM.begin(), starting_points_K_MM.end(),
             [&](const std::array<size_t, 3>& rc_and_descriptor_id) {
                 auto& [starting_row, starting_col, descriptor_id] = rc_and_descriptor_id;
 
-                JGAP_LOG_INFO("K_mm for descriptor {}", descriptor_id);
+                JGAP_LOG_INFO("K_MM for descriptor {}", descriptor_id);
                 fillU_mm(starting_row, starting_col, gap_components[descriptor_id], resulting_A);
             }
         );
@@ -166,7 +166,7 @@ namespace jgap {
         return b;
     }
 
-    void IterativeGapFit::fillInverseSigmaK_nm(
+    void IterativeGapFit::fillInverseSigmaLK_NM(
         const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms, const EnergyData& energy_data,
         const Regularization& sigmas_inverse, Matrix<RowMajor>& A, size_t starting_row
     ) {
@@ -232,12 +232,12 @@ namespace jgap {
         const size_t starting_row, const size_t starting_col, const ValuePtr<GapComponent>& gap_component,
         Matrix<RowMajor>& A
     ) const {
-        auto K_mm_block = gap_component->sparseToSparseCovariance();
+        auto K_MM_block = gap_component->sparseToSparseCovariance();
 
-        const size_t n = K_mm_block.nRows();
-        for (size_t i = 0; i < n; i++) K_mm_block(i, i) += jitter;
+        const size_t n = K_MM_block.nRows();
+        for (size_t i = 0; i < n; i++) K_MM_block(i, i) += jitter;
 
-        auto U_mm_block = choleskyDecomposition(K_mm_block);
+        auto U_mm_block = choleskyDecomposition(K_MM_block);
 
         for (size_t i = 0; i < n; i++) {
             for (size_t j = 0; j < n; j++) {

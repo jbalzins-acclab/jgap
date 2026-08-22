@@ -12,9 +12,9 @@ namespace jgap {
     ///
     enum class ClusterPermutationMode {
         ///
-        Reduced,
+        NoNodePermutation,
         ///
-        PermuteSameSpecies
+        PermuteSameSpeciesNodes
     };
 }
 

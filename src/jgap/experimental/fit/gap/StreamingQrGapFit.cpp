@@ -97,7 +97,7 @@ namespace jgap {
             unseqForEach(chunk_frame_layout.begin(), chunk_frame_layout.end(), [&](const auto& layout) {
                 size_t f_idx = layout.first;
                 size_t start_r = layout.second;
-                fillInverseSigmaK_nm(
+                fillInverseSigmaLK_NM(
                     gap_components, training_data[f_idx], energies_without_external[f_idx], sigmas_inverse[f_idx],
                     A_chunk, start_r
                 );
@@ -121,7 +121,7 @@ namespace jgap {
             y_accum = Qt_b.head(C);
         }
 
-        JGAP_LOG_INFO("Streaming QR: Appending regularization block (K_mm^1/2)");
+        JGAP_LOG_INFO("Streaming QR: Appending regularization block (K_MM^1/2)");
         Matrix<ColumnMajor> A_reg(C, C);
         std::vector<Real> b_reg(C, 0.0_r);
 

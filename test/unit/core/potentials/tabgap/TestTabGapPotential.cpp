@@ -7,7 +7,7 @@
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
@@ -54,7 +54,7 @@ TEST(TestTabGapPotential, TwoAndThreeBodyTermsGridMatching) {
     std::vector<Descriptor<4>> triplet_sparse = {{6.0, 0.0, 3.0, 1.0}};
     std::vector<Real> triplet_coeffs = {0.8};
 
-    auto three_body_comp = AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
+    auto three_body_comp = ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
         triplet_species, ValuePtr<ThreeBodyTransformation<4>>(triplet_trans), triplet_kernel, triplet_sparse,
         triplet_coeffs
     );

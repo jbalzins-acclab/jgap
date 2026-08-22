@@ -29,17 +29,20 @@ namespace jgap {
         for (const auto& [species_pair, interpolator]: per_species_interpolators) {
             Cluster2Expansion expansion(species_pair);
             expansion.forEach(nl, [&](const Cluster2& cluster) {
-                InterpolationResults<1> spline_val = interpolator.interpolate({cluster.separation01.magnitude});
+                auto [E_pair, gradient] = interpolator.interpolate({cluster.separation01.magnitude});
 
-                result.value += spline_val.value;
+                Real E_cluster = 0.5 * E_pair;
+                result.value += E_cluster;
 
-                Real dE_dr = spline_val.gradient[0];
+                Real dE_dr = 0.5 * gradient[0];
 
-                result.virials += cluster.separation01.virials() * dE_dr;
-
-                Vector3 f01 = cluster.separation01.direction * dE_dr;
-                result.forces[cluster.idx1] -= f01;
-                result.forces[cluster.idx0] += f01;
+                accumulatePairDerivatives(
+                    result.forces[cluster.idx0],
+                    result.forces[cluster.idx1],
+                    result.virials,
+                    dE_dr,
+                    cluster.separation01
+                );
             });
         }
 

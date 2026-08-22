@@ -111,6 +111,32 @@ namespace jgap {
         return oss.str();
     }
 
+    double elapsedMillisSince(const std::chrono::steady_clock::time_point& start) {
+        auto end = std::chrono::steady_clock::now();
+        return std::chrono::duration<double, std::milli>(end - start).count();
+    }
+
+    std::string formatDuration(double ms) {
+        if (ms < 1000.0) {
+            return std::to_string(static_cast<int>(ms)) + " ms";
+        }
+        double sec = ms / 1000.0;
+        if (sec < 60.0) {
+            return std::to_string(sec) + " s";
+        }
+        int min = static_cast<int>(sec / 60.0);
+        int rem_sec = static_cast<int>(sec) % 60;
+        return std::to_string(min) + "m " + std::to_string(rem_sec) + "s";
+    }
+
+    constexpr Real factorial(size_t n) {
+        Real result = 1.0;
+        for (size_t i = 2; i <= n; i++) {
+            result *= static_cast<Real>(i);
+        }
+        return result;
+    }
+
     double rms(const std::vector<double> &x) {
         if (x.empty()) return 0.0;
         double res = 0.0;

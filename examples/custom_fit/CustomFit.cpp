@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
         const auto kernel3 = SquaredExpKernel<3, 1>(energy_scale, {1.0, 1.0, 1.0});
 
         potential.addComponent(
-            AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(triplet, trans3, kernel3, sparsifier3, training_data)
+            ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(triplet, trans3, kernel3, sparsifier3, training_data)
         );
     }
 

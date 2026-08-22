@@ -8,8 +8,8 @@
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
 #include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
@@ -42,7 +42,7 @@ namespace jgap {
     }
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
-    std::vector<AtomicThreeBodyGapComponent<Dim, TKernel>> createThreeBodyComponents(
+    std::vector<ThreeBodyGapComponent<Dim, TKernel>> createThreeBodyComponents(
         const std::vector<Atoms>& training_data, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
         const TKernel& kernel, const Sparsifier<Dim>& sparsifier
     ) {
@@ -55,7 +55,7 @@ namespace jgap {
             all_species_sets.insert(sets.begin(), sets.end());
         }
 
-        std::vector<AtomicThreeBodyGapComponent<Dim, TKernel>> components;
+        std::vector<ThreeBodyGapComponent<Dim, TKernel>> components;
         for (const auto& species_set: all_species_sets) {
             components.emplace_back(species_set, transformation, kernel, sparsifier, training_data);
         }

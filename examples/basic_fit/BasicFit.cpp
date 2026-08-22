@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
         auto kernel3 = WendlandKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
         auto sparsifier3 = HistogramUniformSparsifier<4>(seed, n_sparse3, std::array{true, true, true, false});
         potential.addComponents(
-            AtomicThreeBodyGapComponent<4, WendlandKernel<3, 1>>::createComponents(
+            ThreeBodyGapComponent<4, WendlandKernel<3, 1>>::createComponents(
                 training_data, trans3, kernel3, sparsifier3
             )
         );

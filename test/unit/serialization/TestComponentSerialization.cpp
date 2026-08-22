@@ -3,8 +3,8 @@
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/core/potentials/gap/component/AtomicThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/transform/manybody/TwoBodySum.hpp"
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
@@ -83,20 +83,20 @@ TEST(TestComponentSerialization, ManyBodyEam) {
     EXPECT_EQ(restored_aggregator->getCentralSpecies().symbol(), "Fe");
 }
 
-TEST(TestComponentSerialization, AtomicThreeBody) {
+TEST(TestComponentSerialization, ThreeBody) {
     std::vector<Descriptor<4>> sparse_points = {
         Descriptor<4>{{6.0, 0.0, 3.0, 1.0}}, Descriptor<4>{{5.0, 0.5, 2.5, 0.8}}
     };
     std::vector<Real> coefficients = {0.15, -0.25};
 
     auto transform_ptr = ValuePtr<ThreeBodyTransformation<4>>(Angle3bTransformation(CosCutoff(6.0, 1.0)));
-    AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(
+    ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(
         Species3AtomicSorted("Fe|Fe,Ni"), transform_ptr, SquaredExpKernel<3, 1>(5.0, {1.0, 1.5, 2.0}), sparse_points,
         coefficients
     );
 
-    auto rt = roundTrip(component, tmpFile("atomic_3b.h5"));
-    auto restored = rt.as<AtomicThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>>();
+    auto rt = roundTrip(component, tmpFile("three_body.h5"));
+    auto restored = rt.as<ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>>();
     ASSERT_NE(restored, nullptr);
 
     EXPECT_DOUBLE_EQ(restored->getKernel().getEnergyScale(), 5.0);

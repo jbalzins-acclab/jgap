@@ -1,7 +1,7 @@
 #ifndef JGAP_THREEBODYTGCOMPONENT_HPP
 #define JGAP_THREEBODYTGCOMPONENT_HPP
 #include "TabGapComponent.hpp"
-#include "jgap/core/atomic/iteration/Cluster3AtomicExpansion.hpp"
+#include "jgap/core/atomic/iteration/Cluster3Expansion.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/splines/CubicBSpline3D.hpp"
 #include "jgap/core/transform/nbody/3b/CosTransformation.hpp"
@@ -31,7 +31,7 @@ namespace jgap {
         CubicBSpline3D spline;
 
         CosTransformation transformation{};
-        Cluster3AtomicExpansion expansion;
+        Cluster3Expansion expansion;
     };
 }
 

@@ -81,40 +81,39 @@ namespace jgap {
 
         /// @brief $\vec{Q} += \vec{q}(r_{ij})$, and update derivatives.
         void add(const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
-            for (size_t d = 0; d < Dim; d++) {
-                value[d] += contribution.value[d];
+            for (size_t dim = 0; dim < Dim; dim++) {
+                value[dim] += contribution.value[dim];
             }
 
-            const auto& separation = cluster.separation01;
-            const auto& derivs = contribution.derivatives;
-
             for (size_t dim = 0; dim < Dim; dim++) {
-                Vector3 force_contrib = separation.direction * derivs[dim];
-                forces[cluster.idx0][dim] += force_contrib;
-                forces[cluster.idx1][dim] -= force_contrib;
-
-                virials[dim] += separation.virials() * derivs[dim];
+                accumulatePairDerivatives(
+                    forces[cluster.idx0][dim],
+                    forces[cluster.idx1][dim],
+                    virials[dim],
+                    contribution.derivatives[dim],
+                    cluster.separation01
+                );
             }
         }
 
         /// @brief $\vec{Q} += \vec{q}(r_{ij}, r_{ik}, r_{jk})$, and update derivatives.
         void add(const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
-            for (size_t d = 0; d < Dim; d++) {
-                value[d] += contribution.value[d];
+            for (size_t dim = 0; dim < Dim; dim++) {
+                value[dim] += contribution.value[dim];
             }
 
             for (size_t i = 0; i < 3; i++) {
                 for (size_t j = i + 1; j < 3; j++) {
                     const auto sep_idx = flattenedIndex(i, j);
-                    const auto& separation = cluster.separation(sep_idx);
-                    const auto& derivs = contribution.derivatives[sep_idx];
 
                     for (size_t dim = 0; dim < Dim; dim++) {
-                        Vector3 force_contrib = separation.direction * derivs[dim];
-                        forces[cluster.atom_indexes[i]][dim] += force_contrib;
-                        forces[cluster.atom_indexes[j]][dim] -= force_contrib;
-
-                        virials[dim] += separation.virials() * derivs[dim];
+                        accumulatePairDerivatives(
+                            forces[cluster.atom_indexes[i]][dim],
+                            forces[cluster.atom_indexes[j]][dim],
+                            virials[dim],
+                            contribution.derivatives[sep_idx][dim],
+                            cluster.separation(sep_idx)
+                        );
                     }
                 }
             }

@@ -1,4 +1,5 @@
 #include "ThreeBodyTGComponent.hpp"
+#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
     ThreeBodyTGComponent::ThreeBodyTGComponent(const Species3AtomicSorted& species, const CubicBSpline3D& spline) :
@@ -14,8 +15,6 @@ namespace jgap {
             result.value += E;
 
             for (size_t idx_ij = 0; idx_ij < 3; idx_ij++) {
-                const Vector3& dir_ij = cluster.separation(idx_ij).direction;
-                const Virials& vir_ij = cluster.separation(idx_ij).virials();
                 const auto [atom_i, atom_j] = cluster.atomIndexes(idx_ij);
 
                 Real dE_drij{};
@@ -24,11 +23,9 @@ namespace jgap {
                     dE_drij += dE_dq[dim] * dq_dr[idx_ij][dim];
                 }
 
-                result.virials += vir_ij * dE_drij;
-
-                Vector3 f_ji = dir_ij * dE_drij;
-                result.forces[atom_i] += f_ji;
-                result.forces[atom_j] -= f_ji;
+                accumulatePairDerivatives(
+                    result.forces[atom_i], result.forces[atom_j], result.virials, dE_drij, cluster.separation(idx_ij)
+                );
             }
         });
 

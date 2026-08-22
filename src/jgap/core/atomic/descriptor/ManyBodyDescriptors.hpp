@@ -60,14 +60,14 @@ namespace jgap {
 
         ManyBodyDescriptors& operator*=(Real scalar) {
             for (size_t i = 0; i < values.size(); i++) {
-                for (size_t d = 0; d < Dim; d++) {
-                    values[i][d] *= scalar;
-                    virials[i][d] *= scalar;
+                for (size_t dim = 0; dim < Dim; dim++) {
+                    values[i][dim] *= scalar;
+                    virials[i][dim] *= scalar;
                 }
             }
             for (size_t i = 0; i < forces.size(); i++) {
-                for (size_t d = 0; d < Dim; d++) {
-                    forces[i][d] *= scalar;
+                for (size_t dim = 0; dim < Dim; dim++) {
+                    forces[i][dim] *= scalar;
                 }
             }
             return *this;
@@ -84,14 +84,14 @@ namespace jgap {
             ManyBodyDescriptor<Dim> total(n_atoms);
 
             for (size_t i = 0; i < values.size(); i++) {
-                for (size_t d = 0; d < Dim; d++) {
-                    total.value[d] += values[i][d] * coeffs[i];
-                    total.virials[d] += virials[i][d] * coeffs[i];
+                for (size_t dim = 0; dim < Dim; dim++) {
+                    total.value[dim] += values[i][dim] * coeffs[i];
+                    total.virials[dim] += virials[i][dim] * coeffs[i];
                 }
 
                 for (size_t j = 0; j < n_atoms; j++) {
-                    for (size_t d = 0; d < Dim; d++) {
-                        total.forces[j][d] += forces[i * n_atoms + j][d] * coeffs[i];
+                    for (size_t dim = 0; dim < Dim; dim++) {
+                        total.forces[j][dim] += forces[i * n_atoms + j][dim] * coeffs[i];
                     }
                 }
             }
@@ -100,48 +100,39 @@ namespace jgap {
 
         /// @brief $\vec{Q}_{descriptor-index} += \vec{q}(r_{ij})$, and update derivatives.
         void add(size_t descriptor_index, const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
-            for (size_t d = 0; d < Dim; d++) {
-                values[descriptor_index][d] += contribution.value[d];
+            for (size_t dim = 0; dim < Dim; dim++) {
+                values[descriptor_index][dim] += contribution.value[dim];
             }
-
-            if (contribution.derivatives.empty()) {
-                return;
-            }
-
-            const auto& separation = cluster.separation01;
-            const auto& derivs = contribution.derivatives;
 
             for (size_t dim = 0; dim < Dim; dim++) {
-                Vector3 force_contrib = separation.direction * derivs[dim];
-                forces[descriptor_index * n_atoms + cluster.idx0][dim] += force_contrib;
-                forces[descriptor_index * n_atoms + cluster.idx1][dim] -= force_contrib;
-
-                virials[descriptor_index][dim] += separation.virials() * derivs[dim];
+                accumulatePairDerivatives(
+                    forces[descriptor_index * n_atoms + cluster.idx0][dim],
+                    forces[descriptor_index * n_atoms + cluster.idx1][dim],
+                    virials[descriptor_index][dim],
+                    contribution.derivatives[dim],
+                    cluster.separation01
+                );
             }
         }
 
         /// @brief $\vec{Q}_{descriptor-index} += \vec{q}(r_{ij}, r_{ik}, r_{jk})$, and update derivatives.
         void add(size_t descriptor_index, const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
-            for (size_t d = 0; d < Dim; d++) {
-                values[descriptor_index][d] += contribution.value[d];
-            }
-
-            if (contribution.derivatives.empty()) {
-                return;
+            for (size_t dim = 0; dim < Dim; dim++) {
+                values[descriptor_index][dim] += contribution.value[dim];
             }
 
             for (size_t i = 0; i < 3; i++) {
                 for (size_t j = i + 1; j < 3; j++) {
                     const auto sep_idx = flattenedIndex(i, j);
-                    const auto& separation = cluster.separation(sep_idx);
-                    const auto& derivs = contribution.derivatives[sep_idx];
 
                     for (size_t dim = 0; dim < Dim; dim++) {
-                        Vector3 force_contrib = separation.direction * derivs[dim];
-                        forces[descriptor_index * n_atoms + cluster.atom_indexes[i]][dim] += force_contrib;
-                        forces[descriptor_index * n_atoms + cluster.atom_indexes[j]][dim] -= force_contrib;
-
-                        virials[descriptor_index][dim] += separation.virials() * derivs[dim];
+                        accumulatePairDerivatives(
+                            forces[descriptor_index * n_atoms + cluster.atom_indexes[i]][dim],
+                            forces[descriptor_index * n_atoms + cluster.atom_indexes[j]][dim],
+                            virials[descriptor_index][dim],
+                            contribution.derivatives[sep_idx][dim],
+                            cluster.separation(sep_idx)
+                        );
                     }
                 }
             }

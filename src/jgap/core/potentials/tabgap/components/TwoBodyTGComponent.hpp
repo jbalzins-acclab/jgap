@@ -3,7 +3,6 @@
 
 #include "TabGapComponent.hpp"
 #include "jgap/core/ValuePtr.hpp"
-#include "jgap/core/atomic/iteration/Cluster2Expansion.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/splines/Spline.hpp"
 
@@ -29,7 +28,6 @@ namespace jgap {
     private:
         Species2Sorted species_pair;
         ValuePtr<Spline<1>> spline;
-        Cluster2Expansion expansion;
     };
 }
 
