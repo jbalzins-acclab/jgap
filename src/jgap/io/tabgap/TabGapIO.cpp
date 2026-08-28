@@ -20,7 +20,7 @@ namespace jgap {
         for (auto& filename: filenames) {
             if (filename.ends_with(".h5") && found_h5++ > 1) {
                 JGAP_LOG_AND_THROW(
-                    "Multiple .h5 files detected when reading single tabulation data: {}", vectorToString(filenames)
+                    "Multiple .h5 files detected when reading single tabulation data: {}", utils::vectorToString(filenames)
                 );
             }
             if (filename.ends_with(".eam.fs")) {
@@ -162,7 +162,7 @@ namespace jgap {
     ///   <li>`energies`: the raw B-spline coefficients (N + 2 values).</li>
     /// </ul>
     /// Because of the one-extra-spacing `upper`, the reader recovers spacing as (upper - lower) / N
-    /// (see \ref TabGapIO::readFromGroup), not / (N - 1).
+    /// (see @ref TabGapIO::readFromGroup), not / (N - 1).
     ///
     /// @param root the HDF5 group to add the pair group to.
     /// @param component the 2-body component to write (its spline must be a CubicBSpline).
@@ -194,7 +194,7 @@ namespace jgap {
         pair_group.createDataSet("energies", coeff_grid.data_flat);
     }
 
-    /// Writes one 3-body group, following the same on-disk convention as \ref TabGapIO::write2b (see its doc):
+    /// Writes one 3-body group, following the same on-disk convention as @ref TabGapIO::write2b (see its doc):
     /// per axis, `N` is the original grid point count (= coeff dims - 2) and `grid_limits`
     /// stores the original-grid extent [origin, cutoff] derived from the coefficient grid; `energies`
     /// holds the raw B-spline coefficients (the original count + 2 per axis). Each triplet group is named
@@ -531,7 +531,7 @@ namespace jgap {
 
     /// Parses one LAMMPS .eam.fs stream (a file or an embedded "eam_files" dataset) and appends the
     /// resulting EAM components (one per element) and pair-potential 2-body components to `pot`.
-    /// Inverse of \ref ::useSomeComponentsAndGenerateEamFs; pair tables stored as r * phi(r) are divided
+    /// Inverse of @ref ::useSomeComponentsAndGenerateEamFs; pair tables stored as r * phi(r) are divided
     /// back by r.
     ///
     /// @param file the .eam.fs text stream to parse.
@@ -539,11 +539,11 @@ namespace jgap {
     void TabGapIO::parseEamFs(std::istream& file, TabGapPotential& pot) {
         std::string line;
         for (size_t i = 0; i < 3; i++) {
-            if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing comment #{}", i);
+            if (!utils::getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing comment #{}", i);
         }
 
         // Elements line: N and symbols
-        if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing elements line");
+        if (!utils::getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing elements line");
 
         std::istringstream iss(line);
         size_t N;
@@ -562,7 +562,7 @@ namespace jgap {
         if (elements.empty()) JGAP_LOG_AND_THROW("Invalid EAM/FS: zero elements");
 
         // Grid sizes line: Nrho, drho, Nr, dr, cutoff
-        if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing grid spec line");
+        if (!utils::getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing grid spec line");
 
         size_t n_rho, n_r;
         Real drho, dr, cutoff;
@@ -579,14 +579,14 @@ namespace jgap {
         // Per-element sections
         for (const auto& central_atom_species: elements) {
             // Header line with atomic number, mass, etc. Ignore contents
-            if (!getLine(file, line)) {
+            if (!utils::getLine(file, line)) {
                 JGAP_LOG_AND_THROW("Invalid EAM/FS: missing per-element header");
             }
 
             Grid<1> energies{{n_rho}, {drho}, {0.0}};
             // Embedding function: Nrho lines
             for (size_t i = 0; i < n_rho; i++) {
-                if (!getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete embedding values");
+                if (!utils::getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete embedding values");
                 energies.data_flat[i] = std::stod(line);
             }
             embedding_energies.insert({central_atom_species, std::move(energies)});
@@ -599,7 +599,7 @@ namespace jgap {
                 Grid<1> rho_per_r_grid{{n_r}, {dr}, {0.0}};
 
                 for (size_t i = 0; i < n_r; i++) {
-                    if (!getLine(file, line)) {
+                    if (!utils::getLine(file, line)) {
                         JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete density function");
                     }
                     rho_per_r_grid.data_flat[i] = std::stod(line);
@@ -637,7 +637,7 @@ namespace jgap {
 
                 Real r{};
                 for (size_t k = 0; k < n_r; k++, r += dr) {
-                    if (!getLine(file, line)) {
+                    if (!utils::getLine(file, line)) {
                         JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete pair potential table");
                     }
                     Real phi = std::stod(line);

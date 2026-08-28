@@ -69,6 +69,31 @@ namespace jgap {
             return *this;
         }
 
+        /// Direct assignment from underlying type U (creates a new allocation)
+        template<typename U>
+            requires std::derived_from<std::remove_cvref_t<U>, T> &&
+                     (!std::same_as<std::remove_cvref_t<U>, ValuePtr<T>>)
+        ValuePtr& operator=(U&& obj) {
+            ptr = std::make_unique<std::remove_cvref_t<U>>(std::forward<U>(obj));
+            return *this;
+        }
+
+        /// Cross-type move assignment (steals pointer, no allocation)
+        template<typename U>
+            requires std::derived_from<U, T> && (!std::same_as<U, T>)
+        ValuePtr& operator=(ValuePtr<U>&& obj) noexcept {
+            ptr = obj.release();
+            return *this;
+        }
+
+        /// Cross-type copy assignment (clones underlying object)
+        template<typename U>
+            requires std::derived_from<U, T> && (!std::same_as<U, T>)
+        ValuePtr& operator=(const ValuePtr<U>& obj) {
+            ptr = obj ? std::unique_ptr<T>(obj->clone()) : nullptr;
+            return *this;
+        }
+
         ~ValuePtr() = default;
 
         T* get() noexcept { return ptr.get(); }

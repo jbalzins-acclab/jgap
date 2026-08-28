@@ -19,7 +19,7 @@
 
 namespace jgap {
 
-    /// Types underlying \ref XYZArrayType vector types.
+    /// Types underlying @ref XYZArrayType vector types.
     using PerAtomProperty = std::variant<int, Real, Vector3, std::string, Species>;
 
     /// Stores the positions and species of atoms in a structure,
@@ -36,22 +36,22 @@ namespace jgap {
     class Atoms {
     public:
         static std::vector<Atoms> readAtoms(const std::string& filename, const MainXYZPropertyNames& prop_names = {}) {
-            return mapVector(XYZData::read(filename, prop_names), [](const XYZData& d) { return Atoms(d); });
+            return utils::mapVector(XYZData::read(filename, prop_names), [](const XYZData& d) { return Atoms(d); });
         }
 
         Atoms(const std::vector<Vector3>& pos, const std::vector<Species>& spec,
               const std::optional<Lattice>& lat = std::nullopt, std::array<bool, 3> pbc = {false, false, false},
               MainXYZPropertyNames names = {});
 
-        /// Construct by coping \ref XYZData.
-        /// \throws \ref std::runtime_error if \ref XYZData doesn't contain
-        /// position/species arrays disguised by array name defined in \ref MainXYZPropertyNames,
+        /// Construct by coping @ref XYZData.
+        /// \throws @ref std::runtime_error if @ref XYZData doesn't contain
+        /// position/species arrays disguised by array name defined in @ref MainXYZPropertyNames,
         /// or if PBC info in XYZData is inconsistent.
         explicit Atoms(const XYZData& data);
 
-        /// Construct by coping \ref XYZData.
-        /// \throws \ref std::runtime_error if \ref XYZData doesn't contain
-        /// position/species arrays disguised by array name defined in \ref MainXYZPropertyNames,
+        /// Construct by coping @ref XYZData.
+        /// \throws @ref std::runtime_error if @ref XYZData doesn't contain
+        /// position/species arrays disguised by array name defined in @ref MainXYZPropertyNames,
         /// or if PBC info in XYZData is inconsistent.
         explicit Atoms(XYZData&& data);
 

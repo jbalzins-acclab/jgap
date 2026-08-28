@@ -4,10 +4,10 @@
 #include <iomanip>
 #include <sstream>
 #include <variant>
+#include "../log/CurrentLogger.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
-#include "../log/CurrentLogger.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {
@@ -27,7 +27,7 @@ namespace jgap {
 
         while (true) {
             std::string line;
-            if (!getLine(in_stream, line)) break;
+            if (!utils::getLine(in_stream, line)) break;
 
             size_t n_atoms = 0;
             try {
@@ -37,9 +37,9 @@ namespace jgap {
             }
 
             XYZData data(main_props);
-            if (!getLine(in_stream, line)) break;
+            if (!utils::getLine(in_stream, line)) break;
 
-            auto raw_properties = parseHeaderLine(line);
+            auto raw_properties = utils::parseHeaderLine(line);
 
             for (auto const& [k, v]: raw_properties) {
                 if (k == "Properties") continue;
@@ -66,7 +66,8 @@ namespace jgap {
                 if (k == main_props.lattice) {
                     if (vals.size() == 9) {
                         data.info[k] = Lattice{
-                            Vector3{vals[0], vals[1], vals[2]}, Vector3{vals[3], vals[4], vals[5]},
+                            Vector3{vals[0], vals[1], vals[2]},
+                            Vector3{vals[3], vals[4], vals[5]},
                             Vector3{vals[6], vals[7], vals[8]}
                         };
                     } else if (vals.size() == 3) {
@@ -87,8 +88,8 @@ namespace jgap {
                 }
 
                 if (k == main_props.virials) {
-                    if (vals.size() == 9 && std::abs(vals[1] - vals[3]) < 1e-9 && std::abs(vals[2] - vals[6]) < 1e-9 &&
-                        std::abs(vals[5] - vals[7]) < 1e-9) {
+                    if (vals.size() == 9 && std::abs(vals[1] - vals[3]) < 1e-9 && std::abs(vals[2] - vals[6]) < 1e-9
+                        && std::abs(vals[5] - vals[7]) < 1e-9) {
 
                         data.info[k] = Virials{vals[0], vals[1], vals[2], vals[4], vals[5], vals[8]};
                         continue;
@@ -108,7 +109,7 @@ namespace jgap {
 
             if (raw_properties.contains("Properties")) {
                 std::string props_str = raw_properties["Properties"];
-                auto tokens = split(props_str, ':');
+                auto tokens = utils::split(props_str, ':');
                 for (size_t i = 0; i < tokens.size(); i += 3) {
                     prop_infos.push_back({tokens[i], tokens[i + 1][0], std::stoi(tokens[i + 2])});
                 }
@@ -118,7 +119,7 @@ namespace jgap {
             }
 
             for (size_t i = 0; i < n_atoms; ++i) {
-                if (!getLine(in_stream, line)) {
+                if (!utils::getLine(in_stream, line)) {
                     JGAP_LOG_AND_THROW("Unexpected end of file at atom #{}", i);
                 }
                 std::istringstream iss(line);
@@ -206,13 +207,9 @@ namespace jgap {
         return oss.str();
     }
 
-    std::map<std::string, XYZArrayType>& XYZData::getArraysForEditing() {
-        return arrays;
-    }
+    std::map<std::string, XYZArrayType>& XYZData::getArraysForEditing() { return arrays; }
 
-    std::map<std::string, XYZInfoType>& XYZData::getPropertiesForEditing() {
-        return info;
-    }
+    std::map<std::string, XYZInfoType>& XYZData::getPropertiesForEditing() { return info; }
 
     void XYZData::write(std::ostream& out_stream) const {
         size_t n_atoms = 0;
@@ -223,7 +220,9 @@ namespace jgap {
                 n_atoms = current_size;
             else if (n_atoms != current_size) {
                 JGAP_LOG_AND_THROW(
-                    "Array sizes mismatch in XYZData::write: {} has size {} but expected {}", name, current_size,
+                    "Array sizes mismatch in XYZData::write: {} has size {} but expected {}",
+                    name,
+                    current_size,
                     n_atoms
                 );
             }
@@ -250,13 +249,29 @@ namespace jgap {
                         val_str = std::format("{:.16g} {:.16g} {:.16g}", arg.x, arg.y, arg.z);
                     } else if constexpr (std::is_same_v<T, Virials>) {
                         val_str = std::format(
-                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}", arg.xx, arg.xy,
-                            arg.xz, arg.xy, arg.yy, arg.yz, arg.xz, arg.yz, arg.zz
+                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}",
+                            arg.xx,
+                            arg.xy,
+                            arg.xz,
+                            arg.xy,
+                            arg.yy,
+                            arg.yz,
+                            arg.xz,
+                            arg.yz,
+                            arg.zz
                         );
                     } else if constexpr (std::is_same_v<T, Lattice>) {
                         val_str = std::format(
-                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}", arg.a.x, arg.a.y,
-                            arg.a.z, arg.b.x, arg.b.y, arg.b.z, arg.c.x, arg.c.y, arg.c.z
+                            "{:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g} {:.16g}",
+                            arg.a.x,
+                            arg.a.y,
+                            arg.a.z,
+                            arg.b.x,
+                            arg.b.y,
+                            arg.b.z,
+                            arg.c.x,
+                            arg.c.y,
+                            arg.c.z
                         );
                     } else if constexpr (std::is_same_v<T, std::array<bool, 3>>) {
                         std::ostringstream oss;
@@ -295,8 +310,8 @@ namespace jgap {
             );
         }
 
-        meta_parts.push_back("Properties=" + join(prop_tokens, ':'));
-        out_stream << join(meta_parts, ' ') << "\n";
+        meta_parts.push_back("Properties=" + utils::join(prop_tokens, ':'));
+        out_stream << utils::join(meta_parts, ' ') << "\n";
 
         for (size_t i = 0; i < n_atoms; ++i) {
             std::vector<std::string> line_tokens;
@@ -321,7 +336,7 @@ namespace jgap {
                     val
                 );
             }
-            out_stream << join(line_tokens, ' ') << "\n";
+            out_stream << utils::join(line_tokens, ' ') << "\n";
         }
     }
 }

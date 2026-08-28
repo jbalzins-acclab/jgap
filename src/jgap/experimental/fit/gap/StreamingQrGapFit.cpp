@@ -1,9 +1,7 @@
 #include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
 
-#include <Eigen/Dense>
-#include <Eigen/QR>
-
 #include "jgap/core/UnseqFor.hpp"
+#include "jgap/core/linalg/Linalg.hpp"
 #include "../../../core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -21,11 +19,7 @@ namespace jgap {
 
         JGAP_LOG_INFO("Starting Streaming QR fit: total columns C = {}, target chunk rows = {}", C, target_chunk_rows);
 
-        using EigenMatrixColLayout = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-        using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
-
-        EigenMatrixColLayout R_accum = EigenMatrixColLayout::Zero(C, C);
-        EigenVectorCol y_accum = EigenVectorCol::Zero(C);
+        linalg::StreamingQRAccumulator accumulator(C);
 
         struct FrameMeta {
             size_t frame_idx;
@@ -103,22 +97,7 @@ namespace jgap {
                 );
             });
 
-            Eigen::Map<EigenMatrixColLayout> A_chunk_map(A_chunk.flatData().data(), chunk_rows, C);
-            Eigen::Map<EigenVectorCol> b_chunk_map(b_chunk.data(), chunk_rows);
-
-            EigenMatrixColLayout M_stacked(C + chunk_rows, C);
-            M_stacked.topRows(C) = R_accum;
-            M_stacked.bottomRows(chunk_rows) = A_chunk_map;
-
-            EigenVectorCol b_stacked(C + chunk_rows);
-            b_stacked.head(C) = y_accum;
-            b_stacked.tail(chunk_rows) = b_chunk_map;
-
-            Eigen::HouseholderQR<EigenMatrixColLayout> qr(M_stacked);
-            EigenVectorCol Qt_b = qr.householderQ().transpose() * b_stacked;
-
-            R_accum = qr.matrixQR().topRows(C).template triangularView<Eigen::Upper>();
-            y_accum = Qt_b.head(C);
+            accumulator.appendBlock(A_chunk, b_chunk);
         }
 
         JGAP_LOG_INFO("Streaming QR: Appending regularization block (K_MM^1/2)");
@@ -131,26 +110,8 @@ namespace jgap {
             start_col += comp->nSparsePoints();
         }
 
-        Eigen::Map<EigenMatrixColLayout> A_reg_map(A_reg.flatData().data(), C, C);
-        Eigen::Map<EigenVectorCol> b_reg_map(b_reg.data(), C);
+        accumulator.appendBlock(A_reg, b_reg);
 
-        EigenMatrixColLayout M_stacked(C + C, C);
-        M_stacked.topRows(C) = R_accum;
-        M_stacked.bottomRows(C) = A_reg_map;
-
-        EigenVectorCol b_stacked(C + C);
-        b_stacked.head(C) = y_accum;
-        b_stacked.tail(C) = b_reg_map;
-
-        Eigen::HouseholderQR<EigenMatrixColLayout> qr(M_stacked);
-        EigenVectorCol Qt_b = qr.householderQ().transpose() * b_stacked;
-
-        R_accum = qr.matrixQR().topRows(C).template triangularView<Eigen::Upper>();
-        y_accum = Qt_b.head(C);
-
-        JGAP_LOG_INFO("Streaming QR: Solving triangular system R_accum * c = y_accum ({}x{})", C, C);
-        EigenVectorCol c = R_accum.template triangularView<Eigen::Upper>().solve(y_accum);
-
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return accumulator.solve();
     }
 }

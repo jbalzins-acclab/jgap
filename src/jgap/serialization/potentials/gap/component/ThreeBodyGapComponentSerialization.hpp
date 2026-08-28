@@ -2,16 +2,16 @@
 #define JGAP_THREEBODYGAPCOMPONENTSERIALIZATION_HPP
 
 #include <vector>
+#include "../../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
+#include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/GapComponent.hpp"
-#include "../../../../core/io/log/CurrentLogger.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
-#include "jgap/core/kernels/Kernel.hpp"
 
 namespace jgap {
 
@@ -36,8 +36,9 @@ namespace jgap {
             SerializationRegistry<Kernel<Dim>>::serialize(kernel_ptr, kernel_group);
 
             auto transformation_group = node.createGroup("transformation");
-            SerializationRegistry<ThreeBodyTransformation<Dim>>::serialize(derived->getTransformation(),
-                                                                           transformation_group);
+            SerializationRegistry<ThreeBodyTransformation<Dim>>::serialize(
+                derived->getTransformation(), transformation_group
+            );
 
             node.writeDataSet("sparse_points", derived->getSparsePoints());
 
@@ -50,8 +51,8 @@ namespace jgap {
         }
 
         ValuePtr<GapComponent> deserialize(const SerializationNode& node) const override {
-            if (node.readOptionalStringAttribute("name") != "ThreeBodyGapComponent" ||
-                node.readOptionalSizeAttribute("dim") != Dim) {
+            if (node.readOptionalStringAttribute("name") != "ThreeBodyGapComponent"
+                || node.readOptionalSizeAttribute("dim") != Dim) {
                 return nullptr;
             }
 
@@ -59,13 +60,11 @@ namespace jgap {
             Species3AtomicSorted species_set(species_encoded);
 
             auto kernel_group_opt = node.getGroup("kernel");
-            if (!kernel_group_opt)
-                JGAP_LOG_AND_THROW("Missing 'kernel' group in ThreeBodyGapComponent serialization");
-            auto kernel_ptr =
-                SerializationRegistry<Kernel<Dim>>::deserialize(kernel_group_opt.value());
+            if (!kernel_group_opt) JGAP_LOG_AND_THROW("Missing 'kernel' group in ThreeBodyGapComponent serialization");
+            auto kernel_ptr = SerializationRegistry<Kernel<Dim>>::deserialize(kernel_group_opt.value());
             auto* kernel_typed = kernel_ptr.template as<TKernel>();
             if (!kernel_typed) {
-                JGAP_LOG_AND_THROW("Deserialized kernel is not of expected type {}", typeName<TKernel>());
+                JGAP_LOG_AND_THROW("Deserialized kernel is not of expected type {}", utils::typeName<TKernel>());
             }
             TKernel kernel = *kernel_typed;
 
@@ -76,8 +75,7 @@ namespace jgap {
                 SerializationRegistry<ThreeBodyTransformation<Dim>>::deserialize(transformation_group_opt.value());
 
             auto sparse_points = node.readDescriptors<Dim>("sparse_points");
-            auto coefficients =
-                node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<Real>{});
+            auto coefficients = node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<Real>{});
 
             return ValuePtr<GapComponent>(ComponentT(species_set, transformation, kernel, sparse_points, coefficients));
         }

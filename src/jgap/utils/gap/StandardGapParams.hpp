@@ -9,7 +9,7 @@
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 
-namespace jgap {
+namespace jgap::utils {
     struct StandardGapParams {
 
         size_t seed;

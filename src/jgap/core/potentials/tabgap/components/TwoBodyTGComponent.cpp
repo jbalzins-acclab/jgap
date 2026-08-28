@@ -16,7 +16,7 @@ namespace jgap {
             result.value += E_cluster;
 
             Real dE_dr = 0.5 * dE_dr_pair[0];
-            accumulatePairDerivatives(
+            utils::accumulatePairDistanceDerivatives(
                 result.forces[cluster.idx0], result.forces[cluster.idx1], result.virials, dE_dr, cluster.separation01
             );
         });

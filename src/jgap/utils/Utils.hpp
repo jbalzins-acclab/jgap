@@ -15,10 +15,7 @@
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Separation.hpp"
 
-namespace jgap {
-    struct MainXYZPropertyNames;
-    class Atoms;
-
+namespace jgap::utils {
 #if defined(__GNUC__) || defined(__clang__)
     inline void sincos(float angle, float* sin_val, float* cos_val) { __builtin_sincosf(angle, sin_val, cos_val); }
     inline void sincos(double angle, double* sin_val, double* cos_val) { __builtin_sincos(angle, sin_val, cos_val); }
@@ -63,8 +60,9 @@ namespace jgap {
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
 
-    inline void accumulatePairDerivatives(Vector3& f0, Vector3& f1, Virials& virials,
-                                          const Real dE_dr, const Separation& r01) {
+    inline void accumulatePairDistanceDerivatives(
+        Vector3& f0, Vector3& f1, Virials& virials, const Real dE_dr, const Separation& r01
+    ) {
         virials += r01.virials() * dE_dr;
 
         Vector3 f10 = r01.direction * dE_dr;

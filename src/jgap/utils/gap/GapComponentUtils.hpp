@@ -11,18 +11,20 @@
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
+#include "jgap/core/transform/manybody/TwoBodySum.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
+#include "jgap/experimental/transform/manybody/ThreeBodySum.hpp"
 #include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
 #include "jgap/experimental/transform/nbody/3b/MeamTransformation.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
-#include "jgap/experimental/transform/manybody/ThreeBodySum.hpp"
 
-namespace jgap {
+namespace jgap::utils {
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
     std::vector<TwoBodyGapComponent<Dim, TKernel>> createTwoBodyComponents(
-        const std::vector<Atoms>& training_data, const ValuePtr<TwoBodyTransformation<Dim>>& transformation,
-        const TKernel& kernel, const Sparsifier<Dim>& sparsifier
+        const std::vector<Atoms>& training_data,
+        const ValuePtr<TwoBodyTransformation<Dim>>& transformation,
+        const TKernel& kernel,
+        const Sparsifier<Dim>& sparsifier
     ) {
         std::set<Species2Sorted> all_species_sets;
         Real cutoff = transformation->getCutoffs().maxOverall();
@@ -43,8 +45,10 @@ namespace jgap {
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
     std::vector<ThreeBodyGapComponent<Dim, TKernel>> createThreeBodyComponents(
-        const std::vector<Atoms>& training_data, const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
-        const TKernel& kernel, const Sparsifier<Dim>& sparsifier
+        const std::vector<Atoms>& training_data,
+        const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
+        const TKernel& kernel,
+        const Sparsifier<Dim>& sparsifier
     ) {
         std::set<Species3AtomicSorted> all_species_sets;
         Real cutoff = transformation->getCutoffs().maxOverall();
@@ -69,8 +73,12 @@ namespace jgap {
 
     template<CKernelOfDim<1> TKernel>
     std::vector<ManyBodyGapComponent<1, TKernel>> createEamComponents(
-        const ValuePtr<TwoBodyTransformation<1>>& base_pf, const TKernel& kernel, const Sparsifier<1>& sparsifier,
-        const std::vector<Atoms>& training_data, EamMode mode, const std::vector<Real>& optional_coeffs = {}
+        const ValuePtr<TwoBodyTransformation<1>>& base_pf,
+        const TKernel& kernel,
+        const Sparsifier<1>& sparsifier,
+        const std::vector<Atoms>& training_data,
+        EamMode mode,
+        const std::vector<Real>& optional_coeffs = {}
     ) {
 
         auto aggregators = createEamAggregators(base_pf, training_data, mode);
@@ -111,8 +119,11 @@ namespace jgap {
 
     template<size_t Dim, CKernelOfDim<Dim> TKernel>
     std::vector<ManyBodyGapComponent<Dim, TKernel>> createCoordinationComponents(
-        const ValuePtr<CoordinationTransformation<Dim>>& base_transform, const TKernel& kernel, const Sparsifier<Dim>& sparsifier,
-        const std::vector<Atoms>& training_data, const std::vector<Real>& optional_coeffs = {}
+        const ValuePtr<CoordinationTransformation<Dim>>& base_transform,
+        const TKernel& kernel,
+        const Sparsifier<Dim>& sparsifier,
+        const std::vector<Atoms>& training_data,
+        const std::vector<Real>& optional_coeffs = {}
     ) {
         auto aggregators = createCoordinationAggregators<Dim>(base_transform, training_data);
         std::vector<ManyBodyGapComponent<Dim, TKernel>> components;
@@ -143,8 +154,7 @@ namespace jgap {
                 for (const auto& contributor_species2: all_species) {
                     auto transform_clone = base_transform;
                     aggregator.extend(
-                        {central_species, contributor_species1, contributor_species2},
-                        std::move(transform_clone)
+                        {central_species, contributor_species1, contributor_species2}, std::move(transform_clone)
                     );
                 }
             }
@@ -156,8 +166,11 @@ namespace jgap {
 
     template<CKernelOfDim<3> TKernel>
     std::vector<ManyBodyGapComponent<3, TKernel>> createMeamComponents(
-        const ValuePtr<MeamTransformation>& base_transform, const TKernel& kernel, const Sparsifier<3>& sparsifier,
-        const std::vector<Atoms>& training_data, const std::vector<Real>& optional_coeffs = {}
+        const ValuePtr<MeamTransformation>& base_transform,
+        const TKernel& kernel,
+        const Sparsifier<3>& sparsifier,
+        const std::vector<Atoms>& training_data,
+        const std::vector<Real>& optional_coeffs = {}
     ) {
         auto aggregators = createMeamAggregators(base_transform, training_data);
         std::vector<ManyBodyGapComponent<3, TKernel>> components;

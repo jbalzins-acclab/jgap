@@ -1,9 +1,10 @@
 #include "GapComponentUtils.hpp"
 #include "jgap/core/transform/manybody/TwoBodySum.hpp"
 
-namespace jgap {
+namespace jgap::utils {
     std::map<Species, ValuePtr<NBodyAggregator<1>>> createEamAggregators(
-        const ValuePtr<TwoBodyTransformation<1>>& base_pf, const std::vector<Atoms>& training_data, EamMode mode) {
+        const ValuePtr<TwoBodyTransformation<1>>& base_pf, const std::vector<Atoms>& training_data, EamMode mode
+    ) {
         if (auto cast = dynamic_cast<const EamPairFunction*>(base_pf.get()); cast == nullptr) {
             JGAP_LOG_AND_THROW("Non EAM pair function cluster transformation provided");
         }

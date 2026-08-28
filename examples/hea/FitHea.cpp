@@ -16,6 +16,7 @@
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;
+using namespace jgap::utils;
 
 int main(int argc, char** argv) {
     CurrentLogger::initDefault({});

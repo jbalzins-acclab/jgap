@@ -25,6 +25,7 @@
 #include "jgap/jgap.hpp"
 
 using namespace jgap;
+using namespace jgap::utils;
 
 namespace {
     // ---- baseline parameters, from test-local/fit-params.json ----

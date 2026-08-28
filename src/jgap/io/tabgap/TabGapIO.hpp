@@ -39,8 +39,8 @@ namespace jgap {
     /// </ul>
     ///
     /// The EAM part (embedding + density functions, and the pair potentials when EAM is present) lives in
-    /// LAMMPS .eam.fs files. \ref TabGapIO::write emits them as separate files next to the .h5 AND embeds their
-    /// contents under "eam_files"; \ref TabGapIO::read prefers separately-supplied .eam.fs files, but when none
+    /// LAMMPS .eam.fs files. @ref TabGapIO::write emits them as separate files next to the .h5 AND embeds their
+    /// contents under "eam_files"; @ref TabGapIO::read prefers separately-supplied .eam.fs files, but when none
     /// are given it attempts to read from embedded "eam_files" in the .h5.
     class TabGapIO {
     public:
@@ -83,7 +83,7 @@ namespace jgap {
         /// callers that have just one group, e.g. TabGapPotentialSerialization.
         ///
         /// @param root the HDF5 group to read from.
-        /// @param read_embedded_eam_fs see \ref TabGapIO::readFromGroup.
+        /// @param read_embedded_eam_fs see @ref TabGapIO::readFromGroup.
         /// @return the assembled potential.
         static TabGapPotential fromGroup(const HighFive::Group& root, bool read_embedded_eam_fs);
 

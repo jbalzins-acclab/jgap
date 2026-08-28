@@ -1,19 +1,14 @@
 #include "IterativeGapFit.hpp"
 
-#include <Eigen/Dense>
-#include <Eigen/IterativeLinearSolvers>
 #include <atomic>
 #include <cassert>
 #include <limits>
 #include <random>
 
 #include "jgap/core/UnseqFor.hpp"
+#include "jgap/core/linalg/Linalg.hpp"
 
 namespace jgap {
-
-    using EigenMatrixCol = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-    using EigenMatrixRow = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-    using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 
     std::vector<Real> IterativeGapFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
@@ -32,32 +27,7 @@ namespace jgap {
     }
 
     std::vector<Real> IterativeGapFit::leastSquares(Matrix<RowMajor>& A, std::vector<Real>& b) {
-        const size_t R = A.nRows();
-        const size_t C = A.nColumns();
-
-        Eigen::Map<EigenMatrixRow> A_map(A.flatData().data(), R, C);
-        Eigen::Map<EigenVectorCol> b_map(b.data(), b.size());
-
-        JGAP_LOG_INFO("Solving least squares via LeastSquaresConjugateGradient directly on A ({}x{})", R, C);
-
-        Eigen::LeastSquaresConjugateGradient<EigenMatrixRow> lscg;
-        if (max_iterations.has_value()) {
-            lscg.setMaxIterations(max_iterations.value());
-        }
-        if (tolerance.has_value()) {
-            lscg.setTolerance(tolerance.value());
-        }
-
-        lscg.compute(A_map);
-        if (lscg.info() != Eigen::Success) {
-            JGAP_LOG_ERROR("LeastSquaresConjugateGradient setup failed", true);
-        }
-
-        EigenVectorCol c = lscg.solve(b_map);
-
-        JGAP_LOG_INFO("LSCG finished: iterations = {}, relative error = {}", lscg.iterations(), lscg.error());
-
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return linalg::solveLeastSquaresConjugateGradient(A, b, max_iterations, tolerance);
     }
 
     Matrix<RowMajor> IterativeGapFit::formMatrixA(
@@ -247,17 +217,6 @@ namespace jgap {
     }
 
     Matrix<RowMajor> IterativeGapFit::choleskyDecomposition(Matrix<RowMajor>& matrix_block) {
-        using EigenMatrixRow = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-        Eigen::Map<EigenMatrixRow> map(matrix_block.flatData().data(), matrix_block.nRows(), matrix_block.nColumns());
-
-        Eigen::LLT<Eigen::Map<EigenMatrixRow>> llt(map);
-        if (llt.info() != Eigen::Success) {
-            JGAP_LOG_ERROR("Cholesky decomposition failed: matrix not positive definite", true);
-        }
-
-        Matrix<RowMajor> result(matrix_block.nRows(), matrix_block.nColumns());
-        Eigen::Map<EigenMatrixRow> res_map(result.flatData().data(), result.nRows(), result.nColumns());
-        res_map = llt.matrixU();
-        return result;
+        return linalg::choleskyDecomposition<MatrixLayout::RowMajor>(matrix_block);
     }
 }

@@ -37,7 +37,7 @@ namespace jgap {
                 }
             }
             JGAP_LOG_AND_THROW(
-                "Could not find an appropriate serializer for {}. Check the registry.", typeName<TBase>()
+                "Could not find an appropriate serializer for {}. Check the registry.", utils::typeName<TBase>()
             );
         }
 
@@ -50,7 +50,7 @@ namespace jgap {
             }
 
             JGAP_LOG_AND_THROW(
-                "Could not find an appropriate deserializer for {}. Check the registry.", typeName<TBase>()
+                "Could not find an appropriate deserializer for {}. Check the registry.", utils::typeName<TBase>()
             );
         }
 

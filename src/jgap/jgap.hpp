@@ -14,11 +14,12 @@
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/fit/gap/regularization/SimpleRegularizationRules.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/Potential.hpp"
+#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
@@ -29,9 +30,8 @@
 #include "jgap/experimental/kernels/WendlandKernel.hpp"
 #include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
-#include "core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/gap/StandardGapFit.hpp"
 
-#endif // JGAP_JGAP_HPP
+#endif

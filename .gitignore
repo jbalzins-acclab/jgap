@@ -7,8 +7,7 @@ vcpkg_installed/*
 .DS_Store
 .idea*
 .vscode*
-/test-local/*
+test-local/*
 build*/*
 .cache/*
-test/reference/install-dependencies/*install/*
 *.log

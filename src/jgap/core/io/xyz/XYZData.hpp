@@ -32,7 +32,7 @@ namespace jgap {
         std::vector<Species>
     >;
 
-    /// Labels for the common ext-xyz property/array names that \ref XYZData::read and \ref Atoms use.
+    /// Labels for the common ext-xyz property/array names that @ref XYZData::read and @ref Atoms use.
     ///
     /// Defaults follow standard ASE naming for convenience,
     /// however, virials require as there seems to be no standard label.
@@ -51,10 +51,10 @@ namespace jgap {
     /// Extended .xyz file data.
     /// Doesn't assume what exactly is known pre-atom,
     /// rather stores all the header properties,
-    /// in some of the \ref XYZInfoType types,
-    /// and a bunch of named arrays as \ref XYZArrayType.
+    /// in some of the @ref XYZInfoType types,
+    /// and a bunch of named arrays as @ref XYZArrayType.
     ///
-    /// @see \ref XYZData::read for specifics.
+    /// @see @ref XYZData::read for specifics.
     ///
     /// @note inspired by ASE.
     class XYZData {
@@ -71,18 +71,18 @@ namespace jgap {
         ///  prop_name=prop_val : for properties that can be written without whitespaces, <br>
         ///  prop_name="val1 val2" : otherwise <br>
         ///
-        /// Allowed types of properties are defined in \ref XYZInfoType,
+        /// Allowed types of properties are defined in @ref XYZInfoType,
         /// however, conversion from string will be attempted only if prop_name matches one in main_props,
         /// moreover, an error will be thrown if such conversion is impossible. <br>
         ///
         /// The property name "Properties" is reserved exclusively for array type definition,
         /// and if not found will default to "species:S:1:pos:R:3". <br>
         /// "Properties" defines what array names, types, and in what order they will be expected later lines. <br>
-        /// Type support can be found in \ref XYZArrayType, which should be encoded as: <br>
+        /// Type support can be found in @ref XYZArrayType, which should be encoded as: <br>
         ///  I:1 - int, <br>
-        ///  R:1 - \ref Real, <br>
-        ///  R:3 - \ref Vector3, <br>
-        ///  S:1 - string without whitespaces if (array name != main_props.species), \ref Species otherwise.
+        ///  R:1 - @ref Real, <br>
+        ///  R:3 - @ref Vector3, <br>
+        ///  S:1 - string without whitespaces if (array name != main_props.species), @ref Species otherwise.
         ///
         ///  PBC is expected to be defined as pbc="T T T";
         ///  pbc="true true true" and pbc="1 1 1" are allowed but will fall back to pbc="T T T" upon writing. <br>
@@ -102,7 +102,7 @@ namespace jgap {
         XYZData& operator=(XYZData&& other) = default;
         XYZData& operator=(const XYZData& other) = default;
 
-        /// Opposite of \ref XYZData::read.
+        /// Opposite of @ref XYZData::read.
         /// Somewhat more permissive in terms of property names.
         void write(const std::string &filename) const;
         void write(std::ostream &out_stream) const;

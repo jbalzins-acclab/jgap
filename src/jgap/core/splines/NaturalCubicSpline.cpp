@@ -12,7 +12,7 @@ namespace jgap {
     InterpolationResults<1> NaturalCubicSpline::interpolate(std::array<Real, 1> pos) const {
         const Real r = pos[0];
         if (r < r_vec.front()) return {energies.front(), {0.0}};
-        if (r > r_vec.back()) return {0.0, {0.0}}; // cutoff behavior
+        if (r > r_vec.back()) return {0.0, {0.0}};
 
         size_t i = findInterval(r);
         double dx = r - r_vec[i];
@@ -44,7 +44,7 @@ namespace jgap {
         std::vector<double> alpha(n - 1);
         for (size_t i = 1; i < n - 1; i++) {
             alpha[i] =
-                    (3.0 / h[i]) * (energies[i + 1] - energies[i]) - (3.0 / h[i - 1]) * (energies[i] - energies[i - 1]);
+                (3.0 / h[i]) * (energies[i + 1] - energies[i]) - (3.0 / h[i - 1]) * (energies[i] - energies[i - 1]);
         }
 
         std::vector<double> l(n), mu(n), z(n);

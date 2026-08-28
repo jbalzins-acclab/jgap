@@ -7,6 +7,7 @@
 #include "jgap/utils/gap/GapComponentUtils.hpp"
 
 using namespace jgap;
+using namespace jgap::utils;
 
 template<size_t Dim>
 auto makeCoordinationComponents(

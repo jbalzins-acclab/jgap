@@ -32,7 +32,15 @@ namespace jgap {
             return data[j * rows + i];
         }
 
+        const Real& operator()(const size_t i, const size_t j) const {
+            if constexpr (Layout == MatrixLayout::RowMajor) {
+                return data[i * columns + j];
+            }
+            return data[j * rows + i];
+        }
+
         std::vector<Real>& flatData() { return data; }
+        const std::vector<Real>& flatData() const { return data; }
 
         size_t nRows() const { return rows; }
         size_t nColumns() const { return columns; }

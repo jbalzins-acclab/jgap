@@ -7,7 +7,7 @@ namespace jgap {
     /// @brief Type Alias for the floating point number type.
     /// @note Meant to SIMPLIFY transition from double to float if such is needed in the future,
     /// it is not guaranteed to work by simple switching.
-    /// @note Initial testing of floats showed ~10%-20% speedup on a small single element potential,
+    /// @note Initial testing of floats showed ~20% speedup on a small single element potential,
     /// returning NaNs as a result. It's probably not worth any further testing,
     /// except using floats to store the covariance matrix but using doubles for operations when finding least squares
     /// (like in QRGapFit) may work.

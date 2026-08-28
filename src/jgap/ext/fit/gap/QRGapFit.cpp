@@ -1,15 +1,13 @@
 #include "QRGapFit.hpp"
 
-#include <Eigen/Dense>
 #include <atomic>
 #include <cassert>
+#include <cmath>
 
 #include "jgap/core/UnseqFor.hpp"
+#include "jgap/core/linalg/Linalg.hpp"
 
 namespace jgap {
-
-    using EigenMatrixCol = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-    using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 
     std::vector<Real> QRGapFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components,
@@ -30,31 +28,7 @@ namespace jgap {
     }
 
     std::vector<Real> QRGapFit::leastSquares(Matrix<ColumnMajor>& A, std::vector<Real>& b) {
-        Eigen::Map<EigenMatrixCol> A_map(A.flatData().data(), A.nRows(), A.nColumns());
-        Eigen::Map<EigenVectorCol> b_map(b.data(), b.size());
-
-        JGAP_LOG_DEBUG("Init Eigen::HouseholderQR");
-        const Eigen::HouseholderQR<Eigen::Ref<EigenMatrixCol>> qr(A_map);
-
-        JGAP_LOG_DEBUG("Q^t");
-        auto Qt = qr.householderQ().transpose();
-
-        JGAP_LOG_DEBUG("Q^t * b");
-        auto Qt_b = Qt * b_map;
-
-        JGAP_LOG_DEBUG("R");
-        auto R = qr.matrixQR().topLeftCorner(A.nColumns(), A.nColumns());
-
-        JGAP_LOG_DEBUG("R^-1 * Q^t_b");
-        EigenVectorCol c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
-
-        Real b_norm = b_map.norm();
-        if (b_norm > 0.0_r && A.nRows() > A.nColumns()) {
-            Real rel_err = Qt_b.tail(A.nRows() - A.nColumns()).norm() / b_norm;
-            JGAP_LOG_INFO("QR solver finished: relative error = {}", rel_err);
-        }
-
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return linalg::solveLeastSquaresHouseholderQR(A, b);
     }
 
     Matrix<ColumnMajor> QRGapFit::formMatrixA(
@@ -260,17 +234,6 @@ namespace jgap {
     }
 
     Matrix<ColumnMajor> QRGapFit::choleskyDecomposition(Matrix<RowMajor>& matrix_block) {
-        using EigenMatrixRow = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-        Eigen::Map<EigenMatrixRow> map(matrix_block.flatData().data(), matrix_block.nRows(), matrix_block.nColumns());
-
-        Eigen::LLT<Eigen::Map<EigenMatrixRow>> llt(map);
-        if (llt.info() != Eigen::Success) {
-            JGAP_LOG_ERROR("Cholesky decomposition failed: matrix not positive definite", true);
-        }
-
-        Matrix<ColumnMajor> result(matrix_block.nRows(), matrix_block.nColumns());
-        Eigen::Map<EigenMatrixCol> res_map(result.flatData().data(), result.nRows(), result.nColumns());
-        res_map = llt.matrixU();
-        return result;
+        return linalg::choleskyDecomposition<MatrixLayout::ColumnMajor>(matrix_block);
     }
 }

@@ -8,6 +8,7 @@
 #include "TwoBodyDescriptor.hpp"
 #include "jgap/core/Vector3.hpp"
 #include "jgap/core/atomic/geometry/Cluster.hpp"
+#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
 
@@ -105,7 +106,7 @@ namespace jgap {
             }
 
             for (size_t dim = 0; dim < Dim; dim++) {
-                accumulatePairDerivatives(
+                utils::accumulatePairDistanceDerivatives(
                     forces[descriptor_index * n_atoms + cluster.idx0][dim],
                     forces[descriptor_index * n_atoms + cluster.idx1][dim],
                     virials[descriptor_index][dim],
@@ -126,7 +127,7 @@ namespace jgap {
                     const auto sep_idx = flattenedIndex(i, j);
 
                     for (size_t dim = 0; dim < Dim; dim++) {
-                        accumulatePairDerivatives(
+                        utils::accumulatePairDistanceDerivatives(
                             forces[descriptor_index * n_atoms + cluster.atom_indexes[i]][dim],
                             forces[descriptor_index * n_atoms + cluster.atom_indexes[j]][dim],
                             virials[descriptor_index][dim],

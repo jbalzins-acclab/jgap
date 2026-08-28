@@ -12,6 +12,7 @@
 #include "jgap/jgap.hpp"
 
 using namespace jgap;
+using namespace jgap::utils;
 
 int main(int argc, char** argv) {
     CurrentLogger::initDefault({.stdout_log_debug = true});
@@ -89,8 +90,9 @@ int main(int argc, char** argv) {
     }
 
     IsolatedAtomPotential isolated_atom_pot{training_data};
-    ScreenedCoulombPotential sc_pot =
-        screened_coulomb_dataset_file ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data} : ScreenedCoulombPotential{training_data};
+    ScreenedCoulombPotential sc_pot = screened_coulomb_dataset_file
+                                          ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data}
+                                          : ScreenedCoulombPotential{training_data};
 
     CompositePotential external{{
         {"isolated", isolated_atom_pot},

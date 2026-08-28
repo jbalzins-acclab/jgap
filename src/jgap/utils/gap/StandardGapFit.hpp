@@ -6,19 +6,19 @@
 #include "jgap/core/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
+#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
+#include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
-#include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
 #include "jgap/core/sparsification/HistogramUniformSparsifier.hpp"
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/utils/gap/GapComponentUtils.hpp"
 
-namespace jgap {
+namespace jgap::utils {
     inline GapPotential standardGapFit(const std::vector<Atoms>& training_data, const StandardGapParams& params) {
         GapPotential potential;
 
@@ -34,9 +34,7 @@ namespace jgap {
             auto kernel2 = SquaredExpKernel<1, 1>(10.0_r, {1.0_r});
             auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
             potential.addComponents(
-                createTwoBodyComponents<2, SquaredExpKernel<1, 1>>(
-                    training_data, trans2, kernel2, sparsifier2
-                )
+                createTwoBodyComponents<2, SquaredExpKernel<1, 1>>(training_data, trans2, kernel2, sparsifier2)
             );
         }
 
@@ -46,11 +44,7 @@ namespace jgap {
         if (params.eam_n_sparse > 0) {
             auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
             auto sparsifier_eam = HistogramUniformSparsifier<1>(
-                params.seed,
-                params.eam_n_sparse,
-                std::nullopt,
-                std::nullopt,
-                Descriptor<1>{params.eam_min_density}
+                params.seed, params.eam_n_sparse, std::nullopt, std::nullopt, Descriptor<1>{params.eam_min_density}
             );
             potential.addComponents(
                 createEamComponents<SquaredExpKernel<1, 0>>(
@@ -68,16 +62,15 @@ namespace jgap {
             auto sparsifier3 =
                 HistogramUniformSparsifier<4>(params.seed, params.n_sparse3, std::array{true, true, true, false});
             potential.addComponents(
-                createThreeBodyComponents<4, SquaredExpKernel<3, 1>>(
-                    training_data, trans3, kernel3, sparsifier3
-                )
+                createThreeBodyComponents<4, SquaredExpKernel<3, 1>>(training_data, trans3, kernel3, sparsifier3)
             );
         }
 
         IsolatedAtomPotential isolated_atom_pot{training_data};
-        ScreenedCoulombPotential sc_pot = params.screened_coulomb_dataset_file
-                                             ? ScreenedCoulombPotential{*params.screened_coulomb_dataset_file, training_data}
-                                             : ScreenedCoulombPotential{training_data};
+        ScreenedCoulombPotential sc_pot =
+            params.screened_coulomb_dataset_file
+                ? ScreenedCoulombPotential{*params.screened_coulomb_dataset_file, training_data}
+                : ScreenedCoulombPotential{training_data};
 
         CompositePotential external{{
             {"isolated", isolated_atom_pot},

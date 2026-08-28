@@ -41,7 +41,7 @@ namespace jgap {
                                                       const std::filesystem::path& base_dir);
 
 
-        /// Reads the `GAP_data` e0 entries into an \ref IsolatedAtomPotential.
+        /// Reads the `GAP_data` e0 entries into an @ref IsolatedAtomPotential.
         static IsolatedAtomPotential transformIsolatedAtomParams(const pugi::xml_node& quip_isolated_atom_params);
 
         /// Builds the GAP components from the `gpSparse` block (one per `gpCoordinates`).

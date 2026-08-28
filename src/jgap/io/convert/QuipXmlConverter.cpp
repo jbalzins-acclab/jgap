@@ -161,7 +161,7 @@ namespace jgap {
             std::string descriptor_param_string = sparse_node.child("descriptor").first_child().value();
             if (descriptor_param_string.find("eam_density") == std::string::npos) continue;
 
-            auto property_map = parseHeaderLine(descriptor_param_string);
+            auto property_map = utils::parseHeaderLine(descriptor_param_string);
 
             if (property_map.contains("Z")) {
                 species_encountered.insert(Species::fromAtomicNumber(std::stoi(property_map["Z"])));
@@ -186,7 +186,7 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("covariance_type must be ard_se: {}", descriptor_param_string);
             }
 
-            auto property_map = parseHeaderLine(descriptor_param_string);
+            auto property_map = utils::parseHeaderLine(descriptor_param_string);
 
             Real delta = std::stod(property_map["delta"]);
             Real theta = std::stod(property_map["theta_uniform"]);
@@ -254,14 +254,15 @@ namespace jgap {
     }
 
     ValuePtr<GapComponent> QuipXmlConverter::transformDistance2b(
-        const QuipDescriptorData& main_data, const pugi::xml_node& distance_2b_node,
+        const QuipDescriptorData& main_data,
+        const pugi::xml_node& distance_2b_node,
         const std::filesystem::path& base_dir
     ) {
         Real cutoff_transition_width = main_data.cutoff_transition_width.value_or(0.5);
         if (main_data.r_min.has_value()) cutoff_transition_width = main_data.cutoff - main_data.r_min.value();
 
         std::string descriptor_param_string = distance_2b_node.child("descriptor").first_child().value();
-        auto param_map = parseHeaderLine(descriptor_param_string);
+        auto param_map = utils::parseHeaderLine(descriptor_param_string);
 
         Species species1 = Species::fromAtomicNumber(std::stoi(param_map["Z1"]));
 
@@ -302,7 +303,7 @@ namespace jgap {
         if (mainData.r_min.has_value()) r_min = mainData.r_min.value();
 
         std::string descriptor_param_string = angle3b_node.child("descriptor").first_child().value();
-        auto param_map = parseHeaderLine(descriptor_param_string);
+        auto param_map = utils::parseHeaderLine(descriptor_param_string);
 
         Species root_species = Species::fromAtomicNumber(std::stoi(param_map["Z"]));
 
@@ -341,8 +342,10 @@ namespace jgap {
     }
 
     ValuePtr<GapComponent> QuipXmlConverter::transformEam(
-        const QuipDescriptorData& main_data, const pugi::xml_node& eam_node,
-        const std::set<Species>& species_encountered, const std::filesystem::path& base_dir
+        const QuipDescriptorData& main_data,
+        const pugi::xml_node& eam_node,
+        const std::set<Species>& species_encountered,
+        const std::filesystem::path& base_dir
     ) {
         std::optional<Real> rMin =
             main_data.cutoff_transition_width.transform([&](Real val) -> Real { return main_data.cutoff - val; });
@@ -352,8 +355,8 @@ namespace jgap {
             JGAP_LOG_AND_THROW("pair_function not specified in eam_density");
         }
 
-        if ((main_data.pair_function.value() == "coscutoff" || main_data.pair_function.value() == "polycutoff") &&
-            !rMin.has_value()) {
+        if ((main_data.pair_function.value() == "coscutoff" || main_data.pair_function.value() == "polycutoff")
+            && !rMin.has_value()) {
             JGAP_LOG_AND_THROW("rmin is required for coscutoff/polycutoff eam pair_function");
         }
 
@@ -362,7 +365,7 @@ namespace jgap {
         }
 
         std::string descriptor_param_string = eam_node.child("descriptor").first_child().value();
-        auto param_map = parseHeaderLine(descriptor_param_string);
+        auto param_map = utils::parseHeaderLine(descriptor_param_string);
         size_t Z_center = std::stoull(param_map["Z"]);
 
         Species central_species = Species::fromAtomicNumber(Z_center);

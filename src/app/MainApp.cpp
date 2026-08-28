@@ -24,6 +24,7 @@
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/tabulation/TabulationParams.hpp"
+#include "jgap/io/PotentialLoader.hpp"
 #include "../jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
@@ -71,52 +72,7 @@ std::array<size_t, 3> parseTriple(const std::string& value) {
     return out;
 }
 
-ValuePtr<Potential> loadPotential(const std::string& pot_path) {
-    namespace fs = std::filesystem;
-    fs::path p(pot_path);
-    const bool has_extension = p.has_extension();
 
-    if (!has_extension) {
-        std::vector<std::string> tabgap_files;
-        const std::string tabgap_h5 = pot_path + ".tabgap.h5";
-        const std::string eam_fs = pot_path + ".eam.fs";
-
-        if (fs::exists(tabgap_h5)) {
-            tabgap_files.push_back(tabgap_h5);
-        }
-        if (fs::exists(eam_fs)) {
-            tabgap_files.push_back(eam_fs);
-        }
-
-        if (!fs::exists(eam_fs)) {
-            const fs::path dir = p.parent_path().empty() ? "." : p.parent_path();
-            if (fs::exists(dir) && fs::is_directory(dir)) {
-                const std::string stem = p.filename().string();
-                for (const auto& entry: fs::directory_iterator(dir)) {
-                    const std::string fname = entry.path().filename().string();
-                    if (fname.starts_with(stem) && fname.ends_with(".eam.fs") && fname != eam_fs) {
-                        tabgap_files.push_back(entry.path().string());
-                    }
-                }
-            }
-        }
-
-        if (!tabgap_files.empty()) {
-            JGAP_LOG_INFO("Loading tabGAP potential from files: {}", vectorToString(tabgap_files));
-            return TabGapIO::read(tabgap_files);
-        }
-
-        if (fs::exists(pot_path + ".jgap.h5")) {
-            return SerializationRegistry<Potential>::deserialize(pot_path + ".jgap.h5");
-        }
-        if (fs::exists(pot_path + ".h5")) {
-            return SerializationRegistry<Potential>::deserialize(pot_path + ".h5");
-        }
-    }
-
-
-    return SerializationRegistry<Potential>::deserialize(pot_path);
-}
 
 int predict(const std::vector<std::string>& args) {
     if (args.size() != 3) {

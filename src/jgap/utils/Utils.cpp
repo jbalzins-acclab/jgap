@@ -17,7 +17,7 @@
 #include "jgap/core/atomic/Atoms.hpp"
 #include "../core/io/log/CurrentLogger.hpp"
 
-namespace jgap {
+namespace jgap::utils {
     bool getLine(std::istream &file, std::string &line) {
         if (!getline(file, line)) return false;
         if (!line.empty() && line.back() == '\r') {

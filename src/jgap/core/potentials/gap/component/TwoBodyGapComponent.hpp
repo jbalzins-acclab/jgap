@@ -70,7 +70,7 @@ namespace jgap {
                         dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
                     }
 
-                    accumulatePairDerivatives(
+                    utils::accumulatePairDistanceDerivatives(
                         result.force(sparse_idx, cluster.idx0),
                         result.force(sparse_idx, cluster.idx1),
                         result.virials(sparse_idx),

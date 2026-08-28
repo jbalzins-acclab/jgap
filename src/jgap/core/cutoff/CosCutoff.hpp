@@ -19,9 +19,7 @@ namespace jgap {
         Real getCutoff() const override { return cutoff; }
         Real getCutoffTransitionWidth() const { return cutoff - r_min; }
 
-        Real evaluate(Real r) const override {
-            return CutoffFunction::evaluate(r);
-        }
+        Real evaluate(Real r) const override { return CutoffFunction::evaluate(r); }
 
         std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override final {
             if (r <= r_min) return {1.0_r, 0.0_r};
@@ -30,7 +28,7 @@ namespace jgap {
 
             const Real phase = (r - r_min) * pi_over_w;
             Real s, c;
-            jgap::sincos(phase, &s, &c);
+            utils::sincos(phase, &s, &c);
 
             Real val = 0.5_r * (c + 1.0_r);
             Real deriv = deriv_coeff * s;

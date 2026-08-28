@@ -102,9 +102,9 @@ namespace jgap {
         JGAP_LOG_INFO(
             "{}d histogram in range {} - {} with {} long bins:",
             Dim,
-            iteratorToString(min_point_.begin(), min_point_.end()),
-            iteratorToString(max_point_.begin(), max_point_.end()),
-            iteratorToString(step.begin(), step.end())
+            utils::iteratorToString(min_point_.begin(), min_point_.end()),
+            utils::iteratorToString(max_point_.begin(), max_point_.end()),
+            utils::iteratorToString(step.begin(), step.end())
         );
 
         std::vector<Descriptor<Dim>> sparse_points;
@@ -137,8 +137,8 @@ namespace jgap {
             JGAP_LOG_WARN(
                 "{}d histogram found no descriptors within range {} - {}",
                 Dim,
-                iteratorToString(min_point_.begin(), min_point_.end()),
-                iteratorToString(max_point_.begin(), max_point_.end())
+                utils::iteratorToString(min_point_.begin(), min_point_.end()),
+                utils::iteratorToString(max_point_.begin(), max_point_.end())
             );
             return {};
         }

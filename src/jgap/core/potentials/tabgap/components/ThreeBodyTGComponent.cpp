@@ -23,7 +23,7 @@ namespace jgap {
                     dE_drij += dE_dq[dim] * dq_dr[idx_ij][dim];
                 }
 
-                accumulatePairDerivatives(
+                utils::accumulatePairDistanceDerivatives(
                     result.forces[atom_i], result.forces[atom_j], result.virials, dE_drij, cluster.separation(idx_ij)
                 );
             }

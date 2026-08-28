@@ -36,7 +36,7 @@ namespace jgap {
 
                 Real dE_dr = 0.5 * gradient[0];
 
-                accumulatePairDerivatives(
+                utils::accumulatePairDistanceDerivatives(
                     result.forces[cluster.idx0],
                     result.forces[cluster.idx1],
                     result.virials,

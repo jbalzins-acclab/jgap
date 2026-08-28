@@ -1,15 +1,13 @@
 #include "QRKernelFit.hpp"
 
-#include <Eigen/Dense>
 #include <atomic>
 #include <cassert>
+#include <cmath>
 
 #include "jgap/core/UnseqFor.hpp"
+#include "jgap/core/linalg/Linalg.hpp"
 
 namespace jgap {
-
-    using EigenMatrixCol = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-    using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 
     std::vector<Real> QRKernelFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components,
@@ -30,22 +28,7 @@ namespace jgap {
     }
 
     std::vector<Real> QRKernelFit::leastSquares(Matrix<ColumnMajor>& A, std::vector<Real>& b) {
-        Eigen::Map<EigenMatrixCol> A_map(A.flatData().data(), A.nRows(), A.nColumns());
-        Eigen::Map<EigenVectorCol> b_map(b.data(), b.size());
-
-        JGAP_LOG_DEBUG("Init Eigen::HouseholderQR");
-        const Eigen::HouseholderQR<Eigen::Ref<EigenMatrixCol>> qr(A_map);
-
-        JGAP_LOG_DEBUG("Q^t * b");
-        auto Qt_b = qr.householderQ().transpose() * b_map;
-
-        JGAP_LOG_DEBUG("R");
-        auto R = qr.matrixQR().topLeftCorner(A.nColumns(), A.nColumns());
-
-        JGAP_LOG_DEBUG("R^-1 * Q^t_b");
-        EigenVectorCol c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
-
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return linalg::solveLeastSquaresHouseholderQR(A, b);
     }
 
     Matrix<ColumnMajor> QRKernelFit::formMatrixA(
