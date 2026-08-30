@@ -26,6 +26,8 @@
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/experimental/fit/gap/IterativeGapFit.hpp"
 #include "jgap/experimental/fit/gap/QRKernelFit.hpp"
+#include "jgap/experimental/fit/gap/SplitQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
 #include "jgap/experimental/kernels/CauchyKernel.hpp"
 #include "jgap/experimental/kernels/WendlandKernel.hpp"
 #include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"

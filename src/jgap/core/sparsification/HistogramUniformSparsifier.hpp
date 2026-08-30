@@ -99,9 +99,29 @@ namespace jgap {
             step[d] = (max_point_[d] - min_point_[d]) / static_cast<Real>(grid_dimensions_[d]);
         }
 
+        size_t active_dims = 0;
+        if (is_dim_active.has_value()) {
+            assert(is_dim_active.value().size() == Dim);
+            for (bool active: is_dim_active.value()) {
+                if (active) active_dims++;
+            }
+        } else if (grid_dimensions.has_value()) {
+            for (size_t gd: grid_dimensions.value()) {
+                if (gd > 1) active_dims++;
+            }
+            if (active_dims == 0) active_dims = Dim;
+        } else {
+            active_dims = Dim;
+        }
+        size_t unused_dims = Dim - active_dims;
+        std::string dim_str = std::to_string(active_dims) + "d";
+        if (unused_dims > 0) {
+            dim_str += " (+" + std::to_string(unused_dims) + " unused)";
+        }
+
         JGAP_LOG_INFO(
-            "{}d histogram in range {} - {} with {} long bins:",
-            Dim,
+            "{} histogram in range {} - {} with {} long bins:",
+            dim_str,
             utils::iteratorToString(min_point_.begin(), min_point_.end()),
             utils::iteratorToString(max_point_.begin(), max_point_.end()),
             utils::iteratorToString(step.begin(), step.end())
@@ -135,8 +155,8 @@ namespace jgap {
 
         if (useful_grid_slots.empty()) {
             JGAP_LOG_WARN(
-                "{}d histogram found no descriptors within range {} - {}",
-                Dim,
+                "{} histogram found no descriptors within range {} - {}",
+                dim_str,
                 utils::iteratorToString(min_point_.begin(), min_point_.end()),
                 utils::iteratorToString(max_point_.begin(), max_point_.end())
             );

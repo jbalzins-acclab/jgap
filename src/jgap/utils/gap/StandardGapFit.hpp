@@ -18,6 +18,7 @@
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/experimental/fit/gap/SplitQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
@@ -124,10 +125,27 @@ namespace jgap::utils {
             }
         }
 
-        if (params.approx_ram_limit_gb.has_value()) {
+        if (params.split_sets.has_value() && !params.split_sets->empty()) {
+            if (params.approx_ram_limit_gb.has_value()) {
+                const double max_bytes = *params.approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
+                const double mm_bytes = static_cast<double>(M) * static_cast<double>(M) * sizeof(Real);
+                if (mm_bytes > max_bytes) {
+                    JGAP_LOG_AND_THROW("Cannot fit within the RAM requirements");
+                }
+                SplitQRGapFit fitter(*params.split_sets, *params.approx_ram_limit_gb);
+                fitter.fit(potential, training_data, sigmas);
+            } else {
+                const double estimated_gb = std::max(
+                    1.0,
+                    (static_cast<double>(N + M) * static_cast<double>(M) * sizeof(Real)) / (1024.0 * 1024.0 * 1024.0)
+                        * 1.5
+                );
+                SplitQRGapFit fitter(*params.split_sets, estimated_gb);
+                fitter.fit(potential, training_data, sigmas);
+            }
+        } else if (params.approx_ram_limit_gb.has_value()) {
             const double max_bytes = *params.approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
             const double mm_bytes = static_cast<double>(M) * static_cast<double>(M) * sizeof(Real);
-            const double two_mm_bytes = 2.0 * mm_bytes;
             const double nm_bytes = static_cast<double>(N + M) * static_cast<double>(M) * sizeof(Real);
 
             if (mm_bytes > max_bytes) {
@@ -137,17 +155,7 @@ namespace jgap::utils {
                 QRGapFit fitter;
                 fitter.fit(potential, training_data, sigmas);
             } else {
-                const double remaining_rows =
-                    (max_bytes / (static_cast<double>(M) * sizeof(Real))) - static_cast<double>(M);
-                const size_t target_chunk_rows =
-                    std::max<size_t>(1, std::min<size_t>(N, static_cast<size_t>(remaining_rows / 2.0)));
-
-                JGAP_LOG_INFO(
-                    "Using StreamingQrGapFit with target chunk rows = {} for approx_ram_limit_gb = {:.4f} GB",
-                    target_chunk_rows,
-                    *params.approx_ram_limit_gb
-                );
-                StreamingQrGapFit fitter(1e-8, target_chunk_rows);
+                StreamingQrGapFit fitter(1e-8, *params.approx_ram_limit_gb);
                 fitter.fit(potential, training_data, sigmas);
             }
         } else {

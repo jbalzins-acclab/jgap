@@ -1,13 +1,14 @@
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "../../src/jgap/io/xyz/XYZData.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
+#include "jgap/experimental/fit/gap/SplitQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
 #include "jgap/io/convert/QuipXmlConverter.hpp"
 #include "jgap/io/log/CurrentLogger.hpp"
@@ -25,6 +26,7 @@ int main(int argc, char** argv) {
     const std::string xml_filename = (argc > 1) ? argv[1] : "gap_xml_files/gp_WTaCrV.xml";
     const std::string train_xyz = (argc > 2) ? argv[2] : "db_WTaCrV.xyz";
     const std::string output_prefix = (argc > 3) ? argv[3] : "WTaCrV";
+    const double ram_limit_gb = 2.0;
 
     JGAP_LOG_INFO("Loading QUIP XML template from: {}", xml_filename);
     ValuePtr<Potential> pot = QuipXmlConverter::transform(xml_filename);
@@ -37,6 +39,58 @@ int main(int argc, char** argv) {
     JGAP_LOG_INFO("Loading training trajectory from: {}", train_xyz);
     const std::vector<Atoms> training_data = Atoms::readAtoms(train_xyz);
     JGAP_LOG_INFO("Loaded {} training frames", training_data.size());
+
+    // ===== Calculate dimensions and estimate RAM =====
+    size_t M = 0;
+    for (const auto& comp: potential.getComponents()) {
+        M += comp->nSparsePoints();
+    }
+
+    size_t N = 0;
+    for (const auto& frame: training_data) {
+        if (frame.getEnergy().has_value()) N += 1;
+        if (frame.getForces().has_value()) N += 3 * frame.nAtoms();
+        if (frame.getVirials().has_value()) N += 6;
+    }
+
+    const double bytes_per_row = static_cast<double>(M) * sizeof(Real);
+    const double kb_per_row = bytes_per_row / 1024.0;
+    const double mm_bytes = static_cast<double>(M) * bytes_per_row;
+    const double mm_mb = mm_bytes / (1024.0 * 1024.0);
+    const double mm_gb = mm_bytes / (1024.0 * 1024.0 * 1024.0);
+    const double nm_bytes = static_cast<double>(N + M) * bytes_per_row;
+    const double nm_mb = nm_bytes / (1024.0 * 1024.0);
+    const double nm_gb = nm_bytes / (1024.0 * 1024.0 * 1024.0);
+    const double max_bytes = ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
+
+    // In-place peak streaming memory breakdown:
+    // 1. workspace: (M + B) * M * 8 bytes (sizeof(Real))
+    // 2. A_chunk input buffer: B * M * 8 bytes
+    // Total Peak RAM = (M + B) * M * 8 bytes + B * M * 8 bytes
+    //                = mm_bytes + 2 * B * bytes_per_row
+    size_t max_chunk_rows = 1;
+    if (max_bytes > mm_bytes + 2.0 * bytes_per_row) {
+        max_chunk_rows = std::max<size_t>(1, static_cast<size_t>((max_bytes - mm_bytes) / (2.0 * bytes_per_row)));
+    }
+    const double chunk_mb = static_cast<double>(max_chunk_rows) * bytes_per_row / (1024.0 * 1024.0);
+    const double peak_streaming_bytes =
+        static_cast<double>(M + max_chunk_rows) * bytes_per_row + static_cast<double>(max_chunk_rows) * bytes_per_row;
+    const double peak_streaming_gb = peak_streaming_bytes / (1024.0 * 1024.0 * 1024.0);
+
+    std::cout << "\n================ Memory Estimation ================\n";
+    std::cout << "Total GAP components            : " << potential.getComponents().size() << "\n";
+    std::cout << "Total columns (sparse points) M : " << M << "\n";
+    std::cout << "Total training rows N           : " << N << "\n";
+    std::cout << "RAM per row                     : " << bytes_per_row << " B (" << std::fixed << std::setprecision(2)
+              << kb_per_row << " KB)\n";
+    std::cout << "Full (N+M)xM matrix (QRGapFit)  : " << nm_mb << " MB (" << std::setprecision(3) << nm_gb << " GB)\n";
+    std::cout << "MxM covariance accumulator      : " << mm_mb << " MB (" << std::setprecision(4) << mm_gb << " GB)\n";
+    std::cout << "Minimum in-place QR RAM         : " << std::setprecision(3) << mm_gb << " GB (1 * MxM)\n";
+    std::cout << "User RAM limit                  : " << std::setprecision(2) << ram_limit_gb << " GB\n";
+    std::cout << "Max chunk capacity (B rows)     : " << max_chunk_rows << " rows (" << std::setprecision(2) << chunk_mb
+              << " MB)\n";
+    std::cout << "Estimated Peak Streaming RAM    : " << std::setprecision(3) << peak_streaming_gb << " GB\n";
+    std::cout << "===================================================\n\n";
 
     // ===== setup regularization from QUIP command line parameters =====
     const PerConfigTypeRegularizationRules regularization(
@@ -56,9 +110,14 @@ int main(int argc, char** argv) {
         "binary_C14:0.01:0.1:1.0:0.0:binary_C15:0.01:0.1:1.0:0.0:binary_C36:0.01:0.1:1.0:0.0"
     );
 
-    // ===== fit using Streaming QR =====
-    JGAP_LOG_INFO("Fitting HEA GAP potential using StreamingQrGapFit...");
-    StreamingQrGapFit fitter(1e-8, 500);
+    // ===== fit using Streaming QR (or Split QR) =====
+    JGAP_LOG_INFO("Fitting HEA GAP potential using StreamingQrGapFit with limit {} GB...", ram_limit_gb);
+    // StreamingQrGapFit fitter(1e-8, ram_limit_gb);
+
+    // Option: Split QR with [Cr], [Ta], [V], [W] splits
+    const std::vector<std::set<Species>> split_sets = {{"Cr"}, {"Ta"}, {"V"}, {"W"}};
+    SplitQRGapFit fitter(1e-8, split_sets, ram_limit_gb);
+
     auto sigmas = regularization.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);
 

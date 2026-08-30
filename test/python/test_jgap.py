@@ -290,6 +290,18 @@ class TestJGAP(unittest.TestCase):
             jgap.standard_gap_fit(pot_file_streaming, frames, sigmas, params_streaming)
             self.assertTrue(os.path.exists(pot_file_streaming))
 
+            # 4. StandardGapParams with split_sets -> triggers SplitQRGapFit
+            params_split = jgap.StandardGapParams(
+                seed=42,
+                n_sparse2=10,
+                n_sparse3=50,
+                split_sets=[["Fe"], ["Ni"]],
+                approx_ram_limit_gb=0.0030,
+            )
+            pot_file_split = os.path.join(tmpdir, "split.jgap.h5")
+            jgap.standard_gap_fit(pot_file_split, frames, sigmas, params_split)
+            self.assertTrue(os.path.exists(pot_file_split))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 #ifndef JGAP_STREAMINGQRACCUMULATOR_HPP
 #define JGAP_STREAMINGQRACCUMULATOR_HPP
 
+#include <optional>
 #include <vector>
 
 #include "jgap/core/Matrix.hpp"
@@ -12,7 +13,7 @@ namespace jgap::linalg {
     /// workspace and buffers chunks to perform standard Eigen HouseholderQR factorizations in-place.
     class StreamingQRAccumulator {
     public:
-        explicit StreamingQRAccumulator(size_t n_cols, size_t max_chunk_rows = 1000);
+        StreamingQRAccumulator(size_t n_cols, double approx_ram_limit_gb);
         ~StreamingQRAccumulator() = default;
 
         StreamingQRAccumulator(StreamingQRAccumulator&&) noexcept = default;
@@ -27,11 +28,18 @@ namespace jgap::linalg {
         Matrix<ColumnMajor>& initialWorkspace() { return workspace; }
         const Matrix<ColumnMajor>& initialWorkspace() const { return workspace; }
 
+        std::vector<Real>& initialB() { return b_workspace; }
+        const std::vector<Real>& initialB() const { return b_workspace; }
+
         void appendBlock(const Matrix<ColumnMajor>& A_chunk, const std::vector<Real>& b_chunk);
         std::vector<Real> solve();
         size_t nCols() const;
+        size_t targetChunkRows() const { return max_chunk_rows; }
+
+        void flush() { finalize(); }
 
     private:
+        static size_t calculateMaxChunkRows(size_t n_cols, double approx_ram_limit_gb);
         void flushFullBlock();
         void finalize();
 
@@ -42,6 +50,6 @@ namespace jgap::linalg {
         std::vector<Real> b_workspace;
     };
 
-} // namespace jgap::linalg
+}
 
-#endif // JGAP_STREAMINGQRACCUMULATOR_HPP
+#endif

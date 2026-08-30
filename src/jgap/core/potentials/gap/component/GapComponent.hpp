@@ -1,6 +1,7 @@
 #ifndef JGAP_GAPCOMPONENT_HPP
 #define JGAP_GAPCOMPONENT_HPP
 
+#include <set>
 #include <vector>
 
 #include "jgap/core/Matrix.hpp"
@@ -9,6 +10,7 @@
 #include "jgap/core/atomic/energy/AtomicQuantities.hpp"
 #include "jgap/core/atomic/energy/AtomicQuantity.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
+#include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
 
 namespace jgap {
@@ -20,6 +22,7 @@ namespace jgap {
         virtual Matrix<RowMajor> sparseToSparseCovariance() const = 0;
         virtual size_t nSparsePoints() const = 0;
         virtual Cutoffs getCutoffs() const = 0;
+        virtual std::set<Species> nonZeroCovarianceFor() const = 0;
 
         virtual GapComponent* clone() const = 0;
 

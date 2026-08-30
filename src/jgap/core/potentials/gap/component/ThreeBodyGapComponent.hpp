@@ -96,6 +96,10 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override { return transformation->getCutoffs(); }
 
+        std::set<Species> nonZeroCovarianceFor() const override {
+            return {species.root, species.nodes[0], species.nodes[1]};
+        }
+
         ThreeBodyGapComponent* clone() const override { return new ThreeBodyGapComponent(*this); }
 
         const Species3AtomicSorted& getSpecies() const { return species; }

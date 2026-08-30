@@ -43,6 +43,25 @@ namespace {
         return arr;
     }
 
+    std::optional<std::vector<std::set<Species>>> parseSplitSets(const py::object& obj) {
+        if (obj.is_none()) return std::nullopt;
+        std::vector<std::set<Species>> result;
+        for (const auto& group: obj) {
+            std::set<Species> group_set;
+            for (const auto& item: group) {
+                if (py::isinstance<Species>(item)) {
+                    group_set.insert(item.cast<Species>());
+                } else if (py::isinstance<py::str>(item)) {
+                    group_set.insert(Species(item.cast<std::string>()));
+                } else {
+                    JGAP_LOG_AND_THROW("split_sets elements must be Species or str");
+                }
+            }
+            result.push_back(std::move(group_set));
+        }
+        return result;
+    }
+
     std::vector<Vector3> numpyToPositions(py::array_t<double> arr) {
         auto buf = arr.request();
         if (buf.ndim == 2) {
@@ -492,7 +511,8 @@ PYBIND11_MODULE(_jgap, m) {
             Real cutoff3,
             Real cutoff3_width,
             size_t n_sparse3,
-            std::optional<Real> approx_ram_limit_gb
+            std::optional<Real> approx_ram_limit_gb,
+            py::object split_sets
         ) {
             utils::StandardGapParams p;
             p.seed = seed;
@@ -508,6 +528,7 @@ PYBIND11_MODULE(_jgap, m) {
             p.cutoff3_width = cutoff3_width;
             p.n_sparse3 = n_sparse3;
             p.approx_ram_limit_gb = approx_ram_limit_gb;
+            p.split_sets = parseSplitSets(split_sets);
             return p;
         }),
         py::arg("seed") = 42,
@@ -522,7 +543,8 @@ PYBIND11_MODULE(_jgap, m) {
         py::arg("cutoff3") = 3.7,
         py::arg("cutoff3_width") = 0.6,
         py::arg("n_sparse3") = 500,
-        py::arg("approx_ram_limit_gb") = std::nullopt)
+        py::arg("approx_ram_limit_gb") = std::nullopt,
+        py::arg("split_sets") = py::none())
         .def_readwrite("seed", &utils::StandardGapParams::seed)
         .def_readwrite("screened_coulomb_dataset_file", &utils::StandardGapParams::screened_coulomb_dataset_file)
         .def_readwrite("cutoff2", &utils::StandardGapParams::cutoff2)
@@ -536,6 +558,24 @@ PYBIND11_MODULE(_jgap, m) {
         .def_readwrite("cutoff3_width", &utils::StandardGapParams::cutoff3_width)
         .def_readwrite("n_sparse3", &utils::StandardGapParams::n_sparse3)
         .def_readwrite("approx_ram_limit_gb", &utils::StandardGapParams::approx_ram_limit_gb)
+        .def_property(
+            "split_sets",
+            [](const utils::StandardGapParams& p) -> py::object {
+                if (!p.split_sets.has_value()) return py::none();
+                py::list outer;
+                for (const auto& grp: *p.split_sets) {
+                    py::set s;
+                    for (const auto& sp: grp) {
+                        s.add(sp.symbol());
+                    }
+                    outer.append(s);
+                }
+                return outer;
+            },
+            [](utils::StandardGapParams& p, const py::object& obj) {
+                p.split_sets = parseSplitSets(obj);
+            }
+        )
         .def("__repr__", [](const utils::StandardGapParams& p) {
             std::ostringstream oss;
             oss << "<StandardGapParams cutoff2=" << p.cutoff2

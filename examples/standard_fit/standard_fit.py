@@ -30,7 +30,8 @@ def main():
         eam_pair_function=jgap.EamPairFunctionType.FSGen3,
         eam_mode=jgap.EamMode.Blind,
         n_sparse3=500,
-        approx_ram_limit_gb=0.5
+        approx_ram_limit_gb=1.0,
+        split_sets=[["Fe"], ["Ni"]],
     )
 
     rules = jgap.PerConfigTypeRegularizationRules(

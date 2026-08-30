@@ -90,6 +90,10 @@ namespace jgap {
 
         Cutoffs getCutoffs() const override { return aggregator->getCutoffs(); }
 
+        std::set<Species> nonZeroCovarianceFor() const override {
+            return {aggregator->getCentralSpecies()};
+        }
+
         ManyBodyGapComponent* clone() const override { return new ManyBodyGapComponent(*this); }
 
         const ValuePtr<NBodyAggregator<Dim>>& getAggregator() const { return aggregator; }

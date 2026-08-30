@@ -6,8 +6,8 @@
 #include "jgap/core/linalg/StreamingQRAccumulator.hpp"
 
 namespace jgap {
-    StreamingQrGapFit::StreamingQrGapFit(const Real jitter, const size_t target_chunk_rows) :
-        QRGapFit(jitter), target_chunk_rows(target_chunk_rows) {}
+    StreamingQrGapFit::StreamingQrGapFit(const Real jitter, const double approx_ram_limit_gb) :
+        QRGapFit(jitter), approx_ram_limit_gb(approx_ram_limit_gb) {}
 
     std::vector<Real> StreamingQrGapFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components,
@@ -20,9 +20,9 @@ namespace jgap {
             C += comp->nSparsePoints();
         }
 
-        JGAP_LOG_INFO("Starting Streaming QR fit: total columns C = {}, target chunk rows = {}", C, target_chunk_rows);
+        linalg::StreamingQRAccumulator accumulator(C, approx_ram_limit_gb);
+        const size_t effective_chunk_rows = accumulator.targetChunkRows();
 
-        linalg::StreamingQRAccumulator accumulator(C, target_chunk_rows);
         size_t start_col = 0;
         for (const auto& comp: gap_components) {
             fillU_mm(start_col, start_col, comp, accumulator.initialWorkspace());
@@ -35,13 +35,37 @@ namespace jgap {
         };
 
         std::vector<FrameMeta> frames_meta;
+        size_t N = 0;
         for (size_t i = 0; i < training_data.size(); ++i) {
             size_t r = 0;
             if (energies_without_external[i].energy.has_value()) r += 1;
             if (energies_without_external[i].forces.has_value()) r += 3 * training_data[i].nAtoms();
             if (energies_without_external[i].virials.has_value()) r += 6;
             frames_meta.push_back({i, r});
+            N += r;
         }
+
+        const double bytes_per_row = static_cast<double>(C) * sizeof(Real);
+        const double mm_mb = (static_cast<double>(C) * static_cast<double>(C) * sizeof(Real)) / (1024.0 * 1024.0);
+        const double full_nm_mb = (static_cast<double>(N + C) * bytes_per_row) / (1024.0 * 1024.0);
+        const double chunk_mb = (static_cast<double>(effective_chunk_rows) * bytes_per_row) / (1024.0 * 1024.0);
+        const double est_peak_gb =
+            (static_cast<double>(C + effective_chunk_rows) * bytes_per_row + static_cast<double>(effective_chunk_rows) * bytes_per_row) /
+            (1024.0 * 1024.0 * 1024.0);
+
+        JGAP_LOG_INFO(
+            "Starting Streaming QR fit: columns C = {}, rows N = {}, RAM/row = {:.2f} KB, MxM RAM = {:.2f} MB, full "
+            "(N+M)xM RAM = {:.2f} MB, limit = {:.2f} GB, chunk capacity = {} rows ({:.2f} MB), est. peak = {:.2f} GB",
+            C,
+            N,
+            bytes_per_row / 1024.0,
+            mm_mb,
+            full_nm_mb,
+            approx_ram_limit_gb,
+            effective_chunk_rows,
+            chunk_mb,
+            est_peak_gb
+        );
 
         size_t frame_cursor = 0;
         size_t chunk_count = 0;
@@ -50,7 +74,7 @@ namespace jgap {
             size_t chunk_start_frame = frame_cursor;
             size_t chunk_rows = 0;
 
-            while (frame_cursor < frames_meta.size() && (chunk_rows < target_chunk_rows || chunk_rows == 0)) {
+            while (frame_cursor < frames_meta.size() && (chunk_rows < effective_chunk_rows || chunk_rows == 0)) {
                 chunk_rows += frames_meta[frame_cursor].rows;
                 frame_cursor++;
             }

@@ -3,8 +3,11 @@
 
 #include <array>
 #include <optional>
+#include <set>
 #include <string>
+#include <vector>
 #include "jgap/core/Real.hpp"
+#include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
 
 namespace jgap::utils {
@@ -37,6 +40,10 @@ namespace jgap::utils {
         // If the full covarince matrix cannot be stored at once,
         // StreamingQRGapFit might be used if sizeof (M x M 64 bit FP) < RAM limit.
         std::optional<Real> approx_ram_limit_gb = std::nullopt;
+
+        // Optional disjoint species split sets for SplitQRGapFit.
+        // If provided and non-empty, SplitQRGapFit will be used.
+        std::optional<std::vector<std::set<Species>>> split_sets = std::nullopt;
     };
 }
 

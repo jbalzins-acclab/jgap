@@ -6,10 +6,8 @@
 namespace jgap {
     class StreamingQrGapFit : public QRGapFit {
     public:
-        explicit StreamingQrGapFit(
-            Real jitter = 1e-8,
-            size_t target_chunk_rows = 8000
-        );
+        explicit StreamingQrGapFit(Real jitter, double approx_ram_limit_gb);
+        explicit StreamingQrGapFit(double approx_ram_limit_gb) : StreamingQrGapFit(1e-8, approx_ram_limit_gb) {}
 
     protected:
         std::vector<Real> findCoefficients(
@@ -20,7 +18,7 @@ namespace jgap {
         ) override;
 
     protected:
-        size_t target_chunk_rows{8000};
+        double approx_ram_limit_gb;
     };
 }
 
