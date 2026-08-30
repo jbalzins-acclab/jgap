@@ -14,11 +14,16 @@ namespace jgap {
 
         TwoBodyDescriptor<2> evaluateAndDifferentiate(const Cluster2& pair) const override final {
             Real r = pair.separation01.magnitude;
+            const auto& dir = pair.separation01.direction;
             auto [f_cut, df_cut] = cutoff->evaluateAndDifferentiate(r);
-            return {{r, f_cut}, std::array{1.0_r, df_cut}};
+            return {
+                .value = {r, f_cut},
+                .grad_r1 = {dir, df_cut * dir},
+            };
         }
 
         Cutoffs getCutoffs() const override { return Cutoffs{{2, cutoff->getCutoff()}}; }
+        bool isRotationallyInvariant() const override { return true; }
 
         ValuePtr<CutoffFunction> getCutoffFunction() const { return cutoff; }
 

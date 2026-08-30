@@ -3,20 +3,17 @@
 
 #include <array>
 #include "Descriptor.hpp"
-#include "jgap/core/atomic/geometry/Cluster2.hpp"
+#include "jgap/core/Vector3.hpp"
 
 namespace jgap {
 
-    /// @brief Derivatives of Descriptor<Dim>(r_ij) wrt r_ij.
-    template<size_t Dim>
-    using TwoBodyDerivatives = std::array<Real, Dim>;
-
-    /// @brief Dim-dimensional 2-body descriptor, and derivatives wrt r_ij in each dimension.
+    /// @brief Dim-dimensional 2-body descriptor, and its gradients.
+    /// @note Transaltional invariance is assumed, hence grad_r0 = -grad_r1 is not stored explicitly.
     template<size_t Dim>
         requires(Dim > 0)
     struct TwoBodyDescriptor {
         Descriptor<Dim> value{};
-        TwoBodyDerivatives<Dim> derivatives{};
+        std::array<Vector3, Dim> grad_r1{};
 
         operator Descriptor<Dim>() { return value; }
         operator Descriptor<Dim>&() { return value; }

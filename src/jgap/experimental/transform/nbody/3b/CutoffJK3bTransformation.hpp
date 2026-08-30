@@ -22,13 +22,21 @@ namespace jgap {
         }
 
         ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override final {
-            Real r01 = triplet.separation01().magnitude;
-            Real r02 = triplet.separation02().magnitude;
-            Real r12 = triplet.separation12().magnitude;
+            Real r01 = triplet.separation01.magnitude;
+            Real r02 = triplet.separation02.magnitude;
+            Real r12 = triplet.separation12.magnitude;
 
             auto [f_cut_01, df_cut_01] = main_cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = main_cutoff->evaluateAndDifferentiate(r02);
             auto [f_cut_12, df_cut_12] = cutoff_12->evaluateAndDifferentiate(r12);
+
+            const auto& dir01 = triplet.separation01.direction;
+            const auto& dir02 = triplet.separation02.direction;
+            const auto& dir12 = triplet.separation12.direction;
+
+            Real dq3_dr01 = df_cut_01 * f_cut_02 * f_cut_12;
+            Real dq3_dr02 = df_cut_02 * f_cut_01 * f_cut_12;
+            Real dq3_dr12 = df_cut_12 * f_cut_01 * f_cut_02;
 
             return {
                 .value =
@@ -38,28 +46,18 @@ namespace jgap {
                         r12,
                         f_cut_01 * f_cut_02 * f_cut_12,
                     },
-                .derivatives = {
-                    std::array{
-                        // wrt r_01
-                        1.0_r,
-                        2.0_r * (r01 - r02),
-                        0.0_r,
-                        df_cut_01 * f_cut_02 * f_cut_12,
+                .grad_r1 =
+                    {
+                        dir01,
+                        2.0_r * (r01 - r02) * dir01,
+                        -dir12,
+                        dq3_dr01 * dir01 - dq3_dr12 * dir12,
                     },
-                    std::array{
-                        // wrt r_02
-                        1.0_r,
-                        2.0_r * (r02 - r01),
-                        0.0_r,
-                        df_cut_02 * f_cut_01 * f_cut_12,
-                    },
-                    std::array{
-                        // wrt r_12
-                        0.0_r,
-                        0.0_r,
-                        1.0_r,
-                        df_cut_12 * f_cut_01 * f_cut_02,
-                    },
+                .grad_r2 = {
+                    dir02,
+                    2.0_r * (r02 - r01) * dir02,
+                    dir12,
+                    dq3_dr02 * dir02 + dq3_dr12 * dir12,
                 }
             };
         }
@@ -67,6 +65,7 @@ namespace jgap {
         Cutoffs getCutoffs() const override {
             return Cutoffs{{3, std::max(main_cutoff->getCutoff(), cutoff_12->getCutoff())}};
         }
+        bool isRotationallyInvariant() const override { return true; }
 
         const ValuePtr<CutoffFunction>& getMainCutoffFunction() const { return main_cutoff; }
         const ValuePtr<CutoffFunction>& getCutoff12Function() const { return cutoff_12; }

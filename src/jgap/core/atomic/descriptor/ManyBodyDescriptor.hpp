@@ -5,7 +5,8 @@
 #include "ThreeBodyDescriptor.hpp"
 #include "TwoBodyDescriptor.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
-#include "jgap/core/atomic/geometry/Cluster.hpp"
+#include "jgap/core/atomic/geometry/Cluster2.hpp"
+#include "jgap/core/atomic/geometry/Cluster3.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {
@@ -82,41 +83,32 @@ namespace jgap {
 
         /// @brief $\vec{Q} += \vec{q}(r_{ij})$, and update derivatives.
         void add(const Cluster2& cluster, const TwoBodyDescriptor<Dim>& contribution) {
-            for (size_t dim = 0; dim < Dim; dim++) {
-                value[dim] += contribution.value[dim];
-            }
+            const auto r01 = cluster.separation01.vec();
 
             for (size_t dim = 0; dim < Dim; dim++) {
-                utils::accumulatePairDistanceDerivatives(
-                    forces[cluster.idx0][dim],
-                    forces[cluster.idx1][dim],
-                    virials[dim],
-                    contribution.derivatives[dim],
-                    cluster.separation01
-                );
+                value[dim] += contribution.value[dim];
+
+                forces[cluster.idx1][dim] -= contribution.grad_r1[dim];
+                forces[cluster.idx0][dim] += contribution.grad_r1[dim];
+
+                virials[dim] += Virials::dyadic(r01, -contribution.grad_r1[dim]);
             }
         }
 
         /// @brief $\vec{Q} += \vec{q}(r_{ij}, r_{ik}, r_{jk})$, and update derivatives.
         void add(const Cluster3& cluster, const ThreeBodyDescriptor<Dim>& contribution) {
+            const auto r01 = cluster.separation01.vec();
+            const auto r02 = cluster.separation02.vec();
+
             for (size_t dim = 0; dim < Dim; dim++) {
                 value[dim] += contribution.value[dim];
-            }
 
-            for (size_t i = 0; i < 3; i++) {
-                for (size_t j = i + 1; j < 3; j++) {
-                    const auto sep_idx = flattenedIndex(i, j);
+                forces[cluster.idx1][dim] -= contribution.grad_r1[dim];
+                forces[cluster.idx2][dim] -= contribution.grad_r2[dim];
+                forces[cluster.idx0][dim] += (contribution.grad_r1[dim] + contribution.grad_r2[dim]);
 
-                    for (size_t dim = 0; dim < Dim; dim++) {
-                        utils::accumulatePairDistanceDerivatives(
-                            forces[cluster.atom_indexes[i]][dim],
-                            forces[cluster.atom_indexes[j]][dim],
-                            virials[dim],
-                            contribution.derivatives[sep_idx][dim],
-                            cluster.separation(sep_idx)
-                        );
-                    }
-                }
+                virials[dim] += Virials::dyadic(r01, -contribution.grad_r1[dim]);
+                virials[dim] += Virials::dyadic(r02, -contribution.grad_r2[dim]);
             }
         }
     };

@@ -57,9 +57,12 @@ TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     Angle3bTransformation trans(mock_cutoff);
 
     Cluster3 triplet;
-    triplet.separation01().magnitude = r01;
-    triplet.separation02().magnitude = r02;
-    triplet.separation12().magnitude = r12;
+    triplet.separation01.magnitude = r01;
+    triplet.separation01.direction = Vector3{1.0, 0.0, 0.0};
+    triplet.separation02.magnitude = r02;
+    triplet.separation02.direction = Vector3{0.0, 1.0, 0.0};
+    triplet.separation12.magnitude = r12;
+    triplet.separation12.direction = Vector3{0.0, 0.0, 1.0};
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(triplet);
@@ -77,25 +80,41 @@ TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     EXPECT_NEAR(desc_and_derivs.value[2], r12, 1e-9);
     EXPECT_NEAR(desc_and_derivs.value[3], val01 * val02, 1e-9);
 
-    // Check derivatives part
-    const auto& derivs = desc_and_derivs.derivatives;
-    EXPECT_EQ(derivs.size(), 3); // 3 separations in a triplet
+    // Check Cartesian gradients part
+    const auto& grad_r1 = desc_and_derivs.grad_r1;
+    const auto& grad_r2 = desc_and_derivs.grad_r2;
 
-    // Derivatives wrt r01
-    EXPECT_NEAR(derivs[0][0], 1.0, 1e-9);
-    EXPECT_NEAR(derivs[0][1], 2.0 * (r01 - r02), 1e-9);
-    EXPECT_NEAR(derivs[0][2], 0.0, 1e-9);
-    EXPECT_NEAR(derivs[0][3], deriv01 * val02, 1e-9);
+    // Gradients wrt atom 1
+    EXPECT_NEAR(grad_r1[0].x, 1.0, 1e-9);
+    EXPECT_NEAR(grad_r1[0].y, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[0].z, 0.0, 1e-9);
 
-    // Derivatives wrt r02
-    EXPECT_NEAR(derivs[1][0], 1.0, 1e-9);
-    EXPECT_NEAR(derivs[1][1], 2.0 * (r02 - r01), 1e-9);
-    EXPECT_NEAR(derivs[1][2], 0.0, 1e-9);
-    EXPECT_NEAR(derivs[1][3], val01 * deriv02, 1e-9);
+    EXPECT_NEAR(grad_r1[1].x, 2.0 * (r01 - r02), 1e-9);
+    EXPECT_NEAR(grad_r1[1].y, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[1].z, 0.0, 1e-9);
 
-    // Derivatives wrt r12
-    EXPECT_NEAR(derivs[2][0], 0.0, 1e-9);
-    EXPECT_NEAR(derivs[2][1], 0.0, 1e-9);
-    EXPECT_NEAR(derivs[2][2], 1.0, 1e-9);
-    EXPECT_NEAR(derivs[2][3], 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[2].x, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[2].y, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[2].z, -1.0, 1e-9);
+
+    EXPECT_NEAR(grad_r1[3].x, deriv01 * val02, 1e-9);
+    EXPECT_NEAR(grad_r1[3].y, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r1[3].z, 0.0, 1e-9);
+
+    // Gradients wrt atom 2
+    EXPECT_NEAR(grad_r2[0].x, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r2[0].y, 1.0, 1e-9);
+    EXPECT_NEAR(grad_r2[0].z, 0.0, 1e-9);
+
+    EXPECT_NEAR(grad_r2[1].x, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r2[1].y, 2.0 * (r02 - r01), 1e-9);
+    EXPECT_NEAR(grad_r2[1].z, 0.0, 1e-9);
+
+    EXPECT_NEAR(grad_r2[2].x, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r2[2].y, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r2[2].z, 1.0, 1e-9);
+
+    EXPECT_NEAR(grad_r2[3].x, 0.0, 1e-9);
+    EXPECT_NEAR(grad_r2[3].y, val01 * deriv02, 1e-9);
+    EXPECT_NEAR(grad_r2[3].z, 0.0, 1e-9);
 }

@@ -12,6 +12,7 @@
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
 #include "jgap/core/sparsification/Sparsifier.hpp"
+#include "jgap/utils/Utils.hpp"
 
 namespace jgap {
 
@@ -107,6 +108,9 @@ namespace jgap {
             if (coeffs.empty()) {
                 JGAP_LOG_AND_THROW("Coefficients must be set before tabulation");
             }
+            if (!transformation->isRotationallyInvariant()) {
+                JGAP_LOG_AND_THROW("Transformation is not rotationally invariant and cannot be tabulated");
+            }
 
             auto& table = tables.three_body_grids.getValueGrid(species);
             const Real iteration_reduction_factor = expansion.getPermutationReductionFactor();
@@ -130,29 +134,27 @@ namespace jgap {
         bool covariateAtom(size_t atom_index, const NeighbourLists& neighbour_list, AtomicQuantities& result) const {
             return expansion.forEach(atom_index, neighbour_list, [&](const Cluster3& cluster) {
                 auto descriptor = transformation->evaluateAndDifferentiate(cluster);
+                const auto r01 = cluster.separation01.vec();
+                const auto r02 = cluster.separation02.vec();
 
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
                     auto [K, gradK_wrt_q] = kernel.valueAndGradient(sparse_points[sparse_idx], descriptor.value);
 
                     result.energy(sparse_idx) += K;
 
-                    for (size_t sep_idx = 0; sep_idx < 3; sep_idx++) {
-                        const auto& derivatives_wrt_r_norms = descriptor.derivatives[sep_idx];
-                        const auto [atom_i, atom_j] = cluster.atomIndexes(sep_idx);
-
-                        Real dK_drnorm = 0.0;
-                        for (size_t dim = 0; dim < Dim; dim++) {
-                            dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
-                        }
-
-                        utils::accumulatePairDistanceDerivatives(
-                            result.force(sparse_idx, atom_i),
-                            result.force(sparse_idx, atom_j),
-                            result.virials(sparse_idx),
-                            dK_drnorm,
-                            cluster.separation(sep_idx)
-                        );
+                    Vector3 f1{0.0_r, 0.0_r, 0.0_r};
+                    Vector3 f2{0.0_r, 0.0_r, 0.0_r};
+                    for (size_t dim = 0; dim < Dim; dim++) {
+                        f1 -= gradK_wrt_q[dim] * descriptor.grad_r1[dim];
+                        f2 -= gradK_wrt_q[dim] * descriptor.grad_r2[dim];
                     }
+
+                    result.force(sparse_idx, cluster.idx1) += f1;
+                    result.force(sparse_idx, cluster.idx2) += f2;
+                    result.force(sparse_idx, cluster.idx0) -= (f1 + f2);
+
+                    result.virials(sparse_idx) += Virials::dyadic(r01, f1);
+                    result.virials(sparse_idx) += Virials::dyadic(r02, f2);
                 }
             });
         }

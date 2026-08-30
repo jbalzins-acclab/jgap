@@ -68,6 +68,9 @@ namespace jgap {
                 ManyBodyGrids2<1, 1>& eam_grids = tables.newEamGrid(central_atom_species);
 
                 for (const auto& [species_set, transformation]: transformations) {
+                    if (!transformation->isRotationallyInvariant()) {
+                        JGAP_LOG_AND_THROW("Transformation is not rotationally invariant and cannot be tabulated");
+                    }
                     auto& grid = eam_grids.aggregator_grids.getValueGrid(species_set);
 
                     for (auto cell: grid) {

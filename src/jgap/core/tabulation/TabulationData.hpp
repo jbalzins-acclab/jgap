@@ -39,12 +39,14 @@ namespace jgap {
 
         ManyBodyGrids2<1, 1>& newEamGrid(const Species& central_atom_species) {
             AtomicTwoBodyGrids<1> aggregator_grids(
-                {0.0_r}, {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b - 1)},
+                {0.0_r},
+                {params.max_cutoffs.per_cluster_size.at(2) / static_cast<Real>(params.n_grid_2b - 1)},
                 {params.n_grid_2b}
             );
 
             eam_grids_vec.emplace_back(
-                central_atom_species, aggregator_grids,
+                central_atom_species,
+                aggregator_grids,
                 Grid<1>{
                     std::array{params.n_grid_2b},
                     std::array{params.max_eam_density / static_cast<Real>(params.n_grid_2b - 1)},
@@ -78,9 +80,9 @@ namespace jgap {
         Real term = r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12;
         Real r12 = sqrt(std::max(0.0_r, term));
 
-        res.separation01().magnitude = r01;
-        res.separation02().magnitude = r02;
-        res.separation12().magnitude = r12;
+        res.separation01.magnitude = r01;
+        res.separation02.magnitude = r02;
+        res.separation12.magnitude = r12;
         return res;
     }
 }

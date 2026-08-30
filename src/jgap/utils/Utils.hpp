@@ -60,16 +60,6 @@ namespace jgap::utils {
     std::string vectorToString(const std::vector<size_t>&);
     std::string vectorToString(const std::vector<std::string>&);
 
-    inline void accumulatePairDistanceDerivatives(
-        Vector3& f0, Vector3& f1, Virials& virials, const Real dE_dr, const Separation& r01
-    ) {
-        virials += r01.virials() * dE_dr;
-
-        Vector3 f10 = r01.direction * dE_dr;
-        f0 += f10;
-        f1 -= f10;
-    }
-
     template<typename T>
     std::string typeName() {
 #if defined(__clang__) || defined(__GNUC__)

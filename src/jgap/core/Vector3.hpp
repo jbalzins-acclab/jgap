@@ -27,6 +27,10 @@ namespace jgap {
             return *this;
         }
 
+        constexpr Vector3 operator-() const {
+            return Vector3{-x, -y, -z};
+        }
+
         constexpr Vector3 operator-(const Vector3& other) const {
             return Vector3{x - other.x, y - other.y, z - other.z};
         }

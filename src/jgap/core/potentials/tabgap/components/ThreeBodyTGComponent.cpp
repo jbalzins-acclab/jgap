@@ -9,24 +9,24 @@ namespace jgap {
         AtomicQuantity result(nl.nAtoms());
 
         expansion.forEach(nl, [&](const Cluster3& cluster) {
-            auto [q, dq_dr] = transformation.evaluateAndDifferentiate(cluster);
-            auto [E, dE_dq] = spline.interpolate(q);
+            auto desc = transformation.evaluateAndDifferentiate(cluster);
+            auto [E, dE_dq] = spline.interpolate(desc.value);
 
             result.value += E;
 
-            for (size_t idx_ij = 0; idx_ij < 3; idx_ij++) {
-                const auto [atom_i, atom_j] = cluster.atomIndexes(idx_ij);
-
-                Real dE_drij{};
-
-                for (size_t dim = 0; dim < 3; dim++) {
-                    dE_drij += dE_dq[dim] * dq_dr[idx_ij][dim];
-                }
-
-                utils::accumulatePairDistanceDerivatives(
-                    result.forces[atom_i], result.forces[atom_j], result.virials, dE_drij, cluster.separation(idx_ij)
-                );
+            Vector3 f1{0.0_r, 0.0_r, 0.0_r};
+            Vector3 f2{0.0_r, 0.0_r, 0.0_r};
+            for (size_t dim = 0; dim < 3; dim++) {
+                f1 -= dE_dq[dim] * desc.grad_r1[dim];
+                f2 -= dE_dq[dim] * desc.grad_r2[dim];
             }
+
+            result.forces[cluster.idx1] += f1;
+            result.forces[cluster.idx2] += f2;
+            result.forces[cluster.idx0] -= (f1 + f2);
+
+            result.virials += Virials::dyadic(cluster.separation01.vec(), f1);
+            result.virials += Virials::dyadic(cluster.separation02.vec(), f2);
         });
 
         return result;

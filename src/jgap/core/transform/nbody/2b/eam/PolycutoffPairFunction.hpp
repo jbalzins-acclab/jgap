@@ -14,14 +14,13 @@ namespace jgap {
             interval_inverse = 1.0_r / (cutoff - r_min);
         }
 
-        Descriptor<1> evaluate(const Cluster2& pair) const override {
-            return TwoBodyTransformation<1>::evaluate(pair);
-        }
+        Descriptor<1> evaluate(const Cluster2& pair) const override { return TwoBodyTransformation<1>::evaluate(pair); }
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override final {
             Real distance = pair.separation01.magnitude;
-            if (distance >= cutoff) return {.value = {0.0_r}, .derivatives = {0.0_r}};
-            if (distance <= r_min) return {.value = {prefactor}, .derivatives = {0.0_r}};
+            const auto& dir = pair.separation01.direction;
+            if (distance >= cutoff) return {.value = {0.0_r}, .grad_r1 = {Vector3{}}};
+            if (distance <= r_min) return {.value = {prefactor}, .grad_r1 = {Vector3{}}};
 
             const Real chi = (distance - r_min) * interval_inverse;
             const Real dchi_dr = interval_inverse;
@@ -29,10 +28,11 @@ namespace jgap {
             Real val = prefactor * (1.0_r - chi * chi * chi * (6.0_r * chi * chi - 15.0_r * chi + 10.0_r));
             Real deriv = prefactor * (dchi_dr * chi * chi * (-30.0_r * chi * chi + 60.0_r * chi - 30.0_r));
 
-            return {.value = {val}, .derivatives = {deriv}};
+            return {.value = {val}, .grad_r1 = {deriv * dir}};
         }
 
         PolycutoffPairFunction* clone() const override { return new PolycutoffPairFunction(*this); }
+        bool isRotationallyInvariant() const override { return true; }
 
         Real getRMin() const { return r_min; }
 

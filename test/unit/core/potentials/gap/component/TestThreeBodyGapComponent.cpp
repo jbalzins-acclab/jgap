@@ -17,22 +17,31 @@ namespace {
     template<size_t Dim>
     class MockThreeBodyTransformation : public ThreeBodyTransformation<Dim> {
     public:
+        MockThreeBodyTransformation(bool is_rot_inv = true) : is_rot_inv(is_rot_inv) {}
         ThreeBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster3& cluster) const override {
             ThreeBodyDescriptor<Dim> res;
             res.value[0] = 1.0;
-            res.derivatives[0].fill(0.1);
-            res.derivatives[1].fill(0.1);
-            res.derivatives[2].fill(0.1);
+            const auto& dir01 = cluster.separation01.direction;
+            const auto& dir02 = cluster.separation02.direction;
+            const auto& dir12 = cluster.separation12.direction;
+            for (size_t d = 0; d < Dim; ++d) {
+                res.grad_r1[d] = 0.1_r * dir01 - 0.1_r * dir12;
+                res.grad_r2[d] = 0.1_r * dir02 + 0.1_r * dir12;
+            }
             return res;
         }
         Cutoffs getCutoffs() const override { return Cutoffs{{3, 15.0}}; }
+        bool isRotationallyInvariant() const override { return is_rot_inv; }
         Descriptor<Dim> evaluate(const Cluster3& cluster) const override {
             return ThreeBodyTransformation<Dim>::evaluate(cluster);
         }
         bool isSwapInvariant(size_t idx1, size_t idx2) const override {
             return (idx1 == 1 && idx2 == 2) || (idx1 == 2 && idx2 == 1);
         }
-        MockThreeBodyTransformation* clone() const override { return new MockThreeBodyTransformation(); }
+        MockThreeBodyTransformation* clone() const override { return new MockThreeBodyTransformation(*this); }
+
+    private:
+        bool is_rot_inv = true;
     };
 
     template<size_t Dim>
@@ -172,4 +181,20 @@ TEST(TestThreeBodyGapComponent, TabulationThreeBody) {
 
         EXPECT_NEAR(grid.data_flat[i], 2.0 * coeffs[0] * K, 1e-9);
     }
+}
+
+TEST(TestThreeBodyGapComponent, NonRotationallyInvariantThrowsOnTabulation) {
+    ValuePtr<ThreeBodyTransformation<1>> non_rot_trans = MockThreeBodyTransformation<1>(/*is_rot_inv=*/false);
+    MockKernel<1> kernel;
+    std::vector<Descriptor<1>> sparse_points = {{1.0}};
+    Species3AtomicSorted species{"Fe", "Fe", "Ni"};
+    auto component = ThreeBodyGapComponent(species, non_rot_trans, kernel, sparse_points);
+    component.setCoefficients({1.0});
+
+    TabulationParams params;
+    params.n_grid_3b = {5, 5, 5};
+    params.max_cutoffs = component.getCutoffs();
+    TabulationData tables(params);
+
+    EXPECT_THROW(component.tabulate(tables), std::runtime_error);
 }

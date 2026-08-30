@@ -16,7 +16,8 @@ namespace jgap {
         static constexpr Real ClusterPermutationsAvailable = 2.0;
 
         Cluster3Expansion(
-            const Species3AtomicSorted& species_set, ClusterPermutationMode mode = ClusterPermutationMode::NoNodePermutation
+            const Species3AtomicSorted& species_set,
+            ClusterPermutationMode mode = ClusterPermutationMode::NoNodePermutation
         ) :
             species_set(species_set),
             mode(mode),
@@ -48,21 +49,23 @@ namespace jgap {
                         found = true;
                         callback(
                             Cluster3{
-                                .atom_indexes = {atom_index, it1->neighbour_index, it2->neighbour_index},
-                                .separations = {
-                                    it1->separation, it2->separation,
-                                    Separation(it1->separation.vec(), it2->separation.vec())
-                                }
+                                .idx0 = atom_index,
+                                .idx1 = it1->neighbour_index,
+                                .idx2 = it2->neighbour_index,
+                                .separation01 = it1->separation,
+                                .separation02 = it2->separation,
+                                .separation12 = Separation(it1->separation.vec(), it2->separation.vec())
                             }
                         );
                         if (mode != ClusterPermutationMode::NoNodePermutation) {
                             callback(
                                 Cluster3{
-                                    .atom_indexes = {atom_index, it2->neighbour_index, it1->neighbour_index},
-                                    .separations = {
-                                        it2->separation, it1->separation,
-                                        Separation(it2->separation.vec(), it1->separation.vec())
-                                    }
+                                    .idx0 = atom_index,
+                                    .idx1 = it2->neighbour_index,
+                                    .idx2 = it1->neighbour_index,
+                                    .separation01 = it2->separation,
+                                    .separation02 = it1->separation,
+                                    .separation12 = Separation(it2->separation.vec(), it1->separation.vec())
                                 }
                             );
                         }
@@ -82,11 +85,12 @@ namespace jgap {
                         found = true;
                         callback(
                             Cluster3{
-                                .atom_indexes = {atom_index, it1.neighbour_index, it2.neighbour_index},
-                                .separations = {
-                                    it1.separation, it2.separation,
-                                    Separation(it1.separation.vec(), it2.separation.vec())
-                                }
+                                .idx0 = atom_index,
+                                .idx1 = it1.neighbour_index,
+                                .idx2 = it2.neighbour_index,
+                                .separation01 = it1.separation,
+                                .separation02 = it2.separation,
+                                .separation12 = Separation(it1.separation.vec(), it2.separation.vec())
                             }
                         );
                     }

@@ -17,13 +17,15 @@ namespace jgap {
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& cluster) const override final {
             Real r01 = cluster.separation01.magnitude;
+            const auto& dir = cluster.separation01.direction;
 
-            auto [val, derivative] = spline.interpolate({r01});
+            auto [val, derivative] = spline.interpolate({ r01 });
 
-            return {.value = {val}, .derivatives = {derivative}};
+            return { .value = { val }, .grad_r1 = { derivative[0] * dir } };
         }
 
-        Cutoffs getCutoffs() const override { return {{2u, spline.getCutoff()[0]}}; }
+        Cutoffs getCutoffs() const override { return { { 2u, spline.getCutoff()[0] } }; }
+        bool isRotationallyInvariant() const override { return true; }
 
         SplinePairTransformation* clone() const override { return new SplinePairTransformation(*this); }
 

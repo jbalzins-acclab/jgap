@@ -41,6 +41,7 @@ namespace jgap {
             return Species(AtomicNumberToSymbol[Z]);
         }
 
+        Species() : id(0) {}
         Species(const Species& other) = default;
         Species& operator=(const Species& other) = default;
 

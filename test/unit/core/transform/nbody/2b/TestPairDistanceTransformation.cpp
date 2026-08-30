@@ -50,6 +50,7 @@ TEST(TestPairDistanceTransformation, CorrectlyUsesCutoff) {
 
     Cluster2 pair;
     pair.separation01.magnitude = test_dist;
+    pair.separation01.direction = Vector3{1.0, 0.0, 0.0};
 
     // 3. Test evaluate()
     auto desc = trans.evaluate(pair);
@@ -63,7 +64,12 @@ TEST(TestPairDistanceTransformation, CorrectlyUsesCutoff) {
     EXPECT_NEAR(desc_and_derivs.value[0], test_dist, 1e-9);
     EXPECT_NEAR(desc_and_derivs.value[1], test_val, 1e-9);
 
-    EXPECT_EQ(desc_and_derivs.derivatives.size(), 2);
-    EXPECT_NEAR(desc_and_derivs.derivatives[0], 1.0, 1e-9); // Derivative of r wrt r is 1
-    EXPECT_NEAR(desc_and_derivs.derivatives[1], test_deriv, 1e-9); // Derivative of f_cut wrt r
+    EXPECT_EQ(desc_and_derivs.grad_r1.size(), 2);
+    EXPECT_NEAR(desc_and_derivs.grad_r1[0].x, 1.0, 1e-9);
+    EXPECT_NEAR(desc_and_derivs.grad_r1[0].y, 0.0, 1e-9);
+    EXPECT_NEAR(desc_and_derivs.grad_r1[0].z, 0.0, 1e-9);
+
+    EXPECT_NEAR(desc_and_derivs.grad_r1[1].x, test_deriv, 1e-9);
+    EXPECT_NEAR(desc_and_derivs.grad_r1[1].y, 0.0, 1e-9);
+    EXPECT_NEAR(desc_and_derivs.grad_r1[1].z, 0.0, 1e-9);
 }

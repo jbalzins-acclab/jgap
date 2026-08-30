@@ -63,20 +63,15 @@ namespace jgap {
 
                     result.energy(sparse_idx) += K;
 
-                    const auto& derivatives_wrt_r_norms = descriptor.derivatives;
-
-                    Real dK_drnorm = 0.0;
+                    Vector3 f1{};
                     for (size_t dim = 0; dim < Dim; dim++) {
-                        dK_drnorm += derivatives_wrt_r_norms[dim] * gradK_wrt_q[dim];
+                        f1 -= gradK_wrt_q[dim] * descriptor.grad_r1[dim];
                     }
 
-                    utils::accumulatePairDistanceDerivatives(
-                        result.force(sparse_idx, cluster.idx0),
-                        result.force(sparse_idx, cluster.idx1),
-                        result.virials(sparse_idx),
-                        dK_drnorm,
-                        cluster.separation01
-                    );
+                    result.force(sparse_idx, cluster.idx1) += f1;
+                    result.force(sparse_idx, cluster.idx0) -= f1;
+
+                    result.virials(sparse_idx) += Virials::dyadic(cluster.separation01.vec(), f1);
                 }
             });
 
@@ -113,6 +108,9 @@ namespace jgap {
             const auto& coeffs = this->getCoefficients();
             if (coeffs.empty()) {
                 JGAP_LOG_AND_THROW("Coefficients must be set before tabulation");
+            }
+            if (!transformation->isRotationallyInvariant()) {
+                JGAP_LOG_AND_THROW("Transformation is not rotationally invariant and cannot be tabulated");
             }
 
             Grid<Dependencies>* table_ref = &tables.two_body_grids.getValueGrid(species);

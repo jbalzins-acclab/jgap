@@ -8,8 +8,10 @@ using namespace jgap;
 
 TEST(TestClusterExpansions, PBC1AtomCell) {
     Atoms atoms(
-        {{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
-        {true, false, false}
+        { { 0.0, 0.0, 0.0 } },
+        { Species("Fe") },
+        Lattice({ 2.0, 0.0, 0.0 }, { 0.0, 2.0, 0.0 }, { 0.0, 0.0, 2.0 }),
+        { true, false, false }
     );
     // cutoff 2.5 means it will see its own periodic images at +2.0 and -2.0.
     auto nl = NeighbourLists(atoms, 2.5);
@@ -24,8 +26,10 @@ TEST(TestClusterExpansions, PBC1AtomCell) {
 
 TEST(TestClusterExpansions, PBC1AtomCellCluster3) {
     Atoms atoms(
-        {{0.0, 0.0, 0.0}}, {Species("Fe")}, Lattice({2.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 2.0}),
-        {true, true, false}
+        { { 0.0, 0.0, 0.0 } },
+        { Species("Fe") },
+        Lattice({ 2.0, 0.0, 0.0 }, { 0.0, 2.0, 0.0 }, { 0.0, 0.0, 2.0 }),
+        { true, true, false }
     );
 
     auto nl = NeighbourLists(atoms, 2.5);
@@ -39,7 +43,8 @@ TEST(TestClusterExpansions, Cluster2Expansion_Species2Atomic) {
     // A square of 4 atoms. Side length 10. Diagonal is ~14.14.
     // Cutoff is 11, so adjacent atoms are neighbors, but diagonal ones are not.
     Atoms atoms(
-        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+        { { 0, 0, 0 }, { 10, 0, 0 }, { 0, 10, 0 }, { 10, 10, 0 } },
+        { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") }
     );
     auto nl = NeighbourLists(atoms, 11.0);
 
@@ -68,7 +73,8 @@ TEST(TestClusterExpansions, Cluster2Expansion_Species2Sorted) {
     // A square of 4 atoms. Side length 10. Diagonal is ~14.14.
     // Cutoff is 11, so adjacent atoms are neighbors, but diagonal ones are not.
     Atoms atoms(
-        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+        { { 0, 0, 0 }, { 10, 0, 0 }, { 0, 10, 0 }, { 10, 10, 0 } },
+        { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") }
     );
     auto nl = NeighbourLists(atoms, 11.0);
 
@@ -91,7 +97,8 @@ TEST(TestClusterExpansions, Cluster2Expansion_Species2Sorted) {
 TEST(TestClusterExpansions, Cluster3Expansion) {
     // Same square of 4 atoms.
     Atoms atoms(
-        {{0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0}}, {Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni")}
+        { { 0, 0, 0 }, { 10, 0, 0 }, { 0, 10, 0 }, { 10, 10, 0 } },
+        { Species("Fe"), Species("Ni"), Species("Fe"), Species("Ni") }
     );
     auto nl = NeighbourLists(atoms, 11.0);
 
@@ -118,7 +125,7 @@ TEST(TestClusterExpansions, Cluster3Expansion) {
 }
 
 TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
-    Atoms atoms({{0, 0, 0}, {1, 0, 0}, {0.5, 0.866025, 0}}, {Species("Fe"), Species("Fe"), Species("Fe")});
+    Atoms atoms({ { 0, 0, 0 }, { 1, 0, 0 }, { 0.5, 0.866025, 0 } }, { Species("Fe"), Species("Fe"), Species("Fe") });
     auto nl = NeighbourLists(atoms, 1.5);
 
     Cluster3Expansion reduced(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::NoNodePermutation);
@@ -135,16 +142,16 @@ TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
     const auto& c0 = permute_clusters[0];
     const auto& c1 = permute_clusters[1];
 
-    EXPECT_EQ(c0.atom_indexes[0], c1.atom_indexes[0]);
-    EXPECT_EQ(c0.atom_indexes[1], c1.atom_indexes[2]);
-    EXPECT_EQ(c0.atom_indexes[2], c1.atom_indexes[1]);
+    EXPECT_EQ(c0.idx0, c1.idx0);
+    EXPECT_EQ(c0.idx1, c1.idx2);
+    EXPECT_EQ(c0.idx2, c1.idx1);
 
-    EXPECT_DOUBLE_EQ(c0.separation01().magnitude, c1.separation02().magnitude);
-    EXPECT_DOUBLE_EQ(c0.separation02().magnitude, c1.separation01().magnitude);
-    EXPECT_DOUBLE_EQ(c0.separation12().magnitude, c1.separation12().magnitude);
+    EXPECT_DOUBLE_EQ(c0.separation01.magnitude, c1.separation02.magnitude);
+    EXPECT_DOUBLE_EQ(c0.separation02.magnitude, c1.separation01.magnitude);
+    EXPECT_DOUBLE_EQ(c0.separation12.magnitude, c1.separation12.magnitude);
 
     // Derivatives for r12 point in opposite directions in the permuted cluster
-    EXPECT_DOUBLE_EQ((c0.separation12().direction + c1.separation12().direction).norm(), 0.0);
+    EXPECT_DOUBLE_EQ((c0.separation12.direction + c1.separation12.direction).norm(), 0.0);
 
     // Reduction factor is always 2.0 when nodes are different species (e.g. Fe|Cu,Al)
     Cluster3Expansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::NoNodePermutation);

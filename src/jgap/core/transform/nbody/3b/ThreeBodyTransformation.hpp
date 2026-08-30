@@ -21,6 +21,7 @@ namespace jgap {
 
         virtual ThreeBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster3& cluster) const = 0;
         virtual Cutoffs getCutoffs() const = 0;
+        virtual bool isRotationallyInvariant() const = 0;
         virtual bool isSwapInvariant(size_t idx1, size_t idx2) const = 0;
         virtual ThreeBodyTransformation<Dim>* clone() const = 0;
     };

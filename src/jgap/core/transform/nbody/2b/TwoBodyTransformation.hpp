@@ -22,6 +22,7 @@ namespace jgap {
 
         virtual TwoBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster2& pair) const = 0;
         virtual Cutoffs getCutoffs() const = 0;
+        virtual bool isRotationallyInvariant() const = 0;
         virtual TwoBodyTransformation<Dim>* clone() const = 0;
     };
 
