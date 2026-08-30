@@ -5,7 +5,7 @@ from ase.build import bulk
 from ase.optimize import BFGS
 from ase.filters import FrechetCellFilter
 from elastic import get_elastic_tensor, get_elementary_deformations
-from jgap_calculator import JGAPCalculator
+from jgap import JGAPCalculator
 
 potential_file = "../coordination_fit/fe.jgap.h5"
 if not os.path.exists(potential_file):

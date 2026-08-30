@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
 
     // ===== setup regularization =====
     const PerConfigTypeRegularizationRules regularization(
-        ConfigSigmas(0.002, 0.1, 0.2),
+        PerConfigTypeSigmas(0.002, 0.1, 0.2),
         "isolated_atom:0.0001:0.04:0.04:0.0:liquid:0.01:0.5:2.0:0.0:dimer:0.01:0.5:2.0:0.0:"
         "short_range:0.01:0.5:2.0:0.0:liquid_surface_100:0.01:0.5:2.0:0.0:"
         "liquid_surface_110:0.01:0.5:2.0:0.0:liquid_surface_111:0.01:0.5:2.0:0.0:"
@@ -141,19 +141,14 @@ int main(int argc, char** argv) {
 
     // ===== fit =====
     StreamingQrGapFit fitter(1e-8, 1000);
-    fitter.fit(potential, training_data, regularization);
+    auto sigmas = regularization.determineForAll(training_data);
+    fitter.fit(potential, training_data, sigmas);
 
     const std::string potential_file = output_prefix + ".jgap.h5";
     SerializationRegistry<Potential>::serialize(potential, potential_file);
     JGAP_LOG_INFO("Saved fitted potential to {}", potential_file);
 
-    TabulationData tabulation_data = potential.tabulate(
-        {.max_cutoffs = potential.getCutoffs(), .max_eam_density = 10.0, .n_grid_2b = 5000, .n_grid_3b = {80, 80, 80}}
-    );
-    TabGapPotential tabgap{tabulation_data};
-
-    const Filenames tabgap_files = TabGapIO::write(tabgap, output_prefix);
-    JGAP_LOG_INFO("Saved tabGAP to: {}", vectorToString(tabgap_files));
+    standardTabulation(potential, output_prefix);
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;
     return 0;

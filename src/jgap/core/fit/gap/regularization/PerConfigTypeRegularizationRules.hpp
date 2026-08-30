@@ -1,42 +1,38 @@
 #ifndef JGAP_PERCONFIGTYPEREGULARIZATIONRULES_HPP
 #define JGAP_PERCONFIGTYPEREGULARIZATIONRULES_HPP
 
-#include <optional>
+#include <map>
+#include <string>
+#include "PerConfigTypeSigmas.hpp"
 #include "RegularizationRules.hpp"
-#include "ConfigSigmas.hpp"
-#include "../../../../serialization/SerializationRegistry.hpp"
 
 namespace jgap {
     class PerConfigTypeRegularizationRules : public RegularizationRules {
     public:
-        PerConfigTypeRegularizationRules(Real energy_sigma_per_atom,
-                                         Real force_component_sigma,
-                                         Real virials_iso_sigma_per_atom,
-                                         Real virials_aniso_sigmas_per_atom,
-                                         const std::map<std::string, Real> &exact,
-                                         const std::map<std::string, Real> &contains
+        explicit PerConfigTypeRegularizationRules(
+            PerConfigTypeSigmas default_sigmas,
+            std::map<std::string, PerConfigTypeSigmas> exact_config_type_sigmas = {},
+            std::map<std::string, PerConfigTypeSigmas> config_type_contains_sigmas = {}
         );
 
-        PerConfigTypeRegularizationRules(const ConfigSigmas &default_sigmas,
-                                         const std::map<std::string, ConfigSigmas>& exact_config_type_sigmas,
-                                         const std::map<std::string, ConfigSigmas>& contains_config_type_sigmas);
+        PerConfigTypeRegularizationRules(PerConfigTypeSigmas default_sigmas, const std::string& config_string);
 
-        PerConfigTypeRegularizationRules(ConfigSigmas default_sigmas,
-                                         const std::string& config_string);
+        Regularization determine(const Atoms& atoms) const override;
 
-        void fillSigmas(Regularization &sigmas, const Atoms &atoms) const override;
+        PerConfigTypeRegularizationRules* clone() const override { return new PerConfigTypeRegularizationRules(*this); }
 
-        PerConfigTypeRegularizationRules* clone() const override {
-            return new PerConfigTypeRegularizationRules(*this);
+        const PerConfigTypeSigmas& getDefaults() const { return defaults; }
+        const std::map<std::string, PerConfigTypeSigmas>& getExactConfigTypeSigmas() const {
+            return exact_config_type_sigmas;
+        }
+        const std::map<std::string, PerConfigTypeSigmas>& getConfigTypeContainsSigmas() const {
+            return config_type_contains_sigmas;
         }
 
     private:
-        ConfigSigmas defaults;
-
-        std::map<std::string, Real> exact_multiplier;
-        std::map<std::string, Real> contains_multiplier; // order-sensitive
-        std::map<std::string, ConfigSigmas> exact_config_type_sigmas;
-        std::map<std::string, ConfigSigmas> contains_config_type_sigmas;
+        PerConfigTypeSigmas defaults;
+        std::map<std::string, PerConfigTypeSigmas> exact_config_type_sigmas;
+        std::map<std::string, PerConfigTypeSigmas> config_type_contains_sigmas;
     };
 }
 

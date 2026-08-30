@@ -1,7 +1,7 @@
-// Example: fit a 2b+3b+EAM GAP using QuadraticBumpKernel on a training set, serialize it, and tabulate it.
+// Example: fit a 2b+3b+EAM GAP using WendlandKernel on a training set, serialize it, and tabulate it.
 //
-// Usage: basic_fit <training.xyz> <output_prefix> [zbl_dataset_file]
-//   writes <output_prefix>.jgap.h5 (the serialized potential) and, via TabGapIO,
+// Usage: basic_fit <training.xyz> <output_prefix> [screened_coulomb_dataset_file]
+//   writes <output_prefix>.jgap.h5 (the serialized potential) and, via standardTabulation,
 //   <output_prefix>.tabgap.h5 + <output_prefix>.eam.fs file(s).
 
 #include <chrono>
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         auto kernel2 = WendlandKernel<1, 1>(10.0_r, {1.0_r});
         auto sparsifier2 = HistogramUniformSparsifier<2>(seed, n_sparse2, std::array{true, false});
         potential.addComponents(
-            TwoBodyGapComponent<2, WendlandKernel<1, 1>>::createComponents(training_data, trans2, kernel2, sparsifier2)
+            createTwoBodyComponents<2, WendlandKernel<1, 1>>(training_data, trans2, kernel2, sparsifier2)
         );
     }
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         auto kernel_eam = WendlandKernel<1, 0>(1.0_r, {1.0_r});
         auto sparsifier_eam = HistogramUniformSparsifier<1>(seed, eam_n_sparse);
         potential.addComponents(
-            EamPairFunction::createComponents(eam_pf, kernel_eam, sparsifier_eam, training_data, eam_mode)
+            createEamComponents<WendlandKernel<1, 0>>(eam_pf, kernel_eam, sparsifier_eam, training_data, eam_mode)
         );
     }
 
@@ -83,9 +83,7 @@ int main(int argc, char** argv) {
         auto kernel3 = WendlandKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
         auto sparsifier3 = HistogramUniformSparsifier<4>(seed, n_sparse3, std::array{true, true, true, false});
         potential.addComponents(
-            ThreeBodyGapComponent<4, WendlandKernel<3, 1>>::createComponents(
-                training_data, trans3, kernel3, sparsifier3
-            )
+            createThreeBodyComponents<4, WendlandKernel<3, 1>>(training_data, trans3, kernel3, sparsifier3)
         );
     }
 
@@ -103,21 +101,14 @@ int main(int argc, char** argv) {
 
     // Fit
     IterativeGapFit fitter;
-    fitter.fit(potential, training_data, regularization_rules);
+    auto sigmas = regularization_rules.determineForAll(training_data);
+    fitter.fit(potential, training_data, sigmas);
 
-    // Serialize the fitted potential; the registry stamps the node with the concrete type so it can be
-    // read back without knowing what kind of potential it is.
     const std::string potential_file = output_prefix + ".jgap.h5";
     SerializationRegistry<Potential>::serialize(potential, potential_file);
     JGAP_LOG_INFO("Saved fitted potential to {}", potential_file);
 
-    TabulationData tabulation_data = potential.tabulate(
-        {.max_cutoffs = potential.getCutoffs(), .max_eam_density = 10.0, .n_grid_2b = 5000, .n_grid_3b = {80, 80, 80}}
-    );
-    TabGapPotential tabgap{tabulation_data};
-
-    const Filenames tabgap_files = TabGapIO::write(tabgap, output_prefix);
-    JGAP_LOG_INFO("Saved tabGAP to: {}", vectorToString(tabgap_files));
+    standardTabulation(potential, output_prefix);
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;
     return 0;

@@ -1,27 +1,70 @@
 #include "GapFit.hpp"
 #include "../../io/log/CurrentLogger.hpp"
-
 #include "jgap/core/UnseqFor.hpp"
 
 namespace jgap {
-    void GapFit::fit(GapPotential& to_be_fit, const std::vector<Atoms>& training_data,
-                     const RegularizationRules& regularization_rules, const std::vector<Regularization>& sigmas) {
+    void GapFit::fit(
+        GapPotential& to_be_fit, const std::vector<Atoms>& training_data, const std::vector<Regularization>& sigmas
+    ) {
+        if (sigmas.size() != training_data.size()) {
+            JGAP_LOG_AND_THROW(
+                "Number of training structures ({}) doesn't match number of regularization sigmas ({})",
+                training_data.size(),
+                sigmas.size()
+            );
+        }
 
         auto sigmas_inverse = sigmas;
-        if (sigmas_inverse.empty()) {
-            sigmas_inverse.resize(training_data.size());
-        }
-        if (sigmas_inverse.size() != training_data.size()) {
-            JGAP_LOG_AND_THROW("Number of training structures {} doesn't match number of regularization params {}",
-                               training_data.size(), sigmas_inverse.size());
-        }
 
         for (size_t i = 0; i < training_data.size(); i++) {
-            regularization_rules.fillSigmas(sigmas_inverse[i], training_data[i]);
+            const auto& atoms = training_data[i];
+            const auto& reg = sigmas[i];
+
+            // Validation checks: if data is present, regularization must be specified and positive
+            if (atoms.getEnergy().has_value()) {
+                if (!reg.energy.has_value() || *reg.energy <= 0.0_r) {
+                    JGAP_LOG_AND_THROW(
+                        "Structure {} has energy data, but no valid positive energy regularization sigma was specified",
+                        i
+                    );
+                }
+            }
+
+            if (atoms.getForces().has_value()) {
+                if (!reg.forces.has_value() || reg.forces->size() != atoms.nAtoms()) {
+                    JGAP_LOG_AND_THROW(
+                        "Structure {} has forces data (size {}), but force regularization sigmas are missing or size "
+                        "mismatch",
+                        i,
+                        atoms.nAtoms()
+                    );
+                }
+                for (size_t a = 0; a < atoms.nAtoms(); ++a) {
+                    const auto& f_sig = (*reg.forces)[a];
+                    if (f_sig.x <= 0.0_r || f_sig.y <= 0.0_r || f_sig.z <= 0.0_r) {
+                        JGAP_LOG_AND_THROW("Structure {} has non-positive force regularization sigma at atom {}", i, a);
+                    }
+                }
+            }
+
+            if (atoms.getVirials().has_value()) {
+                if (!reg.virials.has_value()) {
+                    JGAP_LOG_AND_THROW(
+                        "Structure {} has virials data, but no virial regularization sigmas were specified", i
+                    );
+                }
+                const auto& v_sig = *reg.virials;
+                if (v_sig.xx <= 0.0_r || v_sig.yy <= 0.0_r || v_sig.zz <= 0.0_r || v_sig.xy <= 0.0_r
+                    || v_sig.xz <= 0.0_r || v_sig.yz <= 0.0_r) {
+                    JGAP_LOG_AND_THROW("Structure {} has non-positive virial regularization sigma", i);
+                }
+            }
 
             sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform([](Real val) -> Real { return 1.0_r / val; });
             sigmas_inverse[i].virials = sigmas_inverse[i].virials.transform([](const Virials& val) -> Virials {
-                return Virials{1.0_r / val.xx, 1.0_r / val.xy, 1.0_r / val.xz, 1.0_r / val.yy, 1.0_r / val.yz, 1.0_r / val.zz};
+                return Virials{
+                    1.0_r / val.xx, 1.0_r / val.xy, 1.0_r / val.xz, 1.0_r / val.yy, 1.0_r / val.yz, 1.0_r / val.zz
+                };
             });
             sigmas_inverse[i].forces =
                 sigmas_inverse[i].forces.transform([](const std::vector<Vector3>& val) -> std::vector<Vector3> {

@@ -11,7 +11,9 @@ using namespace jgap::utils;
 
 template<size_t Dim>
 auto makeCoordinationComponents(
-    const std::vector<Atoms>& training_data, uint64_t seed, size_t n_sparse,
+    const std::vector<Atoms>& training_data,
+    uint64_t seed,
+    size_t n_sparse,
     const std::array<std::pair<Real, Real>, Dim>& ranges
 ) {
     auto coord_trans = ValuePtr<CoordinationTransformation<Dim>>(CoordinationTransformation<Dim>(ranges));
@@ -74,7 +76,9 @@ int main(int argc, char** argv) {
         // BCC
         potential.addComponents(
             makeCoordinationComponents<3>(
-                training_data, 120, 500,
+                training_data,
+                120,
+                500,
                 std::array<std::pair<Real, Real>, 3>{{
                     {2.4_r, 2.6_r},
                     {2.75_r, 2.95_r},
@@ -88,7 +92,9 @@ int main(int argc, char** argv) {
         // FCC
         potential.addComponents(
             makeCoordinationComponents<3>(
-                training_data, 120, 500,
+                training_data,
+                120,
+                500,
                 std::array<std::pair<Real, Real>, 3>{{
                     {2.45_r, 2.75_r},
                     {3.5_r, 3.8_r},
@@ -126,8 +132,9 @@ int main(int argc, char** argv) {
     }
 
     IsolatedAtomPotential isolated_atom_pot{training_data};
-    ScreenedCoulombPotential sc_pot =
-        screened_coulomb_dataset_file ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data} : ScreenedCoulombPotential{training_data};
+    ScreenedCoulombPotential sc_pot = screened_coulomb_dataset_file
+                                          ? ScreenedCoulombPotential{*screened_coulomb_dataset_file, training_data}
+                                          : ScreenedCoulombPotential{training_data};
 
     CompositePotential external{{
         {"isolated", isolated_atom_pot},
@@ -138,7 +145,8 @@ int main(int argc, char** argv) {
 
     // Fit
     QRGapFit fitter;
-    fitter.fit(potential, training_data, SimpleRegularizationRules());
+    auto sigmas = SimpleRegularizationRules().determineForAll(training_data);
+    fitter.fit(potential, training_data, sigmas);
 
     const std::string potential_file = output_prefix + ".jgap.h5";
     SerializationRegistry<Potential>::serialize(potential, potential_file);

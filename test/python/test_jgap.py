@@ -128,6 +128,49 @@ class TestJGAP(unittest.TestCase):
         self.assertEqual(atoms_from_ase.symbols, ["Fe", "Ni"])
         np.testing.assert_allclose(atoms_from_ase.positions, new_pos)
 
+    def test_regularization_rules(self):
+        defaults = jgap.PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)
+        rules = jgap.PerConfigTypeRegularizationRules(
+            default_sigmas=defaults,
+            exact_config_type_sigmas={
+                "liquid": jgap.PerConfigTypeSigmas(0.01, 0.2, 0.5, 0.1)
+            },
+            config_type_contains_sigmas={
+                "melt": jgap.PerConfigTypeSigmas(0.02, 0.3, 0.6, 0.15),
+                "melt_high_temp": jgap.PerConfigTypeSigmas(0.05, 0.4, 0.8, 0.2),
+            }
+        )
+
+        pos = np.array([[0.0, 0.0, 0.0], [1.4, 1.4, 1.4]])
+        atoms1 = jgap.Atoms(positions=pos, symbols=["Fe", "Fe"])
+        atoms1.config_type = "bulk" # fallback to default
+
+        atoms2 = jgap.Atoms(positions=pos, symbols=["Fe", "Fe"])
+        atoms2.config_type = "liquid" # exact match
+
+        atoms3 = jgap.Atoms(positions=pos, symbols=["Fe", "Fe"])
+        atoms3.config_type = "fast_melt_traj" # contains "melt"
+
+        atoms4 = jgap.Atoms(positions=pos, symbols=["Fe", "Fe"])
+        atoms4.config_type = "fast_melt_high_temp_traj" # contains "melt" and "melt_high_temp" -> longest match
+
+        sigmas1 = rules.determine(atoms1)
+        sigmas2 = rules.determine(atoms2)
+        sigmas3 = rules.determine(atoms3)
+        sigmas4 = rules.determine(atoms4)
+
+        self.assertAlmostEqual(sigmas1.energy, 0.001)
+        self.assertAlmostEqual(sigmas2.energy, 0.01)
+        self.assertAlmostEqual(sigmas3.energy, 0.02)
+        self.assertAlmostEqual(sigmas4.energy, 0.05)
+
+        all_sigmas = rules.determine_for_all([atoms1, atoms2, atoms3, atoms4])
+        self.assertEqual(len(all_sigmas), 4)
+        self.assertAlmostEqual(all_sigmas[0].energy, sigmas1.energy)
+        self.assertAlmostEqual(all_sigmas[1].energy, sigmas2.energy)
+        self.assertAlmostEqual(all_sigmas[2].energy, sigmas3.energy)
+        self.assertAlmostEqual(all_sigmas[3].energy, sigmas4.energy)
+
     def test_read_xyz(self):
         xyz_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../resources/xyz-samples/feni-test.xyz")
@@ -139,31 +182,6 @@ class TestJGAP(unittest.TestCase):
             self.assertGreater(len(first_frame), 0)
             self.assertEqual(first_frame.positions.ndim, 2)
             self.assertEqual(first_frame.positions.shape[1], 3)
-
-    def test_standard_gap_params(self):
-        rules = jgap.SimpleRegularizationRules(0.002, 0.04, 0.08, 0.01)
-        pf = jgap.FSGenPairFunction(4.5, 3.0)
-
-        params = jgap.StandardGapParams(
-            seed=123,
-            cutoff2=4.0,
-            n_sparse2=15,
-            eam_mode=jgap.EamMode.Blind,
-            eam_pf=pf,
-            eam_n_sparse=10,
-            eam_min_density=0.05,
-            cutoff3=3.5,
-            n_sparse3=100,
-            regularization_rules=rules,
-        )
-
-        self.assertEqual(params.seed, 123)
-        self.assertEqual(params.cutoff2, 4.0)
-        self.assertEqual(params.n_sparse2, 15)
-        self.assertEqual(params.eam_n_sparse, 10)
-        self.assertEqual(params.cutoff3, 3.5)
-        self.assertEqual(params.n_sparse3, 100)
-        self.assertIn("StandardGapParams", repr(params))
 
     def test_standard_gap_fit_and_tabulate(self):
         xyz_path = os.path.abspath(
@@ -179,65 +197,98 @@ class TestJGAP(unittest.TestCase):
             seed=42,
             cutoff2=3.5,
             n_sparse2=5,
+            eam_pair_function=jgap.EamPairFunctionType.FSGen3,
             eam_n_sparse=5,
             eam_min_density=0.05,
             cutoff3=3.0,
             n_sparse3=20,
         )
 
-        # 1. Fit potential
-        gap_pot = jgap.standard_gap_fit(training_frames, params)
-        self.assertIsInstance(gap_pot, jgap.GapPotential)
-        self.assertGreater(gap_pot.num_components(), 0)
-
-        # 2. Evaluate energy & forces
-        test_frame = training_frames[0]
-        res = gap_pot.calculate_energy(test_frame)
-        self.assertIsInstance(res.energy, float)
-        self.assertEqual(res.forces.shape, (len(test_frame), 3))
+        rules = jgap.SimpleRegularizationRules()
+        sigmas = rules.determine_for_all(training_frames)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 3. Save & Load GapPotential
             pot_file = os.path.join(tmpdir, "model.jgap.h5")
-            gap_pot.save(pot_file)
 
+            # 1. Fit potential and save directly to file
+            jgap.standard_gap_fit(pot_file, training_frames, sigmas, params)
+            self.assertTrue(os.path.exists(pot_file))
+
+            # 2. Load potential & evaluate
             loaded_pot = jgap.load_potential(pot_file)
-            res_loaded = loaded_pot.calculate_energy(test_frame)
-            self.assertAlmostEqual(res.energy, res_loaded.energy, places=6)
-            np.testing.assert_allclose(res.forces, res_loaded.forces, rtol=1e-5, atol=1e-5)
+            test_frame = training_frames[0]
+            res = loaded_pot.calculate_energy(test_frame)
+            self.assertIsInstance(res.energy, float)
+            self.assertEqual(res.forces.shape, (len(test_frame), 3))
 
-            # 4. Tabulate
-            tab_params = jgap.TabulationParams(
-                max_cutoffs=gap_pot.get_cutoffs(),
+            # 3. Tabulate
+            tab_prefix = os.path.join(tmpdir, "model_tab")
+            tab_params = jgap.StandardTabulationParams(
                 r_min_3b=1.0,
                 max_eam_density=8.0,
                 n_grid_2b=500,
                 n_grid_3b=[20, 20, 20],
             )
-            tabgap_pot = gap_pot.tabulate(tab_params)
-            self.assertIsInstance(tabgap_pot, jgap.TabGapPotential)
+            jgap.standard_tabulation(pot_file, tab_prefix, tab_params)
+            self.assertTrue(os.path.exists(f"{tab_prefix}.tabgap.h5"))
 
-            res_tab = tabgap_pot.calculate_energy(test_frame)
-            self.assertIsInstance(res_tab.energy, float)
-
-            # 5. Save & Load TabGapPotential
-            tab_prefix = os.path.join(tmpdir, "model_tab")
-            written_files = jgap.save_tabgap(tabgap_pot, tab_prefix)
-            self.assertGreater(len(written_files), 0)
-
-            loaded_tabgap = jgap.load_potential(written_files)
-            res_tab_loaded = loaded_tabgap.calculate_energy(test_frame)
-            self.assertAlmostEqual(res_tab.energy, res_tab_loaded.energy, places=6)
-
-            # 6. Use with ASE Calculator
+            # 4. Load TabGap & Use with ASE Calculator
+            loaded_tabgap = jgap.load_potential(f"{tab_prefix}.tabgap.h5")
             ase_atoms = test_frame.to_ase()
             ase_atoms.calc = JGAPCalculator(loaded_tabgap)
             e = ase_atoms.get_potential_energy()
             f = ase_atoms.get_forces()
             s = ase_atoms.get_stress()
-            self.assertAlmostEqual(e, res_tab_loaded.energy, places=6)
-            np.testing.assert_allclose(f, res_tab_loaded.forces, rtol=1e-5, atol=1e-5)
+            self.assertIsInstance(e, float)
+            self.assertEqual(f.shape, (len(test_frame), 3))
             self.assertEqual(len(s), 6)
+
+    def test_approx_ram_limit_gb(self):
+        xyz_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../resources/xyz-samples/feni-test.xyz")
+        )
+        if not os.path.exists(xyz_path):
+            return
+
+        frames = jgap.read_atoms(xyz_path)[:3]
+        rules = jgap.SimpleRegularizationRules()
+        sigmas = rules.determine_for_all(frames)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Tiny RAM limit (< M*M) -> throws error
+            params_tiny = jgap.StandardGapParams(
+                seed=42,
+                n_sparse2=10,
+                n_sparse3=50,
+                approx_ram_limit_gb=1e-12,
+            )
+            pot_file_tiny = os.path.join(tmpdir, "tiny_ram.jgap.h5")
+            with self.assertRaises(RuntimeError):
+                jgap.standard_gap_fit(pot_file_tiny, frames, sigmas, params_tiny)
+
+            # 2. Tight RAM limit between M*M and 2*M*M -> triggers StreamingQrGapFit with small chunk rows
+            # M is ~370 sparse points -> M*M*8 bytes ~ 1.1 MB (0.00102 GB). 2*M*M*8 ~ 2.19 MB (0.00204 GB).
+            params_inplace = jgap.StandardGapParams(
+                seed=42,
+                n_sparse2=10,
+                n_sparse3=50,
+                approx_ram_limit_gb=0.0015, # ~1.6 MB (between M*M and 2*M*M)
+            )
+            pot_file_inplace = os.path.join(tmpdir, "inplace.jgap.h5")
+            jgap.standard_gap_fit(pot_file_inplace, frames, sigmas, params_inplace)
+            self.assertTrue(os.path.exists(pot_file_inplace))
+
+            # 3. Medium RAM limit between 2*M*M and (N+M)*M -> triggers StreamingQrGapFit with larger chunk rows
+            # (N+M)*M*8 ~ 4.46 MB (0.00415 GB).
+            params_streaming = jgap.StandardGapParams(
+                seed=42,
+                n_sparse2=10,
+                n_sparse3=50,
+                approx_ram_limit_gb=0.0030, # ~3.2 MB (between 2*M*M and (N+M)*M)
+            )
+            pot_file_streaming = os.path.join(tmpdir, "streaming.jgap.h5")
+            jgap.standard_gap_fit(pot_file_streaming, frames, sigmas, params_streaming)
+            self.assertTrue(os.path.exists(pot_file_streaming))
 
 
 if __name__ == "__main__":

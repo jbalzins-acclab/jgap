@@ -33,5 +33,6 @@
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/gap/StandardGapFit.hpp"
+#include "jgap/utils/gap/StandardTabulation.hpp"
 
 #endif

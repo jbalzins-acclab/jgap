@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "../jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
@@ -25,10 +26,10 @@
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/tabulation/TabulationParams.hpp"
 #include "jgap/io/PotentialLoader.hpp"
-#include "../jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/Utils.hpp"
+#include "jgap/utils/gap/StandardTabulation.hpp"
 
 using namespace jgap;
 
@@ -73,7 +74,6 @@ std::array<size_t, 3> parseTriple(const std::string& value) {
 }
 
 
-
 int predict(const std::vector<std::string>& args) {
     if (args.size() != 3) {
         std::cerr << "--predict expects: <pot_file> <in.xyz> <out.xyz>\n";
@@ -110,11 +110,7 @@ int tabulate(const std::vector<std::string>& args) {
     }
     const std::string& pot_file = args[0];
 
-    const ValuePtr<Potential> potential = SerializationRegistry<Potential>::deserialize(pot_file);
-
-    // Default tabulation params, with cutoffs taken from the potential; override the rest from args.
-    TabulationParams params;
-    params.max_cutoffs = potential->getCutoffs();
+    utils::StandardTabulationParams params;
 
     for (size_t i = 1; i < args.size(); i++) {
         const auto [key, value] = splitKeyValue(args[i]);
@@ -131,8 +127,7 @@ int tabulate(const std::vector<std::string>& args) {
         }
     }
 
-    const TabGapPotential tabgap{potential->tabulate(params)};
-    TabGapIO::write(tabgap, potentialPrefix(pot_file));
+    utils::standardTabulation(pot_file, potentialPrefix(pot_file), params);
     return 0;
 }
 

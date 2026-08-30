@@ -13,20 +13,17 @@
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
+#include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
+#include "jgap/core/fit/gap/regularization/PerConfigTypeSigmas.hpp"
+#include "jgap/core/fit/gap/regularization/Regularization.hpp"
 #include "jgap/core/fit/gap/regularization/RegularizationRules.hpp"
 #include "jgap/core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "jgap/core/potentials/Cutoffs.hpp"
 #include "jgap/core/potentials/Potential.hpp"
-#include "jgap/core/potentials/gap/GapPotential.hpp"
-#include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/core/tabulation/TabulationParams.hpp"
-#include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/io/PotentialLoader.hpp"
-#include "jgap/io/tabgap/TabGapIO.hpp"
-#include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/gap/StandardGapFit.hpp"
 #include "jgap/utils/gap/StandardGapParams.hpp"
+#include "jgap/utils/gap/StandardTabulation.hpp"
 
 namespace py = pybind11;
 using namespace jgap;
@@ -138,83 +135,6 @@ namespace {
         }
         throw std::invalid_argument("Expected (6,) Voigt array or (3, 3) matrix for Virials");
     }
-
-    // Fast ASE calculation wrapper
-    class PyJGAPCalculator {
-    public:
-        explicit PyJGAPCalculator(const std::vector<std::string>& paths) {
-            potential = loadPotential(paths);
-        }
-
-        py::dict calculate(
-            const std::vector<std::string>& chemical_symbols,
-            py::array_t<double> positions,
-            py::array_t<double> cell,
-            py::array_t<bool> pbc
-        ) {
-            auto pos_buf = positions.request();
-            auto cell_buf = cell.request();
-            auto pbc_buf = pbc.request();
-
-            size_t n_atoms = chemical_symbols.size();
-
-            const double* pos_ptr = static_cast<const double*>(pos_buf.ptr);
-            const double* cell_ptr = static_cast<const double*>(cell_buf.ptr);
-            const bool* pbc_ptr = static_cast<const bool*>(pbc_buf.ptr);
-
-            std::vector<Vector3> pos;
-            pos.reserve(n_atoms);
-            std::vector<Species> spec;
-            spec.reserve(n_atoms);
-
-            for (size_t i = 0; i < n_atoms; ++i) {
-                pos.emplace_back(pos_ptr[3 * i], pos_ptr[3 * i + 1], pos_ptr[3 * i + 2]);
-                spec.emplace_back(chemical_symbols[i]);
-            }
-
-            Lattice lat{
-                Vector3(cell_ptr[0], cell_ptr[1], cell_ptr[2]),
-                Vector3(cell_ptr[3], cell_ptr[4], cell_ptr[5]),
-                Vector3(cell_ptr[6], cell_ptr[7], cell_ptr[8])
-            };
-
-            std::array<bool, 3> pbc_arr = {pbc_ptr[0], pbc_ptr[1], pbc_ptr[2]};
-
-            Atoms atoms(pos, spec, lat, pbc_arr);
-
-            AtomicQuantity result = potential->calculateEnergy(atoms);
-
-            py::array_t<double> forces_array({n_atoms, (size_t) 3});
-            auto forces_buf = forces_array.request();
-            double* forces_ptr = static_cast<double*>(forces_buf.ptr);
-
-            for (size_t i = 0; i < n_atoms; ++i) {
-                forces_ptr[3 * i + 0] = result.forces[i].x;
-                forces_ptr[3 * i + 1] = result.forces[i].y;
-                forces_ptr[3 * i + 2] = result.forces[i].z;
-            }
-
-            py::array_t<double> virial_array(6);
-            auto virial_buf = virial_array.request();
-            double* virial_ptr = static_cast<double*>(virial_buf.ptr);
-
-            virial_ptr[0] = result.virials.xx;
-            virial_ptr[1] = result.virials.yy;
-            virial_ptr[2] = result.virials.zz;
-            virial_ptr[3] = result.virials.yz;
-            virial_ptr[4] = result.virials.xz;
-            virial_ptr[5] = result.virials.xy;
-
-            py::dict out;
-            out["energy"] = result.value;
-            out["forces"] = forces_array;
-            out["virial"] = virial_array;
-            return out;
-        }
-
-    private:
-        ValuePtr<Potential> potential;
-    };
 
 } // anonymous namespace
 
@@ -460,157 +380,71 @@ PYBIND11_MODULE(_jgap, m) {
         });
 
     // =========================================================================
-    // TabulationParams
-    // =========================================================================
-    py::class_<TabulationParams>(m, "TabulationParams")
-        .def(py::init([](
-            std::optional<Cutoffs> max_cutoffs,
-            Real r_min_3b,
-            Real max_eam_density,
-            size_t n_grid_2b,
-            std::optional<std::array<size_t, 3>> n_grid_3b
-        ) {
-            TabulationParams p;
-            if (max_cutoffs.has_value()) p.max_cutoffs = *max_cutoffs;
-            p.r_min_3b = r_min_3b;
-            p.max_eam_density = max_eam_density;
-            p.n_grid_2b = n_grid_2b;
-            if (n_grid_3b.has_value()) p.n_grid_3b = *n_grid_3b;
-            return p;
-        }),
-        py::arg("max_cutoffs") = std::nullopt,
-        py::arg("r_min_3b") = 0.1,
-        py::arg("max_eam_density") = 12.0,
-        py::arg("n_grid_2b") = 5000,
-        py::arg("n_grid_3b") = std::nullopt)
-        .def_readwrite("max_cutoffs", &TabulationParams::max_cutoffs)
-        .def_readwrite("r_min_3b", &TabulationParams::r_min_3b)
-        .def_readwrite("max_eam_density", &TabulationParams::max_eam_density)
-        .def_readwrite("n_grid_2b", &TabulationParams::n_grid_2b)
-        .def_readwrite("n_grid_3b", &TabulationParams::n_grid_3b)
-        .def("__repr__", [](const TabulationParams& p) {
-            std::ostringstream oss;
-            oss << "<TabulationParams r_min_3b=" << p.r_min_3b
-                << ", max_eam_density=" << p.max_eam_density
-                << ", n_grid_2b=" << p.n_grid_2b
-                << ", n_grid_3b=[" << p.n_grid_3b[0] << "," << p.n_grid_3b[1] << "," << p.n_grid_3b[2] << "]>";
-            return oss.str();
-        });
-
-    // =========================================================================
     // Potential
     // =========================================================================
     py::class_<Potential, std::shared_ptr<Potential>> pot_class(m, "Potential");
-
-    // =========================================================================
-    // GapPotential
-    // =========================================================================
-    py::class_<GapPotential, Potential, std::shared_ptr<GapPotential>>(m, "GapPotential")
-        .def(py::init<>())
-        .def("num_components", [](const GapPotential& p) { return p.getComponents().size(); })
-        .def("__repr__", [](const GapPotential& p) {
-            std::ostringstream oss;
-            oss << "<GapPotential num_components=" << p.getComponents().size() << ">";
-            return oss.str();
-        });
-
-    // =========================================================================
-    // TabGapPotential
-    // =========================================================================
-    py::class_<TabGapPotential, Potential, std::shared_ptr<TabGapPotential>>(m, "TabGapPotential")
-        .def(py::init<>())
-        .def("__repr__", [](const TabGapPotential&) {
-            return "<TabGapPotential>";
-        });
-
-    // Potential method bindings
     pot_class
         .def("calculate_energy", &Potential::calculateEnergy,
              py::arg("atoms"),
              py::call_guard<py::gil_scoped_release>(),
              "Calculate energy, forces, and virials for the given structure")
         .def("get_cutoffs", &Potential::getCutoffs)
-        .def("tabulate", [](
-            const Potential& pot,
-            std::optional<TabulationParams> maybe_params,
-            std::optional<Real> r_min_3b,
-            std::optional<Real> max_eam_density,
-            std::optional<size_t> n_grid_2b,
-            std::optional<std::array<size_t, 3>> n_grid_3b
-        ) -> std::shared_ptr<TabGapPotential> {
-            TabulationParams params = maybe_params.value_or(TabulationParams{pot.getCutoffs()});
-            if (r_min_3b.has_value()) params.r_min_3b = *r_min_3b;
-            if (max_eam_density.has_value()) params.max_eam_density = *max_eam_density;
-            if (n_grid_2b.has_value()) params.n_grid_2b = *n_grid_2b;
-            if (n_grid_3b.has_value()) params.n_grid_3b = *n_grid_3b;
-
-            TabulationData tab_data = pot.tabulate(params);
-            return std::make_shared<TabGapPotential>(tab_data);
-        },
-        py::arg("params") = std::nullopt,
-        py::arg("r_min_3b") = std::nullopt,
-        py::arg("max_eam_density") = std::nullopt,
-        py::arg("n_grid_2b") = std::nullopt,
-        py::arg("n_grid_3b") = std::nullopt,
-        py::call_guard<py::gil_scoped_release>(),
-        "Tabulate potential into a TabGapPotential")
-        .def("save", [](const Potential& pot, const std::string& filename) {
-            SerializationRegistry<Potential>::serialize(
-                ValuePtr<Potential>(std::unique_ptr<Potential>(pot.clone())), filename
-            );
-        }, py::arg("filename"), "Save potential to serialized HDF5 file")
         .def_static("load", [](const std::string& path) -> std::shared_ptr<Potential> {
             auto val = loadPotential(path);
             return std::shared_ptr<Potential>(val.release());
         }, py::arg("path"), "Load potential from file path or base stem");
 
     // =========================================================================
-    // TabGapIO
+    // Regularization & Sigmas
     // =========================================================================
-    py::class_<TabGapIO>(m, "TabGapIO")
-        .def_static("write", [](const TabGapPotential& pot, const std::string& prefix) {
-            return TabGapIO::write(pot, prefix);
-        }, py::arg("potential"), py::arg("prefix"),
-           "Write TabGapPotential to .tabgap.h5 and .eam.fs files")
-        .def_static("read", [](const std::vector<std::string>& files) {
-            return TabGapIO::read(files);
-        }, py::arg("files"), "Read TabGapPotential from list of files")
-        .def_static("read", [](const std::string& file) {
-            return TabGapIO::read(std::vector<std::string>{file});
-        }, py::arg("file"), "Read TabGapPotential from a single file");
-
-    m.def("save_tabgap", [](const TabGapPotential& pot, const std::string& prefix) {
-        return TabGapIO::write(pot, prefix);
-    }, py::arg("potential"), py::arg("prefix"), "Save a TabGapPotential to disk");
-
-    // =========================================================================
-    // EAM Enums and Pair Functions
-    // =========================================================================
-    py::enum_<EamMode>(m, "EamMode")
-        .value("FSsym", EamMode::FSsym)
-        .value("FSgen", EamMode::FSgen)
-        .value("EAM", EamMode::EAM)
-        .value("Blind", EamMode::Blind)
-        .export_values();
-
-    py::class_<EamPairFunction, std::shared_ptr<EamPairFunction>>(m, "EamPairFunction");
-
-    py::class_<FSGenPairFunction, EamPairFunction, std::shared_ptr<FSGenPairFunction>>(m, "FSGenPairFunction")
-        .def(py::init<Real, Real, Real>(),
-             py::arg("cutoff") = 4.5,
-             py::arg("degree") = 3.0,
-             py::arg("prefactor") = 1.0)
-        .def_property_readonly("degree", &FSGenPairFunction::getDegree)
-        .def("__repr__", [](const FSGenPairFunction& pf) {
+    py::class_<PerConfigTypeSigmas>(m, "PerConfigTypeSigmas")
+        .def(py::init<Real>(), py::arg("energy"))
+        .def(py::init<Real, Real, Real>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
+        .def(py::init<Real, Real, Real, Real>(), py::arg("energy"), py::arg("force"), py::arg("virials_iso"), py::arg("virials_aniso"))
+        .def(py::init<Real, Vector3, Virials>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
+        .def_readwrite("energy", &PerConfigTypeSigmas::energy)
+        .def_readwrite("force", &PerConfigTypeSigmas::force)
+        .def_readwrite("virials", &PerConfigTypeSigmas::virials)
+        .def("__repr__", [](const PerConfigTypeSigmas& s) {
             std::ostringstream oss;
-            oss << "<FSGenPairFunction degree=" << pf.getDegree() << ">";
+            oss << "<PerConfigTypeSigmas energy=" << s.energy << ", force=" << s.force.x << ">";
+            return oss.str();
+        });
+
+    py::class_<Regularization>(m, "Regularization")
+        .def(py::init<>())
+        .def_readwrite("energy", &Regularization::energy)
+        .def_readwrite("virials", &Regularization::virials)
+        .def_readwrite("forces", &Regularization::forces)
+        .def("__repr__", [](const Regularization& r) {
+            std::ostringstream oss;
+            oss << "<Regularization has_energy=" << r.energy.has_value()
+                << ", has_forces=" << r.forces.has_value()
+                << ", has_virials=" << r.virials.has_value() << ">";
             return oss.str();
         });
 
     // =========================================================================
     // Regularization Rules
     // =========================================================================
-    py::class_<RegularizationRules, std::shared_ptr<RegularizationRules>>(m, "RegularizationRules");
+    py::class_<RegularizationRules, std::shared_ptr<RegularizationRules>>(m, "RegularizationRules")
+        .def("determine", &RegularizationRules::determine, py::arg("atoms"))
+        .def("determine_for_all", &RegularizationRules::determineForAll, py::arg("structures"));
+
+    py::class_<PerConfigTypeRegularizationRules, RegularizationRules, std::shared_ptr<PerConfigTypeRegularizationRules>>(m, "PerConfigTypeRegularizationRules")
+        .def(py::init<PerConfigTypeSigmas, std::map<std::string, PerConfigTypeSigmas>, std::map<std::string, PerConfigTypeSigmas>>(),
+             py::arg("default_sigmas"),
+             py::arg("exact_config_type_sigmas") = std::map<std::string, PerConfigTypeSigmas>{},
+             py::arg("config_type_contains_sigmas") = std::map<std::string, PerConfigTypeSigmas>{})
+        .def(py::init<PerConfigTypeSigmas, const std::string&>(),
+             py::arg("default_sigmas"),
+             py::arg("config_string"))
+        .def_property_readonly("defaults", &PerConfigTypeRegularizationRules::getDefaults)
+        .def_property_readonly("exact_config_type_sigmas", &PerConfigTypeRegularizationRules::getExactConfigTypeSigmas)
+        .def_property_readonly("config_type_contains_sigmas", &PerConfigTypeRegularizationRules::getConfigTypeContainsSigmas)
+        .def("__repr__", [](const PerConfigTypeRegularizationRules&) {
+            return "<PerConfigTypeRegularizationRules>";
+        });
 
     py::class_<SimpleRegularizationRules, RegularizationRules, std::shared_ptr<SimpleRegularizationRules>>(m, "SimpleRegularizationRules")
         .def(py::init<Real, Real, Real, Real, Real, Real>(),
@@ -625,6 +459,23 @@ PYBIND11_MODULE(_jgap, m) {
         });
 
     // =========================================================================
+    // EAM Enums
+    // =========================================================================
+    py::enum_<utils::EamPairFunctionType>(m, "EamPairFunctionType")
+        .value("FSGen2", utils::EamPairFunctionType::FSGen2)
+        .value("FSGen3", utils::EamPairFunctionType::FSGen3)
+        .value("Coscutoff", utils::EamPairFunctionType::Coscutoff)
+        .value("Polycutoff", utils::EamPairFunctionType::Polycutoff)
+        .export_values();
+
+    py::enum_<EamMode>(m, "EamMode")
+        .value("FSsym", EamMode::FSsym)
+        .value("FSgen", EamMode::FSgen)
+        .value("EAM", EamMode::EAM)
+        .value("Blind", EamMode::Blind)
+        .export_values();
+
+    // =========================================================================
     // StandardGapParams
     // =========================================================================
     py::class_<utils::StandardGapParams>(m, "StandardGapParams")
@@ -635,13 +486,13 @@ PYBIND11_MODULE(_jgap, m) {
             Real cutoff2_width,
             size_t n_sparse2,
             EamMode eam_mode,
-            std::shared_ptr<EamPairFunction> eam_pf,
+            utils::EamPairFunctionType eam_pair_function,
             size_t eam_n_sparse,
             Real eam_min_density,
             Real cutoff3,
             Real cutoff3_width,
             size_t n_sparse3,
-            std::shared_ptr<RegularizationRules> regularization_rules
+            std::optional<Real> approx_ram_limit_gb
         ) {
             utils::StandardGapParams p;
             p.seed = seed;
@@ -650,17 +501,13 @@ PYBIND11_MODULE(_jgap, m) {
             p.cutoff2_width = cutoff2_width;
             p.n_sparse2 = n_sparse2;
             p.eam_mode = eam_mode;
-            if (eam_pf) {
-                p.eam_pf = ValuePtr<EamPairFunction>(std::unique_ptr<EamPairFunction>(eam_pf->clone()));
-            }
+            p.eam_pair_function = eam_pair_function;
             p.eam_n_sparse = eam_n_sparse;
             p.eam_min_density = eam_min_density;
             p.cutoff3 = cutoff3;
             p.cutoff3_width = cutoff3_width;
             p.n_sparse3 = n_sparse3;
-            if (regularization_rules) {
-                p.regularization_rules = ValuePtr<RegularizationRules>(std::unique_ptr<RegularizationRules>(regularization_rules->clone()));
-            }
+            p.approx_ram_limit_gb = approx_ram_limit_gb;
             return p;
         }),
         py::arg("seed") = 42,
@@ -669,24 +516,26 @@ PYBIND11_MODULE(_jgap, m) {
         py::arg("cutoff2_width") = 1.0,
         py::arg("n_sparse2") = 20,
         py::arg("eam_mode") = EamMode::Blind,
-        py::arg("eam_pf") = nullptr,
+        py::arg("eam_pair_function") = utils::EamPairFunctionType::FSGen3,
         py::arg("eam_n_sparse") = 20,
         py::arg("eam_min_density") = 0.05,
         py::arg("cutoff3") = 3.7,
         py::arg("cutoff3_width") = 0.6,
         py::arg("n_sparse3") = 500,
-        py::arg("regularization_rules") = nullptr)
+        py::arg("approx_ram_limit_gb") = std::nullopt)
         .def_readwrite("seed", &utils::StandardGapParams::seed)
         .def_readwrite("screened_coulomb_dataset_file", &utils::StandardGapParams::screened_coulomb_dataset_file)
         .def_readwrite("cutoff2", &utils::StandardGapParams::cutoff2)
         .def_readwrite("cutoff2_width", &utils::StandardGapParams::cutoff2_width)
         .def_readwrite("n_sparse2", &utils::StandardGapParams::n_sparse2)
         .def_readwrite("eam_mode", &utils::StandardGapParams::eam_mode)
+        .def_readwrite("eam_pair_function", &utils::StandardGapParams::eam_pair_function)
         .def_readwrite("eam_n_sparse", &utils::StandardGapParams::eam_n_sparse)
         .def_readwrite("eam_min_density", &utils::StandardGapParams::eam_min_density)
         .def_readwrite("cutoff3", &utils::StandardGapParams::cutoff3)
         .def_readwrite("cutoff3_width", &utils::StandardGapParams::cutoff3_width)
         .def_readwrite("n_sparse3", &utils::StandardGapParams::n_sparse3)
+        .def_readwrite("approx_ram_limit_gb", &utils::StandardGapParams::approx_ram_limit_gb)
         .def("__repr__", [](const utils::StandardGapParams& p) {
             std::ostringstream oss;
             oss << "<StandardGapParams cutoff2=" << p.cutoff2
@@ -701,11 +550,68 @@ PYBIND11_MODULE(_jgap, m) {
     // =========================================================================
     // Standard Gap Fit
     // =========================================================================
-    m.def("standard_gap_fit", [](const std::vector<Atoms>& training_data, const utils::StandardGapParams& params) {
-        auto pot = utils::standardGapFit(training_data, params);
-        return pot;
-    }, py::arg("training_data"), py::arg("params") = utils::StandardGapParams(), py::call_guard<py::gil_scoped_release>(),
-       "Fit a standard GAP potential from training data");
+    m.def("standard_gap_fit", [](
+        const std::string& filename,
+        const std::vector<Atoms>& training_data,
+        const std::vector<Regularization>& sigmas,
+        const utils::StandardGapParams& params
+    ) {
+        utils::standardGapFit(filename, training_data, sigmas, params);
+    },
+    py::arg("filename"),
+    py::arg("training_data"),
+    py::arg("sigmas"),
+    py::arg("params") = utils::StandardGapParams(),
+    py::call_guard<py::gil_scoped_release>(),
+    "Fit a standard GAP potential from training data and write to file");
+
+    // =========================================================================
+    // Tabulation
+    // =========================================================================
+    py::class_<utils::StandardTabulationParams>(m, "StandardTabulationParams")
+        .def(py::init<Real, Real, size_t, std::array<size_t, 3>>(),
+             py::arg("r_min_3b") = 0.5,
+             py::arg("max_eam_density") = 10.0,
+             py::arg("n_grid_2b") = 5000,
+             py::arg("n_grid_3b") = std::array<size_t, 3>{80, 80, 80})
+        .def_readwrite("r_min_3b", &utils::StandardTabulationParams::r_min_3b)
+        .def_readwrite("max_eam_density", &utils::StandardTabulationParams::max_eam_density)
+        .def_readwrite("n_grid_2b", &utils::StandardTabulationParams::n_grid_2b)
+        .def_readwrite("n_grid_3b", &utils::StandardTabulationParams::n_grid_3b)
+        .def("__repr__", [](const utils::StandardTabulationParams& p) {
+            std::ostringstream oss;
+            oss << "<StandardTabulationParams r_min_3b=" << p.r_min_3b
+                << ", max_eam_density=" << p.max_eam_density
+                << ", n_grid_2b=" << p.n_grid_2b
+                << ", n_grid_3b=[" << p.n_grid_3b[0] << "," << p.n_grid_3b[1] << "," << p.n_grid_3b[2] << "]>";
+            return oss.str();
+        });
+
+    m.def("standard_tabulation", [](
+        const std::string& pot_filename,
+        const std::string& output_prefix,
+        const utils::StandardTabulationParams& params
+    ) {
+        utils::standardTabulation(pot_filename, output_prefix, params);
+    },
+    py::arg("pot_filename"),
+    py::arg("output_prefix"),
+    py::arg("params") = utils::StandardTabulationParams(),
+    py::call_guard<py::gil_scoped_release>(),
+    "Tabulate a potential file and save .tabgap.h5 and .eam.fs files");
+
+    m.def("standard_tabulation", [](
+        const Potential& potential,
+        const std::string& output_prefix,
+        const utils::StandardTabulationParams& params
+    ) {
+        utils::standardTabulation(potential, output_prefix, params);
+    },
+    py::arg("potential"),
+    py::arg("output_prefix"),
+    py::arg("params") = utils::StandardTabulationParams(),
+    py::call_guard<py::gil_scoped_release>(),
+    "Tabulate a Potential object and save .tabgap.h5 and .eam.fs files");
 
     // =========================================================================
     // Potential loader functions
@@ -732,11 +638,4 @@ PYBIND11_MODULE(_jgap, m) {
             frames[i].write(out);
         }
     }, py::arg("frames"), py::arg("filename"), "Write a list of Atoms frames to an XYZ file");
-
-    // =========================================================================
-    // Legacy / direct ASE calculator
-    // =========================================================================
-    py::class_<PyJGAPCalculator>(m, "PyJGAPCalculator")
-        .def(py::init<const std::vector<std::string>&>(), py::arg("paths"))
-        .def("calculate", &PyJGAPCalculator::calculate);
 }

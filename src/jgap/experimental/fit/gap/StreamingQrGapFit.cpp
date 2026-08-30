@@ -1,16 +1,19 @@
 #include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
 
+#include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/linalg/Linalg.hpp"
-#include "../../../core/io/log/CurrentLogger.hpp"
+#include "jgap/core/linalg/StreamingQRAccumulator.hpp"
 
 namespace jgap {
     StreamingQrGapFit::StreamingQrGapFit(const Real jitter, const size_t target_chunk_rows) :
         QRGapFit(jitter), target_chunk_rows(target_chunk_rows) {}
 
     std::vector<Real> StreamingQrGapFit::findCoefficients(
-        std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
-        std::vector<EnergyData>& energies_without_external, std::vector<Regularization>& sigmas_inverse
+        std::vector<ValuePtr<GapComponent>>& gap_components,
+        const std::vector<Atoms>& training_data,
+        std::vector<EnergyData>& energies_without_external,
+        std::vector<Regularization>& sigmas_inverse
     ) {
         size_t C = 0;
         for (const auto& comp: gap_components) {
@@ -19,7 +22,12 @@ namespace jgap {
 
         JGAP_LOG_INFO("Starting Streaming QR fit: total columns C = {}, target chunk rows = {}", C, target_chunk_rows);
 
-        linalg::StreamingQRAccumulator accumulator(C);
+        linalg::StreamingQRAccumulator accumulator(C, target_chunk_rows);
+        size_t start_col = 0;
+        for (const auto& comp: gap_components) {
+            fillU_mm(start_col, start_col, comp, accumulator.initialWorkspace());
+            start_col += comp->nSparsePoints();
+        }
 
         struct FrameMeta {
             size_t frame_idx;
@@ -50,8 +58,12 @@ namespace jgap {
             chunk_count++;
 
             JGAP_LOG_INFO(
-                "Streaming QR: Chunk {} (frames {}..{}, rows {} x cols {})", chunk_count, chunk_start_frame,
-                chunk_end_frame - 1, chunk_rows, C
+                "Streaming QR: Chunk {} (frames {}..{}, rows {} x cols {})",
+                chunk_count,
+                chunk_start_frame,
+                chunk_end_frame - 1,
+                chunk_rows,
+                C
             );
 
             Matrix<ColumnMajor> A_chunk(chunk_rows, C);
@@ -92,25 +104,17 @@ namespace jgap {
                 size_t f_idx = layout.first;
                 size_t start_r = layout.second;
                 fillInverseSigmaLK_NM(
-                    gap_components, training_data[f_idx], energies_without_external[f_idx], sigmas_inverse[f_idx],
-                    A_chunk, start_r
+                    gap_components,
+                    training_data[f_idx],
+                    energies_without_external[f_idx],
+                    sigmas_inverse[f_idx],
+                    A_chunk,
+                    start_r
                 );
             });
 
             accumulator.appendBlock(A_chunk, b_chunk);
         }
-
-        JGAP_LOG_INFO("Streaming QR: Appending regularization block (K_MM^1/2)");
-        Matrix<ColumnMajor> A_reg(C, C);
-        std::vector<Real> b_reg(C, 0.0_r);
-
-        size_t start_col = 0;
-        for (const auto& comp: gap_components) {
-            fillU_mm(start_col, start_col, comp, A_reg);
-            start_col += comp->nSparsePoints();
-        }
-
-        accumulator.appendBlock(A_reg, b_reg);
 
         return accumulator.solve();
     }

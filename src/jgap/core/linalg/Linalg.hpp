@@ -25,27 +25,7 @@ namespace jgap::linalg {
     template<MatrixLayout OutputLayout = MatrixLayout::ColumnMajor>
     Matrix<OutputLayout> choleskyDecomposition(Matrix<RowMajor>& matrix_block);
 
-    /// Out-of-core / chunked QR accumulator that incrementally maintains upper-triangular R and Q^T * b.
-    class StreamingQRAccumulator {
-    public:
-        explicit StreamingQRAccumulator(size_t n_cols);
-        ~StreamingQRAccumulator();
+}
 
-        StreamingQRAccumulator(StreamingQRAccumulator&&) noexcept;
-        StreamingQRAccumulator& operator=(StreamingQRAccumulator&&) noexcept;
+#endif
 
-        StreamingQRAccumulator(const StreamingQRAccumulator&) = delete;
-        StreamingQRAccumulator& operator=(const StreamingQRAccumulator&) = delete;
-
-        void appendBlock(const Matrix<ColumnMajor>& A_chunk, const std::vector<Real>& b_chunk);
-        std::vector<Real> solve() const;
-        size_t nCols() const;
-
-    private:
-        struct Impl;
-        std::unique_ptr<Impl> pimpl;
-    };
-
-} // namespace jgap::linalg
-
-#endif // JGAP_LINALG_HPP

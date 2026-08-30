@@ -29,23 +29,20 @@ namespace jgap {
         static constexpr size_t NumberOfElements = 118;
 
         static std::map<std::string, uint16_t> SymbolToAtomicNumber;
-        static std::array<std::string, NumberOfElements+1> AtomicNumberToSymbol;
-        static std::array<Real, NumberOfElements+1> Masses;
+        static std::array<std::string, NumberOfElements + 1> AtomicNumberToSymbol;
+        static std::array<Real, NumberOfElements + 1> Masses;
 
         static Species Anon() {
             static const Species anon("AnonymousSpecies");
             return anon;
         }
 
-        static Species fromAtomicNumber(size_t Z) {
-            return Species(AtomicNumberToSymbol[Z]);
-        }
+        static Species fromAtomicNumber(size_t Z) { return Species(AtomicNumberToSymbol[Z]); }
 
-        Species() : id(0) {}
         Species(const Species& other) = default;
         Species& operator=(const Species& other) = default;
 
-        Species(const std::string &symbol) {
+        Species(const std::string& symbol) {
             std::lock_guard lock(Mtx);
 
             if (SymbolIds.empty()) {
@@ -71,17 +68,11 @@ namespace jgap {
 
         Species(const char* symbol) : Species(std::string(symbol)) {}
 
-        Species(uint16_t id) : id(id) {
-            assert(IdSymbols.contains(id) && "Unknown species ID");
-        }
+        Species(uint16_t id) : id(id) { assert(IdSymbols.contains(id) && "Unknown species ID"); }
 
-        std::string symbol() const {
-            return IdSymbols.at(id);
-        }
+        std::string symbol() const { return IdSymbols.at(id); }
 
-        uint16_t getId() const {
-            return id;
-        }
+        uint16_t getId() const { return id; }
 
         std::optional<size_t> atomicNumber() const {
             if (!SymbolToAtomicNumber.contains(symbol())) {
@@ -91,18 +82,12 @@ namespace jgap {
         }
 
         std::optional<Real> mass() const {
-            return atomicNumber().transform(
-                [](const size_t Z) -> double { return Masses[Z]; }
-                );
+            return atomicNumber().transform([](const size_t Z) -> double { return Masses[Z]; });
         }
 
-        bool operator<(const Species& other) const {
-            return id < other.id;
-        }
+        bool operator<(const Species& other) const { return id < other.id; }
 
-        bool operator==(const Species& other) const {
-            return id == other.id;
-        }
+        bool operator==(const Species& other) const { return id == other.id; }
 
     private:
         inline static std::mutex Mtx{};
