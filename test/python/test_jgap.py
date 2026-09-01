@@ -255,52 +255,23 @@ class TestJGAP(unittest.TestCase):
         sigmas = rules.determine_for_all(frames)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Tiny RAM limit (< M*M) -> throws error
-            params_tiny = jgap.StandardGapParams(
+            # Valid RAM limit -> runs ElementalQRGapFit with bounded chunk size
+            params_valid = jgap.StandardGapParams(
                 seed=42,
                 n_sparse2=10,
                 n_sparse3=50,
-                approx_ram_limit_gb=1e-12,
+                approx_ram_limit_gb=1.0,
             )
-            pot_file_tiny = os.path.join(tmpdir, "tiny_ram.jgap.h5")
-            with self.assertRaises(RuntimeError):
-                jgap.standard_gap_fit(pot_file_tiny, frames, sigmas, params_tiny)
+            pot_file_valid = os.path.join(tmpdir, "valid_ram.jgap.h5")
+            jgap.standard_gap_fit(pot_file_valid, frames, sigmas, params_valid)
+            self.assertTrue(os.path.exists(pot_file_valid))
 
-            # 2. Tight RAM limit between M*M and 2*M*M -> triggers StreamingQrGapFit with small chunk rows
-            # M is ~370 sparse points -> M*M*8 bytes ~ 1.1 MB (0.00102 GB). 2*M*M*8 ~ 2.19 MB (0.00204 GB).
-            params_inplace = jgap.StandardGapParams(
-                seed=42,
-                n_sparse2=10,
-                n_sparse3=50,
-                approx_ram_limit_gb=0.0015, # ~1.6 MB (between M*M and 2*M*M)
-            )
-            pot_file_inplace = os.path.join(tmpdir, "inplace.jgap.h5")
-            jgap.standard_gap_fit(pot_file_inplace, frames, sigmas, params_inplace)
-            self.assertTrue(os.path.exists(pot_file_inplace))
-
-            # 3. Medium RAM limit between 2*M*M and (N+M)*M -> triggers StreamingQrGapFit with larger chunk rows
-            # (N+M)*M*8 ~ 4.46 MB (0.00415 GB).
-            params_streaming = jgap.StandardGapParams(
-                seed=42,
-                n_sparse2=10,
-                n_sparse3=50,
-                approx_ram_limit_gb=0.0030, # ~3.2 MB (between 2*M*M and (N+M)*M)
-            )
-            pot_file_streaming = os.path.join(tmpdir, "streaming.jgap.h5")
-            jgap.standard_gap_fit(pot_file_streaming, frames, sigmas, params_streaming)
-            self.assertTrue(os.path.exists(pot_file_streaming))
-
-            # 4. StandardGapParams with split_sets -> triggers SplitQRGapFit
-            params_split = jgap.StandardGapParams(
-                seed=42,
-                n_sparse2=10,
-                n_sparse3=50,
-                split_sets=[["Fe"], ["Ni"]],
-                approx_ram_limit_gb=0.0030,
-            )
-            pot_file_split = os.path.join(tmpdir, "split.jgap.h5")
-            jgap.standard_gap_fit(pot_file_split, frames, sigmas, params_split)
-            self.assertTrue(os.path.exists(pot_file_split))
+    def test_scaled_regularization_rules(self):
+        base_rules = jgap.SimpleRegularizationRules(0.002, 0.05, 0.1, 0.02)
+        scaled_rules = jgap.ScaledRegularizationRules(base_rules, force_scale=0.5, min_scale=1.0)
+        self.assertAlmostEqual(scaled_rules.force_scale, 0.5)
+        self.assertAlmostEqual(scaled_rules.min_scale, 1.0)
+        self.assertIn("ScaledRegularizationRules", repr(scaled_rules))
 
 
 if __name__ == "__main__":

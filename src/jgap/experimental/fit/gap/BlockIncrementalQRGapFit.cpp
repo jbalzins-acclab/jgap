@@ -1,4 +1,4 @@
-#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
+#include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 
 #include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/core/UnseqFor.hpp"
@@ -6,10 +6,10 @@
 #include "jgap/core/linalg/StreamingQRAccumulator.hpp"
 
 namespace jgap {
-    StreamingQrGapFit::StreamingQrGapFit(const Real jitter, const double approx_ram_limit_gb) :
+    BlockIncrementalQRGapFit::BlockIncrementalQRGapFit(const Real jitter, const double approx_ram_limit_gb) :
         QRGapFit(jitter), approx_ram_limit_gb(approx_ram_limit_gb) {}
 
-    std::vector<Real> StreamingQrGapFit::findCoefficients(
+    std::vector<Real> BlockIncrementalQRGapFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components,
         const std::vector<Atoms>& training_data,
         std::vector<EnergyData>& energies_without_external,
@@ -54,7 +54,7 @@ namespace jgap {
             (1024.0 * 1024.0 * 1024.0);
 
         JGAP_LOG_INFO(
-            "Starting Streaming QR fit: columns C = {}, rows N = {}, RAM/row = {:.2f} KB, MxM RAM = {:.2f} MB, full "
+            "Starting Block Incremental QR fit: columns C = {}, rows N = {}, RAM/row = {:.2f} KB, MxM RAM = {:.2f} MB, full "
             "(N+M)xM RAM = {:.2f} MB, limit = {:.2f} GB, chunk capacity = {} rows ({:.2f} MB), est. peak = {:.2f} GB",
             C,
             N,
@@ -74,15 +74,19 @@ namespace jgap {
             size_t chunk_start_frame = frame_cursor;
             size_t chunk_rows = 0;
 
-            while (frame_cursor < frames_meta.size() && (chunk_rows < effective_chunk_rows || chunk_rows == 0)) {
-                chunk_rows += frames_meta[frame_cursor].rows;
+            while (frame_cursor < frames_meta.size()) {
+                size_t next_rows = frames_meta[frame_cursor].rows;
+                if (chunk_rows > 0 && chunk_rows + next_rows > effective_chunk_rows) {
+                    break;
+                }
+                chunk_rows += next_rows;
                 frame_cursor++;
             }
             size_t chunk_end_frame = frame_cursor;
             chunk_count++;
 
             JGAP_LOG_INFO(
-                "Streaming QR: Chunk {} (frames {}..{}, rows {} x cols {})",
+                "Block Incremental QR: Chunk {} (frames {}..{}, rows {} x cols {})",
                 chunk_count,
                 chunk_start_frame,
                 chunk_end_frame - 1,
@@ -140,6 +144,7 @@ namespace jgap {
             accumulator.appendBlock(A_chunk, b_chunk);
         }
 
+        accumulator.flush();
         return accumulator.solve();
     }
 }

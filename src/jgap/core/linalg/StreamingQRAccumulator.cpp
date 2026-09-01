@@ -98,9 +98,13 @@ namespace jgap::linalg {
         EigenVector hCoeffs(n_cols);
 
         // In-place Householder QR directly on the active top rows of workspace (0 extra matrix allocations!)
-        Eigen::internal::householder_qr_inplace_blocked<StridedMatrixMap, EigenVector>::run(active_matrix_map, hCoeffs);
+        Eigen::internal::householder_qr_inplace_blocked<StridedMatrixMap, EigenVector>::run(
+            active_matrix_map, hCoeffs
+        );
 
-        Eigen::HouseholderSequence<StridedMatrixMap, EigenVector> householder_Q(active_matrix_map, hCoeffs);
+        Eigen::HouseholderSequence<StridedMatrixMap, EigenVector> householder_Q(
+            active_matrix_map, hCoeffs
+        );
         workspace_target_vector_map.head(active_rows) = householder_Q.transpose() * active_target_vector;
 
         active_matrix_map.topRows(n_cols).template triangularView<Eigen::StrictlyLower>().setZero();
@@ -140,7 +144,7 @@ namespace jgap::linalg {
             buffered_rows += to_copy;
             chunk_cursor += to_copy;
 
-            // When buffer is full, perform QR decomposition to absorb chunk into R
+            // When buffer is full, perform in-place Householder QR to absorb chunk into R
             if (buffered_rows == max_chunk_rows) {
                 flushFullBlock();
             }

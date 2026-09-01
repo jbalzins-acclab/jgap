@@ -3,7 +3,6 @@
 
 #include <array>
 #include <optional>
-#include <set>
 #include <string>
 #include <vector>
 #include "jgap/core/Real.hpp"
@@ -36,14 +35,8 @@ namespace jgap::utils {
         Real cutoff3_width = 0.6;
         size_t n_sparse3 = 500;
 
-        // A RAM limit that helps to determine if the full covarince matrix could be stored at once.
-        // If the full covarince matrix cannot be stored at once,
-        // StreamingQRGapFit might be used if sizeof (M x M 64 bit FP) < RAM limit.
-        std::optional<Real> approx_ram_limit_gb = std::nullopt;
-
-        // Optional disjoint species split sets for SplitQRGapFit.
-        // If provided and non-empty, SplitQRGapFit will be used.
-        std::optional<std::vector<std::set<Species>>> split_sets = std::nullopt;
+        // Mandatory RAM limit in gigabytes for ElementalQRGapFit out-of-core execution.
+        Real approx_ram_limit_gb = 4.0;
     };
 }
 

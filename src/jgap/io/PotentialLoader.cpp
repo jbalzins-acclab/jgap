@@ -62,7 +62,7 @@ namespace jgap {
             }
         }
 
-        if (pot_path.ends_with(".tabgap.h5")) {
+        if (pot_path.ends_with(".tabgap.h5") || pot_path.ends_with(".eam.fs")) {
             return TabGapIO::read(std::vector<std::string>{pot_path});
         }
 

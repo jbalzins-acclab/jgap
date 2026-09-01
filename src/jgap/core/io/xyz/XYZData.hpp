@@ -1,42 +1,33 @@
 #ifndef JGAP_XYZDATA_HPP
 #define JGAP_XYZDATA_HPP
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <map>
-#include <vector>
-#include <variant>
 #include <array>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <string>
+#include <variant>
+#include <vector>
 
-#include "jgap/core/Real.hpp"
 #include "../../Vector3.hpp"
+#include "jgap/core/Real.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
 
 namespace jgap {
-    using XYZInfoType = std::variant<
-        std::string,
-        int,
-        Real,
-        Vector3,
-        Virials,
-        Lattice,
-        std::array<bool, 3>
-    >;
+    using XYZInfoType = std::variant<std::string, int, Real, Vector3, Virials, Lattice, std::array<bool, 3> >;
     using XYZArrayType = std::variant<
         std::vector<int>,
         std::vector<Real>,
         std::vector<Vector3>,
         std::vector<std::string>,
-        std::vector<Species>
-    >;
+        std::vector<Species> >;
 
     /// Labels for the common ext-xyz property/array names that @ref XYZData::read and @ref Atoms use.
     ///
     /// Defaults follow standard ASE naming for convenience,
     /// however, virials require as there seems to be no standard label.
-    /// Otherwise, one might need to check "force"↔"forces" ambiguity and "Lattice" casing.
+    /// Otherwise, one might need to check "force" <-> "forces" ambiguity and "Lattice" casing.
     struct MainXYZPropertyNames {
         std::string positions = "pos";
         std::string species = "species";
@@ -59,13 +50,13 @@ namespace jgap {
     /// @note inspired by ASE.
     class XYZData {
     public:
-        static std::vector<XYZData> read(const std::string &filename, const MainXYZPropertyNames& main_props = {});
+        static std::vector<XYZData> read(const std::string& filename, const MainXYZPropertyNames& main_props = {});
 
         /// Tries to read the file as an extended .xyz file, containing one or multiple frames.
         /// Each frame is expected to be in format: <br>
         ///  line 1: N - number of atoms <br>
         ///  line 2: Header containing property map <br>
-        ///  lines 3-(N+2): per-atom data 
+        ///  lines 3-(N+2): per-atom data
         ///
         /// The property map should be in format: <br>
         ///  prop_name=prop_val : for properties that can be written without whitespaces, <br>
@@ -104,8 +95,8 @@ namespace jgap {
 
         /// Opposite of @ref XYZData::read.
         /// Somewhat more permissive in terms of property names.
-        void write(const std::string &filename) const;
-        void write(std::ostream &out_stream) const;
+        void write(const std::string& filename) const;
+        void write(std::ostream& out_stream) const;
         std::string write() const;
 
         const MainXYZPropertyNames& getMainPropertyNames() const { return main_property_names; }
@@ -114,7 +105,7 @@ namespace jgap {
         const auto& getArrays() const { return arrays; }
 
         std::map<std::string, XYZInfoType>& getPropertiesForEditing();
-        std::map<std::string, XYZArrayType> & getArraysForEditing();
+        std::map<std::string, XYZArrayType>& getArraysForEditing();
 
     protected:
         MainXYZPropertyNames main_property_names;

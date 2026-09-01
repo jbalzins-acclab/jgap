@@ -8,8 +8,8 @@
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/experimental/fit/gap/SplitQRGapFit.hpp"
-#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/io/convert/QuipXmlConverter.hpp"
 #include "jgap/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
@@ -114,9 +114,8 @@ int main(int argc, char** argv) {
     JGAP_LOG_INFO("Fitting HEA GAP potential using StreamingQrGapFit with limit {} GB...", ram_limit_gb);
     // StreamingQrGapFit fitter(1e-8, ram_limit_gb);
 
-    // Option: Split QR with [Cr], [Ta], [V], [W] splits
-    const std::vector<std::set<Species>> split_sets = {{"Cr"}, {"Ta"}, {"V"}, {"W"}};
-    SplitQRGapFit fitter(1e-8, split_sets, ram_limit_gb);
+    // Elemental QR with automatic single-species splits
+    ElementalQRGapFit fitter(1e-8, ram_limit_gb);
 
     auto sigmas = regularization.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);

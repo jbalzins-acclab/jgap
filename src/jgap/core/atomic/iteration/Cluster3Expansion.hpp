@@ -17,7 +17,7 @@ namespace jgap {
 
         Cluster3Expansion(
             const Species3AtomicSorted& species_set,
-            ClusterPermutationMode mode = ClusterPermutationMode::NoNodePermutation
+            ClusterPermutationMode mode = ClusterPermutationMode::PermuteSameSpeciesNodes
         ) :
             species_set(species_set),
             mode(mode),

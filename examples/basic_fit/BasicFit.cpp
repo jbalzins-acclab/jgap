@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     potential.optional_external_potential = external;
 
     // Fit
-    IterativeGapFit fitter;
+    CGLSGapFit fitter;
     auto sigmas = regularization_rules.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);
 

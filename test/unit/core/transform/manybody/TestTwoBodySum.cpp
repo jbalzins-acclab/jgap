@@ -14,7 +14,10 @@ namespace {
     class MockEamPairFunction final : public EamPairFunction {
     public:
         MockEamPairFunction(Real value_to_return, Real deriv_factor, Real cutoff = 10.0, bool is_rot_inv = true) :
-            EamPairFunction(cutoff), value_to_return_(value_to_return), deriv_factor_(deriv_factor), is_rot_inv(is_rot_inv) {}
+            EamPairFunction(cutoff),
+            value_to_return_(value_to_return),
+            deriv_factor_(deriv_factor),
+            is_rot_inv(is_rot_inv) {}
 
         Descriptor<1> evaluate(const Cluster2& pair) const override { return {{value_to_return_}}; }
 
@@ -200,14 +203,9 @@ TEST(TestTwoBodySum, RealPairFunction) {
     EXPECT_NEAR(calc_virials0.xx, -2.0 * expected_deriv, 1e-9);
 }
 
-TEST(TestTwoBodySum, NonRotationallyInvariantThrowsOnTabulation) {
+TEST(TestTwoBodySum, NonRotationallyInvariantThrowsOnExtend) {
     auto aggregator = TwoBodySum<1>("Fe");
-    aggregator.extend({"Fe", "Ni"}, MockEamPairFunction(1.0, 0.5, 10.0, /*is_rot_inv=*/false));
-
-    TabulationParams params;
-    params.n_grid_2b = 10;
-    params.max_cutoffs = aggregator.getCutoffs();
-    TabulationData tables(params);
-
-    EXPECT_THROW(aggregator.tabulateNewManyBodyGrid(tables), std::runtime_error);
+    EXPECT_THROW(
+        aggregator.extend({"Fe", "Ni"}, MockEamPairFunction(1.0, 0.5, 10.0, /*is_rot_inv=*/false)), std::runtime_error
+    );
 }

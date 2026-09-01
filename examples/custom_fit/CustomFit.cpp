@@ -21,7 +21,7 @@
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
-#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
+#include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/jgap.hpp"
 
 using namespace jgap;
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     );
 
     // ===== fit =====
-    StreamingQrGapFit fitter(1e-8, 1000);
+    BlockIncrementalQRGapFit fitter(1e-8, 1000);
     auto sigmas = regularization.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);
 

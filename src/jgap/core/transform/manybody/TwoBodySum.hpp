@@ -29,6 +29,9 @@ namespace jgap {
                     "whose root doesnt match central atom species"
                 );
             }
+            if (!transformation->isRotationallyInvariant()) {
+                JGAP_LOG_AND_THROW("Transformation is not rotationally invariant and cannot be used with TwoBodySum");
+            }
             transformations.insert({species_set, std::move(transformation)});
         }
 

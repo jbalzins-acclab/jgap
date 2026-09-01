@@ -18,8 +18,8 @@
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
-#include "jgap/experimental/fit/gap/SplitQRGapFit.hpp"
-#include "jgap/experimental/fit/gap/StreamingQrGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/gap/GapComponentUtils.hpp"
@@ -106,62 +106,9 @@ namespace jgap::utils {
 
         potential.optional_external_potential = external;
 
-        // RAM estimation & solver selection
-        size_t M = 0;
-        for (const auto& comp: potential.getComponents()) {
-            M += comp->nSparsePoints();
-        }
-
-        size_t N = 0;
-        for (const auto& atoms: training_data) {
-            if (atoms.getEnergy().has_value()) {
-                N += 1;
-            }
-            if (atoms.getForces().has_value()) {
-                N += 3 * atoms.nAtoms();
-            }
-            if (atoms.getVirials().has_value()) {
-                N += 6;
-            }
-        }
-
-        if (params.split_sets.has_value() && !params.split_sets->empty()) {
-            if (params.approx_ram_limit_gb.has_value()) {
-                const double max_bytes = *params.approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
-                const double mm_bytes = static_cast<double>(M) * static_cast<double>(M) * sizeof(Real);
-                if (mm_bytes > max_bytes) {
-                    JGAP_LOG_AND_THROW("Cannot fit within the RAM requirements");
-                }
-                SplitQRGapFit fitter(*params.split_sets, *params.approx_ram_limit_gb);
-                fitter.fit(potential, training_data, sigmas);
-            } else {
-                const double estimated_gb = std::max(
-                    1.0,
-                    (static_cast<double>(N + M) * static_cast<double>(M) * sizeof(Real)) / (1024.0 * 1024.0 * 1024.0)
-                        * 1.5
-                );
-                SplitQRGapFit fitter(*params.split_sets, estimated_gb);
-                fitter.fit(potential, training_data, sigmas);
-            }
-        } else if (params.approx_ram_limit_gb.has_value()) {
-            const double max_bytes = *params.approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
-            const double mm_bytes = static_cast<double>(M) * static_cast<double>(M) * sizeof(Real);
-            const double nm_bytes = static_cast<double>(N + M) * static_cast<double>(M) * sizeof(Real);
-
-            if (mm_bytes > max_bytes) {
-                JGAP_LOG_AND_THROW("Cannot fit within the RAM requirements");
-            }
-            if (nm_bytes <= max_bytes) {
-                QRGapFit fitter;
-                fitter.fit(potential, training_data, sigmas);
-            } else {
-                StreamingQrGapFit fitter(1e-8, *params.approx_ram_limit_gb);
-                fitter.fit(potential, training_data, sigmas);
-            }
-        } else {
-            QRGapFit fitter;
-            fitter.fit(potential, training_data, sigmas);
-        }
+        // Always perform ElementalQRGapFit with single-element structures first
+        ElementalQRGapFit fitter(1e-8, params.approx_ram_limit_gb);
+        fitter.fit(potential, training_data, sigmas);
 
         SerializationRegistry<Potential>::serialize(potential, filename);
         JGAP_LOG_INFO("Saved fitted potential to {}", filename);

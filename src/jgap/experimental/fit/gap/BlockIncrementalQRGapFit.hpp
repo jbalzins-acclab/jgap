@@ -1,13 +1,13 @@
-#ifndef JGAP_STREAMINGQRGAPFIT_HPP
-#define JGAP_STREAMINGQRGAPFIT_HPP
+#ifndef JGAP_BLOCKINCREMENTALQRGAPFIT_HPP
+#define JGAP_BLOCKINCREMENTALQRGAPFIT_HPP
 
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 
 namespace jgap {
-    class StreamingQrGapFit : public QRGapFit {
+    class BlockIncrementalQRGapFit : public QRGapFit {
     public:
-        explicit StreamingQrGapFit(Real jitter, double approx_ram_limit_gb);
-        explicit StreamingQrGapFit(double approx_ram_limit_gb) : StreamingQrGapFit(1e-8, approx_ram_limit_gb) {}
+        explicit BlockIncrementalQRGapFit(Real jitter, double approx_ram_limit_gb);
+        explicit BlockIncrementalQRGapFit(double approx_ram_limit_gb) : BlockIncrementalQRGapFit(1e-8, approx_ram_limit_gb) {}
 
     protected:
         std::vector<Real> findCoefficients(

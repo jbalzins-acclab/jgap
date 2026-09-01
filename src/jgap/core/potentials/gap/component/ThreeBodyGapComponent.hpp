@@ -63,9 +63,7 @@ namespace jgap {
             auto it = neighbour_list.atoms_by_species.find(species.root);
             if (it != neighbour_list.atoms_by_species.end()) {
                 for (size_t atom_index: it->second) {
-                    if (covariateAtom(atom_index, neighbour_list, result)) {
-                        found_any = true;
-                    }
+                    found_any |= covariateAtom(atom_index, neighbour_list, result);
                 }
             }
 

@@ -1,5 +1,5 @@
-#ifndef JGAP_ITERATIVEGAPFIT_HPP
-#define JGAP_ITERATIVEGAPFIT_HPP
+#ifndef JGAP_CGLSGAPFIT_HPP
+#define JGAP_CGLSGAPFIT_HPP
 
 #include <optional>
 #include "jgap/core/Matrix.hpp"
@@ -7,9 +7,9 @@
 
 namespace jgap {
 
-    class IterativeGapFit : public GapFit {
+    class CGLSGapFit : public GapFit {
     public:
-        explicit IterativeGapFit(
+        explicit CGLSGapFit(
             const Real jitter = 1e-8, const std::optional<int> max_iterations = std::nullopt,
             const std::optional<double> tolerance = std::nullopt, const int print_interval = 1
         ) :
