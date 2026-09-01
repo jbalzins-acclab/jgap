@@ -45,31 +45,38 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(HighFive)
 
 # ------------------------------------------------------------------------------
-# 4. oneTBB (Multi-core Tasking) from Host / System or via FetchContent
+# 4. OpenMP (Multi-core Parallelization)
 # ------------------------------------------------------------------------------
-find_package(TBB CONFIG QUIET)
-if (NOT TBB_FOUND)
-    find_package(TBB QUIET)
+if (APPLE AND NOT OpenMP_CXX_FOUND)
+    if (EXISTS "/opt/homebrew/opt/libomp")
+        set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
+        list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp")
+    elseif (EXISTS "/usr/local/opt/libomp")
+        set(OpenMP_ROOT "/usr/local/opt/libomp")
+        list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/libomp")
+    endif ()
 endif ()
 
-if (NOT TBB_FOUND)
-    message(STATUS "Host TBB not found, fetching oneTBB via FetchContent...")
-    set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
-    set(TBB_STRICT OFF CACHE INTERNAL "" FORCE)
-    set(TBB_EXAMPLES OFF CACHE INTERNAL "" FORCE)
-    FetchContent_Declare(
-        oneTBB
-        GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-        GIT_TAG v2022.0.0
-        GIT_SHALLOW TRUE
-        SYSTEM
-    )
-    FetchContent_MakeAvailable(oneTBB)
-    set(TBB_FOUND TRUE)
+find_package(OpenMP QUIET)
+
+if (APPLE AND NOT OpenMP_CXX_FOUND)
+    if (EXISTS "/opt/homebrew/opt/libomp")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+        find_package(OpenMP QUIET)
+    elseif (EXISTS "/usr/local/opt/libomp")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "/usr/local/opt/libomp/lib/libomp.dylib")
+        find_package(OpenMP QUIET)
+    endif ()
 endif ()
 
-if (TBB_FOUND)
-    message(STATUS "TBB enabled: multi-core parallelization will be active")
+if (OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP enabled: multi-core parallelization will be active (${OpenMP_CXX_VERSION})")
+else ()
+    message(STATUS "OpenMP not found: multi-core parallelization won't be enabled")
 endif ()
 
 # ------------------------------------------------------------------------------
@@ -88,33 +95,6 @@ endif ()
 if (JGAP_BLAS_LIBS)
     message(STATUS "BLAS acceleration enabled (${JGAP_BLAS_LIBS})")
 else ()
-    # Fallback to OpenMP multi-threading in Eigen if available
-    if (APPLE AND NOT OpenMP_CXX_FOUND)
-        if (EXISTS "/opt/homebrew/opt/libomp")
-            set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
-            list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp")
-        elseif (EXISTS "/usr/local/opt/libomp")
-            set(OpenMP_ROOT "/usr/local/opt/libomp")
-            list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/libomp")
-        endif ()
-    endif ()
-
-    find_package(OpenMP QUIET)
-
-    if (APPLE AND NOT OpenMP_CXX_FOUND)
-        if (EXISTS "/opt/homebrew/opt/libomp")
-            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include")
-            set(OpenMP_CXX_LIB_NAMES "omp")
-            set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
-            find_package(OpenMP QUIET)
-        elseif (EXISTS "/usr/local/opt/libomp")
-            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
-            set(OpenMP_CXX_LIB_NAMES "omp")
-            set(OpenMP_omp_LIBRARY "/usr/local/opt/libomp/lib/libomp.dylib")
-            find_package(OpenMP QUIET)
-        endif ()
-    endif ()
-
     if (OpenMP_CXX_FOUND)
         message(STATUS "No BLAS found: using Eigen's built-in routines with OpenMP multi-threading")
     else ()

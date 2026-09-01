@@ -75,12 +75,9 @@ if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(jgap_lib PRIVATE c++)
 endif ()
 
-if (TBB_FOUND)
-    target_compile_definitions(jgap_lib PRIVATE HAS_TBB)
-    target_link_libraries(jgap_lib PRIVATE TBB::tbb)
-    if (TARGET TBB::tbbmalloc)
-        target_link_libraries(jgap_lib PRIVATE TBB::tbbmalloc)
-    endif ()
+if (OpenMP_CXX_FOUND)
+    target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
+    target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)
 endif ()
 
 # Public include dirs so consumers of the target get jgap's headers for free.

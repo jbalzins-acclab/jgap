@@ -19,18 +19,17 @@ A high-performance C++23 library, command-line tool, and Python framework for fi
 `jgap` uses a modern hybrid dependency model:
 
 ### Automatic Dependencies (via CMake `FetchContent`)
-The following C++ libraries are **automatically downloaded and configured** during CMake build. You do **not** need to install them manually:
+The following lightweight C++ libraries are **automatically downloaded and configured** during CMake build. You do **not** need to install them manually:
 * **Eigen3** ($\ge 3.4.0$) — Linear algebra template library.
 * **HighFive** ($\ge 3.0.0$) — Header-only modern C++ wrapper for HDF5.
 * **pugixml** ($\ge 1.15$) — XML parser for QUIP potential conversion (`jgap_convert`).
-* **oneTBB** ($\ge 2022.0.0$) — Auto-fetched for multi-core parallelization if not found on the host system.
 * **GoogleTest** ($\ge 1.14$) — Unit testing framework (Debug builds only).
 
 ### Host System Dependencies
 The following native runtime libraries should be present on your host system:
 1. **HDF5** (`libhdf5`) — **Required** for reading/writing `.jgap.h5` and `.tabgap.h5` files.
 2. **BLAS / OpenBLAS** — **Strongly Recommended** for accelerated linear algebra (`EIGEN_USE_BLAS`). (On macOS, Apple Accelerate is used automatically if OpenBLAS is not present).
-3. **oneTBB** (`libtbb`) — **Optional / Auto-fetched** (`HAS_TBB`). If a host/module TBB is present, it will be used; otherwise CMake automatically downloads and compiles oneTBB.
+3. **OpenMP** — **Recommended** for multi-core parallelization (`HAS_OPENMP`). Built into GCC/Clang/Intel compilers; on macOS via `brew install libomp`.
 4. **Python $\ge$ 3.10 + pybind11** — **Optional** for building the `jgap` Python package and ASE calculator.
 
 ---
@@ -41,42 +40,36 @@ Before installing new packages, you can verify whether your system or HPC cluste
 
 ### Using `pkg-config`
 ```bash
-pkg-config --modversion hdf5 openblas tbb
+pkg-config --modversion hdf5 openblas
 ```
 
 ### Checking Package Managers
 * **macOS (Homebrew)**:
   ```bash
-  brew list --formula | grep -E 'hdf5|openblas|tbb'
+  brew list --formula | grep -E 'hdf5|openblas|libomp'
   ```
 * **Debian / Ubuntu**:
   ```bash
-  dpkg -l | grep -E 'libhdf5-dev|libopenblas-dev|libtbb-dev'
+  dpkg -l | grep -E 'libhdf5-dev|libopenblas-dev|libomp-dev'
   ```
 * **Conda / Mamba**:
   ```bash
-  conda list | grep -E 'hdf5|openblas|tbb'
+  conda list | grep -E 'hdf5|openblas|llvm-openmp'
   ```
 
 ### Checking HPC Environment Modules (`Lmod` / `module spider`)
-On supercomputing clusters, modules often require loading prerequisite compilers or MPI stacks first. Use `module spider` to inspect available modules and their prerequisite chains:
+On supercomputing clusters, OpenMP is natively supported by the compiler module (e.g. `gcc`, `aocc`, `intel`). Use `module spider` to inspect available compiler and library modules:
 
 ```bash
 # Check compiler, OpenBLAS, and HDF5
 module spider gcc
 module spider openblas
 module spider hdf5
-
-# Check TBB (try common module aliases if 'tbb' is not found)
-module spider tbb
-module spider onetbb
-module spider intel-oneapi-tbb
-module spider imkl
 ```
 
 Example workflow on an Lmod-based HPC cluster:
 ```bash
-# 1. Load compiler and prerequisite stacks (as indicated by module spider)
+# 1. Load compiler (provides native OpenMP support) and MPI stack
 module load gcc/15.2.0 openmpi/5.0.10
 
 # 2. Load math and I/O libraries
@@ -91,7 +84,7 @@ If dependencies are missing on your workstation or cluster, install them using y
 
 ### macOS (Homebrew)
 ```bash
-brew install cmake ninja hdf5 openblas tbb
+brew install cmake ninja hdf5 openblas libomp
 ```
 *(Apple Accelerate is also detected automatically out-of-the-box on macOS).*
 
@@ -99,30 +92,28 @@ brew install cmake ninja hdf5 openblas tbb
 ```bash
 sudo apt update
 sudo apt install -y cmake ninja-build build-essential \
-                    libhdf5-dev libopenblas-dev libtbb-dev \
+                    libhdf5-dev libopenblas-dev libomp-dev \
                     python3-dev python3-pip
 ```
 
 ### Fedora / RHEL (`dnf`)
 ```bash
 sudo dnf install -y cmake ninja-build gcc-c++ \
-                    hdf5-devel openblas-devel tbb-devel \
+                    hdf5-devel openblas-devel libgomp \
                     python3-devel
 ```
 
 ### Arch Linux (`pacman`)
 ```bash
-sudo pacman -S cmake ninja hdf5 openblas intel-oneapi-tbb python
+sudo pacman -S cmake ninja hdf5 openblas openmp python
 ```
 
 ### Conda / Mamba (Recommended for User-Space HPC Environments)
 ```bash
 conda install -c conda-forge cmake ninja compilers \
-                            hdf5 openblas tbb-devel pybind11
+                            hdf5 openblas pybind11
 ```
 *(When using Conda, CMake will automatically locate dependencies inside `$CONDA_PREFIX`).*
-
-> **Note on oneTBB**: If your environment does not have TBB installed, CMake will automatically fetch and compile `oneTBB` via `FetchContent` during configuration. No manual installation is needed!
 
 ---
 

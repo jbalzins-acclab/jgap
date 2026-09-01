@@ -2,9 +2,11 @@
 #define JGAP_GAPCOMPONENTUTILS_HPP
 
 #include <map>
+#include <optional>
 #include <set>
 #include <vector>
 
+#include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
@@ -35,9 +37,17 @@ namespace jgap::utils {
             all_species_sets.insert(sets.begin(), sets.end());
         }
 
+        std::vector<Species2Sorted> species_vec(all_species_sets.begin(), all_species_sets.end());
+        std::vector<std::optional<TwoBodyGapComponent<Dim, TKernel>>> components_opt(species_vec.size());
+
+        unseqForIndex(0, species_vec.size(), [&](size_t i) {
+            components_opt[i].emplace(species_vec[i], transformation, kernel, sparsifier, training_data);
+        });
+
         std::vector<TwoBodyGapComponent<Dim, TKernel>> components;
-        for (const auto& species_set: all_species_sets) {
-            components.emplace_back(species_set, transformation, kernel, sparsifier, training_data);
+        components.reserve(species_vec.size());
+        for (auto& comp: components_opt) {
+            components.push_back(std::move(*comp));
         }
 
         return components;
@@ -59,9 +69,17 @@ namespace jgap::utils {
             all_species_sets.insert(sets.begin(), sets.end());
         }
 
+        std::vector<Species3AtomicSorted> species_vec(all_species_sets.begin(), all_species_sets.end());
+        std::vector<std::optional<ThreeBodyGapComponent<Dim, TKernel>>> components_opt(species_vec.size());
+
+        unseqForIndex(0, species_vec.size(), [&](size_t i) {
+            components_opt[i].emplace(species_vec[i], transformation, kernel, sparsifier, training_data);
+        });
+
         std::vector<ThreeBodyGapComponent<Dim, TKernel>> components;
-        for (const auto& species_set: all_species_sets) {
-            components.emplace_back(species_set, transformation, kernel, sparsifier, training_data);
+        components.reserve(species_vec.size());
+        for (auto& comp: components_opt) {
+            components.push_back(std::move(*comp));
         }
 
         return components;
@@ -80,12 +98,24 @@ namespace jgap::utils {
         EamMode mode,
         const std::vector<Real>& optional_coeffs = {}
     ) {
+        auto aggregators_map = createEamAggregators(base_pf, training_data, mode);
+        std::vector<ValuePtr<NBodyAggregator<1>>> aggregators_vec;
+        aggregators_vec.reserve(aggregators_map.size());
+        for (auto& [species, agg]: aggregators_map) {
+            aggregators_vec.push_back(std::move(agg));
+        }
 
-        auto aggregators = createEamAggregators(base_pf, training_data, mode);
+        std::vector<std::optional<ManyBodyGapComponent<1, TKernel>>> components_opt(aggregators_vec.size());
+        unseqForIndex(0, aggregators_vec.size(), [&](size_t i) {
+            components_opt[i].emplace(
+                std::move(aggregators_vec[i]), kernel, sparsifier, training_data, optional_coeffs
+            );
+        });
+
         std::vector<ManyBodyGapComponent<1, TKernel>> components;
-
-        for (auto& [central_species, aggregator]: aggregators) {
-            components.emplace_back(std::move(aggregator), kernel, sparsifier, training_data, optional_coeffs);
+        components.reserve(aggregators_vec.size());
+        for (auto& comp: components_opt) {
+            components.push_back(std::move(*comp));
         }
 
         return components;
@@ -125,11 +155,24 @@ namespace jgap::utils {
         const std::vector<Atoms>& training_data,
         const std::vector<Real>& optional_coeffs = {}
     ) {
-        auto aggregators = createCoordinationAggregators<Dim>(base_transform, training_data);
-        std::vector<ManyBodyGapComponent<Dim, TKernel>> components;
+        auto aggregators_map = createCoordinationAggregators<Dim>(base_transform, training_data);
+        std::vector<ValuePtr<NBodyAggregator<Dim>>> aggregators_vec;
+        aggregators_vec.reserve(aggregators_map.size());
+        for (auto& [species, agg]: aggregators_map) {
+            aggregators_vec.push_back(std::move(agg));
+        }
 
-        for (auto& [central_species, aggregator]: aggregators) {
-            components.emplace_back(std::move(aggregator), kernel, sparsifier, training_data, optional_coeffs);
+        std::vector<std::optional<ManyBodyGapComponent<Dim, TKernel>>> components_opt(aggregators_vec.size());
+        unseqForIndex(0, aggregators_vec.size(), [&](size_t i) {
+            components_opt[i].emplace(
+                std::move(aggregators_vec[i]), kernel, sparsifier, training_data, optional_coeffs
+            );
+        });
+
+        std::vector<ManyBodyGapComponent<Dim, TKernel>> components;
+        components.reserve(aggregators_vec.size());
+        for (auto& comp: components_opt) {
+            components.push_back(std::move(*comp));
         }
 
         return components;
@@ -172,11 +215,24 @@ namespace jgap::utils {
         const std::vector<Atoms>& training_data,
         const std::vector<Real>& optional_coeffs = {}
     ) {
-        auto aggregators = createMeamAggregators(base_transform, training_data);
-        std::vector<ManyBodyGapComponent<3, TKernel>> components;
+        auto aggregators_map = createMeamAggregators(base_transform, training_data);
+        std::vector<ValuePtr<NBodyAggregator<3>>> aggregators_vec;
+        aggregators_vec.reserve(aggregators_map.size());
+        for (auto& [species, agg]: aggregators_map) {
+            aggregators_vec.push_back(std::move(agg));
+        }
 
-        for (auto& [central_species, aggregator]: aggregators) {
-            components.emplace_back(std::move(aggregator), kernel, sparsifier, training_data, optional_coeffs);
+        std::vector<std::optional<ManyBodyGapComponent<3, TKernel>>> components_opt(aggregators_vec.size());
+        unseqForIndex(0, aggregators_vec.size(), [&](size_t i) {
+            components_opt[i].emplace(
+                std::move(aggregators_vec[i]), kernel, sparsifier, training_data, optional_coeffs
+            );
+        });
+
+        std::vector<ManyBodyGapComponent<3, TKernel>> components;
+        components.reserve(aggregators_vec.size());
+        for (auto& comp: components_opt) {
+            components.push_back(std::move(*comp));
         }
 
         return components;
