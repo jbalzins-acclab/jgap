@@ -174,7 +174,7 @@ TEST(TestThreeBodyGapComponent, TabulationThreeBody) {
 
     for (size_t i = 0; i < grid.data_flat.size(); ++i) {
         auto grid_pos = grid.getCoord(grid.getIndices(i));
-        auto triplet = TabulationData::gridPosAsCluster3(grid_pos);
+        auto [triplet, _] = TabulationData::gridPosAsCluster3(grid_pos, species);
 
         auto transformed = trans->evaluate(triplet);
         Real K = kernel.value(sparse_points[0], transformed);

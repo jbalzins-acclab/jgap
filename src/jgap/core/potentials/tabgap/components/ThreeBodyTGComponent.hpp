@@ -26,6 +26,8 @@ namespace jgap {
 
         const auto& getSpline() const { return spline; }
 
+        const Cluster3Expansion& getExpansion() const { return expansion; }
+
     private:
         Species3AtomicSorted species;
         CubicBSpline3D spline;

@@ -1,5 +1,6 @@
 #include "CubicBSpline3D.hpp"
 #include "CubicBSpline.hpp"
+#include "jgap/core/UnseqFor.hpp"
 
 #include <cmath>
 
@@ -22,7 +23,7 @@ namespace jgap {
         }
 
         Grid<3> temp1({Nx, My, Mz}, values.spacing, new_origin);
-        for (size_t iy = 0; iy < My; ++iy) {
+        unseqForIndex(0, My, [&](size_t iy) {
             for (size_t iz = 0; iz < Mz; ++iz) {
                 std::vector<Real> slice(Mx);
                 for (size_t ix = 0; ix < Mx; ++ix) {
@@ -33,10 +34,10 @@ namespace jgap {
                     temp1({ix, iy, iz}) = coeffs[ix];
                 }
             }
-        }
+        });
 
         Grid<3> temp2({Nx, Ny, Mz}, values.spacing, new_origin);
-        for (size_t ix = 0; ix < Nx; ++ix) {
+        unseqForIndex(0, Nx, [&](size_t ix) {
             for (size_t iz = 0; iz < Mz; ++iz) {
                 std::vector<Real> slice(My);
                 for (size_t iy = 0; iy < My; ++iy) {
@@ -47,10 +48,10 @@ namespace jgap {
                     temp2({ix, iy, iz}) = coeffs[iy];
                 }
             }
-        }
+        });
 
         Grid<3> final_coeff({Nx, Ny, Nz}, values.spacing, new_origin);
-        for (size_t ix = 0; ix < Nx; ++ix) {
+        unseqForIndex(0, Nx, [&](size_t ix) {
             for (size_t iy = 0; iy < Ny; ++iy) {
                 std::vector<Real> slice(Mz);
                 for (size_t iz = 0; iz < Mz; ++iz) {
@@ -61,7 +62,7 @@ namespace jgap {
                     final_coeff({ix, iy, iz}) = coeffs[iz];
                 }
             }
-        }
+        });
 
         return CubicBSpline3D(final_coeff);
     }

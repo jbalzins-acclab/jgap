@@ -42,9 +42,8 @@ namespace jgap {
         Species(const Species& other) = default;
         Species& operator=(const Species& other) = default;
 
-        Species(const std::string& symbol) {
+        static void ensureInitialized() {
             std::lock_guard lock(Mtx);
-
             if (SymbolIds.empty()) {
                 IdSymbols[0] = "AnonymousSpecies";
                 SymbolIds["AnonymousSpecies"] = 0;
@@ -54,6 +53,11 @@ namespace jgap {
                     SymbolIds[element_symbol] = Z;
                 }
             }
+        }
+
+        Species(const std::string& symbol) {
+            ensureInitialized();
+            std::lock_guard lock(Mtx);
 
             if (SymbolIds.contains(symbol)) {
                 id = SymbolIds[symbol];
@@ -68,9 +72,15 @@ namespace jgap {
 
         Species(const char* symbol) : Species(std::string(symbol)) {}
 
-        Species(uint16_t id) : id(id) { assert(IdSymbols.contains(id) && "Unknown species ID"); }
+        Species(uint16_t id) : id(id) {
+            ensureInitialized();
+            assert(IdSymbols.contains(id) && "Unknown species ID");
+        }
 
-        std::string symbol() const { return IdSymbols.at(id); }
+        std::string symbol() const {
+            ensureInitialized();
+            return IdSymbols.at(id);
+        }
 
         uint16_t getId() const { return id; }
 

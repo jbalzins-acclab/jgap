@@ -9,5 +9,8 @@ vcpkg_installed/*
 .vscode*
 test-local/*
 build*/*
+build/
 .cache/*
 *.log
+CMakeUserPresets.json
+compile_commands.json

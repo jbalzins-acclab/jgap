@@ -1,124 +1,214 @@
 # JGAP
-## Overview
 
+A high-performance C++23 library, command-line tool, and Python framework for fitting and evaluating **Gaussian Approximation Potentials (GAP)**, **Tabulated GAP (tabGAP)**, and **Embedded Atom Method (EAM)** potentials.
 
-## Compilation/Run guide
-### Prerequisites
-- CMake 3.11+
-- A C++23 compiler. **GCC 15+ is recommended**: jgap uses `#embed` (GCC 15 / Clang ≥ 19) to bake the
-  built-in screening datasets into the binary. Older C++23 compilers (GCC 14, AppleClang) still build
-  and fit — without `#embed` those datasets are instead read at runtime from
-  `resources/dmol-screening-fit/`, so you must run with the `resources/` folder present (or pass an
-  explicit screening dataset file; see `standard_fit`'s optional argument and `StandardGapParams::screened_coulomb_dataset_file`).
-  Get a suitable compiler if needed:
-  - Puhti / HPC modules: `module load gcc/15` (or the newest available)
-  - Homebrew: `brew install gcc` then `export CC=gcc-15 CXX=g++-15` (the default `c++` on macOS is
-    AppleClang, so you must point CMake at the Homebrew GCC — via these vars or
-    `-DCMAKE_CXX_COMPILER=g++-15`)
-  - conda (no sudo): `conda install -c conda-forge 'gxx>=15'` then
-    `export CC=$CONDA_PREFIX/bin/gcc CXX=$CONDA_PREFIX/bin/g++`
-  - Spack: `spack install gcc@15` (then `spack load gcc@15`)
+---
 
-### Dependencies
-- **Required:** Eigen3 (header-only), oneTBB, HighFive (+ HDF5).
-- **Optional:** pugixml (QUIP `.xml` conversion — see below); a BLAS such as OpenBLAS.
-  - A BLAS is **strongly recommended** — it does the heavy linear algebra and is a large speedup for
-    fitting. Without one, jgap falls back to Eigen's own routines and enables Eigen's OpenMP
-    multi-threading (if OpenMP is available) so they at least run in parallel; a BLAS is still faster.
+## 1. Prerequisites
 
-Install them with **any one** of the package managers below, then point CMake at them:
-- vcpkg → pass its toolchain file (`-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`)
-- everything else → pass the install prefix(es) via `-DCMAKE_PREFIX_PATH=...`
+* **CMake $\ge$ 3.25** and **Ninja** (recommended).
+* **C++23 Compliant Compiler**:
+  * **GCC $\ge$ 15** or **Clang $\ge$ 19** (recommended for `#embed` support of built-in screening parameters).
+  * **AppleClang $\ge$ 16** (Xcode 16+) is fully supported.
+  * **GCC 14** / older C++23 compilers work seamlessly by loading runtime screening tables from `resources/`.
 
-CMake finds each dependency through its CMake config package, so any source that installs those works.
-A missing optional dependency is detected automatically (a `-- ...` status line reports it).
+---
 
-#### vcpkg (manifest in `vcpkg.json`)
-> Recommended on personal machines (laptops/desktops), where it gives a clean, reproducible build.
-> On HPC clusters it works but use it with care: vcpkg builds every dependency from source and keeps
-> large build trees and caches, creating a great many files — which can strain quota- or inode-limited
-> shared filesystems. There, prefer the cluster's environment modules, Spack, or conda.
+## 2. Dependencies Overview
 
+`jgap` uses a modern hybrid dependency model:
+
+### Automatic Dependencies (via CMake `FetchContent`)
+The following C++ libraries are **automatically downloaded and configured** during CMake build. You do **not** need to install them manually:
+* **Eigen3** ($\ge 3.4.0$) — Linear algebra template library.
+* **HighFive** ($\ge 3.0.0$) — Header-only modern C++ wrapper for HDF5.
+* **pugixml** ($\ge 1.15$) — XML parser for QUIP potential conversion (`jgap_convert`).
+* **oneTBB** ($\ge 2022.0.0$) — Auto-fetched for multi-core parallelization if not found on the host system.
+* **GoogleTest** ($\ge 1.14$) — Unit testing framework (Debug builds only).
+
+### Host System Dependencies
+The following native runtime libraries should be present on your host system:
+1. **HDF5** (`libhdf5`) — **Required** for reading/writing `.jgap.h5` and `.tabgap.h5` files.
+2. **BLAS / OpenBLAS** — **Strongly Recommended** for accelerated linear algebra (`EIGEN_USE_BLAS`). (On macOS, Apple Accelerate is used automatically if OpenBLAS is not present).
+3. **oneTBB** (`libtbb`) — **Optional / Auto-fetched** (`HAS_TBB`). If a host/module TBB is present, it will be used; otherwise CMake automatically downloads and compiles oneTBB.
+4. **Python $\ge$ 3.10 + pybind11** — **Optional** for building the `jgap` Python package and ASE calculator.
+
+---
+
+## 3. How to Check Existing Host Dependencies
+
+Before installing new packages, you can verify whether your system or HPC cluster already provides them:
+
+### Using `pkg-config`
 ```bash
-git clone https://github.com/microsoft/vcpkg.git
-cd vcpkg && ./bootstrap-vcpkg.sh
-export VCPKG_ROOT=$PWD && export PATH=$VCPKG_ROOT:$PATH
-cd <jgap>   # vcpkg install reads vcpkg.json
-vcpkg install
-# then configure jgap with -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+pkg-config --modversion hdf5 openblas tbb
 ```
 
-#### Homebrew (macOS / Linux)
+### Checking Package Managers
+* **macOS (Homebrew)**:
+  ```bash
+  brew list --formula | grep -E 'hdf5|openblas|tbb'
+  ```
+* **Debian / Ubuntu**:
+  ```bash
+  dpkg -l | grep -E 'libhdf5-dev|libopenblas-dev|libtbb-dev'
+  ```
+* **Conda / Mamba**:
+  ```bash
+  conda list | grep -E 'hdf5|openblas|tbb'
+  ```
+
+### Checking HPC Environment Modules (`Lmod` / `module spider`)
+On supercomputing clusters, modules often require loading prerequisite compilers or MPI stacks first. Use `module spider` to inspect available modules and their prerequisite chains:
+
 ```bash
-brew install cmake eigen tbb hdf5 openblas pugixml
-# HighFive is not in homebrew-core — install it via conda/spack or from git (below).
-# configure with: -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+# Check compiler, OpenBLAS, and HDF5
+module spider gcc
+module spider openblas
+module spider hdf5
+
+# Check TBB (try common module aliases if 'tbb' is not found)
+module spider tbb
+module spider onetbb
+module spider intel-oneapi-tbb
+module spider imkl
 ```
 
-#### conda (conda-forge)
+Example workflow on an Lmod-based HPC cluster:
 ```bash
-conda install -c conda-forge eigen tbb-devel highfive hdf5 openblas pugixml
-# configure with: -DCMAKE_PREFIX_PATH="$CONDA_PREFIX"
+# 1. Load compiler and prerequisite stacks (as indicated by module spider)
+module load gcc/15.2.0 openmpi/5.0.10
+
+# 2. Load math and I/O libraries
+module load openblas/0.3.30 hdf5/1.14.6
 ```
 
-#### Spack
+---
+
+## 4. Installing Host Dependencies
+
+If dependencies are missing on your workstation or cluster, install them using your preferred method:
+
+### macOS (Homebrew)
 ```bash
-spack install eigen intel-tbb highfive openblas pugixml
-spack load eigen intel-tbb highfive openblas pugixml   # sets CMAKE_PREFIX_PATH
+brew install cmake ninja hdf5 openblas tbb
+```
+*(Apple Accelerate is also detected automatically out-of-the-box on macOS).*
+
+### Ubuntu / Debian (`apt`)
+```bash
+sudo apt update
+sudo apt install -y cmake ninja-build build-essential \
+                    libhdf5-dev libopenblas-dev libtbb-dev \
+                    python3-dev python3-pip
 ```
 
-#### From git (build/install from source)
-Useful for header-only or unpackaged deps. Each ships a CMake install; install to a common `<prefix>`
-and add it to `CMAKE_PREFIX_PATH`. Example (HighFive, which needs HDF5):
+### Fedora / RHEL (`dnf`)
 ```bash
-git clone --depth 1 https://github.com/BlueBrain/HighFive
-cmake -S HighFive -B HighFive/build -DHIGHFIVE_UNIT_TESTS=OFF -DHIGHFIVE_EXAMPLES=OFF \
-      -DCMAKE_INSTALL_PREFIX=<prefix>
-cmake --build HighFive/build --target install
+sudo dnf install -y cmake ninja-build gcc-c++ \
+                    hdf5-devel openblas-devel tbb-devel \
+                    python3-devel
 ```
-Eigen (https://gitlab.com/libeigen/eigen) and pugixml (https://github.com/zeux/pugixml) install the same
-way; oneTBB is at https://github.com/uxlfoundation/oneTBB.
 
-### Optional: XML (QUIP) support
-QUIP `.xml` conversion needs `pugixml`. If `pugixml` is not found, CMake automatically drops the
-`QuipXmlConverter` sources and the `jgap_convert` app (a status line reports which way it went);
-everything else builds unchanged.
-- Other package managers: simply install (or don't install) `pugixml`.
-- vcpkg: `pugixml` is the default-on `xml` feature; build without it via
-  `vcpkg install --no-default-features` or, at configure time,
-  `-DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON`.
-### Compile
-Configure with whichever dependency source you used (see Dependencies), then build:
+### Arch Linux (`pacman`)
 ```bash
-# with vcpkg:
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-      -DCMAKE_BUILD_TYPE=Release
-
-# without vcpkg (Homebrew / conda / Spack / from-source) — point at the install prefix(es) instead:
-cmake -B build -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DCMAKE_BUILD_TYPE=Release   # e.g. Homebrew
-# (conda: $CONDA_PREFIX; Spack: usually set by `spack load`; multiple prefixes: ";"-separated)
-
-cmake --build build -j
+sudo pacman -S cmake ninja hdf5 openblas intel-oneapi-tbb python
 ```
-Add `-DCMAKE_CXX_COMPILER=g++-15` (or your C++23 compiler) if it isn't the default.
-### Install (to use jgap as a library)
-To consume jgap from another CMake project (see `examples/`), install it to a prefix:
+
+### Conda / Mamba (Recommended for User-Space HPC Environments)
 ```bash
-cmake --install build --prefix <prefix>
+conda install -c conda-forge cmake ninja compilers \
+                            hdf5 openblas tbb-devel pybind11
 ```
-A downstream project then only needs `find_package(jgap CONFIG REQUIRED)` and
-`target_link_libraries(<target> PRIVATE jgap::jgap)` — that pulls in jgap's headers and its public
-dependencies. (The dependency CMake configs must be on `CMAKE_PREFIX_PATH`; when jgap is built with
-vcpkg they live in `<build>/vcpkg_installed/<triplet>`.)
-This produces:
-- `libjgap` — the library (link it as `jgap::jgap`; see "Install" above and `examples/`).
-- `jgap` — CLI for using a serialized potential.
-- `jgap_convert` — QUIP `.xml` → `.h5` converter (only when `pugixml` is available).
-### Run
-- `jgap --predict <pot.h5> <in.xyz> <out.xyz>` — predict energy/forces for every frame in `in.xyz`.
-- `jgap --tabulate <pot.h5> [r_min_3b=..] [max_eam_density=..] [n_grid_2b=..] [n_grid_3b=a,b,c]` —
-  writes `<pot>.tabgap.h5` plus the EAM `<pot>.eam.fs` file(s).
-- `jgap_convert <quip.xml> [out.h5]` — convert a QUIP potential to a serialized `.h5`.
-  - warn: sensitive to format changes in quip.xml — check the code upon error.
+*(When using Conda, CMake will automatically locate dependencies inside `$CONDA_PREFIX`).*
 
-Fitting a potential is done through the library API (no dedicated CLI yet) — see `examples/Main.cpp`.
+> **Note on oneTBB**: If your environment does not have TBB installed, CMake will automatically fetch and compile `oneTBB` via `FetchContent` during configuration. No manual installation is needed!
+
+---
+
+## 5. Building and Testing with CMake Presets
+
+`jgap` provides built-in `CMakePresets.json` profiles for all standard workflows:
+
+### Fast Developer Workflow (Debug + Build + Run All Tests)
+```bash
+cmake --workflow --preset dev
+```
+
+### Release Build (Optimized with `-O3 -ffast-math -march=native`)
+```bash
+cmake --preset release
+cmake --build --preset release
+```
+
+### Install Library, CLI & Python Bindings (to `$HOME/.local`)
+```bash
+cmake --workflow --preset install
+```
+*(To install to a custom prefix or virtual environment, run `cmake --preset release -DCMAKE_INSTALL_PREFIX=/path/to/prefix && cmake --build --preset install`).*
+
+### Run Unit Tests
+```bash
+ctest --preset debug
+```
+
+### AddressSanitizer (Memory Diagnostics)
+```bash
+cmake --preset asan
+cmake --build --preset asan
+ctest --preset asan
+```
+
+---
+
+## 6. Python Package & ASE Calculator
+
+After building or installing `jgap`, the Python bindings are available in `python/jgap`:
+
+```python
+import jgap
+from ase.io import read
+
+# Standard GAP potential fit
+fitter = jgap.StandardGapFit(
+    cutoff_2b=5.0,
+    cutoff_3b=4.0,
+    delta_2b=0.01,
+    delta_3b=0.05,
+    approx_ram_limit_gb=16.0
+)
+fitter.fit("train.xyz")
+fitter.save("potential.jgap.h5")
+
+# Tabulate into fast EAM / tabGAP
+jgap.StandardTabulation.tabulate("potential.jgap.h5", "potential")
+```
+
+Using as an ASE Calculator:
+```python
+from jgap.ase import JGAPCalculator
+from ase.io import read
+
+atoms = read("structure.xyz")
+atoms.calc = JGAPCalculator("potential.jgap.h5")
+
+energy = atoms.get_potential_energy()
+forces = atoms.get_forces()
+```
+
+---
+
+## 7. Command-Line Tools
+
+* **Predict Energy & Forces**:
+  ```bash
+  jgap --predict potential.jgap.h5 input.xyz output.xyz
+  ```
+* **Tabulate Potential (to EAM `.eam.fs` and tabGAP `.tabgap.h5`)**:
+  ```bash
+  jgap --tabulate potential.jgap.h5
+  ```
+* **Convert QUIP XML to HDF5**:
+  ```bash
+  jgap_convert potential.xml potential.jgap.h5
+  ```

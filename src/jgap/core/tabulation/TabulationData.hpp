@@ -2,6 +2,8 @@
 #define JGAP_TABULATIONDATA_HPP
 
 #include <map>
+#include <optional>
+#include <utility>
 
 #include "AtomicThreeBodyGrids.hpp"
 #include "AtomicTwoBodyGrids.hpp"
@@ -10,6 +12,7 @@
 #include "TwoBodyGrids.hpp"
 #include "jgap/core/atomic/geometry/Cluster2.hpp"
 #include "jgap/core/atomic/geometry/Cluster3.hpp"
+#include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/splines/Grid.hpp"
 
 namespace jgap {
@@ -59,9 +62,14 @@ namespace jgap {
 
     struct TabulationData : TabGapData {
         static Cluster2 gridPosAsCluster2(std::array<Real, 1> grid_pos);
-        static Cluster3 gridPosAsCluster3(std::array<Real, 3> grid_pos);
+        static std::pair<Cluster3, std::optional<Cluster3>> gridPosAsCluster3(
+            std::array<Real, 3> grid_pos, const Species3AtomicSorted& species
+        );
 
         explicit TabulationData(const TabulationParams& params) : TabGapData(params) {}
+
+    private:
+        static Cluster3 gridPosAsCluster3(std::array<Real, 3> grid_pos);
     };
 
     inline Cluster2 TabulationData::gridPosAsCluster2(std::array<Real, 1> grid_pos) {
@@ -84,6 +92,19 @@ namespace jgap {
         res.separation02.magnitude = r02;
         res.separation12.magnitude = r12;
         return res;
+    }
+
+    inline std::pair<Cluster3, std::optional<Cluster3>> TabulationData::gridPosAsCluster3(
+        std::array<Real, 3> grid_pos, const Species3AtomicSorted& species
+    ) {
+        Cluster3 cluster1 = gridPosAsCluster3(grid_pos);
+        if (species.nodes[0] == species.nodes[1]) {
+            Cluster3 cluster2 = cluster1;
+            cluster2.separation01.magnitude = cluster1.separation02.magnitude;
+            cluster2.separation02.magnitude = cluster1.separation01.magnitude;
+            return {cluster1, cluster2};
+        }
+        return {cluster1, std::nullopt};
     }
 }
 

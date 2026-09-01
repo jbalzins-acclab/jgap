@@ -7,6 +7,7 @@
 #include "../../../transform/nbody/3b/ThreeBodyTransformation.hpp"
 #include "GapComponent.hpp"
 #include "jgap/core/Matrix.hpp"
+#include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/atomic/energy/AtomicQuantities.hpp"
 #include "jgap/core/atomic/iteration/Cluster3Expansion.hpp"
 #include "jgap/core/atomic/iteration/ClusterPermutationMode.hpp"
@@ -117,19 +118,24 @@ namespace jgap {
             auto& table = tables.three_body_grids.getValueGrid(species);
             const Real iteration_reduction_factor = expansion.getPermutationReductionFactor();
 
-            for (size_t i = 0; i < table.data_flat.size(); ++i) {
+            unseqForIndex(0, table.data_flat.size(), [&](size_t i) {
                 auto indices = table.getIndices(i);
                 auto pos = table.getCoord(indices);
 
-                auto cluster = TabulationData::gridPosAsCluster3(pos);
-                auto transformed = transformation->evaluate(cluster);
+                auto [cluster1, optional_cluster2] = TabulationData::gridPosAsCluster3(pos, species);
+                auto transformed1 = transformation->evaluate(cluster1);
 
-                Real& value = table.data_flat[i];
+                Real value = 0.0;
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
-                    value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed)
-                             * iteration_reduction_factor;
+                    Real k_val = kernel.value(sparse_points[sparse_idx], transformed1);
+                    if (optional_cluster2.has_value()) {
+                        auto transformed2 = transformation->evaluate(*optional_cluster2);
+                        k_val = 0.5 * (k_val + kernel.value(sparse_points[sparse_idx], transformed2));
+                    }
+                    value += coeffs[sparse_idx] * k_val * iteration_reduction_factor;
                 }
-            }
+                table.data_flat[i] += value;
+            });
         }
 
     private:

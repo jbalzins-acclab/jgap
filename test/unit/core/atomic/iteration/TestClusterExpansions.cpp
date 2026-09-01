@@ -34,9 +34,12 @@ TEST(TestClusterExpansions, PBC1AtomCellCluster3) {
 
     auto nl = NeighbourLists(atoms, 2.5);
 
-    // Cluster3Expansion gives 6 atom-centric triplets
+    // Cluster3Expansion gives 12 atom-centric triplets (6 pairs x 2 permutations)
     Cluster3Expansion ac3e(Species3AtomicSorted("Fe|Fe,Fe"));
-    EXPECT_EQ(ac3e.expand(0, nl).size(), 6);
+    EXPECT_EQ(ac3e.expand(0, nl).size(), 12);
+
+    Cluster3Expansion ac3e_no_perm(Species3AtomicSorted("Fe|Fe,Fe"), ClusterPermutationMode::NoNodePermutation);
+    EXPECT_EQ(ac3e_no_perm.expand(0, nl).size(), 6);
 }
 
 TEST(TestClusterExpansions, Cluster2Expansion_Species2Atomic) {

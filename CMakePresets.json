@@ -1,0 +1,173 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with unit tests enabled and compile commands exported",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Optimized Release build (-O3 -ffast-math -march=native)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -ffast-math -march=native",
+        "CMAKE_INSTALL_PREFIX": "$env{HOME}/.local"
+      }
+    },
+    {
+      "name": "release-tests",
+      "displayName": "Release with Tests",
+      "description": "Optimized Release build with unit tests enabled",
+      "inherits": "release",
+      "cacheVariables": {
+        "JGAP_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "displayName": "Release with Debug Info",
+      "description": "Optimized release with debug symbols for profiling",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -ffast-math -march=native"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "AddressSanitizer",
+      "description": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS_DEBUG": "-g -fsanitize=address,undefined -fno-omit-frame-pointer"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "release-tests",
+      "configurePreset": "release-tests"
+    },
+    {
+      "name": "relwithdebinfo",
+      "configurePreset": "relwithdebinfo"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "install",
+      "configurePreset": "release",
+      "targets": ["install"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release-tests",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "displayName": "Developer Cycle (Debug)",
+      "description": "Configure, build, and run tests in Debug mode",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    },
+    {
+      "name": "ci",
+      "displayName": "CI Workflow (Release + Tests)",
+      "description": "Configure, build Release targets, and run tests in Release mode",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "release-tests"
+        },
+        {
+          "type": "build",
+          "name": "release-tests"
+        },
+        {
+          "type": "test",
+          "name": "release"
+        }
+      ]
+    },
+    {
+      "name": "install",
+      "displayName": "Install Workflow (Release)",
+      "description": "Configure, build Release target, and install to CMAKE_INSTALL_PREFIX",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "release"
+        },
+        {
+          "type": "build",
+          "name": "install"
+        }
+      ]
+    }
+  ]
+}

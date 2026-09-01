@@ -158,3 +158,99 @@ TEST(TestTabGapPotential, EamPotentialTabulationAccuracy) {
         EXPECT_NEAR(tabgap_res.virials.zz, orig_res.virials.zz, 1e-3);
     }
 }
+
+TEST(TestTabGapPotential, ThreeBodySameSpeciesClusterPermutationModeAndEnergyMatching) {
+    Species3AtomicSorted same_species("Fe", "Fe", "Fe");
+    Angle3bTransformation triplet_trans(CosCutoff(4.0, 0.5));
+    SquaredExpKernel<3, 1> triplet_kernel(1.0, std::array<Real, 3>{1.0, 1.0, 1.0});
+    std::vector<Descriptor<4>> triplet_sparse = {{5.0, 0.0, 2.5, 1.0}, {4.0, 0.5, 2.0, 1.0}};
+    std::vector<Real> triplet_coeffs = {0.7, -0.3};
+
+    auto three_body_comp = ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
+        same_species, ValuePtr<ThreeBodyTransformation<4>>(triplet_trans), triplet_kernel, triplet_sparse,
+        triplet_coeffs
+    );
+
+    GapPotential gap;
+    gap.addComponent(three_body_comp);
+
+    TabulationData tables = gap.tabulate({
+        .max_cutoffs = gap.getCutoffs(),
+        .n_grid_3b = {30, 30, 30},
+    });
+
+    TabGapPotential tabgap(tables);
+
+    const auto& three_body_map = tabgap.getThreeBodyComponents();
+    ASSERT_TRUE(three_body_map.contains(same_species));
+    const auto& tg_3b = three_body_map.at(same_species);
+
+    // Verify ClusterPermutationMode is NoNodePermutation
+    EXPECT_EQ(tg_3b.getExpansion().getMode(), ClusterPermutationMode::NoNodePermutation);
+
+    // Configuration of 4 Fe atoms (forming multiple triplets around central atoms)
+    Atoms atoms(
+        {
+            {0.0, 0.0, 0.0},
+            {2.0, 0.0, 0.0},
+            {0.0, 2.2, 0.0},
+            {1.5, 1.5, 0.0},
+        },
+        {Species("Fe"), Species("Fe"), Species("Fe"), Species("Fe")}
+    );
+
+    auto gap_res = gap.calculateEnergy(atoms);
+    auto tabgap_res = tabgap.calculateEnergy(atoms);
+
+    // If permutation mode was wrong (PermuteSameSpeciesNodes), tabgap_res would be 2x gap_res.
+    EXPECT_NEAR(tabgap_res.value, gap_res.value, 1e-3);
+    for (size_t i = 0; i < atoms.nAtoms(); ++i) {
+        EXPECT_NEAR(tabgap_res.forces[i].x, gap_res.forces[i].x, 1e-2);
+        EXPECT_NEAR(tabgap_res.forces[i].y, gap_res.forces[i].y, 1e-2);
+        EXPECT_NEAR(tabgap_res.forces[i].z, gap_res.forces[i].z, 1e-2);
+    }
+}
+
+TEST(TestTabGapPotential, ThreeBodySymmetricDistanceSwapCheck) {
+    Species3AtomicSorted same_species("Fe", "Fe", "Fe");
+
+    // Create an asymmetric 3D grid
+    Grid<3> asymm_grid(
+        std::array<size_t, 3>{4, 4, 4},
+        std::array<Real, 3>{0.5, 0.5, 0.5},
+        std::array<Real, 3>{1.0, 1.0, -1.0}
+    );
+    // Fill with values such that grid({1, 2, 0}) != grid({2, 1, 0})
+    for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t k = 0; k < 4; ++k) {
+                asymm_grid({i, j, k}) = static_cast<Real>(i * 10 + j + k);
+            }
+        }
+    }
+
+    CubicBSpline3D asymm_spline(asymm_grid);
+    EXPECT_THROW(
+        ThreeBodyTGComponent(same_species, asymm_spline),
+        std::runtime_error
+    );
+
+    // Create a symmetric 3D grid: grid(i, j, k) == grid(j, i, k)
+    Grid<3> symm_grid(
+        std::array<size_t, 3>{4, 4, 4},
+        std::array<Real, 3>{0.5, 0.5, 0.5},
+        std::array<Real, 3>{1.0, 1.0, -1.0}
+    );
+    for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 4; ++j) {
+            for (size_t k = 0; k < 4; ++k) {
+                symm_grid({i, j, k}) = static_cast<Real>((i + j) * 10 + (i * j) + k);
+            }
+        }
+    }
+
+    CubicBSpline3D symm_spline(symm_grid);
+    EXPECT_NO_THROW(
+        ThreeBodyTGComponent(same_species, symm_spline)
+    );
+}
