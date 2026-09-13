@@ -4,7 +4,7 @@
 #include "../../io/log/StdoutLogger.hpp"
 
 namespace jgap {
-    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, Real> &isolated_atom_energies)
+    IsolatedAtomPotential::IsolatedAtomPotential(const std::map<Species, double> &isolated_atom_energies)
         : isolated_energies(isolated_atom_energies) {
     }
 

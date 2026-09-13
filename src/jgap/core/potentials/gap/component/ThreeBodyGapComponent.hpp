@@ -27,7 +27,7 @@ namespace jgap {
             const ValuePtr<ThreeBodyTransformation<Dim>>& transformation,
             const TKernel& kernel,
             const std::vector<Descriptor<Dim>>& sparse_points,
-            const std::vector<Real>& optional_coeffs = {}
+            const std::vector<double>& optional_coeffs = {}
         ) :
             species(species),
             transformation(transformation),
@@ -72,7 +72,7 @@ namespace jgap {
                 return std::nullopt;
             }
 
-            const Real factor = expansion.getPermutationReductionFactor();
+            const double factor = expansion.getPermutationReductionFactor();
             if (factor != 1.0) {
                 result *= factor;
             }
@@ -80,7 +80,7 @@ namespace jgap {
             return result;
         }
 
-        Matrix<RowMajor> sparseToSparseCovariance() const override {
+        Matrix<RowMajor> K_MM() const override {
             Matrix<RowMajor> result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
@@ -90,6 +90,7 @@ namespace jgap {
             }
             return result;
         }
+
 
         size_t nSparsePoints() const override { return sparse_points.size(); }
 
@@ -116,7 +117,7 @@ namespace jgap {
             }
 
             auto& table = tables.three_body_grids.getValueGrid(species);
-            const Real iteration_reduction_factor = expansion.getPermutationReductionFactor();
+            const double iteration_reduction_factor = expansion.getPermutationReductionFactor();
 
             unseqForIndex(0, table.data_flat.size(), [&](size_t i) {
                 auto indices = table.getIndices(i);
@@ -125,9 +126,9 @@ namespace jgap {
                 auto [cluster1, optional_cluster2] = TabulationData::gridPosAsCluster3(pos, species);
                 auto transformed1 = transformation->evaluate(cluster1);
 
-                Real value = 0.0;
+                double value = 0.0;
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
-                    Real k_val = kernel.value(sparse_points[sparse_idx], transformed1);
+                    double k_val = kernel.value(sparse_points[sparse_idx], transformed1);
                     if (optional_cluster2.has_value()) {
                         auto transformed2 = transformation->evaluate(*optional_cluster2);
                         k_val = 0.5 * (k_val + kernel.value(sparse_points[sparse_idx], transformed2));
@@ -150,8 +151,8 @@ namespace jgap {
 
                     result.energy(sparse_idx) += K;
 
-                    Vector3 f1{0.0_r, 0.0_r, 0.0_r};
-                    Vector3 f2{0.0_r, 0.0_r, 0.0_r};
+                    Vector3 f1{0.0, 0.0, 0.0};
+                    Vector3 f2{0.0, 0.0, 0.0};
                     for (size_t dim = 0; dim < Dim; dim++) {
                         f1 -= gradK_wrt_q[dim] * descriptor.grad_r1[dim];
                         f2 -= gradK_wrt_q[dim] * descriptor.grad_r2[dim];

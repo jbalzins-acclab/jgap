@@ -14,7 +14,7 @@ namespace jgap {
 
     class Cluster2Expansion {
     public:
-        static constexpr Real ClusterPermutationsAvailable = 1.0;
+        static constexpr double ClusterPermutationsAvailable = 1.0;
 
         Cluster2Expansion(const Species2Atomic& species_set) : species_set1(species_set), species_set2(std::nullopt) {}
 

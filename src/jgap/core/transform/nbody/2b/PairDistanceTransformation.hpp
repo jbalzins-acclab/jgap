@@ -13,7 +13,7 @@ namespace jgap {
         Descriptor<2> evaluate(const Cluster2& pair) const override { return TwoBodyTransformation<2>::evaluate(pair); }
 
         TwoBodyDescriptor<2> evaluateAndDifferentiate(const Cluster2& pair) const override final {
-            Real r = pair.separation01.magnitude;
+            double r = pair.separation01.magnitude;
             const auto& dir = pair.separation01.direction;
             auto [f_cut, df_cut] = cutoff->evaluateAndDifferentiate(r);
             return {

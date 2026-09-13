@@ -66,7 +66,7 @@ namespace jgap {
 
             size_t active_grid_dim =
                 active_dims > 0
-                    ? static_cast<size_t>(std::ceil(std::pow(n_sparse_points, 1.0_r / static_cast<Real>(active_dims))))
+                    ? static_cast<size_t>(std::ceil(std::pow(n_sparse_points, 1.0 / static_cast<double>(active_dims))))
                     : 1;
 
             for (size_t d = 0; d < Dim; d++) {
@@ -75,15 +75,15 @@ namespace jgap {
             }
         }
 
-        std::array<Real, Dim> min_point_{};
-        std::array<Real, Dim> max_point_{};
-        std::array<Real, Dim> step{};
+        std::array<double, Dim> min_point_{};
+        std::array<double, Dim> max_point_{};
+        std::array<double, Dim> step{};
 
         for (size_t d = 0; d < Dim; d++) {
             if (min_point.has_value()) {
                 min_point_[d] = min_point.value()[d];
             } else {
-                min_point_[d] = std::numeric_limits<Real>::max();
+                min_point_[d] = std::numeric_limits<double>::max();
                 for (size_t i = 0; i < descriptors.size(); ++i) {
                     min_point_[d] = std::min(min_point_[d], descriptors[i][d]);
                 }
@@ -91,12 +91,12 @@ namespace jgap {
             if (max_point.has_value()) {
                 max_point_[d] = max_point.value()[d];
             } else {
-                max_point_[d] = std::numeric_limits<Real>::lowest();
+                max_point_[d] = std::numeric_limits<double>::lowest();
                 for (size_t i = 0; i < descriptors.size(); ++i) {
-                    max_point_[d] = std::max(max_point_[d], descriptors[i][d] + 0.0001_r /*keep all points in bounds*/);
+                    max_point_[d] = std::max(max_point_[d], descriptors[i][d] + 0.0001 /*keep all points in bounds*/);
                 }
             }
-            step[d] = (max_point_[d] - min_point_[d]) / static_cast<Real>(grid_dimensions_[d]);
+            step[d] = (max_point_[d] - min_point_[d]) / static_cast<double>(grid_dimensions_[d]);
         }
 
         size_t active_dims = 0;
@@ -193,7 +193,7 @@ namespace jgap {
             Descriptor<Dim> pt;
             for (size_t d = 0; d < Dim; d++) {
                 std::uniform_real_distribution<> margin_dist(0, step[d]);
-                pt[d] = min_point_[d] + step[d] * static_cast<Real>(grid_slot[d]) + margin_dist(gen);
+                pt[d] = min_point_[d] + step[d] * static_cast<double>(grid_slot[d]) + margin_dist(gen);
             }
             sparse_points.push_back(pt);
         }

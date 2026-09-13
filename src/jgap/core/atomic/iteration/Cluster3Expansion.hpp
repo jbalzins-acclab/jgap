@@ -13,7 +13,7 @@ namespace jgap {
 
     class Cluster3Expansion {
     public:
-        static constexpr Real ClusterPermutationsAvailable = 2.0;
+        static constexpr double ClusterPermutationsAvailable = 2.0;
 
         Cluster3Expansion(
             const Species3AtomicSorted& species_set,
@@ -23,11 +23,11 @@ namespace jgap {
             mode(mode),
             factor(
                 (species_set.nodes[0] != species_set.nodes[1] || mode == ClusterPermutationMode::NoNodePermutation)
-                    ? static_cast<Real>(ClusterPermutationsAvailable)
+                    ? static_cast<double>(ClusterPermutationsAvailable)
                     : 1.0
             ) {}
 
-        Real getPermutationReductionFactor() const { return factor; }
+        double getPermutationReductionFactor() const { return factor; }
 
         ClusterPermutationMode getMode() const { return mode; }
 
@@ -127,7 +127,7 @@ namespace jgap {
     private:
         Species3AtomicSorted species_set;
         ClusterPermutationMode mode;
-        Real factor;
+        double factor;
     };
 }
 

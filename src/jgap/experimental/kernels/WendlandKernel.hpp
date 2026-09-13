@@ -19,19 +19,19 @@ namespace jgap {
 
         WendlandKernel() = default;
 
-        WendlandKernel(const Real energy_scale, const std::array<Real, ExpDimensions>& length_scales) {
+        WendlandKernel(const double energy_scale, const std::array<double, ExpDimensions>& length_scales) {
             prefactor = energy_scale * energy_scale;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                inverse_length_scales_squared[dim] = 1.0_r / (length_scales[dim] * length_scales[dim]);
+                inverse_length_scales_squared[dim] = 1.0 / (length_scales[dim] * length_scales[dim]);
             }
         }
 
-        Real getEnergyScale() const { return std::sqrt(prefactor); }
+        double getEnergyScale() const { return std::sqrt(prefactor); }
 
-        std::array<Real, ExpDimensions> getLengthScales() const {
-            std::array<Real, ExpDimensions> length_scales{};
+        std::array<double, ExpDimensions> getLengthScales() const {
+            std::array<double, ExpDimensions> length_scales{};
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                length_scales[dim] = 1.0_r / std::sqrt(inverse_length_scales_squared[dim]);
+                length_scales[dim] = 1.0 / std::sqrt(inverse_length_scales_squared[dim]);
             }
             return length_scales;
         }
@@ -39,23 +39,23 @@ namespace jgap {
         KernelValueAndGradient valueAndGradient(
             const Descriptor<TotalDimensions>& sparse_point, const Descriptor<TotalDimensions>& q
         ) const override {
-            Real dist_sq = 0.0_r;
+            double dist_sq = 0.0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q[dim] - sparse_point[dim];
+                double diff = q[dim] - sparse_point[dim];
                 dist_sq += diff * diff * inverse_length_scales_squared[dim];
             }
 
-            Real val = 0.0_r;
-            std::array<Real, TotalDimensions> gradient{};
+            double val = 0.0;
+            std::array<double, TotalDimensions> gradient{};
 
-            if (dist_sq < 1.0_r) {
-                Real r = std::sqrt(dist_sq);
-                Real omr = 1.0_r - r;
-                Real omr2 = omr * omr;
-                Real omr3 = omr2 * omr;
-                Real omr4 = omr2 * omr2;
+            if (dist_sq < 1.0) {
+                double r = std::sqrt(dist_sq);
+                double omr = 1.0 - r;
+                double omr2 = omr * omr;
+                double omr3 = omr2 * omr;
+                double omr4 = omr2 * omr2;
 
-                Real base_val = prefactor * omr4 * (1.0_r + 4.0_r * r);
+                double base_val = prefactor * omr4 * (1.0 + 4.0 * r);
                 val = base_val;
 
                 if constexpr (CutoffDimensions == 1) {
@@ -63,7 +63,7 @@ namespace jgap {
                     val = base_val * sparse_point[ExpDimensions] * q[ExpDimensions];
                 }
 
-                Real factor = 20.0_r * prefactor * omr3;
+                double factor = 20.0 * prefactor * omr3;
                 if constexpr (CutoffDimensions == 1) {
                     factor *= sparse_point[ExpDimensions] * q[ExpDimensions];
                 }
@@ -79,8 +79,8 @@ namespace jgap {
         WendlandKernel* clone() const override { return new WendlandKernel(*this); }
 
     private:
-        Real prefactor{};
-        std::array<Real, ExpDimensions> inverse_length_scales_squared{};
+        double prefactor{};
+        std::array<double, ExpDimensions> inverse_length_scales_squared{};
     };
 }
 

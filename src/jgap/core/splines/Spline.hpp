@@ -9,8 +9,8 @@ namespace jgap {
     class Spline {
     public:
         virtual ~Spline() = default;
-        virtual InterpolationResults<Dim> interpolate(std::array<Real, Dim> pos) const = 0;
-        virtual std::array<Real, Dim> getCutoff() const = 0;
+        virtual InterpolationResults<Dim> interpolate(std::array<double, Dim> pos) const = 0;
+        virtual std::array<double, Dim> getCutoff() const = 0;
 
         virtual Spline<Dim>* clone() const = 0;
     };

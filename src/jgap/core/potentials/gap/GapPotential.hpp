@@ -14,7 +14,7 @@ namespace jgap {
         template<typename GapComponentT>
             requires(std::convertible_to<GapComponentT, ValuePtr<GapComponent>>)
         GapPotential(std::initializer_list<GapComponentT> components, ValuePtr<Potential> external = nullptr,
-                     const std::vector<Real>& coefficients = {}) :
+                     const std::vector<double>& coefficients = {}) :
             optional_external_potential(std::move(external)), components(components.begin(), components.end()) {
             if (!coefficients.empty()) {
                 setCoefficients(coefficients);
@@ -31,7 +31,7 @@ namespace jgap {
 
         void addComponent(ValuePtr<GapComponent> component);
 
-        void setCoefficients(const std::vector<Real>& new_coefficients);
+        void setCoefficients(const std::vector<double>& new_coefficients);
 
         AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
 

@@ -23,7 +23,7 @@ namespace {
         return SerializationRegistry<GapComponent>::deserialize(file);
     }
 
-    void expectCoeffsEq(const std::vector<Real>& a, const std::vector<Real>& b) {
+    void expectCoeffsEq(const std::vector<double>& a, const std::vector<double>& b) {
         ASSERT_EQ(a.size(), b.size());
         for (size_t i = 0; i < a.size(); ++i) {
             EXPECT_DOUBLE_EQ(a[i], b[i]);
@@ -33,7 +33,7 @@ namespace {
 
 TEST(TestComponentSerialization, NBodyTwoBody) {
     std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}, Descriptor<2>{{2.5, 0.5}}};
-    std::vector<Real> coefficients = {0.5, -0.3};
+    std::vector<double> coefficients = {0.5, -0.3};
 
     auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
     TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> component(
@@ -63,7 +63,7 @@ TEST(TestComponentSerialization, ManyBodyEam) {
     );
 
     std::vector<Descriptor<1>> sparse_points = {Descriptor<1>{{1.5}}};
-    std::vector<Real> coefficients = {0.42};
+    std::vector<double> coefficients = {0.42};
 
     ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> component(
         aggregator, SquaredExpKernel<1, 0>(1.0, {1.0}), sparse_points, coefficients
@@ -87,7 +87,7 @@ TEST(TestComponentSerialization, ThreeBody) {
     std::vector<Descriptor<4>> sparse_points = {
         Descriptor<4>{{6.0, 0.0, 3.0, 1.0}}, Descriptor<4>{{5.0, 0.5, 2.5, 0.8}}
     };
-    std::vector<Real> coefficients = {0.15, -0.25};
+    std::vector<double> coefficients = {0.15, -0.25};
 
     auto transform_ptr = ValuePtr<ThreeBodyTransformation<4>>(Angle3bTransformation(CosCutoff(6.0, 1.0)));
     ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> component(

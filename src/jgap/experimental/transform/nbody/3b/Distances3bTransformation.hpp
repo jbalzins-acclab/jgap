@@ -15,9 +15,9 @@ namespace jgap {
         }
 
         ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override final {
-            Real r01 = triplet.separation01.magnitude;
-            Real r02 = triplet.separation02.magnitude;
-            Real r12 = triplet.separation12.magnitude;
+            double r01 = triplet.separation01.magnitude;
+            double r02 = triplet.separation02.magnitude;
+            double r12 = triplet.separation12.magnitude;
 
             auto [f_cut_01, df_cut_01] = cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = cutoff->evaluateAndDifferentiate(r02);

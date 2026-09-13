@@ -129,10 +129,10 @@ namespace jgap::utils {
         return std::to_string(min) + "m " + std::to_string(rem_sec) + "s";
     }
 
-    constexpr Real factorial(size_t n) {
-        Real result = 1.0;
+    constexpr double factorial(size_t n) {
+        double result = 1.0;
         for (size_t i = 2; i <= n; i++) {
-            result *= static_cast<Real>(i);
+            result *= static_cast<double>(i);
         }
         return result;
     }

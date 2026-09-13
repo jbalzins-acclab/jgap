@@ -42,14 +42,14 @@ TEST(TestScaledRegularizationRules, ScalesWithMaxForceMagnitude) {
     atoms.setForces({{3.0, 4.0, 0.0}, {1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
 
     SimpleRegularizationRules base_rules(0.002, 0.05, 0.1, 0.02);
-    const Real force_scale = 0.4;
+    const double force_scale = 0.4;
     // max_force = 5.0 => scale = 1.0 + 0.4 * 5.0 = 3.0
     ScaledRegularizationRules scaled_rules(base_rules, force_scale);
 
     auto base_sig = base_rules.determine(atoms);
     auto scaled_sig = scaled_rules.determine(atoms);
 
-    const Real expected_scale = 3.0;
+    const double expected_scale = 3.0;
 
     ASSERT_TRUE(base_sig.energy.has_value());
     ASSERT_TRUE(scaled_sig.energy.has_value());

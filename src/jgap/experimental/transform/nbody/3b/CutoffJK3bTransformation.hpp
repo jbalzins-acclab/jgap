@@ -22,9 +22,9 @@ namespace jgap {
         }
 
         ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override final {
-            Real r01 = triplet.separation01.magnitude;
-            Real r02 = triplet.separation02.magnitude;
-            Real r12 = triplet.separation12.magnitude;
+            double r01 = triplet.separation01.magnitude;
+            double r02 = triplet.separation02.magnitude;
+            double r12 = triplet.separation12.magnitude;
 
             auto [f_cut_01, df_cut_01] = main_cutoff->evaluateAndDifferentiate(r01);
             auto [f_cut_02, df_cut_02] = main_cutoff->evaluateAndDifferentiate(r02);
@@ -34,9 +34,9 @@ namespace jgap {
             const auto& dir02 = triplet.separation02.direction;
             const auto& dir12 = triplet.separation12.direction;
 
-            Real dq3_dr01 = df_cut_01 * f_cut_02 * f_cut_12;
-            Real dq3_dr02 = df_cut_02 * f_cut_01 * f_cut_12;
-            Real dq3_dr12 = df_cut_12 * f_cut_01 * f_cut_02;
+            double dq3_dr01 = df_cut_01 * f_cut_02 * f_cut_12;
+            double dq3_dr02 = df_cut_02 * f_cut_01 * f_cut_12;
+            double dq3_dr12 = df_cut_12 * f_cut_01 * f_cut_02;
 
             return {
                 .value =
@@ -49,13 +49,13 @@ namespace jgap {
                 .grad_r1 =
                     {
                         dir01,
-                        2.0_r * (r01 - r02) * dir01,
+                        2.0 * (r01 - r02) * dir01,
                         -dir12,
                         dq3_dr01 * dir01 - dq3_dr12 * dir12,
                     },
                 .grad_r2 = {
                     dir02,
-                    2.0_r * (r02 - r01) * dir02,
+                    2.0 * (r02 - r01) * dir02,
                     dir12,
                     dq3_dr02 * dir02 + dq3_dr12 * dir12,
                 }

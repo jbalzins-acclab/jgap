@@ -68,7 +68,7 @@ namespace jgap {
             auto aggregator = SerializationRegistry<NBodyAggregator<Dim>>::deserialize(aggregator_group_opt.value());
 
             auto sparse_points = node.readDescriptors<Dim>("sparse_points");
-            auto coefficients = node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<Real>{});
+            auto coefficients = node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<double>{});
 
             return ValuePtr<GapComponent>(ComponentT(aggregator, kernel, sparse_points, coefficients));
         }

@@ -17,31 +17,31 @@ TEST(ScreenedCoulombPotentialTest, FeNiInteractionFromEmbedded) {
     ScreenedCoulombPotential sc(species, EmbeddedScreenedCoulombCoeffDataset::DMOL, 10.0);
 
     // Test at a specific distance
-    Real r = 0.5; // Angstroms
+    double r = 0.5; // Angstroms
     auto [energy, derivative] = sc.energyAndDerivative(Species2Sorted(fe, ni), r);
 
-    Real z1 = fe.atomicNumber().value();
-    Real z2 = ni.atomicNumber().value();
+    double z1 = fe.atomicNumber().value();
+    double z2 = ni.atomicNumber().value();
 
     // The coefficients for Fe-Ni obtained from an old fit-dmol.py which uses alternative calculation
     // (with constant a=(std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848 to make screening argument dimensionless):
     std::array c = {0.32818750683529224, 1.2763590338471473,  0.5319935400634741,
                     0.4920242580140316,  0.13562223656825356, 2.9359601944688674};
 
-    Real a_inverse = (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848;
-    Real x = r * a_inverse;
+    double a_inverse = (std::pow(z1, 0.23) + std::pow(z2, 0.23)) / 0.46848;
+    double x = r * a_inverse;
 
-    Real term1 = exp(-c[1] * x);
-    Real term2 = exp(-c[3] * x);
-    Real term3 = exp(-c[5] * x);
+    double term1 = exp(-c[1] * x);
+    double term2 = exp(-c[3] * x);
+    double term3 = exp(-c[5] * x);
 
-    Real phi = c[0] * term1 + c[2] * term2 + c[4] * term3;
-    Real dphi_dx = -c[0] * c[1] * term1 - c[2] * c[3] * term2 - c[4] * c[5] * term3;
-    Real dphi_dr = a_inverse * dphi_dx;
+    double phi = c[0] * term1 + c[2] * term2 + c[4] * term3;
+    double dphi_dx = -c[0] * c[1] * term1 - c[2] * c[3] * term2 - c[4] * c[5] * term3;
+    double dphi_dr = a_inverse * dphi_dx;
 
-    Real prefactor = z1 * z2 * ScreenedCoulombPotential::CoulombConstant_eV_Ang / r;
-    Real expected_e = prefactor * phi;
-    Real expected_dE_dr = -(prefactor * phi / r) + prefactor * dphi_dr;
+    double prefactor = z1 * z2 * ScreenedCoulombPotential::CoulombConstant_eV_Ang / r;
+    double expected_e = prefactor * phi;
+    double expected_dE_dr = -(prefactor * phi / r) + prefactor * dphi_dr;
 
     ASSERT_NEAR(1206.6878058678733, expected_e, 2e-3);
     ASSERT_NEAR(energy, 1206.6878058678733, 2e-3);
@@ -55,7 +55,7 @@ TEST(ScreenedCoulombPotentialTest, FeNi4AtomSquare) {
 
     ScreenedCoulombPotential sc(species, EmbeddedScreenedCoulombCoeffDataset::DMOL, 10.0);
 
-    Real r = 0.5; // side length of square in Angstroms
+    double r = 0.5; // side length of square in Angstroms
     auto [energy_single, deriv_single] = sc.energyAndDerivative(Species2Sorted(fe, ni), r);
 
     // 4 atoms in a square of side 0.5 Å:

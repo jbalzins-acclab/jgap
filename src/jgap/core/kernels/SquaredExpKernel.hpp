@@ -18,38 +18,38 @@ namespace jgap {
 
         SquaredExpKernel() = default;
 
-        SquaredExpKernel(const Real energy_scale, const std::array<Real, ExpDimensions>& length_scales) {
+        SquaredExpKernel(const double energy_scale, const std::array<double, ExpDimensions>& length_scales) {
             prefactor = energy_scale * energy_scale;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                inverse_length_scales_squared[dim] = 1.0_r / (length_scales[dim] * length_scales[dim]);
+                inverse_length_scales_squared[dim] = 1.0 / (length_scales[dim] * length_scales[dim]);
             }
         }
 
-        Real getEnergyScale() const { return std::sqrt(prefactor); }
+        double getEnergyScale() const { return std::sqrt(prefactor); }
 
-        std::array<Real, ExpDimensions> getLengthScales() const {
-            std::array<Real, ExpDimensions> length_scales{};
+        std::array<double, ExpDimensions> getLengthScales() const {
+            std::array<double, ExpDimensions> length_scales{};
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                length_scales[dim] = 1.0_r / std::sqrt(inverse_length_scales_squared[dim]);
+                length_scales[dim] = 1.0 / std::sqrt(inverse_length_scales_squared[dim]);
             }
             return length_scales;
         }
 
-        Real value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
+        double value(const Descriptor<TotalDimensions>& q1, const Descriptor<TotalDimensions>& q2) const override {
             return Kernel<TotalDimensions>::value(q1, q2);
         }
 
         KernelValueAndGradient valueAndGradient(
             const Descriptor<TotalDimensions>& sparse_point, const Descriptor<TotalDimensions>& q
         ) const override {
-            Real exp_argument = 0.0_r;
+            double exp_argument = 0.0;
             for (size_t dim = 0; dim < ExpDimensions; dim++) {
-                Real diff = q[dim] - sparse_point[dim];
+                double diff = q[dim] - sparse_point[dim];
                 exp_argument += diff * diff * inverse_length_scales_squared[dim];
             }
-            Real val = prefactor * std::exp(-0.5_r * exp_argument);
+            double val = prefactor * std::exp(-0.5 * exp_argument);
 
-            std::array<Real, TotalDimensions> gradient{};
+            std::array<double, TotalDimensions> gradient{};
 
             if constexpr (CutoffDimensions == 1) {
                 gradient[ExpDimensions] = val * sparse_point[ExpDimensions];
@@ -66,8 +66,8 @@ namespace jgap {
         SquaredExpKernel* clone() const override { return new SquaredExpKernel(*this); }
 
     private:
-        Real prefactor{};
-        std::array<Real, ExpDimensions> inverse_length_scales_squared{};
+        double prefactor{};
+        std::array<double, ExpDimensions> inverse_length_scales_squared{};
     };
 }
 

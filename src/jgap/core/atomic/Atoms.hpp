@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "../Vector3.hpp"
-#include "jgap/core/Real.hpp"
 #include "energy/AtomicQuantity.hpp"
 #include "geometry/Lattice.hpp"
 #include "../io/xyz/XYZData.hpp"
@@ -20,7 +19,7 @@
 namespace jgap {
 
     /// Types underlying @ref XYZArrayType vector types.
-    using PerAtomProperty = std::variant<int, Real, Vector3, std::string, Species>;
+    using PerAtomProperty = std::variant<int, double, Vector3, std::string, Species>;
 
     /// Stores the positions and species of atoms in a structure,
     /// as well as information on periodicity, and may optionally store
@@ -87,8 +86,8 @@ namespace jgap {
         void removeAtom(size_t index);
         void removeArray(const std::string& name);
 
-        std::optional<Real> getEnergy() const { return energy; }
-        void setEnergy(Real e) { energy = e; }
+        std::optional<double> getEnergy() const { return energy; }
+        void setEnergy(double e) { energy = e; }
         void eraseEnergy() { energy = std::nullopt; }
 
         std::optional<Virials> getVirials() const { return virials; }
@@ -120,7 +119,7 @@ namespace jgap {
         std::optional<std::vector<Vector3>> forces;
         std::optional<Lattice> lattice;
         std::array<bool, 3> pbc = {false, false, false};
-        std::optional<Real> energy;
+        std::optional<double> energy;
         std::optional<Virials> virials;
         std::optional<std::string> config_type;
 

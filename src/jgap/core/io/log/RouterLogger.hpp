@@ -2,9 +2,9 @@
 #define JGAP_ROUTERLOGGER_HPP
 
 #include <memory>
-#include "jgap/io/log/Logger.hpp"
+#include "jgap/core/io/log/Logger.hpp"
 #include "LogConfig.hpp"
-#include "jgap/io/log/StdoutLogger.hpp"
+#include "jgap/core/io/log/StdoutLogger.hpp"
 #include "FileLogger.hpp"
 
 namespace jgap {

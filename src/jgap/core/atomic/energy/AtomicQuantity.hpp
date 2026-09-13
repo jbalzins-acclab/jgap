@@ -12,17 +12,17 @@ namespace jgap {
     /// @note Essentially equivalent to a one-dimensional @ref ManyBodyDescriptor<Dim = 1>,
     /// but is meant to store energy or scalar multiple of it (e.g. kernel value).
     struct AtomicQuantity {
-        Real value;
+        double value;
 
         Virials virials;
         std::vector<Vector3> forces;
 
-        explicit AtomicQuantity(size_t n_atoms) : value(Real{}), virials({}), forces(n_atoms, Vector3{}) {}
+        explicit AtomicQuantity(size_t n_atoms) : value(double{}), virials({}), forces(n_atoms, Vector3{}) {}
 
         AtomicQuantity operator+(const AtomicQuantity& other) const;
         AtomicQuantity& operator+=(const AtomicQuantity& other);
-        AtomicQuantity operator*(Real scalar) const;
-        AtomicQuantity& operator*=(Real scalar);
+        AtomicQuantity operator*(double scalar) const;
+        AtomicQuantity& operator*=(double scalar);
     };
 }
 

@@ -41,7 +41,7 @@ namespace jgap {
         }
         const auto& coefficients_group = coefficients_group_opt.value();
 
-        std::map<Species2Sorted, std::array<Real, 6>> coefficients;
+        std::map<Species2Sorted, std::array<double, 6>> coefficients;
         for (const auto& group_name: coefficients_group.getChildNames()) {
             auto pair_group_opt = coefficients_group.getGroup(group_name);
             if (!pair_group_opt) {

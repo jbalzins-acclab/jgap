@@ -33,10 +33,10 @@ namespace jgap {
         for (size_t i = 0; i < segments.size(); i += 5) {
             std::string config_type = segments[i];
             try {
-                Real e = std::stod(segments[i + 1]);
-                Real f = std::stod(segments[i + 2]);
-                Real v = std::stod(segments[i + 3]);
-                Real h = std::stod(segments[i + 4]);
+                double e = std::stod(segments[i + 1]);
+                double f = std::stod(segments[i + 2]);
+                double v = std::stod(segments[i + 3]);
+                double h = std::stod(segments[i + 4]);
                 if (h != 0.0) {
                     JGAP_LOG_WARN(
                         "Hessian regularization is not supported, but a non-zero value was provided for config_type {}",

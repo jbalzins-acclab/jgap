@@ -4,7 +4,7 @@
 #include <fstream>
 #include <vector>
 #include "Sparsifier.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 
 namespace jgap {
 
@@ -20,8 +20,8 @@ namespace jgap {
                 JGAP_LOG_AND_THROW("Could not open file: {}", filename);
             }
 
-            std::vector<Real> all_numbers;
-            Real num;
+            std::vector<double> all_numbers;
+            double num;
             while (file >> num) {
                 all_numbers.push_back(num);
             }

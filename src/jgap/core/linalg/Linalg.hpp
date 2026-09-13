@@ -6,17 +6,16 @@
 #include <vector>
 
 #include "jgap/core/Matrix.hpp"
-#include "jgap/core/Real.hpp"
 
 namespace jgap::linalg {
 
     /// Solves min ||A*c - b||_2 using unpivoted Householder QR decomposition (ColumnMajor matrix A).
-    std::vector<Real> solveLeastSquaresHouseholderQR(Matrix<ColumnMajor>& A, std::vector<Real>& b);
+    std::vector<double> solveLeastSquaresHouseholderQR(Matrix<ColumnMajor>& A, std::vector<double>& b);
 
     /// Solves min ||A*c - b||_2 using Least Squares Conjugate Gradient (RowMajor matrix A).
-    std::vector<Real> solveLeastSquaresConjugateGradient(
+    std::vector<double> solveLeastSquaresConjugateGradient(
         Matrix<RowMajor>& A,
-        std::vector<Real>& b,
+        std::vector<double>& b,
         std::optional<int> max_iterations = std::nullopt,
         std::optional<double> tolerance = std::nullopt
     );

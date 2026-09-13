@@ -51,7 +51,7 @@ namespace jgap {
                                           ? ClusterPermutationMode::NoNodePermutation
                                           : ClusterPermutationMode::PermuteSameSpeciesNodes;
                     Cluster3Expansion expansion(species_set, mode);
-                    Real factor = expansion.getPermutationReductionFactor();
+                    double factor = expansion.getPermutationReductionFactor();
 
                     expansion.forEach(atom_index, nl, [&](const Cluster3& cluster) {
                         auto contribution = transformation->evaluateAndDifferentiate(cluster);

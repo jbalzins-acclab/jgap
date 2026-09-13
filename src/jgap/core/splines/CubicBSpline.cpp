@@ -5,16 +5,16 @@
 
 namespace jgap {
 
-    std::vector<Real> CubicBSpline::toSplineCoefficients(const std::vector<Real>& original, const Real spacing) {
+    std::vector<double> CubicBSpline::toSplineCoefficients(const std::vector<double>& original, const double spacing) {
         static constexpr std::array basis = {1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0};
 
         const size_t n_coefficients = original.size() + 2;
 
-        const Real inverse_spacing = 1.0 / spacing;
-        const Real inverse_spacing_sq = inverse_spacing * inverse_spacing;
-        std::vector<std::array<Real, 4>> bands(n_coefficients);
-        bands[0] = {inverse_spacing_sq, -2.0_r * inverse_spacing_sq, inverse_spacing_sq, 0.0};
-        bands[n_coefficients - 1] = {inverse_spacing_sq, -2.0_r * inverse_spacing_sq, inverse_spacing_sq, 0.0};
+        const double inverse_spacing = 1.0 / spacing;
+        const double inverse_spacing_sq = inverse_spacing * inverse_spacing;
+        std::vector<std::array<double, 4>> bands(n_coefficients);
+        bands[0] = {inverse_spacing_sq, -2.0 * inverse_spacing_sq, inverse_spacing_sq, 0.0};
+        bands[n_coefficients - 1] = {inverse_spacing_sq, -2.0 * inverse_spacing_sq, inverse_spacing_sq, 0.0};
 
         for (size_t i = 1; i < n_coefficients - 1; i++) {
             bands[i][0] = basis[0];
@@ -51,7 +51,7 @@ namespace jgap {
         bands[n_coefficients - 1][3] /= bands[n_coefficients - 1][2];
         bands[n_coefficients - 1][2] = 1.0;
 
-        std::vector<Real> coefficients(n_coefficients, 0.0);
+        std::vector<double> coefficients(n_coefficients, 0.0);
         coefficients[n_coefficients - 1] = bands[n_coefficients - 1][3];
         for (size_t i = n_coefficients - 2; i > 0; i--) {
             coefficients[i] = bands[i][3] - bands[i][2] * coefficients[i + 1];
@@ -74,24 +74,24 @@ namespace jgap {
         return CubicBSpline(coeff_table);
     }
 
-    InterpolationResults<1> CubicBSpline::interpolate(std::array<Real, 1> pos) const {
-        const Real r = pos[0];
-        const Real h = coefficients.spacing[0];
-        const Real data_origin = coefficients.origin[0] + h;
-        const Real data_upper = data_origin + static_cast<Real>(coefficients.sizes[0] - 3) * h;
+    InterpolationResults<1> CubicBSpline::interpolate(std::array<double, 1> pos) const {
+        const double r = pos[0];
+        const double h = coefficients.spacing[0];
+        const double data_origin = coefficients.origin[0] + h;
+        const double data_upper = data_origin + static_cast<double>(coefficients.sizes[0] - 3) * h;
         if (r < (data_origin - 1e-9) || r > (data_upper + 1e-9)) {
             return {0.0, {0.0}};
         }
 
-        const Real u = (r - data_origin) / h;
+        const double u = (r - data_origin) / h;
         // Maximum allowed starting index: coeff sizes - 4 ensures reading i..i+3 remains within valid memory [0,
         // sizes-1]
         const int imax = static_cast<int>(coefficients.sizes[0]) - 4;
         const int i = std::clamp(static_cast<int>(std::floor(u)), 0, imax);
-        const Real t = u - i;
+        const double t = u - i;
 
-        Real Phi[4], dPhi[4];
-        const Real dinv = 1.0 / h;
+        double Phi[4], dPhi[4];
+        const double dinv = 1.0 / h;
 
         if (t < 0.0) {
             Phi[0] = 1.0 / 6.0 - 0.5 * t;
@@ -104,7 +104,7 @@ namespace jgap {
             dPhi[2] = 0.5 * dinv;
             dPhi[3] = 0.0;
         } else if (t > 1.0) {
-            const Real dt = t - 1.0;
+            const double dt = t - 1.0;
             Phi[0] = 0.0;
             Phi[1] = 1.0 / 6.0 - 0.5 * dt;
             Phi[2] = 4.0 / 6.0;
@@ -115,8 +115,8 @@ namespace jgap {
             dPhi[2] = 0.0;
             dPhi[3] = 0.5 * dinv;
         } else {
-            const Real t2 = t * t;
-            const Real t3 = t2 * t;
+            const double t2 = t * t;
+            const double t3 = t2 * t;
 
             Phi[0] = (1 - 3 * t + 3 * t2 - t3) / 6.0;
             Phi[1] = (4 - 6 * t2 + 3 * t3) / 6.0;
@@ -129,8 +129,8 @@ namespace jgap {
             dPhi[3] = (3 * t2) * dinv / 6.0;
         }
 
-        Real value = 0.0;
-        Real derivative = 0.0;
+        double value = 0.0;
+        double derivative = 0.0;
         for (int k = 0; k < 4; ++k) {
             value += coefficients.data_flat[i + k] * Phi[k];
             derivative += coefficients.data_flat[i + k] * dPhi[k];
@@ -139,11 +139,11 @@ namespace jgap {
         return {value, {derivative}};
     }
 
-    std::array<Real, 1> CubicBSpline::getCutoff() const {
+    std::array<double, 1> CubicBSpline::getCutoff() const {
         // The valid data range is from the original grid's origin (data_origin = coefficients.origin[0] + h)
         // to its last point at data_origin + (N - 1) * h, where N = coefficients.sizes[0] - 2.
-        const Real data_points = static_cast<Real>(coefficients.sizes[0] - 2);
-        const Real data_origin = coefficients.origin[0] + coefficients.spacing[0];
+        const double data_points = static_cast<double>(coefficients.sizes[0] - 2);
+        const double data_origin = coefficients.origin[0] + coefficients.spacing[0];
         return {data_origin + (data_points - 1) * coefficients.spacing[0]};
     }
 }

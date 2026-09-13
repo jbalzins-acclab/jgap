@@ -62,7 +62,7 @@ namespace jgap {
             return result;
         }
 
-        ManyBodyDescriptor& operator*=(Real scalar) {
+        ManyBodyDescriptor& operator*=(double scalar) {
             for (size_t d = 0; d < Dim; d++) {
                 value[d] *= scalar;
                 virials[d] *= scalar;
@@ -75,7 +75,7 @@ namespace jgap {
             return *this;
         }
 
-        ManyBodyDescriptor operator*(Real scalar) const {
+        ManyBodyDescriptor operator*(double scalar) const {
             ManyBodyDescriptor result = *this;
             result *= scalar;
             return result;

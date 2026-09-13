@@ -14,7 +14,7 @@ namespace jgap {
         }
     }
 
-    void GapPotential::setCoefficients(const std::vector<Real> &new_coefficients) {
+    void GapPotential::setCoefficients(const std::vector<double> &new_coefficients) {
         if (new_coefficients.empty()) {
             JGAP_LOG_AND_THROW("Cannot set empty coefficients");
         }

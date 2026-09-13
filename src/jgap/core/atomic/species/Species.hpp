@@ -9,7 +9,6 @@
 #include <optional>
 #include <string>
 
-#include "../../Real.hpp"
 #include "../../io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -30,7 +29,7 @@ namespace jgap {
 
         static std::map<std::string, uint16_t> SymbolToAtomicNumber;
         static std::array<std::string, NumberOfElements + 1> AtomicNumberToSymbol;
-        static std::array<Real, NumberOfElements + 1> Masses;
+        static std::array<double, NumberOfElements + 1> Masses;
 
         static Species Anon() {
             static const Species anon("AnonymousSpecies");
@@ -91,7 +90,7 @@ namespace jgap {
             return SymbolToAtomicNumber.at(symbol());
         }
 
-        std::optional<Real> mass() const {
+        std::optional<double> mass() const {
             return atomicNumber().transform([](const size_t Z) -> double { return Masses[Z]; });
         }
 

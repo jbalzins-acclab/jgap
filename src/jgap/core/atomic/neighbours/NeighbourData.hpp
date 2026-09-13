@@ -5,7 +5,7 @@
 
 namespace jgap {
     struct NeighbourData {
-        /// Index corresponds to the underlying \Atoms object.
+        /// Index corresponds to the underlying Atoms object.
         size_t neighbour_index{};
         Separation separation{};
     };

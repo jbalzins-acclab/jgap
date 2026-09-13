@@ -13,8 +13,8 @@ namespace jgap {
 
         std::map<Species2Atomic, Grid<GridDim>> value_grids;
 
-        AtomicTwoBodyGrids(const std::array<Real, DegreesOfFreedom>& origin,
-                           const std::array<Real, DegreesOfFreedom>& spacing,
+        AtomicTwoBodyGrids(const std::array<double, DegreesOfFreedom>& origin,
+                           const std::array<double, DegreesOfFreedom>& spacing,
                            const std::array<size_t, DegreesOfFreedom>& dims)
             : origin(origin), spacing(spacing), dims(dims) {}
 
@@ -27,8 +27,8 @@ namespace jgap {
             auto it = value_grids.find(species_set);
             if (it == value_grids.end()) {
                 std::array<size_t, GridDim> grid_dims;
-                std::array<Real, GridDim> grid_spacing;
-                std::array<Real, GridDim> grid_origin;
+                std::array<double, GridDim> grid_spacing;
+                std::array<double, GridDim> grid_origin;
                 for (size_t i = 0; i < DegreesOfFreedom; ++i) {
                     grid_dims[i] = dims[i];
                     grid_spacing[i] = spacing[i];
@@ -62,8 +62,8 @@ namespace jgap {
         }
 
     private:
-        std::array<Real, DegreesOfFreedom> origin;
-        std::array<Real, DegreesOfFreedom> spacing;
+        std::array<double, DegreesOfFreedom> origin;
+        std::array<double, DegreesOfFreedom> spacing;
         std::array<size_t, DegreesOfFreedom> dims;
     };
 }

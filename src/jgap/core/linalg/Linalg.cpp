@@ -10,11 +10,11 @@
 
 namespace jgap::linalg {
 
-    using EigenMatrixCol = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
-    using EigenMatrixRow = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-    using EigenVectorCol = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
+    using EigenMatrixCol = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
+    using EigenMatrixRow = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+    using EigenVectorCol = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 
-    std::vector<Real> solveLeastSquaresHouseholderQR(Matrix<ColumnMajor>& A, std::vector<Real>& b) {
+    std::vector<double> solveLeastSquaresHouseholderQR(Matrix<ColumnMajor>& A, std::vector<double>& b) {
         Eigen::Map<EigenMatrixCol> A_map(A.flatData().data(), A.nRows(), A.nColumns());
         Eigen::Map<EigenVectorCol> b_map(b.data(), b.size());
 
@@ -31,19 +31,19 @@ namespace jgap::linalg {
         auto R = qr.matrixQR().topLeftCorner(A.nColumns(), A.nColumns());
 
         JGAP_LOG_DEBUG("R^-1 * Q^t_b");
-        EigenVectorCol c = R.triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
+        EigenVectorCol c = R.template triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
 
-        Real b_norm = b_map.norm();
-        if (b_norm > 0.0_r && A.nRows() > A.nColumns()) {
-            Real rel_err = Qt_b.tail(A.nRows() - A.nColumns()).norm() / b_norm;
+        double b_norm = b_map.norm();
+        if (b_norm > 0.0 && A.nRows() > A.nColumns()) {
+            double rel_err = Qt_b.tail(A.nRows() - A.nColumns()).norm() / b_norm;
             JGAP_LOG_INFO("QR solver finished: relative error = {}", rel_err);
         }
 
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return std::vector<double>{c.data(), c.data() + c.size()};
     }
 
-    std::vector<Real> solveLeastSquaresConjugateGradient(
-        Matrix<RowMajor>& A, std::vector<Real>& b, std::optional<int> max_iterations, std::optional<double> tolerance
+    std::vector<double> solveLeastSquaresConjugateGradient(
+        Matrix<RowMajor>& A, std::vector<double>& b, std::optional<int> max_iterations, std::optional<double> tolerance
     ) {
         const size_t R = A.nRows();
         const size_t C = A.nColumns();
@@ -70,7 +70,7 @@ namespace jgap::linalg {
 
         JGAP_LOG_INFO("LSCG finished: iterations = {}, relative error = {}", lscg.iterations(), lscg.error());
 
-        return std::vector<Real>{c.data(), c.data() + c.size()};
+        return std::vector<double>{c.data(), c.data() + c.size()};
     }
 
     template<>

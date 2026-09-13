@@ -17,29 +17,29 @@ namespace jgap {
     public:
         explicit ScaledRegularizationRules(
             std::shared_ptr<RegularizationRules> base_rules,
-            Real force_scale = 1.0_r,
-            Real min_scale = 1.0_r
+            double force_scale = 1.0,
+            double min_scale = 1.0
         );
 
         explicit ScaledRegularizationRules(
             const RegularizationRules& base_rules,
-            Real force_scale = 1.0_r,
-            Real min_scale = 1.0_r
+            double force_scale = 1.0,
+            double min_scale = 1.0
         );
 
         explicit ScaledRegularizationRules(
             PerConfigTypeSigmas base_sigmas,
-            Real force_scale = 1.0_r,
-            Real min_scale = 1.0_r
+            double force_scale = 1.0,
+            double min_scale = 1.0
         );
 
         explicit ScaledRegularizationRules(
-            Real energy_sigma_per_atom = 0.001,
-            Real force_component_sigma = 0.05,
-            Real virials_iso_sigma_per_atom = 0.1,
-            Real virials_aniso_sigmas_per_atom = 0.02,
-            Real force_scale = 1.0_r,
-            Real min_scale = 1.0_r
+            double energy_sigma_per_atom = 0.001,
+            double force_component_sigma = 0.05,
+            double virials_iso_sigma_per_atom = 0.1,
+            double virials_aniso_sigmas_per_atom = 0.02,
+            double force_scale = 1.0,
+            double min_scale = 1.0
         );
 
         Regularization determine(const Atoms& atoms) const override;
@@ -48,14 +48,14 @@ namespace jgap {
             return new ScaledRegularizationRules(*this);
         }
 
-        Real getForceScale() const { return force_scale; }
-        Real getMinScale() const { return min_scale; }
+        double getForceScale() const { return force_scale; }
+        double getMinScale() const { return min_scale; }
         const RegularizationRules* getBaseRules() const { return base_rules.get(); }
 
     private:
         std::shared_ptr<RegularizationRules> base_rules;
-        Real force_scale;
-        Real min_scale;
+        double force_scale;
+        double min_scale;
     };
 
 }

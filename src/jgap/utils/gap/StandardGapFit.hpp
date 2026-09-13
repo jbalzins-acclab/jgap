@@ -18,7 +18,7 @@
 #include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
-#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
@@ -26,16 +26,16 @@
 
 namespace jgap::utils {
 
-    inline ValuePtr<EamPairFunction> makeStandardEamPairFunction(EamPairFunctionType type, Real cutoff2) {
+    inline ValuePtr<EamPairFunction> makeStandardEamPairFunction(EamPairFunctionType type, double cutoff2) {
         switch (type) {
             case EamPairFunctionType::FSGen2:
-                return FSGenPairFunction(cutoff2, 2.0_r);
+                return FSGenPairFunction(cutoff2, 2.0);
             case EamPairFunctionType::FSGen3:
-                return FSGenPairFunction(cutoff2, 3.0_r);
+                return FSGenPairFunction(cutoff2, 3.0);
             case EamPairFunctionType::Coscutoff:
-                return CoscutoffPairFunction(cutoff2, 0.0_r);
+                return CoscutoffPairFunction(cutoff2, 0.0);
             case EamPairFunctionType::Polycutoff:
-                return PolycutoffPairFunction(cutoff2, 0.0_r);
+                return PolycutoffPairFunction(cutoff2, 0.0);
         }
         JGAP_LOG_AND_THROW("Unknown EamPairFunctionType");
     }
@@ -57,7 +57,7 @@ namespace jgap::utils {
         // ====================================================================================
         if (params.n_sparse2 > 0) {
             auto trans2 = PairDistanceTransformation(CosCutoff(params.cutoff2, params.cutoff2_width));
-            auto kernel2 = SquaredExpKernel<1, 1>(10.0_r, {1.0_r});
+            auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
             auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, params.n_sparse2, std::array{true, false});
             potential.addComponents(
                 createTwoBodyComponents<2, SquaredExpKernel<1, 1>>(training_data, trans2, kernel2, sparsifier2)
@@ -69,7 +69,7 @@ namespace jgap::utils {
         // ====================================================================================
         if (params.eam_n_sparse > 0) {
             auto eam_pf = makeStandardEamPairFunction(params.eam_pair_function, params.cutoff2);
-            auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
+            auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
             auto sparsifier_eam = HistogramUniformSparsifier<1>(
                 params.seed, params.eam_n_sparse, std::nullopt, std::nullopt, Descriptor<1>{params.eam_min_density}
             );
@@ -85,7 +85,7 @@ namespace jgap::utils {
         // ====================================================================================
         if (params.n_sparse3 > 0) {
             auto trans3 = Angle3bTransformation(CosCutoff(params.cutoff3, params.cutoff3_width));
-            auto kernel3 = SquaredExpKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
+            auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
             auto sparsifier3 =
                 HistogramUniformSparsifier<4>(params.seed, params.n_sparse3, std::array{true, true, true, false});
             potential.addComponents(
@@ -106,8 +106,8 @@ namespace jgap::utils {
 
         potential.optional_external_potential = external;
 
-        // Always perform ElementalQRGapFit with single-element structures first
-        ElementalQRGapFit fitter(1e-8, params.approx_ram_limit_gb);
+        // Always perform ElementIncrementalQRGapFit with single-element structures first
+        ElementIncrementalQRGapFit fitter(1e-8, params.approx_ram_limit_gb);
         fitter.fit(potential, training_data, sigmas);
 
         SerializationRegistry<Potential>::serialize(potential, filename);

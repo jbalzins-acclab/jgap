@@ -28,8 +28,8 @@ namespace jgap {
             for (size_t i = 0; i < coeff_grid.sizes[0]; ++i) {
                 for (size_t j = i + 1; j < coeff_grid.sizes[1]; ++j) {
                     for (size_t k = 0; k < coeff_grid.sizes[2]; ++k) {
-                        Real v1 = coeff_grid({i, j, k});
-                        Real v2 = coeff_grid({j, i, k});
+                        double v1 = coeff_grid({i, j, k});
+                        double v2 = coeff_grid({j, i, k});
                         if (std::abs(v1 - v2) > 1e-4) {
                             JGAP_LOG_AND_THROW(
                                 "3-body spline for symmetric species {}-{}-{} is not symmetric in swapping distances "
@@ -59,8 +59,8 @@ namespace jgap {
 
             result.value += E;
 
-            Vector3 f1{0.0_r, 0.0_r, 0.0_r};
-            Vector3 f2{0.0_r, 0.0_r, 0.0_r};
+            Vector3 f1{0.0, 0.0, 0.0};
+            Vector3 f2{0.0, 0.0, 0.0};
             for (size_t dim = 0; dim < 3; dim++) {
                 f1 -= dE_dq[dim] * desc.grad_r1[dim];
                 f2 -= dE_dq[dim] * desc.grad_r2[dim];

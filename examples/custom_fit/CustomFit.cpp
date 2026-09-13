@@ -31,18 +31,18 @@ namespace {
     // ---- baseline parameters, from test-local/fit-params.json ----
     constexpr size_t SEED = 120;
 
-    constexpr Real EAM_CUTOFF = 5.0; // json eam pair_function cutoff
-    constexpr Real EAM_ENERGY_SCALE = 1.0; // json eam kernel_setup energy_scale
+    constexpr double EAM_CUTOFF = 5.0; // json eam pair_function cutoff
+    constexpr double EAM_ENERGY_SCALE = 1.0; // json eam kernel_setup energy_scale
     constexpr size_t EAM_N_SPARSE = 20; // json eam kernel_setup n_sparse
 
-    constexpr Real CUTOFF_3B = 4.0; // json 3b cutoff
-    constexpr Real WIDTH_3B = 0.6; // json 3b cutoff_transition_width
-    constexpr Real ENERGY_SCALE_3B = 1.0; // json 3b energy_scale (base, before the Ni adjustment)
+    constexpr double CUTOFF_3B = 4.0; // json 3b cutoff
+    constexpr double WIDTH_3B = 0.6; // json 3b cutoff_transition_width
+    constexpr double ENERGY_SCALE_3B = 1.0; // json 3b energy_scale (base, before the Ni adjustment)
     constexpr size_t N_SPARSE_3B = 500; // json 3b n_sparse (per triplet — reduce for a quick run)
 
-    constexpr Real CUTOFF_2B = 5.0; // json 2b cutoff
-    constexpr Real WIDTH_2B = 0.5; // json 2b cutoff_transition_width
-    constexpr Real ENERGY_SCALE_2B = 10.0; // json 2b energy_scale
+    constexpr double CUTOFF_2B = 5.0; // json 2b cutoff
+    constexpr double WIDTH_2B = 0.5; // json 2b cutoff_transition_width
+    constexpr double ENERGY_SCALE_2B = 10.0; // json 2b energy_scale
     constexpr size_t N_SPARSE_2B = 20; // json 2b n_sparse
 
     bool isNi(const Species& s) { return s.symbol() == "Ni"; }
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
     for (const auto& triplet: triplets) {
         const int n_ni =
             (isNi(triplet.root) ? 1 : 0) + (isNi(triplet.nodes[0]) ? 1 : 0) + (isNi(triplet.nodes[1]) ? 1 : 0);
-        const Real energy_scale = ENERGY_SCALE_3B * (1.0 + 0.1 * static_cast<Real>(n_ni)); // mild Ni boost
+        const double energy_scale = ENERGY_SCALE_3B * (1.0 + 0.1 * static_cast<double>(n_ni)); // mild Ni boost
         const auto kernel3 = SquaredExpKernel<3, 1>(energy_scale, {1.0, 1.0, 1.0});
 
         potential.addComponent(

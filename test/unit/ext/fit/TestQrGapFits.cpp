@@ -19,7 +19,7 @@
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
-#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 #include "jgap/utils/gap/GapComponentUtils.hpp"
 
@@ -52,7 +52,7 @@ TYPED_TEST(QrGapFits, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) 
     equilateralTriangle.setForces({{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}});
 
     auto trans = PairDistanceTransformation(CosCutoff(10.0, 0.7));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<double, 1>{1.0});
     std::vector<Descriptor<2>> sparse_points = {{3.0, 1.0}};
     auto component =
         TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(Species2Sorted("Fe", "Fe"), trans, kernel, sparse_points);
@@ -70,13 +70,13 @@ TYPED_TEST(QrGapFits, twoBodyEquilateralTriangleAtEquilibriumQuipCompatibility) 
     ASSERT_NEAR(totalVariance, 27.0, 1e-6);
 }
 
-GapPotential create2bPotential(const std::vector<Real>& sparsePts) {
+GapPotential create2bPotential(const std::vector<double>& sparsePts) {
     auto trans = PairDistanceTransformation(CosCutoff(10.0, 0.7));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<double, 1>{1.0});
 
     std::vector<Descriptor<2>> sparse_points;
     CosCutoff ref_cutoff(10.0, 0.7);
-    for (Real r: sparsePts) {
+    for (double r: sparsePts) {
         sparse_points.push_back({r, ref_cutoff.evaluate(r)});
     }
 
@@ -175,16 +175,16 @@ TYPED_TEST(QrGapFits, twoAtomsWithForceQuipCompatibility5) {
     ASSERT_NEAR(coeffs[2], 0.38697171383300527, 1e-6);
 }
 
-GapPotential createEamPotential(Real theta, Real delta, Real r_min, Real cutoff, const std::vector<Real>& sparse_pts) {
+GapPotential createEamPotential(double theta, double delta, double r_min, double cutoff, const std::vector<double>& sparse_pts) {
     auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
     auto eam_aggregator = TwoBodySum<1>(Species("Fe"));
     eam_aggregator.extend(Species2Atomic("Fe", "Fe"), trans);
 
-    auto kernel = SquaredExpKernel<1, 0>(delta, std::array<Real, 1>{theta});
+    auto kernel = SquaredExpKernel<1, 0>(delta, std::array<double, 1>{theta});
 
     std::vector<Descriptor<1>> sparse_points;
-    for (Real r: sparse_pts) {
+    for (double r: sparse_pts) {
         sparse_points.push_back({r});
     }
 
@@ -222,10 +222,10 @@ TYPED_TEST(QrGapFits, eamQuipCompatibilityRealBox) {
 }
 
 GapPotential create3bPotential(
-    Real theta, Real delta, Real cutoff_transition_width, Real cutoff, const std::vector<Vector3>& sparsePts
+    double theta, double delta, double cutoff_transition_width, double cutoff, const std::vector<Vector3>& sparsePts
 ) {
     auto trans = Angle3bTransformation(CosCutoff(cutoff, cutoff_transition_width));
-    auto kernel = SquaredExpKernel<3, 1>(delta, std::array<Real, 3>{theta, theta, theta});
+    auto kernel = SquaredExpKernel<3, 1>(delta, std::array<double, 3>{theta, theta, theta});
     std::vector<Descriptor<4>> sparse_points;
     for (const auto& q: sparsePts) {
         sparse_points.push_back({q.x, q.y, q.z, 1.0});
@@ -287,14 +287,14 @@ TYPED_TEST(QrGapFits, MissingRegularizationThrows) {
 
 TEST(SplitQRGapFitTest, NonZeroCovarianceForSpecies) {
     auto trans2 = PairDistanceTransformation(CosCutoff(5.0, 1.0));
-    auto kernel2 = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
+    auto kernel2 = SquaredExpKernel<1, 1>(1.0, std::array<double, 1>{1.0});
     TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp2(
         Species2Sorted("Fe", "Ni"), trans2, kernel2, std::vector<Descriptor<2>>{{2.5, 1.0}}
     );
     EXPECT_EQ(comp2.nonZeroCovarianceFor(), (std::set<Species>{"Fe", "Ni"}));
 
     auto trans3 = Angle3bTransformation(CosCutoff(5.0, 1.0));
-    auto kernel3 = SquaredExpKernel<3, 1>(1.0, std::array<Real, 3>{1.0, 1.0, 1.0});
+    auto kernel3 = SquaredExpKernel<3, 1>(1.0, std::array<double, 3>{1.0, 1.0, 1.0});
     ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp3(
         Species3AtomicSorted("Fe", "Ni", "Cu"), trans3, kernel3, std::vector<Descriptor<4>>{{2.5, 2.5, 2.5, 1.0}}
     );
@@ -302,14 +302,14 @@ TEST(SplitQRGapFitTest, NonZeroCovarianceForSpecies) {
 
     TwoBodySum<1> sum(Species("Fe"));
     sum.extend(Species2Atomic("Fe", "Ni"), PolycutoffPairFunction(5.0, 0.0));
-    auto kernel_eam = SquaredExpKernel<1, 0>(1.0, std::array<Real, 1>{1.0});
+    auto kernel_eam = SquaredExpKernel<1, 0>(1.0, std::array<double, 1>{1.0});
     ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> comp_mb(
         sum, kernel_eam, std::vector<Descriptor<1>>{{1.0}}
     );
     EXPECT_EQ(comp_mb.nonZeroCovarianceFor(), (std::set<Species>{"Fe"}));
 }
 
-TEST(ElementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
+TEST(ElementIncrementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
     // 1. Fe dimer
     Atoms fe_dimer(
         {{0.0, 0.0, 0.0}, {2.5, 0.0, 0.0}},
@@ -340,7 +340,7 @@ TEST(ElementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
     std::vector<Atoms> train_data = {fe_dimer, ni_dimer, feni_dimer};
 
     auto trans = PairDistanceTransformation(CosCutoff(6.0, 1.0));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<Real, 1>{1.0});
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array<double, 1>{1.0});
 
     TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp_fe(
         Species2Sorted("Fe", "Fe"), trans, kernel, std::vector<Descriptor<2>>{{2.5, 1.0}}
@@ -361,7 +361,7 @@ TEST(ElementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
     QRGapFit qr_fitter(1e-8);
     qr_fitter.fit(pot_qr, train_data, sigmas);
 
-    ElementalQRGapFit split_fitter(1e-8, 1.0);
+    ElementIncrementalQRGapFit split_fitter(1e-8, 1.0);
     split_fitter.fit(pot_split, train_data, sigmas);
 
     // Verify coefficients match
@@ -388,7 +388,7 @@ TEST(ElementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
     }
 }
 
-TEST(ElementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
+TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
     auto all_atoms = Atoms::readAtoms("test/resources/xyz-samples/feni-train.xyz");
     std::vector<Atoms> train_data;
     std::vector<Atoms> fe_only, ni_only, feni_both;
@@ -457,7 +457,7 @@ TEST(ElementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
     BlockIncrementalQRGapFit stream_fitter(1e-8, test_ram_gb);
     stream_fitter.fit(pot_stream, train_data, sigmas);
 
-    ElementalQRGapFit split_fitter(1e-8, test_ram_gb);
+    ElementIncrementalQRGapFit split_fitter(1e-8, test_ram_gb);
     split_fitter.fit(pot_split, train_data, sigmas);
 
     // 1. Verify pot_qr and pot_stream match component-wise directly

@@ -17,7 +17,7 @@ namespace jgap {
         const size_t Ny = My + 2;
         const size_t Nz = Mz + 2;
 
-        std::array<Real, 3> new_origin = values.origin;
+        std::array<double, 3> new_origin = values.origin;
         for (size_t i = 0; i < 3; i++) {
             new_origin[i] -= values.spacing[i];
         }
@@ -25,11 +25,11 @@ namespace jgap {
         Grid<3> temp1({Nx, My, Mz}, values.spacing, new_origin);
         unseqForIndex(0, My, [&](size_t iy) {
             for (size_t iz = 0; iz < Mz; ++iz) {
-                std::vector<Real> slice(Mx);
+                std::vector<double> slice(Mx);
                 for (size_t ix = 0; ix < Mx; ++ix) {
                     slice[ix] = values({ix, iy, iz});
                 }
-                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[0]);
+                std::vector<double> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[0]);
                 for (size_t ix = 0; ix < Nx; ++ix) {
                     temp1({ix, iy, iz}) = coeffs[ix];
                 }
@@ -39,11 +39,11 @@ namespace jgap {
         Grid<3> temp2({Nx, Ny, Mz}, values.spacing, new_origin);
         unseqForIndex(0, Nx, [&](size_t ix) {
             for (size_t iz = 0; iz < Mz; ++iz) {
-                std::vector<Real> slice(My);
+                std::vector<double> slice(My);
                 for (size_t iy = 0; iy < My; ++iy) {
                     slice[iy] = temp1({ix, iy, iz});
                 }
-                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[1]);
+                std::vector<double> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[1]);
                 for (size_t iy = 0; iy < Ny; ++iy) {
                     temp2({ix, iy, iz}) = coeffs[iy];
                 }
@@ -53,11 +53,11 @@ namespace jgap {
         Grid<3> final_coeff({Nx, Ny, Nz}, values.spacing, new_origin);
         unseqForIndex(0, Nx, [&](size_t ix) {
             for (size_t iy = 0; iy < Ny; ++iy) {
-                std::vector<Real> slice(Mz);
+                std::vector<double> slice(Mz);
                 for (size_t iz = 0; iz < Mz; ++iz) {
                     slice[iz] = temp2({ix, iy, iz});
                 }
-                std::vector<Real> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[2]);
+                std::vector<double> coeffs = CubicBSpline::toSplineCoefficients(slice, values.spacing[2]);
                 for (size_t iz = 0; iz < Nz; ++iz) {
                     final_coeff({ix, iy, iz}) = coeffs[iz];
                 }
@@ -67,7 +67,7 @@ namespace jgap {
         return CubicBSpline3D(final_coeff);
     }
 
-    InterpolationResults<3> CubicBSpline3D::interpolate(std::array<Real, 3> pos) const {
+    InterpolationResults<3> CubicBSpline3D::interpolate(std::array<double, 3> pos) const {
         const auto& coeffs = coefficients.data_flat;
         const auto& dims = coefficients.sizes;
         const auto& spacing = coefficients.spacing;
@@ -75,18 +75,18 @@ namespace jgap {
         const auto cutoff = getCutoff();
 
         for (size_t d = 0; d < 3; d++) {
-            const Real data_origin = origin[d] + spacing[d];
-            const Real data_upper = data_origin + static_cast<Real>(dims[d] - 3) * spacing[d];
+            const double data_origin = origin[d] + spacing[d];
+            const double data_upper = data_origin + static_cast<double>(dims[d] - 3) * spacing[d];
             if (pos[d] < (data_origin - 1e-9) || pos[d] > (data_upper + 1e-9)) {
                 return {0.0, {0.0, 0.0, 0.0}};
             }
         }
 
-        Real u[3], t[3];
+        double u[3], t[3];
         int ii[3];
 
         for (size_t d = 0; d < 3; d++) {
-            const Real data_origin = origin[d] + spacing[d];
+            const double data_origin = origin[d] + spacing[d];
             u[d] = (pos[d] - data_origin) / spacing[d];
             int i0 = static_cast<int>(std::floor(u[d]));
             int imax = static_cast<int>(dims[d]) - 4;
@@ -94,9 +94,9 @@ namespace jgap {
             t[d] = u[d] - ii[d];
         }
 
-        Real Phi[3][4], dPhi[3][4];
+        double Phi[3][4], dPhi[3][4];
         for (size_t d = 0; d < 3; ++d) {
-            const Real dinv = 1.0 / spacing[d];
+            const double dinv = 1.0 / spacing[d];
 
             if (t[d] < 0.0) {
                 Phi[d][0] = 1.0 / 6.0 - 0.5 * t[d];
@@ -109,7 +109,7 @@ namespace jgap {
                 dPhi[d][2] = 0.5 * dinv;
                 dPhi[d][3] = 0.0;
             } else if (t[d] > 1.0) {
-                const Real dt = t[d] - 1.0;
+                const double dt = t[d] - 1.0;
                 Phi[d][0] = 0.0;
                 Phi[d][1] = 1.0 / 6.0 - 0.5 * dt;
                 Phi[d][2] = 4.0 / 6.0;
@@ -120,8 +120,8 @@ namespace jgap {
                 dPhi[d][2] = 0.0;
                 dPhi[d][3] = 0.5 * dinv;
             } else {
-                const Real t2 = t[d] * t[d];
-                const Real t3 = t2 * t[d];
+                const double t2 = t[d] * t[d];
+                const double t3 = t2 * t[d];
 
                 Phi[d][0] = (1 - 3 * t[d] + 3 * t2 - t3) / 6.0;
                 Phi[d][1] = (4 - 6 * t2 + 3 * t3) / 6.0;
@@ -138,21 +138,21 @@ namespace jgap {
         const int N1 = dims[1];
         const int N2 = dims[2];
 
-        Real value = 0.0;
-        Real dval[3] = {0.0, 0.0, 0.0};
+        double value = 0.0;
+        double dval[3] = {0.0, 0.0, 0.0};
 
         for (int i = 0; i < 4; ++i) {
             const int base_i = ((ii[0] + i) * N1 + ii[1]) * N2 + ii[2];
 
-            Real ppc = 0.0;
-            Real dpp1 = 0.0;
-            Real dpp2 = 0.0;
+            double ppc = 0.0;
+            double dpp1 = 0.0;
+            double dpp2 = 0.0;
 
             for (int j = 0; j < 4; ++j) {
-                const Real* cptr = &coeffs[base_i + j * N2];
+                const double* cptr = &coeffs[base_i + j * N2];
 
-                const Real pc = Phi[2][0] * cptr[0] + Phi[2][1] * cptr[1] + Phi[2][2] * cptr[2] + Phi[2][3] * cptr[3];
-                const Real dpc =
+                const double pc = Phi[2][0] * cptr[0] + Phi[2][1] * cptr[1] + Phi[2][2] * cptr[2] + Phi[2][3] * cptr[3];
+                const double dpc =
                     dPhi[2][0] * cptr[0] + dPhi[2][1] * cptr[1] + dPhi[2][2] * cptr[2] + dPhi[2][3] * cptr[3];
 
                 ppc += Phi[1][j] * pc;
@@ -169,13 +169,13 @@ namespace jgap {
         return {value, {dval[0], dval[1], dval[2]}};
     }
 
-    std::array<Real, 3> CubicBSpline3D::getCutoff() const {
+    std::array<double, 3> CubicBSpline3D::getCutoff() const {
         // Original grid data_origin = origin + spacing, data_points N = sizes - 2.
         // Cutoff is exact upper bound: data_origin + (N - 1) * spacing.
-        std::array<Real, 3> cutoff;
+        std::array<double, 3> cutoff;
         for (size_t d = 0; d < 3; d++) {
-            const Real data_points = static_cast<Real>(coefficients.sizes[d] - 2);
-            const Real data_origin = coefficients.origin[d] + coefficients.spacing[d];
+            const double data_points = static_cast<double>(coefficients.sizes[d] - 2);
+            const double data_origin = coefficients.origin[d] + coefficients.spacing[d];
             cutoff[d] = data_origin + (data_points - 1) * coefficients.spacing[d];
         }
         return cutoff;

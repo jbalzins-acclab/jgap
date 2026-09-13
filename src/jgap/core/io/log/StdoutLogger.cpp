@@ -1,4 +1,4 @@
-#include "jgap/io/log/StdoutLogger.hpp"
+#include "jgap/core/io/log/StdoutLogger.hpp"
 
 #include <iostream>
 #include <chrono>

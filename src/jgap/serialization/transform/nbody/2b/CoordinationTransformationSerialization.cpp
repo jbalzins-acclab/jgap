@@ -11,8 +11,8 @@ namespace jgap {
             node.writeAttribute("dimensions", Dim);
 
             const auto& ranges = obj->getRanges();
-            std::vector<Real> r_mins;
-            std::vector<Real> r_maxs;
+            std::vector<double> r_mins;
+            std::vector<double> r_maxs;
             for (size_t i = 0; i < Dim; ++i) {
                 r_mins.push_back(ranges[i].first);
                 r_maxs.push_back(ranges[i].second);
@@ -44,7 +44,7 @@ namespace jgap {
             JGAP_LOG_AND_THROW("Invalid array sizes for r_mins or r_maxs in CoordinationTransformation");
         }
 
-        std::array<std::pair<Real, Real>, Dim> ranges;
+        std::array<std::pair<double, double>, Dim> ranges;
         for (size_t i = 0; i < Dim; ++i) {
             ranges[i] = {r_mins[i], r_maxs[i]};
         }

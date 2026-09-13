@@ -11,7 +11,7 @@ namespace jgap {
         SplinePairPotential() = default;
         ~SplinePairPotential() override = default;
 
-        void extend(Species species1, Species species2, const std::vector<Real> &r, const std::vector<Real> &energies);
+        void extend(Species species1, Species species2, const std::vector<double> &r, const std::vector<double> &energies);
 
         AtomicQuantity calculateEnergy(const Atoms &atoms) const override;
 

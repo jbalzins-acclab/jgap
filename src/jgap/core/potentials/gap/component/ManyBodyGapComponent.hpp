@@ -18,7 +18,7 @@ namespace jgap {
     public:
         ManyBodyGapComponent(
             const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel,
-            std::vector<Descriptor<Dim>> sparse_points, const std::vector<Real>& optional_coeffs = {}
+            std::vector<Descriptor<Dim>> sparse_points, const std::vector<double>& optional_coeffs = {}
         ) :
             aggregator(aggregator), kernel(kernel), sparse_points(std::move(sparse_points)) {
             if (!optional_coeffs.empty()) {
@@ -28,7 +28,7 @@ namespace jgap {
 
         ManyBodyGapComponent(
             const ValuePtr<NBodyAggregator<Dim>>& aggregator, const TKernel& kernel, const Sparsifier<Dim>& sparsifier,
-            const std::vector<Atoms>& training_data, const std::vector<Real>& optional_coeffs = {}
+            const std::vector<Atoms>& training_data, const std::vector<double>& optional_coeffs = {}
         ) :
             ManyBodyGapComponent(
                 aggregator, kernel, sparsifier.selectSparsePoints(getAllDescriptors(training_data, aggregator)),
@@ -75,7 +75,7 @@ namespace jgap {
             return result;
         }
 
-        Matrix<RowMajor> sparseToSparseCovariance() const override {
+        Matrix<RowMajor> K_MM() const override {
             Matrix<RowMajor> result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
@@ -85,6 +85,7 @@ namespace jgap {
             }
             return result;
         }
+
 
         size_t nSparsePoints() const override { return sparse_points.size(); }
 
@@ -110,7 +111,7 @@ namespace jgap {
                 aggregator->tabulateNewManyBodyGrid(tables);
                 auto& eam_grids = tables.eam_grids_vec.back();
 
-                Real max_sparse = 0.0;
+                double max_sparse = 0.0;
                 if (!sparse_points.empty()) {
                     max_sparse = sparse_points[0][0];
                     for (const auto& sp: sparse_points) {
@@ -143,7 +144,7 @@ namespace jgap {
             const std::vector<Atoms>& training_data, const ValuePtr<NBodyAggregator<Dim>>& aggregator
         ) {
             std::vector<Descriptor<Dim>> all_descriptors;
-            Real cutoff = aggregator->getCutoffs().maxOverall();
+            double cutoff = aggregator->getCutoffs().maxOverall();
             for (const auto& atoms: training_data) {
                 NeighbourLists nl(atoms, cutoff);
                 auto aggregated = aggregator->aggregate(nl);

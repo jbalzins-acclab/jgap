@@ -11,39 +11,39 @@ namespace {
     class MockCutoff : public CutoffFunction {
     public:
         // Set the values that the mock will return
-        void set_values(Real r, Real val, Real deriv) {
+        void set_values(double r, double val, double deriv) {
             expected_r = r;
             return_val = val;
             return_deriv = deriv;
         }
 
-        Real evaluate(Real r) const override {
+        double evaluate(double r) const override {
             EXPECT_NEAR(r, expected_r, 1e-9);
             return return_val;
         }
 
-        std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override {
+        std::tuple<double, double> evaluateAndDifferentiate(double r) const override {
             EXPECT_NEAR(r, expected_r, 1e-9);
             return {return_val, return_deriv};
         }
 
-        Real getCutoff() const override { return 10.0; }
+        double getCutoff() const override { return 10.0; }
 
         MockCutoff* clone() const override { return new MockCutoff(*this); }
 
     private:
-        Real expected_r = 0.0;
-        Real return_val = 0.0;
-        Real return_deriv = 0.0;
+        double expected_r = 0.0;
+        double return_val = 0.0;
+        double return_deriv = 0.0;
     };
 }
 
 TEST(TestPairDistanceTransformation, CorrectlyUsesCutoff) {
     // 2. Setup
     MockCutoff mock_cutoff{};
-    Real test_dist = 2.5;
-    Real test_val = 0.5;
-    Real test_deriv = -0.25;
+    double test_dist = 2.5;
+    double test_val = 0.5;
+    double test_deriv = -0.25;
     mock_cutoff.set_values(test_dist, test_val, test_deriv);
 
     PairDistanceTransformation trans(mock_cutoff);

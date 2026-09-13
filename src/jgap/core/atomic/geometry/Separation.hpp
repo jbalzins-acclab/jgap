@@ -2,7 +2,6 @@
 #define JGAP_SEPARATION_HPP
 
 #include "../../Vector3.hpp"
-#include "jgap/core/Real.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 
 namespace jgap {
@@ -16,7 +15,7 @@ namespace jgap {
     /// Separation::virials() should be used as a starting point for the chain rule application
     /// when calculating Virials for e.g. @ref AtomicQuantity or @ref ManyBodyDescriptor.
     struct Separation {
-        Real magnitude{};
+        double magnitude{};
         Vector3 direction{};
 
         Separation() = default;

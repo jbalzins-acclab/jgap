@@ -2,13 +2,12 @@
 #define JGAP_INTERPOLATIONRESULTS_HPP
 #include <array>
 
-#include "jgap/core/Real.hpp"
 
 namespace jgap {
     template<size_t Dim>
     struct InterpolationResults {
-        Real value;
-        std::array<Real, Dim> gradient;
+        double value;
+        std::array<double, Dim> gradient;
     };
 }
 

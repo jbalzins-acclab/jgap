@@ -148,7 +148,7 @@ PYBIND11_MODULE(_jgap, m) {
     // =========================================================================
     py::class_<Vector3>(m, "Vector3")
         .def(py::init<>())
-        .def(py::init<Real, Real, Real>(), py::arg("x"), py::arg("y"), py::arg("z"))
+        .def(py::init<double, double, double>(), py::arg("x"), py::arg("y"), py::arg("z"))
         .def_readwrite("x", &Vector3::x)
         .def_readwrite("y", &Vector3::y)
         .def_readwrite("z", &Vector3::z)
@@ -170,9 +170,9 @@ PYBIND11_MODULE(_jgap, m) {
         })
         .def("__add__", [](const Vector3& a, const Vector3& b) { return a + b; })
         .def("__sub__", [](const Vector3& a, const Vector3& b) { return a - b; })
-        .def("__mul__", [](const Vector3& a, Real s) { return a * s; })
-        .def("__rmul__", [](const Vector3& a, Real s) { return a * s; })
-        .def("__truediv__", [](const Vector3& a, Real s) { return a / s; })
+        .def("__mul__", [](const Vector3& a, double s) { return a * s; })
+        .def("__rmul__", [](const Vector3& a, double s) { return a * s; })
+        .def("__truediv__", [](const Vector3& a, double s) { return a / s; })
         .def("__repr__", [](const Vector3& v) {
             std::ostringstream oss;
             oss << "Vector3(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -221,7 +221,7 @@ PYBIND11_MODULE(_jgap, m) {
     // =========================================================================
     py::class_<Virials>(m, "Virials")
         .def(py::init<>())
-        .def(py::init<Real, Real, Real, Real, Real, Real>(),
+        .def(py::init<double, double, double, double, double, double>(),
              py::arg("xx"), py::arg("xy"), py::arg("xz"),
              py::arg("yy"), py::arg("yz"), py::arg("zz"))
         .def(py::init(&voigtToVirials), py::arg("voigt_or_matrix"))
@@ -325,7 +325,7 @@ PYBIND11_MODULE(_jgap, m) {
 
         .def_property("pbc", &Atoms::getPbc, &Atoms::setPbc)
 
-        .def_property("energy", &Atoms::getEnergy, [](Atoms& a, std::optional<Real> e) {
+        .def_property("energy", &Atoms::getEnergy, [](Atoms& a, std::optional<double> e) {
             if (e.has_value()) a.setEnergy(*e);
             else a.eraseEnergy();
         })
@@ -400,10 +400,10 @@ PYBIND11_MODULE(_jgap, m) {
     // Regularization & Sigmas
     // =========================================================================
     py::class_<PerConfigTypeSigmas>(m, "PerConfigTypeSigmas")
-        .def(py::init<Real>(), py::arg("energy"))
-        .def(py::init<Real, Real, Real>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
-        .def(py::init<Real, Real, Real, Real>(), py::arg("energy"), py::arg("force"), py::arg("virials_iso"), py::arg("virials_aniso"))
-        .def(py::init<Real, Vector3, Virials>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
+        .def(py::init<double>(), py::arg("energy"))
+        .def(py::init<double, double, double>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
+        .def(py::init<double, double, double, double>(), py::arg("energy"), py::arg("force"), py::arg("virials_iso"), py::arg("virials_aniso"))
+        .def(py::init<double, Vector3, Virials>(), py::arg("energy"), py::arg("force"), py::arg("virials"))
         .def_readwrite("energy", &PerConfigTypeSigmas::energy)
         .def_readwrite("force", &PerConfigTypeSigmas::force)
         .def_readwrite("virials", &PerConfigTypeSigmas::virials)
@@ -449,7 +449,7 @@ PYBIND11_MODULE(_jgap, m) {
         });
 
     py::class_<SimpleRegularizationRules, RegularizationRules, std::shared_ptr<SimpleRegularizationRules>>(m, "SimpleRegularizationRules")
-        .def(py::init<Real, Real, Real, Real, Real, Real>(),
+        .def(py::init<double, double, double, double, double, double>(),
              py::arg("energy_sigma_per_atom") = 0.001,
              py::arg("force_component_sigma") = 0.05,
              py::arg("virials_iso_sigma_per_atom") = 0.1,
@@ -461,15 +461,15 @@ PYBIND11_MODULE(_jgap, m) {
         });
 
     py::class_<ScaledRegularizationRules, RegularizationRules, std::shared_ptr<ScaledRegularizationRules>>(m, "ScaledRegularizationRules")
-        .def(py::init<std::shared_ptr<RegularizationRules>, Real, Real>(),
+        .def(py::init<std::shared_ptr<RegularizationRules>, double, double>(),
              py::arg("base_rules"),
              py::arg("force_scale") = 1.0,
              py::arg("min_scale") = 1.0)
-        .def(py::init<PerConfigTypeSigmas, Real, Real>(),
+        .def(py::init<PerConfigTypeSigmas, double, double>(),
              py::arg("base_sigmas"),
              py::arg("force_scale") = 1.0,
              py::arg("min_scale") = 1.0)
-        .def(py::init<Real, Real, Real, Real, Real, Real>(),
+        .def(py::init<double, double, double, double, double, double>(),
              py::arg("energy_sigma_per_atom") = 0.001,
              py::arg("force_component_sigma") = 0.05,
              py::arg("virials_iso_sigma_per_atom") = 0.1,
@@ -507,17 +507,17 @@ PYBIND11_MODULE(_jgap, m) {
         .def(py::init([](
             size_t seed,
             std::optional<std::string> screened_coulomb_dataset_file,
-            Real cutoff2,
-            Real cutoff2_width,
+            double cutoff2,
+            double cutoff2_width,
             size_t n_sparse2,
             EamMode eam_mode,
             utils::EamPairFunctionType eam_pair_function,
             size_t eam_n_sparse,
-            Real eam_min_density,
-            Real cutoff3,
-            Real cutoff3_width,
+            double eam_min_density,
+            double cutoff3,
+            double cutoff3_width,
             size_t n_sparse3,
-            Real approx_ram_limit_gb
+            double approx_ram_limit_gb
         ) {
             utils::StandardGapParams p;
             p.seed = seed;
@@ -595,7 +595,7 @@ PYBIND11_MODULE(_jgap, m) {
     // Tabulation
     // =========================================================================
     py::class_<utils::StandardTabulationParams>(m, "StandardTabulationParams")
-        .def(py::init<Real, Real, size_t, std::array<size_t, 3>>(),
+        .def(py::init<double, double, size_t, std::array<size_t, 3>>(),
              py::arg("r_min_3b") = 0.5,
              py::arg("max_eam_density") = 10.0,
              py::arg("n_grid_2b") = 5000,

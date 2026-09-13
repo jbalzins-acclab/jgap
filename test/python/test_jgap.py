@@ -255,7 +255,7 @@ class TestJGAP(unittest.TestCase):
         sigmas = rules.determine_for_all(frames)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Valid RAM limit -> runs ElementalQRGapFit with bounded chunk size
+            # Valid RAM limit -> runs ElementIncrementalQRGapFit with bounded chunk size
             params_valid = jgap.StandardGapParams(
                 seed=42,
                 n_sparse2=10,

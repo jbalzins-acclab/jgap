@@ -30,7 +30,7 @@ namespace jgap {
     }
 
     TabGapPotential::TabGapPotential(
-        std::map<Species, Real> isolated_atom_energies,
+        std::map<Species, double> isolated_atom_energies,
         std::map<Species2Sorted, TwoBodyTGComponent> two_body_components,
         std::map<Species3AtomicSorted, ThreeBodyTGComponent> three_body_components,
         std::multimap<Species, EamTGComponent> eam_components

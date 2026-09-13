@@ -16,13 +16,13 @@ TEST(SplineTest, OneDimensionalSplines) {
     Species si("Si");
     ScreenedCoulombPotential sc({Species2Sorted(si, si)});
 
-    std::vector<Real> r_vec;
-    std::vector<Real> e_vec;
-    std::vector<Real> de_vec;
+    std::vector<double> r_vec;
+    std::vector<double> e_vec;
+    std::vector<double> de_vec;
 
-    Real cutoff = 4.0;
-    Real spacing = 0.001;
-    for (Real r = 0.1; r <= cutoff + 1e-9; r += spacing) {
+    double cutoff = 4.0;
+    double spacing = 0.001;
+    for (double r = 0.1; r <= cutoff + 1e-9; r += spacing) {
         r_vec.push_back(r);
         auto ed = sc.energyAndDerivative(Species2Sorted(si, si), r);
         e_vec.push_back(ed[0]);
@@ -37,9 +37,9 @@ TEST(SplineTest, OneDimensionalSplines) {
     CubicBSpline& b_spline = *dynamic_cast<CubicBSpline*>(b_spline_ptr.get());
 
     for (size_t i = 0; i < r_vec.size(); ++i) {
-        Real r = r_vec[i];
-        Real sc_e = e_vec[i];
-        Real sc_de = de_vec[i];
+        double r = r_vec[i];
+        double sc_e = e_vec[i];
+        double sc_de = de_vec[i];
 
         auto natural_res = natural_cubic_spline.interpolate({r});
         auto hermite_res = hermite_cubic_spline.interpolate({r});
@@ -49,27 +49,27 @@ TEST(SplineTest, OneDimensionalSplines) {
         EXPECT_NEAR(sc_e, hermite_res.value, 1e-9);
         EXPECT_NEAR(sc_e, b_spline_res.value, 1e-9);
 
-        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1.2e-2);
+        double de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1.2e-2);
         EXPECT_NEAR(sc_de, natural_res.gradient[0], de_tolerance);
         EXPECT_NEAR(sc_de, hermite_res.gradient[0], de_tolerance);
         EXPECT_NEAR(sc_de, b_spline_res.gradient[0], de_tolerance);
     }
 
-    for (Real r = 0.1005; r < cutoff; r += spacing) {
+    for (double r = 0.1005; r < cutoff; r += spacing) {
         auto ed = sc.energyAndDerivative(Species2Sorted(si, si), r);
-        Real sc_e = ed[0];
-        Real sc_de = ed[1];
+        double sc_e = ed[0];
+        double sc_de = ed[1];
 
         auto natural_res = natural_cubic_spline.interpolate({r});
         auto hermite_res = hermite_cubic_spline.interpolate({r});
         auto b_spline_res = b_spline.interpolate({r});
 
-        Real e_tolerance = 1e-9 + std::abs(sc_e) * 1e-3;
+        double e_tolerance = 1e-9 + std::abs(sc_e) * 1e-3;
         EXPECT_NEAR(natural_res.value, sc_e, e_tolerance);
         EXPECT_NEAR(hermite_res.value, sc_e, e_tolerance);
         EXPECT_NEAR(b_spline_res.value, sc_e, e_tolerance);
 
-        Real de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1e-2);
+        double de_tolerance = 1e-9 + std::max(2e-5, std::abs(sc_de) * 1e-2);
         EXPECT_NEAR(natural_res.gradient[0], sc_de, de_tolerance);
         EXPECT_NEAR(hermite_res.gradient[0], sc_de, de_tolerance);
         EXPECT_NEAR(b_spline_res.gradient[0], sc_de, de_tolerance);
@@ -77,16 +77,16 @@ TEST(SplineTest, OneDimensionalSplines) {
 }
 
 TEST(SplineTest, CubicBSplineCutoff) {
-    std::vector<Real> e_vec = {1.0, 2.0, 3.0, 2.0, 1.0, 0.0};
+    std::vector<double> e_vec = {1.0, 2.0, 3.0, 2.0, 1.0, 0.0};
     Grid<1> grid({e_vec.size()}, {1.0}, {0.0}, e_vec);
     auto b_spline_ptr = CubicBSpline::fit(grid);
     CubicBSpline& b_spline = *dynamic_cast<CubicBSpline*>(b_spline_ptr.get());
 
-    Real spline_cutoff = b_spline.getCutoff()[0];
+    double spline_cutoff = b_spline.getCutoff()[0];
     EXPECT_NEAR(spline_cutoff, 5.0, 1e-9);
 
     // Test just inside the cutoff
-    auto result_inside_cutoff = b_spline.interpolate({spline_cutoff - 1e-9_r});
+    auto result_inside_cutoff = b_spline.interpolate({spline_cutoff - 1e-9});
     EXPECT_NEAR(result_inside_cutoff.value, 0.0, 2e-9);
 
     // Test at the cutoff
@@ -97,17 +97,17 @@ TEST(SplineTest, CubicBSplineCutoff) {
     EXPECT_NEAR(result_at_cutoff.gradient[0], result_inside_cutoff.gradient[0], 1e-5);
 
     // Test beyond the cutoff (outside the 1e-9 tolerance)
-    auto result_beyond_cutoff = b_spline.interpolate({spline_cutoff + 1.0_r});
+    auto result_beyond_cutoff = b_spline.interpolate({spline_cutoff + 1.0});
     EXPECT_NEAR(result_beyond_cutoff.value, 0.0, 1e-9);
     EXPECT_NEAR(result_beyond_cutoff.gradient[0], 0.0, 1e-9);
 }
 
 TEST(SplineTest, PreCutoffZero) {
     // Create data that is zero for the last few points
-    std::vector<Real> r_vec;
-    std::vector<Real> e_vec;
-    Real spacing = 0.5;
-    for (Real r = 0.0; r <= 5.0 + 1e-9; r += spacing) {
+    std::vector<double> r_vec;
+    std::vector<double> e_vec;
+    double spacing = 0.5;
+    for (double r = 0.0; r <= 5.0 + 1e-9; r += spacing) {
         r_vec.push_back(r);
         if (r < 3.0) {
             e_vec.push_back(std::cos(r * M_PI / 6.0)); // Function is zero at r=3
@@ -140,17 +140,17 @@ TEST(SplineTest, PreCutoffZero) {
 }
 
 TEST(SplineTest, ThreeDimensionalSpline) {
-    auto mock_function = [](Real x, Real y, Real z) { return std::sin(x) * std::cos(y) * std::exp(-z); };
+    auto mock_function = [](double x, double y, double z) { return std::sin(x) * std::cos(y) * std::exp(-z); };
 
     size_t n_points = 80;
-    Real spacing = 0.1;
-    std::vector<Real> values;
+    double spacing = 0.1;
+    std::vector<double> values;
     for (size_t i = 0; i < n_points; ++i) {
         for (size_t j = 0; j < n_points; ++j) {
             for (size_t k = 0; k < n_points; ++k) {
-                Real x = 0.1 + i * spacing;
-                Real y = 0.1 + j * spacing;
-                Real z = 0.1 + k * spacing;
+                double x = 0.1 + i * spacing;
+                double y = 0.1 + j * spacing;
+                double z = 0.1 + k * spacing;
                 values.push_back(mock_function(x, y, z));
             }
         }
@@ -159,11 +159,11 @@ TEST(SplineTest, ThreeDimensionalSpline) {
     Grid<3> grid({n_points, n_points, n_points}, {spacing, spacing, spacing}, {0.1, 0.1, 0.1}, values);
     CubicBSpline3D spline = CubicBSpline3D::fit(grid);
 
-    Real x = 0.15;
-    Real y = 0.25;
-    Real z = 0.35;
-    Real expected = mock_function(x, y, z);
-    Real interpolated = spline.interpolate({x, y, z}).value;
+    double x = 0.15;
+    double y = 0.25;
+    double z = 0.35;
+    double expected = mock_function(x, y, z);
+    double interpolated = spline.interpolate({x, y, z}).value;
 
     EXPECT_NEAR(expected, interpolated, 1e-3);
 }

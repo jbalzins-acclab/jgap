@@ -9,16 +9,15 @@
 #include <vector>
 
 #include "../../Vector3.hpp"
-#include "jgap/core/Real.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
 
 namespace jgap {
-    using XYZInfoType = std::variant<std::string, int, Real, Vector3, Virials, Lattice, std::array<bool, 3> >;
+    using XYZInfoType = std::variant<std::string, int, double, Vector3, Virials, Lattice, std::array<bool, 3> >;
     using XYZArrayType = std::variant<
         std::vector<int>,
-        std::vector<Real>,
+        std::vector<double>,
         std::vector<Vector3>,
         std::vector<std::string>,
         std::vector<Species> >;
@@ -71,7 +70,7 @@ namespace jgap {
         /// "Properties" defines what array names, types, and in what order they will be expected later lines. <br>
         /// Type support can be found in @ref XYZArrayType, which should be encoded as: <br>
         ///  I:1 - int, <br>
-        ///  R:1 - @ref Real, <br>
+        ///  R:1 - @ref double, <br>
         ///  R:3 - @ref Vector3, <br>
         ///  S:1 - string without whitespaces if (array name != main_props.species), @ref Species otherwise.
         ///

@@ -16,19 +16,19 @@ namespace jgap {
     public:
         Cutoffs getCutoffs() const override { return Cutoffs{{2, cutoff}}; }
 
-        void setPrefactor(Real p) { prefactor = p; }
+        void setPrefactor(double p) { prefactor = p; }
 
-        Real getPrefactor() const { return prefactor; }
+        double getPrefactor() const { return prefactor; }
 
-        Real getCutoff() const { return cutoff; }
+        double getCutoff() const { return cutoff; }
 
         EamPairFunction* clone() const override = 0;
 
     protected:
-        Real cutoff;
-        Real prefactor;
+        double cutoff;
+        double prefactor;
 
-        EamPairFunction(Real cutoff = 0.0, Real prefactor = 1.0) : cutoff(cutoff), prefactor(prefactor) {}
+        EamPairFunction(double cutoff = 0.0, double prefactor = 1.0) : cutoff(cutoff), prefactor(prefactor) {}
     };
 
 }

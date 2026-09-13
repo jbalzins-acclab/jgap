@@ -1,7 +1,6 @@
 #ifndef JGAP_JGAP_HPP
 #define JGAP_JGAP_HPP
 
-#include "jgap/core/Real.hpp"
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/Vector3.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
@@ -27,7 +26,7 @@
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/experimental/fit/gap/CGLSGapFit.hpp"
 #include "jgap/experimental/fit/gap/QRKernelFit.hpp"
-#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/experimental/kernels/CauchyKernel.hpp"
 #include "jgap/experimental/kernels/WendlandKernel.hpp"

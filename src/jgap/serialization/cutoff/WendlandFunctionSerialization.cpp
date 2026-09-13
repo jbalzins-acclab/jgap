@@ -21,8 +21,8 @@ namespace jgap {
             return nullptr;
         }
 
-        Real r_min = node.readDoubleAttribute("r_min");
-        Real r_max = node.readDoubleAttribute("r_max");
+        double r_min = node.readDoubleAttribute("r_min");
+        double r_max = node.readDoubleAttribute("r_max");
 
         return WendlandFunction(r_min, r_max);
     }

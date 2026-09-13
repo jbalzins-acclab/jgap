@@ -29,7 +29,7 @@ namespace jgap::utils {
         const Sparsifier<Dim>& sparsifier
     ) {
         std::set<Species2Sorted> all_species_sets;
-        Real cutoff = transformation->getCutoffs().maxOverall();
+        double cutoff = transformation->getCutoffs().maxOverall();
 
         for (const auto& atoms: training_data) {
             NeighbourLists nl(atoms, cutoff);
@@ -61,7 +61,7 @@ namespace jgap::utils {
         const Sparsifier<Dim>& sparsifier
     ) {
         std::set<Species3AtomicSorted> all_species_sets;
-        Real cutoff = transformation->getCutoffs().maxOverall();
+        double cutoff = transformation->getCutoffs().maxOverall();
 
         for (const auto& atoms: training_data) {
             NeighbourLists nl(atoms, cutoff);
@@ -96,7 +96,7 @@ namespace jgap::utils {
         const Sparsifier<1>& sparsifier,
         const std::vector<Atoms>& training_data,
         EamMode mode,
-        const std::vector<Real>& optional_coeffs = {}
+        const std::vector<double>& optional_coeffs = {}
     ) {
         auto aggregators_map = createEamAggregators(base_pf, training_data, mode);
         std::vector<ValuePtr<NBodyAggregator<1>>> aggregators_vec;
@@ -153,7 +153,7 @@ namespace jgap::utils {
         const TKernel& kernel,
         const Sparsifier<Dim>& sparsifier,
         const std::vector<Atoms>& training_data,
-        const std::vector<Real>& optional_coeffs = {}
+        const std::vector<double>& optional_coeffs = {}
     ) {
         auto aggregators_map = createCoordinationAggregators<Dim>(base_transform, training_data);
         std::vector<ValuePtr<NBodyAggregator<Dim>>> aggregators_vec;
@@ -213,7 +213,7 @@ namespace jgap::utils {
         const TKernel& kernel,
         const Sparsifier<3>& sparsifier,
         const std::vector<Atoms>& training_data,
-        const std::vector<Real>& optional_coeffs = {}
+        const std::vector<double>& optional_coeffs = {}
     ) {
         auto aggregators_map = createMeamAggregators(base_transform, training_data);
         std::vector<ValuePtr<NBodyAggregator<3>>> aggregators_vec;

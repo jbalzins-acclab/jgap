@@ -3,14 +3,13 @@
 
 #include <array>
 
-#include "jgap/core/Real.hpp"
 
 namespace jgap {
 
     /// @brief A wrapper around a fixed-sized array, aimed at emphasizing that the array contains descriptor info.
     template<size_t Dim>
     requires (Dim > 0)
-    using Descriptor = std::array<Real, Dim>;
+    using Descriptor = std::array<double, Dim>;
 
 }
 

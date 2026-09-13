@@ -1,7 +1,7 @@
 #include "GapComponent.hpp"
 
 namespace jgap {
-    void GapComponent::setCoefficients(const std::vector<Real> &new_coeff) {
+    void GapComponent::setCoefficients(const std::vector<double> &new_coeff) {
         if (new_coeff.size() != nSparsePoints()) {
             JGAP_LOG_AND_THROW("Coefficient number {} doesn't match number of sparse points {}", new_coeff.size(),
                                nSparsePoints());

@@ -15,43 +15,43 @@ namespace jgap {
         }
 
         ThreeBodyDescriptor<3> evaluateAndDifferentiate(const Cluster3& cluster) const override final {
-            Real r01 = cluster.separation01.magnitude;
-            Real r02 = cluster.separation02.magnitude;
-            Real r12 = cluster.separation12.magnitude;
+            double r01 = cluster.separation01.magnitude;
+            double r02 = cluster.separation02.magnitude;
+            double r12 = cluster.separation12.magnitude;
 
             auto [f1, df1] = cutoff->evaluateAndDifferentiate(r01);
             auto [f2, df2] = cutoff->evaluateAndDifferentiate(r02);
 
-            Real r01_inv = 1.0_r / r01;
-            Real r02_inv = 1.0_r / r02;
-            Real r01_sq = r01 * r01;
-            Real r02_sq = r02 * r02;
-            Real r12_sq = r12 * r12;
+            double r01_inv = 1.0 / r01;
+            double r02_inv = 1.0 / r02;
+            double r01_sq = r01 * r01;
+            double r02_sq = r02 * r02;
+            double r12_sq = r12 * r12;
 
-            Real c = (r01_sq + r02_sq - r12_sq) * 0.5_r * r01_inv * r02_inv;
+            double c = (r01_sq + r02_sq - r12_sq) * 0.5 * r01_inv * r02_inv;
             // Prevent numerical issues if c goes slightly out of bounds
-            if (c > 1.0_r) {
-                c = 1.0_r;
-            } else if (c < -1.0_r) {
-                c = -1.0_r;
+            if (c > 1.0) {
+                c = 1.0;
+            } else if (c < -1.0) {
+                c = -1.0;
             }
 
-            Real dc_dr01 = (r01_sq - r02_sq + r12_sq) * 0.5_r * r01_inv * r01_inv * r02_inv;
-            Real dc_dr02 = (r02_sq - r01_sq + r12_sq) * 0.5_r * r02_inv * r02_inv * r01_inv;
-            Real dc_dr12 = -r12 * r01_inv * r02_inv;
+            double dc_dr01 = (r01_sq - r02_sq + r12_sq) * 0.5 * r01_inv * r01_inv * r02_inv;
+            double dc_dr02 = (r02_sq - r01_sq + r12_sq) * 0.5 * r02_inv * r02_inv * r01_inv;
+            double dc_dr12 = -r12 * r01_inv * r02_inv;
 
-            Real c2 = c * c;
-            Real c3 = c2 * c;
+            double c2 = c * c;
+            double c3 = c2 * c;
 
-            Real L1 = c;
-            Real L2 = c2 - 1.0_r / 3.0_r;
-            Real L3 = c3 - 0.6_r * c;
+            double L1 = c;
+            double L2 = c2 - 1.0 / 3.0;
+            double L3 = c3 - 0.6 * c;
 
-            Real dL1_dc = 1.0_r;
-            Real dL2_dc = 2.0_r * c;
-            Real dL3_dc = 3.0_r * c2 - 0.6_r;
+            double dL1_dc = 1.0;
+            double dL2_dc = 2.0 * c;
+            double dL3_dc = 3.0 * c2 - 0.6;
 
-            Real f1f2 = f1 * f2;
+            double f1f2 = f1 * f2;
 
             const auto& dir01 = cluster.separation01.direction;
             const auto& dir02 = cluster.separation02.direction;
@@ -62,22 +62,22 @@ namespace jgap {
             desc.value[1] = f1f2 * L2;
             desc.value[2] = f1f2 * L3;
 
-            Real df1f2 = df1 * f2;
-            Real f1df2 = f1 * df2;
+            double df1f2 = df1 * f2;
+            double f1df2 = f1 * df2;
 
-            std::array<Real, 3> dq_dr01 = {
+            std::array<double, 3> dq_dr01 = {
                 df1f2 * L1 + f1f2 * dL1_dc * dc_dr01,
                 df1f2 * L2 + f1f2 * dL2_dc * dc_dr01,
                 df1f2 * L3 + f1f2 * dL3_dc * dc_dr01
             };
 
-            std::array<Real, 3> dq_dr02 = {
+            std::array<double, 3> dq_dr02 = {
                 f1df2 * L1 + f1f2 * dL1_dc * dc_dr02,
                 f1df2 * L2 + f1f2 * dL2_dc * dc_dr02,
                 f1df2 * L3 + f1f2 * dL3_dc * dc_dr02
             };
 
-            std::array<Real, 3> dq_dr12 = {
+            std::array<double, 3> dq_dr12 = {
                 f1f2 * dL1_dc * dc_dr12,
                 f1f2 * dL2_dc * dc_dr12,
                 f1f2 * dL3_dc * dc_dr12,

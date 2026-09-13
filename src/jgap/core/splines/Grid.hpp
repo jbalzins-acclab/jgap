@@ -8,7 +8,6 @@
 #include <numeric>
 #include <vector>
 
-#include "jgap/core/Real.hpp"
 #include "../io/log/CurrentLogger.hpp"
 
 namespace jgap {
@@ -18,9 +17,9 @@ namespace jgap {
     class Grid {
     public:
         std::array<size_t, Dim> sizes{};
-        std::array<Real, Dim> spacing{};
-        std::array<Real, Dim> origin{};
-        std::vector<Real> data_flat{};
+        std::array<double, Dim> spacing{};
+        std::array<double, Dim> origin{};
+        std::vector<double> data_flat{};
 
         Grid() = default;
         Grid(const Grid&) = default;
@@ -29,8 +28,8 @@ namespace jgap {
         Grid& operator=(Grid&&) noexcept = default;
 
         Grid(
-            const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
-            const std::array<Real, Dim>& origin
+            const std::array<size_t, Dim>& sizes, const std::array<double, Dim>& spacing,
+            const std::array<double, Dim>& origin
         ) :
             sizes(sizes), spacing(spacing), origin(origin) {
             size_t total_size = 1;
@@ -42,8 +41,8 @@ namespace jgap {
         }
 
         Grid(
-            const std::array<size_t, Dim>& sizes, const std::array<Real, Dim>& spacing,
-            const std::array<Real, Dim>& origin, const std::vector<Real>& data_flat
+            const std::array<size_t, Dim>& sizes, const std::array<double, Dim>& spacing,
+            const std::array<double, Dim>& origin, const std::vector<double>& data_flat
         ) :
             sizes(sizes), spacing(spacing), origin(origin), data_flat(data_flat) {
             size_t total_size = 1;
@@ -65,17 +64,17 @@ namespace jgap {
         }
 
         // --- Element access ---
-        Real& operator()(const std::array<size_t, Dim>& indices) { return data_flat[getFlatIndex(indices)]; }
+        double& operator()(const std::array<size_t, Dim>& indices) { return data_flat[getFlatIndex(indices)]; }
 
-        const Real& operator()(const std::array<size_t, Dim>& indices) const {
+        const double& operator()(const std::array<size_t, Dim>& indices) const {
             return data_flat[getFlatIndex(indices)];
         }
 
         // --- Coordinate conversion ---
-        std::array<Real, Dim> getCoord(const std::array<size_t, Dim>& indices) const {
-            std::array<Real, Dim> coord;
+        std::array<double, Dim> getCoord(const std::array<size_t, Dim>& indices) const {
+            std::array<double, Dim> coord;
             for (size_t i = 0; i < Dim; ++i) {
-                coord[i] = origin[i] + static_cast<Real>(indices[i]) * spacing[i];
+                coord[i] = origin[i] + static_cast<double>(indices[i]) * spacing[i];
             }
             return coord;
         }
@@ -89,16 +88,16 @@ namespace jgap {
             return indices;
         }
 
-        std::array<Real, Dim> getCutoff() const {
-            std::array<Real, Dim> res{};
+        std::array<double, Dim> getCutoff() const {
+            std::array<double, Dim> res{};
             for (size_t i = 0; i < Dim; i++) {
-                res[i] = origin[i] + static_cast<Real>(sizes[i] - 1) * spacing[i];
+                res[i] = origin[i] + static_cast<double>(sizes[i] - 1) * spacing[i];
             }
             return res;
         }
 
         // --- Find closest <= grid index for a given coordinate ---
-        std::array<size_t, Dim> lowerIndex(const std::array<Real, Dim>& pos) const {
+        std::array<size_t, Dim> lowerIndex(const std::array<double, Dim>& pos) const {
             std::array<size_t, Dim> indices;
             for (size_t i = 0; i < Dim; ++i) {
                 assert(pos[i] >= origin[i] && "Point outside GridN (too low)");
@@ -124,44 +123,44 @@ namespace jgap {
 
         // --- Iterator support ---
         struct AccumulatorRef {
-            Real& ref;
+            double& ref;
 
             AccumulatorRef& operator=(const AccumulatorRef&) = default;
             AccumulatorRef& operator=(AccumulatorRef&&) = default;
-            AccumulatorRef& operator=(Real) = delete;
+            AccumulatorRef& operator=(double) = delete;
 
-            void setValue(Real v) { ref = v; }
+            void setValue(double v) { ref = v; }
 
-            const AccumulatorRef& operator+=(Real v) const {
+            const AccumulatorRef& operator+=(double v) const {
                 ref += v;
                 return *this;
             }
-            const AccumulatorRef& operator-=(Real v) const {
+            const AccumulatorRef& operator-=(double v) const {
                 ref -= v;
                 return *this;
             }
-            const AccumulatorRef& operator*=(Real v) const {
+            const AccumulatorRef& operator*=(double v) const {
                 ref *= v;
                 return *this;
             }
-            const AccumulatorRef& operator/=(Real v) const {
+            const AccumulatorRef& operator/=(double v) const {
                 ref /= v;
                 return *this;
             }
 
-            operator Real() const { return ref; }
+            operator double() const { return ref; }
         };
 
         struct CellRef {
             std::array<size_t, Dim> index;
-            std::array<Real, Dim> pos;
+            std::array<double, Dim> pos;
             AccumulatorRef value;
         };
 
         struct ConstCellRef {
             std::array<size_t, Dim> index;
-            std::array<Real, Dim> pos;
-            const Real& value;
+            std::array<double, Dim> pos;
+            const double& value;
         };
 
         template<bool IsConst>

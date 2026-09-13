@@ -9,7 +9,7 @@
 
 namespace jgap {
 
-    std::vector<Real> QRKernelFit::findCoefficients(
+    std::vector<double> QRKernelFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components,
         const std::vector<Atoms>& training_data,
         std::vector<EnergyData>& energies_without_external,
@@ -27,7 +27,7 @@ namespace jgap {
         return c;
     }
 
-    std::vector<Real> QRKernelFit::leastSquares(Matrix<ColumnMajor>& A, std::vector<Real>& b) {
+    std::vector<double> QRKernelFit::leastSquares(Matrix<ColumnMajor>& A, std::vector<double>& b) {
         return linalg::solveLeastSquaresHouseholderQR(A, b);
     }
 
@@ -93,12 +93,12 @@ namespace jgap {
         return resulting_A;
     }
 
-    std::vector<Real> QRKernelFit::formVectorB(
+    std::vector<double> QRKernelFit::formVectorB(
         const std::vector<ValuePtr<GapComponent>>& components,
         const std::vector<EnergyData>& energy_data,
         const std::vector<Regularization>& sigmas_inverse
     ) {
-        std::vector<Real> b;
+        std::vector<double> b;
         for (size_t i = 0; i < energy_data.size(); i++) {
             if (energy_data[i].energy.has_value()) {
                 assert(sigmas_inverse[i].energy.has_value());
@@ -138,9 +138,9 @@ namespace jgap {
         Matrix<ColumnMajor>& A,
         size_t starting_row
     ) {
-        std::map<Real, NeighbourLists> neighbour_lists;
+        std::map<double, NeighbourLists> neighbour_lists;
         for (const auto& gap_component: gap_components) {
-            Real cutoff = gap_component->getCutoff();
+            double cutoff = gap_component->getCutoff();
             if (!neighbour_lists.contains(cutoff)) {
                 neighbour_lists.insert({cutoff, NeighbourLists(atoms, cutoff)});
             }
@@ -157,9 +157,9 @@ namespace jgap {
 
                 if (energy_data.energy.has_value()) {
                     assert(sigmas_inverse.energy.has_value());
-                    Real sigma_inverse = sigmas_inverse.energy.value();
+                    double sigma_inverse = sigmas_inverse.energy.value();
 
-                    Real energy = 0;
+                    double energy = 0;
                     if (quantities.has_value()) energy = quantities->energy(point_id);
 
                     A(row_counter, contribution_column) = energy * sigma_inverse;

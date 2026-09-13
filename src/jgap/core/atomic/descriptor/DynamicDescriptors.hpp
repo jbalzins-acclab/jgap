@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstring>
 #include <vector>
-#include "jgap/core/Real.hpp"
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
 
 namespace jgap {
@@ -18,20 +17,20 @@ namespace jgap {
               n_descriptors(n_descriptors),
               dim(dim) {}
 
-        DynamicDescriptors(std::vector<Real>&& data, size_t dim)
+        DynamicDescriptors(std::vector<double>&& data, size_t dim)
             : data(std::move(data)),
               n_descriptors(dim > 0 ? this->data.size() / dim : 0),
               dim(dim) {
             assert(dim > 0 ? this->data.size() % dim == 0 : this->data.empty());
         }
 
-        Real& operator()(size_t desc_idx, size_t dim_idx) {
+        double& operator()(size_t desc_idx, size_t dim_idx) {
             assert(desc_idx < n_descriptors);
             assert(dim_idx < dim);
             return data[desc_idx * dim + dim_idx];
         }
 
-        Real operator()(size_t desc_idx, size_t dim_idx) const {
+        double operator()(size_t desc_idx, size_t dim_idx) const {
             assert(desc_idx < n_descriptors);
             assert(dim_idx < dim);
             return data[desc_idx * dim + dim_idx];
@@ -42,7 +41,7 @@ namespace jgap {
             assert(Dim == dim);
             std::vector<Descriptor<Dim>> result(n_descriptors);
             if (n_descriptors > 0) {
-                std::memcpy(result.data(), data.data(), data.size() * sizeof(Real));
+                std::memcpy(result.data(), data.data(), data.size() * sizeof(double));
             }
             return result;
         }
@@ -52,7 +51,7 @@ namespace jgap {
             assert(Dim == dim);
             std::vector<Descriptor<Dim>> result(n_descriptors);
             if (n_descriptors > 0) {
-                std::memcpy(result.data(), data.data(), data.size() * sizeof(Real));
+                std::memcpy(result.data(), data.data(), data.size() * sizeof(double));
             }
             data.clear();
             n_descriptors = 0;
@@ -76,23 +75,23 @@ namespace jgap {
             return n_descriptors == 0;
         }
 
-        const std::vector<Real>& getData() const {
+        const std::vector<double>& getData() const {
             return data;
         }
 
-        void pushBack(const std::vector<Real>& point) {
+        void pushBack(const std::vector<double>& point) {
             assert(point.size() == dim);
             data.insert(data.end(), point.begin(), point.end());
             n_descriptors++;
         }
 
-        void pushBackRaw(const Real* point) {
+        void pushBackRaw(const double* point) {
             data.insert(data.end(), point, point + dim);
             n_descriptors++;
         }
 
     private:
-        std::vector<Real> data;
+        std::vector<double> data;
         size_t n_descriptors;
         size_t dim;
     };

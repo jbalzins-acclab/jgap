@@ -166,8 +166,8 @@ namespace jgap {
             pbc = std::get<std::array<bool, 3>>(info.at(main_property_names.pbc));
         }
 
-        if (info.contains(main_property_names.energy) && std::holds_alternative<Real>(info.at(main_property_names.energy))) {
-            energy = std::get<Real>(info.at(main_property_names.energy));
+        if (info.contains(main_property_names.energy) && std::holds_alternative<double>(info.at(main_property_names.energy))) {
+            energy = std::get<double>(info.at(main_property_names.energy));
         }
 
         if (info.contains(main_property_names.virials) && std::holds_alternative<Virials>(info.at(main_property_names.virials))) {
@@ -232,7 +232,7 @@ namespace jgap {
         }
 
         const auto& lat = *lattice;
-        Real V = lat.volume();
+        double V = lat.volume();
 
         if (std::abs(V) < 1e-12) {
             JGAP_LOG_AND_THROW("Lattice volume is too small or zero.");
@@ -245,9 +245,9 @@ namespace jgap {
 
         for (auto& pos: positions) {
             // Convert to fractional coordinates
-            Real f0 = pos.dot(r0);
-            Real f1 = pos.dot(r1);
-            Real f2 = pos.dot(r2);
+            double f0 = pos.dot(r0);
+            double f1 = pos.dot(r1);
+            double f2 = pos.dot(r2);
 
             // Wrap fractional coordinates to [0, 1) if PBC is enabled for that dimension
             if (pbc[0]) f0 -= std::floor(f0);

@@ -7,8 +7,8 @@
 #include <string_view>
 #include <mutex>
 
-#include "jgap/io/log/Logger.hpp"
-#include "jgap/io/log/LogConfig.hpp"
+#include "jgap/core/io/log/Logger.hpp"
+#include "jgap/core/io/log/LogConfig.hpp"
 
 namespace jgap {
     class FileLogger : public Logger {

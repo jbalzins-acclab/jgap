@@ -2,7 +2,7 @@
 
 #include <filesystem>
 #include <stdexcept>
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/Utils.hpp"

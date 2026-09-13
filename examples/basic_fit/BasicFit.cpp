@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
     const size_t seed = 120;
 
     // 2-body parameters
-    const Real cutoff2 = 4.5;
-    const Real cutoff2_width = 1.0;
+    const double cutoff2 = 4.5;
+    const double cutoff2_width = 1.0;
     const size_t n_sparse2 = 20;
 
     // EAM parameters
@@ -44,8 +44,8 @@ int main(int argc, char** argv) {
     const size_t eam_n_sparse = 20;
 
     // 3-body parameters
-    const Real cutoff3 = 3.7;
-    const Real cutoff3_width = 0.6;
+    const double cutoff3 = 3.7;
+    const double cutoff3_width = 0.6;
     const size_t n_sparse3 = 500;
 
     const SimpleRegularizationRules regularization_rules{};
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     // ====================================================================================
     if (n_sparse2 > 0) {
         auto trans2 = PairDistanceTransformation(CosCutoff(cutoff2, cutoff2_width));
-        auto kernel2 = WendlandKernel<1, 1>(10.0_r, {1.0_r});
+        auto kernel2 = WendlandKernel<1, 1>(10.0, {1.0});
         auto sparsifier2 = HistogramUniformSparsifier<2>(seed, n_sparse2, std::array{true, false});
         potential.addComponents(
             createTwoBodyComponents<2, WendlandKernel<1, 1>>(training_data, trans2, kernel2, sparsifier2)
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     // ManyBodyGapComponent with EAM Pair Function and WendlandKernel
     // ====================================================================================
     if (eam_n_sparse > 0) {
-        auto kernel_eam = WendlandKernel<1, 0>(1.0_r, {1.0_r});
+        auto kernel_eam = WendlandKernel<1, 0>(1.0, {1.0});
         auto sparsifier_eam = HistogramUniformSparsifier<1>(seed, eam_n_sparse);
         potential.addComponents(
             createEamComponents<WendlandKernel<1, 0>>(eam_pf, kernel_eam, sparsifier_eam, training_data, eam_mode)
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     // ====================================================================================
     if (n_sparse3 > 0) {
         auto trans3 = Angle3bTransformation(CosCutoff(cutoff3, cutoff3_width));
-        auto kernel3 = WendlandKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
+        auto kernel3 = WendlandKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
         auto sparsifier3 = HistogramUniformSparsifier<4>(seed, n_sparse3, std::array{true, true, true, false});
         potential.addComponents(
             createThreeBodyComponents<4, WendlandKernel<3, 1>>(training_data, trans3, kernel3, sparsifier3)

@@ -23,7 +23,7 @@ namespace {
             res.value[0] = 1.0;
             const auto& dir = cluster.separation01.direction;
             for (size_t d = 0; d < Dim; ++d) {
-                res.grad_r1[d] = 0.1_r * dir;
+                res.grad_r1[d] = 0.1 * dir;
             }
             return res;
         }
@@ -41,7 +41,7 @@ namespace {
     class MockKernel : public Kernel<Dim> {
     public:
         using KernelValueAndGradient = typename Kernel<Dim>::KernelValueAndGradient;
-        Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
+        double value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
             return Kernel<Dim>::value(q1, q2);
         }
         KernelValueAndGradient valueAndGradient(
@@ -101,8 +101,8 @@ TEST(TestTwoBodyGapComponent, RealTwoBody) {
     Atoms atoms({ { 0, 0, 0 }, { 4, 0, 0 } }, { Species("Fe"), Species("Ni") });
     auto nl = NeighbourLists(atoms, 6.0);
     ValuePtr<TwoBodyTransformation<2>> trans = PairDistanceTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{ 1.0_r });
-    Real expected_cutoff_val = 0.5;
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{ 1.0 });
+    double expected_cutoff_val = 0.5;
     std::vector<Descriptor<2>> sparse_points = { { 4.0, expected_cutoff_val } };
     auto component = TwoBodyGapComponent(Species2Sorted("Fe", "Ni"), trans, kernel, sparse_points);
 
@@ -121,9 +121,9 @@ TEST(TestTwoBodyGapComponent, RealTwoBody) {
 
 TEST(TestTwoBodyGapComponent, TabulationTwoBody) {
     ValuePtr<TwoBodyTransformation<2>> trans = PairDistanceTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{ 1.0_r });
+    auto kernel = SquaredExpKernel<1, 1>(1.0, std::array{ 1.0 });
     std::vector<Descriptor<2>> sparse_points = { { 4.0, 0.5 }, { 3.5, 0.5 } };
-    std::vector<Real> coeffs = { 2.0, -1.0 };
+    std::vector<double> coeffs = { 2.0, -1.0 };
     Species2Sorted species{ "Fe", "Ni" };
     auto component = TwoBodyGapComponent(species, trans, kernel, sparse_points);
 
@@ -140,12 +140,12 @@ TEST(TestTwoBodyGapComponent, TabulationTwoBody) {
     auto& grid = tables.two_body_grids.getValueGrid(species);
 
     for (size_t i = 0; i < params.n_grid_2b; i++) {
-        Real r = grid.getCoord({ i })[0];
+        double r = grid.getCoord({ i })[0];
 
-        Real K1 = std::exp(-0.5 * std::pow(r - 4.0, 2)) * CosCutoff(5.0, 2.0).evaluate(r) * 0.5;
-        Real K2 = std::exp(-0.5 * std::pow(r - 3.5, 2)) * CosCutoff(5.0, 2.0).evaluate(r) * 0.5;
+        double K1 = std::exp(-0.5 * std::pow(r - 4.0, 2)) * CosCutoff(5.0, 2.0).evaluate(r) * 0.5;
+        double K2 = std::exp(-0.5 * std::pow(r - 3.5, 2)) * CosCutoff(5.0, 2.0).evaluate(r) * 0.5;
 
-        Real expected_energy = 2.0 * (coeffs[0] * K1 + coeffs[1] * K2);
+        double expected_energy = 2.0 * (coeffs[0] * K1 + coeffs[1] * K2);
 
         EXPECT_NEAR(grid.data_flat[i], expected_energy, 1e-9);
     }

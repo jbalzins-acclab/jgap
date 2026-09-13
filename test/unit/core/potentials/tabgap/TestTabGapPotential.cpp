@@ -20,7 +20,7 @@
 using namespace jgap;
 
 TEST(TestTabGapPotential, IsolatedAtomEnergy) {
-    std::map<Species, Real> expected_iso{{"Fe", -4.2}, {"Ni", -3.1}};
+    std::map<Species, double> expected_iso{{"Fe", -4.2}, {"Ni", -3.1}};
     auto iso_pot = IsolatedAtomPotential(expected_iso);
 
     GapPotential gap;
@@ -42,17 +42,17 @@ TEST(TestTabGapPotential, IsolatedAtomEnergy) {
 TEST(TestTabGapPotential, TwoAndThreeBodyTermsGridMatching) {
     Species2Sorted pair_species("Fe", "Ni");
     ValuePtr<TwoBodyTransformation<2>> pair_trans = PairDistanceTransformation(CosCutoff(5.0, 1.0));
-    SquaredExpKernel<1, 1> pair_kernel(1.0, std::array<Real, 1>{1.0});
+    SquaredExpKernel<1, 1> pair_kernel(1.0, std::array<double, 1>{1.0});
     std::vector<Descriptor<2>> pair_sparse = {{2.0, 1.0}, {3.0, 1.0}};
-    std::vector<Real> pair_coeffs = {0.5, -0.2};
+    std::vector<double> pair_coeffs = {0.5, -0.2};
 
     auto two_body_comp = TwoBodyGapComponent(pair_species, pair_trans, pair_kernel, pair_sparse, pair_coeffs);
 
     Species3AtomicSorted triplet_species("Fe", "Ni", "Fe");
     Angle3bTransformation triplet_trans(CosCutoff(4.0, 0.5));
-    SquaredExpKernel<3, 1> triplet_kernel(1.0, std::array<Real, 3>{1.0, 1.0, 1.0});
+    SquaredExpKernel<3, 1> triplet_kernel(1.0, std::array<double, 3>{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> triplet_sparse = {{6.0, 0.0, 3.0, 1.0}};
-    std::vector<Real> triplet_coeffs = {0.8};
+    std::vector<double> triplet_coeffs = {0.8};
 
     auto three_body_comp = ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
         triplet_species, ValuePtr<ThreeBodyTransformation<4>>(triplet_trans), triplet_kernel, triplet_sparse,
@@ -78,9 +78,9 @@ TEST(TestTabGapPotential, TwoAndThreeBodyTermsGridMatching) {
     const auto& grid_2b = tables.two_body_grids.value_grids.at(pair_species);
 
     for (const auto cell: grid_2b) {
-        Real r = cell.pos[0];
-        Real expected_val = cell.value;
-        Real actual_val = tg_2b.getSpline()->interpolate(std::array{r}).value;
+        double r = cell.pos[0];
+        double expected_val = cell.value;
+        double actual_val = tg_2b.getSpline()->interpolate(std::array{r}).value;
         EXPECT_NEAR(actual_val, expected_val, 1e-8);
     }
 
@@ -91,8 +91,8 @@ TEST(TestTabGapPotential, TwoAndThreeBodyTermsGridMatching) {
     const auto& grid_3b = tables.three_body_grids.value_grids.at(triplet_species);
 
     for (const auto cell: grid_3b) {
-        Real expected_val = cell.value;
-        Real actual_val = tg_3b.getSpline().interpolate(cell.pos).value;
+        double expected_val = cell.value;
+        double actual_val = tg_3b.getSpline().interpolate(cell.pos).value;
         EXPECT_NEAR(actual_val, expected_val, 1e-8);
     }
 }
@@ -104,9 +104,9 @@ TEST(TestTabGapPotential, EamPotentialTabulationAccuracy) {
     auto eam_aggregator = TwoBodySum<1>("Fe");
     eam_aggregator.extend({"Fe", "Ni"}, trans);
 
-    SquaredExpKernel<1, 0> kernel(1.0, std::array<Real, 1>{1.0});
+    SquaredExpKernel<1, 0> kernel(1.0, std::array<double, 1>{1.0});
     std::vector<Descriptor<1>> sparse_points = {{1.5}};
-    std::vector<Real> coeffs = {1.2};
+    std::vector<double> coeffs = {1.2};
 
     auto eam_comp = ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(eam_aggregator, kernel, sparse_points, coeffs);
 
@@ -121,17 +121,17 @@ TEST(TestTabGapPotential, EamPotentialTabulationAccuracy) {
     TabGapPotential tabgap(tables);
 
     Grid<3> grid_3b(
-        std::array<size_t, 3>{10, 10, 10}, std::array<Real, 3>{0.3, 0.3, 0.2}, std::array<Real, 3>{0.5, 0.5, -1.0}
+        std::array<size_t, 3>{10, 10, 10}, std::array<double, 3>{0.3, 0.3, 0.2}, std::array<double, 3>{0.5, 0.5, -1.0}
     );
 
     for (const auto cell: grid_3b) {
-        Real r01 = cell.pos[0];
-        Real r02 = cell.pos[1];
-        Real cos12 = std::clamp(cell.pos[2], -1.0_r, 1.0_r);
-        Real term = r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12;
-        Real r12 = std::sqrt(std::max(0.0_r, term));
+        double r01 = cell.pos[0];
+        double r02 = cell.pos[1];
+        double cos12 = std::clamp(cell.pos[2], -1.0, 1.0);
+        double term = r01 * r01 + r02 * r02 - 2 * r01 * r02 * cos12;
+        double r12 = std::sqrt(std::max(0.0, term));
 
-        Real sin12 = std::sqrt(std::max(0.0_r, 1.0_r - cos12 * cos12));
+        double sin12 = std::sqrt(std::max(0.0, 1.0 - cos12 * cos12));
 
         Atoms triplet_atoms(
             {{0.0, 0.0, 0.0}, {r01, 0.0, 0.0}, {r02 * cos12, r02 * sin12, 0.0}},
@@ -162,9 +162,9 @@ TEST(TestTabGapPotential, EamPotentialTabulationAccuracy) {
 TEST(TestTabGapPotential, ThreeBodySameSpeciesClusterPermutationModeAndEnergyMatching) {
     Species3AtomicSorted same_species("Fe", "Fe", "Fe");
     Angle3bTransformation triplet_trans(CosCutoff(4.0, 0.5));
-    SquaredExpKernel<3, 1> triplet_kernel(1.0, std::array<Real, 3>{1.0, 1.0, 1.0});
+    SquaredExpKernel<3, 1> triplet_kernel(1.0, std::array<double, 3>{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> triplet_sparse = {{5.0, 0.0, 2.5, 1.0}, {4.0, 0.5, 2.0, 1.0}};
-    std::vector<Real> triplet_coeffs = {0.7, -0.3};
+    std::vector<double> triplet_coeffs = {0.7, -0.3};
 
     auto three_body_comp = ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
         same_species, ValuePtr<ThreeBodyTransformation<4>>(triplet_trans), triplet_kernel, triplet_sparse,
@@ -217,14 +217,14 @@ TEST(TestTabGapPotential, ThreeBodySymmetricDistanceSwapCheck) {
     // Create an asymmetric 3D grid
     Grid<3> asymm_grid(
         std::array<size_t, 3>{4, 4, 4},
-        std::array<Real, 3>{0.5, 0.5, 0.5},
-        std::array<Real, 3>{1.0, 1.0, -1.0}
+        std::array<double, 3>{0.5, 0.5, 0.5},
+        std::array<double, 3>{1.0, 1.0, -1.0}
     );
     // Fill with values such that grid({1, 2, 0}) != grid({2, 1, 0})
     for (size_t i = 0; i < 4; ++i) {
         for (size_t j = 0; j < 4; ++j) {
             for (size_t k = 0; k < 4; ++k) {
-                asymm_grid({i, j, k}) = static_cast<Real>(i * 10 + j + k);
+                asymm_grid({i, j, k}) = static_cast<double>(i * 10 + j + k);
             }
         }
     }
@@ -238,13 +238,13 @@ TEST(TestTabGapPotential, ThreeBodySymmetricDistanceSwapCheck) {
     // Create a symmetric 3D grid: grid(i, j, k) == grid(j, i, k)
     Grid<3> symm_grid(
         std::array<size_t, 3>{4, 4, 4},
-        std::array<Real, 3>{0.5, 0.5, 0.5},
-        std::array<Real, 3>{1.0, 1.0, -1.0}
+        std::array<double, 3>{0.5, 0.5, 0.5},
+        std::array<double, 3>{1.0, 1.0, -1.0}
     );
     for (size_t i = 0; i < 4; ++i) {
         for (size_t j = 0; j < 4; ++j) {
             for (size_t k = 0; k < 4; ++k) {
-                symm_grid({i, j, k}) = static_cast<Real>((i + j) * 10 + (i * j) + k);
+                symm_grid({i, j, k}) = static_cast<double>((i + j) * 10 + (i * j) + k);
             }
         }
     }

@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "jgap/core/Real.hpp"
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
 #include "jgap/core/atomic/descriptor/DescriptorsView.hpp"
 #include "jgap/core/atomic/descriptor/DynamicDescriptors.hpp"
@@ -64,7 +63,7 @@ namespace jgap {
         // --- DataSet Writes ---
         void writeDataSet(const std::string& name, const std::vector<int>& data);
         void writeDataSet(const std::string& name, const std::vector<size_t>& data);
-        void writeDataSet(const std::string& name, const std::vector<Real>& data);
+        void writeDataSet(const std::string& name, const std::vector<double>& data);
         void writeDataSet(const std::string& name, const std::vector<std::string>& data);
         void writeDataSet(const std::string& name, const std::string& data);
 
@@ -102,24 +101,24 @@ namespace jgap {
         }
 
         // --- DataSet Reads ---
-        std::optional<std::vector<Real>> readOptionalRealVectorDataSet(const std::string& name) const;
-        std::vector<Real> readRealVectorDataSet(const std::string& name) const;
+        std::optional<std::vector<double>> readOptionalRealVectorDataSet(const std::string& name) const;
+        std::vector<double> readRealVectorDataSet(const std::string& name) const;
 
         template<size_t N>
-        std::optional<std::array<Real, N>> readOptionalDoubleArrayDataSet(const std::string& name) const {
+        std::optional<std::array<double, N>> readOptionalDoubleArrayDataSet(const std::string& name) const {
             auto opt = readOptionalRealVectorDataSet(name);
             if (!opt) return std::nullopt;
             const auto& vec = opt.value();
             if (vec.size() != N) {
                 JGAP_LOG_AND_THROW("Dataset '{}' expected size {}, got {}", name, N, vec.size());
             }
-            std::array<Real, N> arr;
+            std::array<double, N> arr;
             std::copy(vec.begin(), vec.end(), arr.begin());
             return arr;
         }
 
         template<size_t N>
-        std::array<Real, N> readDoubleArrayDataSet(const std::string& name) const {
+        std::array<double, N> readDoubleArrayDataSet(const std::string& name) const {
             auto opt = readOptionalDoubleArrayDataSet<N>(name);
             if (!opt) {
                 JGAP_LOG_AND_THROW("Required dataset '{}' not found.", name);

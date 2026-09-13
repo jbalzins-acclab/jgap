@@ -17,14 +17,14 @@ namespace jgap {
         QRKernelFit() = default;
 
     protected:
-        std::vector<Real> findCoefficients(
+        std::vector<double> findCoefficients(
             std::vector<ValuePtr<GapComponent>>& gap_components,
             const std::vector<Atoms>& training_data,
             std::vector<EnergyData>& energies_without_external,
             std::vector<Regularization>& sigmas_inverse
         ) override;
 
-        virtual std::vector<Real> leastSquares(Matrix<ColumnMajor>& A, std::vector<Real>& b);
+        virtual std::vector<double> leastSquares(Matrix<ColumnMajor>& A, std::vector<double>& b);
 
     private:
         Matrix<ColumnMajor> formMatrixA(
@@ -34,7 +34,7 @@ namespace jgap {
             const std::vector<Regularization>& sigmas_inverse
         ) const;
 
-        static std::vector<Real> formVectorB(
+        static std::vector<double> formVectorB(
             const std::vector<ValuePtr<GapComponent>>& gap_components,
             const std::vector<EnergyData>& energy_data,
             const std::vector<Regularization>& sigmas_inverse

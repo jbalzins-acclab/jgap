@@ -13,7 +13,7 @@ namespace {
     // Mock EAM function that returns a constant value and a distance-dependent derivative
     class MockEamPairFunction final : public EamPairFunction {
     public:
-        MockEamPairFunction(Real value_to_return, Real deriv_factor, Real cutoff = 10.0, bool is_rot_inv = true) :
+        MockEamPairFunction(double value_to_return, double deriv_factor, double cutoff = 10.0, bool is_rot_inv = true) :
             EamPairFunction(cutoff),
             value_to_return_(value_to_return),
             deriv_factor_(deriv_factor),
@@ -22,7 +22,7 @@ namespace {
         Descriptor<1> evaluate(const Cluster2& pair) const override { return {{value_to_return_}}; }
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& pair) const override {
-            Real deriv = pair.separation01.magnitude * deriv_factor_;
+            double deriv = pair.separation01.magnitude * deriv_factor_;
             return {{value_to_return_}, {deriv * pair.separation01.direction}};
         }
 
@@ -31,8 +31,8 @@ namespace {
         MockEamPairFunction* clone() const override { return new MockEamPairFunction(*this); }
 
     private:
-        Real value_to_return_;
-        Real deriv_factor_;
+        double value_to_return_;
+        double deriv_factor_;
         bool is_rot_inv = true;
     };
 }
@@ -53,7 +53,7 @@ TEST(TestTwoBodySum, SingleTransformation) {
     // --- Analytical Calculation for atom 0 ---
     // Neighbors are at (1,1,0), (1,0,1), (0,1,1). All have dist=sqrt(2).
     // Mock deriv = dist * 0.1 = sqrt(2) * 0.1
-    Real expected_deriv = std::sqrt(2.0) * 0.1;
+    double expected_deriv = std::sqrt(2.0) * 0.1;
 
     // Force on atom i is F_i = dE/dr * direction. Aggregator stores -dE/dr.
     // The aggregator stores the force contribution for each descriptor dimension.
@@ -185,11 +185,11 @@ TEST(TestTwoBodySum, RealPairFunction) {
     // PolycutoffPairFunction evaluation:
     // chi = (2.0 - 1.0) / (4.0 - 1.0) = 1/3
     // val = 2.0 * (1 - (1/27) * (6(1/9) - 15(1/3) + 10)) = 128/81
-    Real expected_val = 128.0 / 81.0;
+    double expected_val = 128.0 / 81.0;
     EXPECT_NEAR(aggregated_descriptors.values[0][0], expected_val, 1e-9);
 
     // deriv = 2.0 * (1/3) * (1/9) * (-30(1/9) + 60(1/3) - 30) = -80/81
-    Real expected_deriv = -80.0 / 81.0;
+    double expected_deriv = -80.0 / 81.0;
 
     // Force on atom 0: +direction * deriv = (1,0,0) * (-80/81)
     const auto& calc_force0 = aggregated_descriptors.force(0, 0)[0];

@@ -6,21 +6,21 @@
 
 namespace jgap {
     struct PerConfigTypeSigmas {
-        Real energy;
+        double energy;
         Vector3 force;
         Virials virials;
 
-        PerConfigTypeSigmas(Real e) :
+        PerConfigTypeSigmas(double e) :
             energy(e),
-            force{e * 50.0_r, e * 50.0_r, e * 50.0_r},
-            virials{e * 100.0_r, e * 100.0_r, e * 100.0_r, e * 100.0_r, e * 100.0_r, e * 100.0_r} {}
+            force{e * 50.0, e * 50.0, e * 50.0},
+            virials{e * 100.0, e * 100.0, e * 100.0, e * 100.0, e * 100.0, e * 100.0} {}
 
-        PerConfigTypeSigmas(Real e, Real f, Real v) : energy(e), force{f, f, f}, virials{v, v, v, v, v, v} {}
+        PerConfigTypeSigmas(double e, double f, double v) : energy(e), force{f, f, f}, virials{v, v, v, v, v, v} {}
 
-        PerConfigTypeSigmas(Real e, Real f, Real v_iso, Real v_aniso) :
+        PerConfigTypeSigmas(double e, double f, double v_iso, double v_aniso) :
             energy(e), force{f, f, f}, virials{v_iso, v_aniso, v_aniso, v_iso, v_aniso, v_iso} {}
 
-        PerConfigTypeSigmas(Real e, Vector3 f, Virials v) : energy(e), force(f), virials(v) {}
+        PerConfigTypeSigmas(double e, Vector3 f, Virials v) : energy(e), force(f), virials(v) {}
     };
 }
 

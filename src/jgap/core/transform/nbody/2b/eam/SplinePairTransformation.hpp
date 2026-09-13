@@ -16,7 +16,7 @@ namespace jgap {
         }
 
         TwoBodyDescriptor<1> evaluateAndDifferentiate(const Cluster2& cluster) const override final {
-            Real r01 = cluster.separation01.magnitude;
+            double r01 = cluster.separation01.magnitude;
             const auto& dir = cluster.separation01.direction;
 
             auto [val, derivative] = spline.interpolate({ r01 });

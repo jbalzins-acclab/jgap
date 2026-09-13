@@ -12,10 +12,10 @@ namespace jgap {
         expansion.forEach(nl, [&](const Cluster2& cluster) {
             auto [E_pair, dE_dr_pair] = spline->interpolate({cluster.separation01.magnitude});
 
-            Real E_cluster = 0.5 * E_pair;
+            double E_cluster = 0.5 * E_pair;
             result.value += E_cluster;
 
-            Real dE_dr = 0.5 * dE_dr_pair[0];
+            double dE_dr = 0.5 * dE_dr_pair[0];
 
             Vector3 f1 = -dE_dr * cluster.separation01.direction;
             result.forces[cluster.idx1] += f1;

@@ -3,7 +3,6 @@
 #include <array>
 #include <map>
 
-#include "../../Real.hpp"
 
 namespace jgap {
     std::map<std::string, uint16_t> Species::SymbolToAtomicNumber {
@@ -46,7 +45,7 @@ namespace jgap {
     };
 
     // From ASE: ase.data.atomic_masses
-    std::array<Real, Species::NumberOfElements+1> Species::Masses = {
+    std::array<double, Species::NumberOfElements+1> Species::Masses = {
         0.000,
         1.008     ,   4.002602  ,   6.94      ,
         9.0121831 ,  10.81      ,  12.011     ,  14.007     ,

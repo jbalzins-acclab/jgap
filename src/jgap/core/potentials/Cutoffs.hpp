@@ -7,28 +7,27 @@
 #include <ranges>
 #include <initializer_list>
 
-#include "jgap/core/Real.hpp"
 #include "jgap/utils/Utils.hpp"
 
 namespace jgap {
     struct Cutoffs {
-        std::map<size_t, Real> per_cluster_size;
+        std::map<size_t, double> per_cluster_size;
 
         Cutoffs() = default;
 
-        Cutoffs(std::map<size_t, Real> per_n_dependencies) : per_cluster_size(std::move(per_n_dependencies)) {}
-        Cutoffs(const std::initializer_list<std::pair<const size_t, Real>> list) : per_cluster_size(list) {}
-        Cutoffs(const std::pair<const size_t, Real> list) : per_cluster_size({list}) {}
+        Cutoffs(std::map<size_t, double> per_n_dependencies) : per_cluster_size(std::move(per_n_dependencies)) {}
+        Cutoffs(const std::initializer_list<std::pair<const size_t, double>> list) : per_cluster_size(list) {}
+        Cutoffs(const std::pair<const size_t, double> list) : per_cluster_size({list}) {}
 
-        Real maxOverall() const {
-            Real result = 0.0;
+        double maxOverall() const {
+            double result = 0.0;
             for (const auto &cutoff: per_cluster_size | std::views::values) {
-                result = std::max(result, static_cast<Real>(cutoff));
+                result = std::max(result, static_cast<double>(cutoff));
             }
             return result;
         }
 
-        Real forDim(const size_t dim) const {
+        double forDim(const size_t dim) const {
             if (per_cluster_size.contains(dim)) {
                 return per_cluster_size.at(dim);
             }

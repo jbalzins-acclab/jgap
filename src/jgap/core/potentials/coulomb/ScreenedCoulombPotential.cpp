@@ -79,7 +79,7 @@ namespace jgap {
             if (line.empty()) continue;
             std::istringstream iss(line);
             std::string elem1_str, elem2_str;
-            std::array<Real, 6> coeffs = {};
+            std::array<double, 6> coeffs = {};
 
             if (!(iss >> elem1_str >> elem2_str >> coeffs[0] >> coeffs[1] >> coeffs[2] >> coeffs[3] >> coeffs[4]
                   >> coeffs[5])) {
@@ -99,7 +99,7 @@ namespace jgap {
     }
 
     ScreenedCoulombPotential::ScreenedCoulombParameters ScreenedCoulombPotential::makeParameters(
-        const Species2Sorted& pair, const std::array<Real, 6>& coeffs
+        const Species2Sorted& pair, const std::array<double, 6>& coeffs
     ) {
         const Species& s1 = pair.nodes[0];
         const Species& s2 = pair.nodes[1];
@@ -111,8 +111,8 @@ namespace jgap {
             JGAP_LOG_AND_THROW("Atomic number undefined for {}", s2.symbol());
         }
 
-        Real z1 = s1.atomicNumber().value();
-        Real z2 = s2.atomicNumber().value();
+        double z1 = s1.atomicNumber().value();
+        double z2 = s2.atomicNumber().value();
 
         return {coeffs, z1 * z2};
     }
@@ -120,8 +120,8 @@ namespace jgap {
     ScreenedCoulombPotential::ScreenedCoulombPotential(
         const std::set<Species2Sorted>& species,
         EmbeddedScreenedCoulombCoeffDataset embedded_dataset,
-        Real cutoff,
-        Real cutoff_transition_width
+        double cutoff,
+        double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -133,8 +133,8 @@ namespace jgap {
     ScreenedCoulombPotential::ScreenedCoulombPotential(
         const std::vector<Atoms>& training_data,
         EmbeddedScreenedCoulombCoeffDataset embedded_dataset,
-        Real cutoff,
-        Real cutoff_transition_width
+        double cutoff,
+        double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -147,8 +147,8 @@ namespace jgap {
     ScreenedCoulombPotential::ScreenedCoulombPotential(
         const std::string& dataset_filename,
         const std::vector<Atoms>& training_data,
-        Real cutoff,
-        Real cutoff_transition_width
+        double cutoff,
+        double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -162,7 +162,7 @@ namespace jgap {
     }
 
     ScreenedCoulombPotential::ScreenedCoulombPotential(
-        std::istream& custom_dataset, const std::set<Species2Sorted>& species, Real cutoff, Real cutoff_transition_width
+        std::istream& custom_dataset, const std::set<Species2Sorted>& species, double cutoff, double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -171,7 +171,7 @@ namespace jgap {
     }
 
     ScreenedCoulombPotential::ScreenedCoulombPotential(
-        std::istream& custom_dataset, const std::vector<Atoms>& training_data, Real cutoff, Real cutoff_transition_width
+        std::istream& custom_dataset, const std::vector<Atoms>& training_data, double cutoff, double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -181,7 +181,7 @@ namespace jgap {
     }
 
     ScreenedCoulombPotential::ScreenedCoulombPotential(
-        const std::map<Species2Sorted, std::array<Real, 6>>& coefficients, Real cutoff, Real cutoff_transition_width
+        const std::map<Species2Sorted, std::array<double, 6>>& coefficients, double cutoff, double cutoff_transition_width
     ) :
         cutoff(cutoff),
         cutoff_transition_width(cutoff_transition_width),
@@ -191,8 +191,8 @@ namespace jgap {
         }
     }
 
-    std::map<Species2Sorted, std::array<Real, 6>> ScreenedCoulombPotential::getCoefficients() const {
-        std::map<Species2Sorted, std::array<Real, 6>> coefficients;
+    std::map<Species2Sorted, std::array<double, 6>> ScreenedCoulombPotential::getCoefficients() const {
+        std::map<Species2Sorted, std::array<double, 6>> coefficients;
         for (const auto& [pair, params]: screened_coulomb_parameters) {
             coefficients[pair] = params.coeffs;
         }
@@ -219,10 +219,10 @@ namespace jgap {
             expansion.forEach(nl, [&](const Cluster2& cluster) {
                 auto [E_pair, dE_dr_pair] = energyAndDerivative(params, cluster.separation01.magnitude);
 
-                Real E_cluster = 0.5 * E_pair;
+                double E_cluster = 0.5 * E_pair;
                 result.value += E_cluster;
 
-                Real dE_dr = 0.5 * dE_dr_pair;
+                double dE_dr = 0.5 * dE_dr_pair;
                 Vector3 f1 = -dE_dr * cluster.separation01.direction;
                 result.forces[cluster.idx1] += f1;
                 result.forces[cluster.idx0] -= f1;
@@ -233,8 +233,8 @@ namespace jgap {
         return result;
     }
 
-    std::array<Real, 2> ScreenedCoulombPotential::energyAndDerivative(
-        const Species2Sorted& species_pair, Real r
+    std::array<double, 2> ScreenedCoulombPotential::energyAndDerivative(
+        const Species2Sorted& species_pair, double r
     ) const {
         auto it = screened_coulomb_parameters.find(species_pair);
         if (it == screened_coulomb_parameters.end()) {
@@ -243,27 +243,27 @@ namespace jgap {
         return energyAndDerivative(it->second, r);
     }
 
-    std::array<Real, 2> ScreenedCoulombPotential::energyAndDerivative(
-        const ScreenedCoulombParameters& params, Real r
+    std::array<double, 2> ScreenedCoulombPotential::energyAndDerivative(
+        const ScreenedCoulombParameters& params, double r
     ) const {
-        Real term1 = exp(-params.coeffs[1] * r);
-        Real term2 = exp(-params.coeffs[3] * r);
-        Real term3 = exp(-params.coeffs[5] * r);
+        double term1 = exp(-params.coeffs[1] * r);
+        double term2 = exp(-params.coeffs[3] * r);
+        double term3 = exp(-params.coeffs[5] * r);
 
-        Real phi = params.coeffs[0] * term1 + params.coeffs[2] * term2 + params.coeffs[4] * term3;
+        double phi = params.coeffs[0] * term1 + params.coeffs[2] * term2 + params.coeffs[4] * term3;
 
-        Real dphi_dr = -params.coeffs[0] * params.coeffs[1] * term1 - params.coeffs[2] * params.coeffs[3] * term2
+        double dphi_dr = -params.coeffs[0] * params.coeffs[1] * term1 - params.coeffs[2] * params.coeffs[3] * term2
                        - params.coeffs[4] * params.coeffs[5] * term3;
 
-        Real prefactor = params.z1_z2 * CoulombConstant_eV_Ang / r;
+        double prefactor = params.z1_z2 * CoulombConstant_eV_Ang / r;
 
-        Real sc_e = prefactor * phi;
-        Real dsc_dr = -(sc_e / r) + prefactor * dphi_dr;
+        double sc_e = prefactor * phi;
+        double dsc_dr = -(sc_e / r) + prefactor * dphi_dr;
 
         auto [cut, dcut] = cutoff_function.evaluateAndDifferentiate(r);
 
-        Real E = cut * sc_e;
-        Real dE_dr = cut * dsc_dr + dcut * sc_e;
+        double E = cut * sc_e;
+        double dE_dr = cut * dsc_dr + dcut * sc_e;
 
         return {E, dE_dr};
     }

@@ -22,7 +22,7 @@ namespace jgap {
 
             // Validation checks: if data is present, regularization must be specified and positive
             if (atoms.getEnergy().has_value()) {
-                if (!reg.energy.has_value() || *reg.energy <= 0.0_r) {
+                if (!reg.energy.has_value() || *reg.energy <= 0.0) {
                     JGAP_LOG_AND_THROW(
                         "Structure {} has energy data, but no valid positive energy regularization sigma was specified",
                         i
@@ -41,7 +41,7 @@ namespace jgap {
                 }
                 for (size_t a = 0; a < atoms.nAtoms(); ++a) {
                     const auto& f_sig = (*reg.forces)[a];
-                    if (f_sig.x <= 0.0_r || f_sig.y <= 0.0_r || f_sig.z <= 0.0_r) {
+                    if (f_sig.x <= 0.0 || f_sig.y <= 0.0 || f_sig.z <= 0.0) {
                         JGAP_LOG_AND_THROW("Structure {} has non-positive force regularization sigma at atom {}", i, a);
                     }
                 }
@@ -54,23 +54,23 @@ namespace jgap {
                     );
                 }
                 const auto& v_sig = *reg.virials;
-                if (v_sig.xx <= 0.0_r || v_sig.yy <= 0.0_r || v_sig.zz <= 0.0_r || v_sig.xy <= 0.0_r
-                    || v_sig.xz <= 0.0_r || v_sig.yz <= 0.0_r) {
+                if (v_sig.xx <= 0.0 || v_sig.yy <= 0.0 || v_sig.zz <= 0.0 || v_sig.xy <= 0.0
+                    || v_sig.xz <= 0.0 || v_sig.yz <= 0.0) {
                     JGAP_LOG_AND_THROW("Structure {} has non-positive virial regularization sigma", i);
                 }
             }
 
-            sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform([](Real val) -> Real { return 1.0_r / val; });
+            sigmas_inverse[i].energy = sigmas_inverse[i].energy.transform([](double val) -> double { return 1.0 / val; });
             sigmas_inverse[i].virials = sigmas_inverse[i].virials.transform([](const Virials& val) -> Virials {
                 return Virials{
-                    1.0_r / val.xx, 1.0_r / val.xy, 1.0_r / val.xz, 1.0_r / val.yy, 1.0_r / val.yz, 1.0_r / val.zz
+                    1.0 / val.xx, 1.0 / val.xy, 1.0 / val.xz, 1.0 / val.yy, 1.0 / val.yz, 1.0 / val.zz
                 };
             });
             sigmas_inverse[i].forces =
                 sigmas_inverse[i].forces.transform([](const std::vector<Vector3>& val) -> std::vector<Vector3> {
                     std::vector<Vector3> result(val.size());
                     for (size_t j = 0; j < val.size(); j++) {
-                        result[j] = Vector3{1.0_r / val[j].x, 1.0_r / val[j].y, 1.0_r / val[j].z};
+                        result[j] = Vector3{1.0 / val[j].x, 1.0 / val[j].y, 1.0 / val[j].z};
                     }
 
                     return result;

@@ -10,21 +10,21 @@ namespace jgap {
     class CGLSGapFit : public GapFit {
     public:
         explicit CGLSGapFit(
-            const Real jitter = 1e-8, const std::optional<int> max_iterations = std::nullopt,
+            const double jitter = 1e-8, const std::optional<int> max_iterations = std::nullopt,
             const std::optional<double> tolerance = std::nullopt, const int print_interval = 1
         ) :
             jitter(jitter), max_iterations(max_iterations), tolerance(tolerance), print_interval(print_interval) {}
 
     protected:
-        std::vector<Real> findCoefficients(
+        std::vector<double> findCoefficients(
             std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
             std::vector<EnergyData>& energies_without_external, std::vector<Regularization>& sigmas_inverse
         ) override;
 
-        virtual std::vector<Real> leastSquares(Matrix<RowMajor>& A, std::vector<Real>& b);
+        virtual std::vector<double> leastSquares(Matrix<RowMajor>& A, std::vector<double>& b);
 
-    protected:
-        Real jitter;
+    private:
+        double jitter;
         std::optional<int> max_iterations;
         std::optional<double> tolerance;
         int print_interval{1};
@@ -34,14 +34,12 @@ namespace jgap {
             const std::vector<EnergyData>& energy_data, const std::vector<Regularization>& sigmas_inverse
         ) const;
 
-        static std::vector<Real> formVectorB(
+        static std::vector<double> formVectorB(
             const std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<EnergyData>& energy_data,
             const std::vector<Regularization>& sigmas_inverse
         );
 
-        void fillU_mm(
-            size_t starting_row, size_t starting_col, const ValuePtr<GapComponent>& gap_component, Matrix<RowMajor>& A
-        ) const;
+        Matrix<RowMajor> U_MM(const ValuePtr<GapComponent>& gap_component) const;
 
         static void fillInverseSigmaLK_NM(
             const std::vector<ValuePtr<GapComponent>>& gap_components, const Atoms& atoms,

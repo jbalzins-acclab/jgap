@@ -4,7 +4,6 @@
 #include "Grid.hpp"
 #include "InterpolationResults.hpp"
 #include "Spline.hpp"
-#include "jgap/core/Real.hpp"
 
 namespace jgap {
     class CubicBSpline3D : public Spline<3> {
@@ -13,8 +12,8 @@ namespace jgap {
 
         static CubicBSpline3D fit(const Grid<3>& values);
 
-        InterpolationResults<3> interpolate(std::array<Real, 3> pos) const override;
-        std::array<Real, 3> getCutoff() const override;
+        InterpolationResults<3> interpolate(std::array<double, 3> pos) const override;
+        std::array<double, 3> getCutoff() const override;
 
         CubicBSpline3D* clone() const override { return new CubicBSpline3D(*this); }
 

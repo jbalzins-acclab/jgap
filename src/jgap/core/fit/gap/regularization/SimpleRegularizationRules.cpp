@@ -5,12 +5,12 @@
 namespace jgap {
 
     SimpleRegularizationRules::SimpleRegularizationRules(
-        Real energy_sigma_per_atom,
-        Real force_component_sigma,
-        Real virials_iso_sigma_per_atom,
-        Real virials_aniso_sigmas_per_atom,
-        Real liquid_multiplier,
-        Real short_range_multiplier
+        double energy_sigma_per_atom,
+        double force_component_sigma,
+        double virials_iso_sigma_per_atom,
+        double virials_aniso_sigmas_per_atom,
+        double liquid_multiplier,
+        double short_range_multiplier
     ) :
         defaults(
             energy_sigma_per_atom, force_component_sigma, virials_iso_sigma_per_atom, virials_aniso_sigmas_per_atom
@@ -19,7 +19,7 @@ namespace jgap {
         short_range_multiplier(short_range_multiplier) {}
 
     Regularization SimpleRegularizationRules::determine(const Atoms& atoms) const {
-        Real multiplier = 1.0;
+        double multiplier = 1.0;
         const std::string ct = atoms.getConfigType().value_or("default");
 
         if (ct == "isolated_atom") {
@@ -36,8 +36,8 @@ namespace jgap {
         }
 
         Regularization sigmas;
-        sigmas.energy = defaults.energy * multiplier * std::sqrt(static_cast<Real>(atoms.nAtoms()));
-        sigmas.virials = defaults.virials * multiplier * std::sqrt(static_cast<Real>(atoms.nAtoms()));
+        sigmas.energy = defaults.energy * multiplier * std::sqrt(static_cast<double>(atoms.nAtoms()));
+        sigmas.virials = defaults.virials * multiplier * std::sqrt(static_cast<double>(atoms.nAtoms()));
 
         sigmas.forces = std::vector<Vector3>(atoms.nAtoms());
         for (size_t i = 0; i < atoms.nAtoms(); i++) {

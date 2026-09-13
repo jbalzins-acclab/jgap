@@ -13,11 +13,11 @@ namespace jgap {
     class AtomicQuantities {
     public:
         AtomicQuantities(size_t n_sparse, size_t n_atoms) :
-            n_sparse(n_sparse), n_atoms(n_atoms), energy_data(n_sparse, Real{}), virial_data(n_sparse, Virials{}),
+            n_sparse(n_sparse), n_atoms(n_atoms), energy_data(n_sparse, double{}), virial_data(n_sparse, Virials{}),
             force_table(n_sparse * n_atoms, Vector3{}) {}
 
-        Real &energy(size_t sparse_idx) { return energy_data[sparse_idx]; }
-        const Real &energy(size_t sparse_idx) const { return energy_data[sparse_idx]; }
+        double &energy(size_t sparse_idx) { return energy_data[sparse_idx]; }
+        const double &energy(size_t sparse_idx) const { return energy_data[sparse_idx]; }
 
         Virials &virials(size_t sparse_idx) { return virial_data[sparse_idx]; }
         const Virials &virials(size_t sparse_idx) const { return virial_data[sparse_idx]; }
@@ -27,7 +27,7 @@ namespace jgap {
             return force_table[sparse_idx * n_atoms + atom_idx];
         }
 
-        AtomicQuantity reduce(const std::vector<Real> &coefficients) const {
+        AtomicQuantity reduce(const std::vector<double> &coefficients) const {
             assert(coefficients.size() == n_sparse);
 
             AtomicQuantity total(n_atoms);
@@ -41,7 +41,7 @@ namespace jgap {
             return total;
         }
 
-        AtomicQuantities& operator*=(Real scalar) {
+        AtomicQuantities& operator*=(double scalar) {
             for (auto& e : energy_data) e *= scalar;
             for (auto& v : virial_data) v *= scalar;
             for (auto& f : force_table) f *= scalar;
@@ -52,7 +52,7 @@ namespace jgap {
         size_t n_sparse;
         size_t n_atoms;
 
-        std::vector<Real> energy_data;
+        std::vector<double> energy_data;
         std::vector<Virials> virial_data;
         std::vector<Vector3> force_table;
     };

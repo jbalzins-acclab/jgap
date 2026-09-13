@@ -13,7 +13,7 @@ namespace jgap {
         Vector3 b;
         Vector3 c;
 
-        Real volume() const { return abs(a.cross(b).dot(c)); }
+        double volume() const { return abs(a.cross(b).dot(c)); }
     };
 }
 

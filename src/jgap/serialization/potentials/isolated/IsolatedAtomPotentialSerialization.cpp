@@ -23,7 +23,7 @@ namespace jgap {
             return nullptr;
         }
 
-        std::map<Species, Real> isolated_energies;
+        std::map<Species, double> isolated_energies;
         auto energies_group_opt = node.getGroup("isolated_energies");
         if (!energies_group_opt) {
             JGAP_LOG_AND_THROW("Missing 'isolated_energies' group in IsolatedAtomPotential serialization");

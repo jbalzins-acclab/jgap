@@ -24,7 +24,7 @@ namespace jgap::utils {
             if (!Z_center_opt && mode != EamMode::Blind && mode != EamMode::EAM) {
                 JGAP_LOG_AND_THROW("Central species of unknown atomic number - incompatible with the EAM mode")
             }
-            Real Z_center = static_cast<Real>(Z_center_opt.value_or(0));
+            double Z_center = static_cast<double>(Z_center_opt.value_or(0));
 
             for (const auto& contributor_species: all_species) {
                 auto pf_clone = base_pf;
@@ -35,8 +35,8 @@ namespace jgap::utils {
                     JGAP_LOG_AND_THROW("Contributor species of unknown atomic number - incompatible with the EAM mode")
                 }
 
-                Real prefactor = 1.0;
-                Real Z_contrib = static_cast<Real>(Z_contrib_opt.value_or(0));
+                double prefactor = 1.0;
+                double Z_contrib = static_cast<double>(Z_contrib_opt.value_or(0));
                 if (mode == EamMode::FSsym) {
                     prefactor = std::sqrt(Z_contrib * Z_center) / 40.0;
                 } else if (mode == EamMode::FSgen) {

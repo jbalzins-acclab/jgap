@@ -12,7 +12,7 @@
 namespace jgap {
 
     void SplinePairPotential::extend(
-        Species species1, Species species2, const std::vector<Real>& r, const std::vector<Real>& energies
+        Species species1, Species species2, const std::vector<double>& r, const std::vector<double>& energies
     ) {
         if (per_species_interpolators.contains(Species2Sorted{ species1, species2 })) {
             JGAP_LOG_AND_THROW("Trying to re-write interpolators for {}-{} pair", species1.symbol(), species2.symbol());
@@ -31,10 +31,10 @@ namespace jgap {
             expansion.forEach(nl, [&](const Cluster2& cluster) {
                 auto [E_pair, gradient] = interpolator.interpolate({ cluster.separation01.magnitude });
 
-                Real E_cluster = 0.5 * E_pair;
+                double E_cluster = 0.5 * E_pair;
                 result.value += E_cluster;
 
-                Real dE_dr = 0.5 * gradient[0];
+                double dE_dr = 0.5 * gradient[0];
                 Vector3 f1 = -dE_dr * cluster.separation01.direction;
                 result.forces[cluster.idx1] += f1;
                 result.forces[cluster.idx0] -= f1;
@@ -55,7 +55,7 @@ namespace jgap {
     }
 
     Cutoffs SplinePairPotential::getCutoffs() const {
-        Real cutoff = 0.0;
+        double cutoff = 0.0;
         for (const auto& interpolator: per_species_interpolators | std::views::values) {
             cutoff = std::max(cutoff, interpolator.getCutoff()[0]);
         }

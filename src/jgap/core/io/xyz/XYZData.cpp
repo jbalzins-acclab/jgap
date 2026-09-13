@@ -57,8 +57,8 @@ namespace jgap {
                 }
 
                 std::istringstream iss(v);
-                std::vector<Real> vals;
-                Real val;
+                std::vector<double> vals;
+                double val;
                 while (iss >> val) {
                     vals.push_back(val);
                 }
@@ -80,7 +80,7 @@ namespace jgap {
 
                 if (k == main_props.energy) {
                     try {
-                        data.info[k] = static_cast<Real>(std::stod(v));
+                        data.info[k] = static_cast<double>(std::stod(v));
                     } catch (...) {
                         JGAP_LOG_AND_THROW("Energy must be a real number")
                     }
@@ -135,15 +135,15 @@ namespace jgap {
                             if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Vector3>();
                             std::get<std::vector<Vector3>>(data.arrays[info.name]).push_back(v);
                         } else if (info.count == 1) {
-                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Real>();
+                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<double>();
 
-                            Real r;
+                            double r;
                             if (!(iss >> r)) {
-                                JGAP_LOG_AND_THROW("Failed to read as Real for property {} at atom {}", info.name, i);
+                                JGAP_LOG_AND_THROW("Failed to read as double for property {} at atom {}", info.name, i);
                             }
-                            std::get<std::vector<Real>>(data.arrays[info.name]).push_back(r);
+                            std::get<std::vector<double>>(data.arrays[info.name]).push_back(r);
                         } else {
-                            JGAP_LOG_AND_THROW("Unsupported Real vector size per array");
+                            JGAP_LOG_AND_THROW("Unsupported double vector size per array");
                         }
                     } else if (info.type == 'I') {
 
@@ -243,7 +243,7 @@ namespace jgap {
                         val_str = arg;
                     } else if constexpr (std::is_same_v<T, int>) {
                         val_str = std::to_string(arg);
-                    } else if constexpr (std::is_same_v<T, Real>) {
+                    } else if constexpr (std::is_same_v<T, double>) {
                         val_str = std::format("{:.16g}", arg);
                     } else if constexpr (std::is_same_v<T, Vector3>) {
                         val_str = std::format("{:.16g} {:.16g} {:.16g}", arg.x, arg.y, arg.z);
@@ -297,7 +297,7 @@ namespace jgap {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, std::vector<int>>)
                         prop_tokens.push_back(name + ":I:1");
-                    else if constexpr (std::is_same_v<T, std::vector<Real>>)
+                    else if constexpr (std::is_same_v<T, std::vector<double>>)
                         prop_tokens.push_back(name + ":R:1");
                     else if constexpr (std::is_same_v<T, std::vector<Vector3>>)
                         prop_tokens.push_back(name + ":R:3");

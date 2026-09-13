@@ -10,7 +10,7 @@
 
 namespace jgap {
 
-    std::array<int, 3> NeighbourLists::findMaxRep(const Atoms& structure, const Real cutoff) {
+    std::array<int, 3> NeighbourLists::findMaxRep(const Atoms& structure, const double cutoff) {
         auto pbc = structure.getPbc();
         auto lattice = structure.getLattice();
 
@@ -36,7 +36,7 @@ namespace jgap {
         return maxRep;
     }
 
-    NeighbourLists::NeighbourLists(const Atoms& box, Real cutoff) : cutoff(cutoff) {
+    NeighbourLists::NeighbourLists(const Atoms& box, double cutoff) : cutoff(cutoff) {
         const auto max_rep = findMaxRep(box, cutoff);
         auto lattice_opt = box.getLattice();
         auto& species = box.getSpecies();
@@ -82,7 +82,7 @@ namespace jgap {
         }
     }
 
-    std::vector<NeighbourLists> NeighbourLists::form(const std::vector<Atoms>& boxes, Real cutoff) {
+    std::vector<NeighbourLists> NeighbourLists::form(const std::vector<Atoms>& boxes, double cutoff) {
         std::vector<std::optional<NeighbourLists>> result_opts(boxes.size());
 
         unseqForIndex(0, boxes.size(),

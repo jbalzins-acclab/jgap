@@ -19,7 +19,7 @@ namespace jgap {
     public:
         virtual ~GapComponent() = default;
         virtual std::optional<AtomicQuantities> covariate(const NeighbourLists& neighbour_list) const = 0;
-        virtual Matrix<RowMajor> sparseToSparseCovariance() const = 0;
+        virtual Matrix<RowMajor> K_MM() const = 0;
         virtual size_t nSparsePoints() const = 0;
         virtual Cutoffs getCutoffs() const = 0;
         virtual std::set<Species> nonZeroCovarianceFor() const = 0;
@@ -29,10 +29,10 @@ namespace jgap {
         template<std::forward_iterator It>
         void setCoefficients(It& iter);
 
-        void setCoefficients(const std::vector<Real>& new_coeff);
-        const std::vector<Real>& getCoefficients() const { return coefficients; }
+        void setCoefficients(const std::vector<double>& new_coeff);
+        const std::vector<double>& getCoefficients() const { return coefficients; }
 
-        Real getCutoff() const { return getCutoffs().maxOverall(); }
+        double getCutoff() const { return getCutoffs().maxOverall(); }
 
         AtomicQuantity energy(const Atoms& atoms) const;
         AtomicQuantity energy(const NeighbourLists& neighbour_list) const;
@@ -40,7 +40,7 @@ namespace jgap {
         virtual void tabulate(TabulationData& tables) const = 0;
 
     private:
-        std::vector<Real> coefficients{};
+        std::vector<double> coefficients{};
     };
 
     template<std::forward_iterator It>

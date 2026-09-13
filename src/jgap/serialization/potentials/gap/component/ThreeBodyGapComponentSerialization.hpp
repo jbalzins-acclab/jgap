@@ -75,7 +75,7 @@ namespace jgap {
                 SerializationRegistry<ThreeBodyTransformation<Dim>>::deserialize(transformation_group_opt.value());
 
             auto sparse_points = node.readDescriptors<Dim>("sparse_points");
-            auto coefficients = node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<Real>{});
+            auto coefficients = node.readOptionalRealVectorDataSet("coefficients").value_or(std::vector<double>{});
 
             return ValuePtr<GapComponent>(ComponentT(species_set, transformation, kernel, sparse_points, coefficients));
         }

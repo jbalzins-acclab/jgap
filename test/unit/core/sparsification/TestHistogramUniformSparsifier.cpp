@@ -6,12 +6,12 @@ using namespace jgap;
 TEST(TestHistogramUniformSparsifier, MinPointFiltersLowerBound) {
     // Descriptors with values ranging from 0.0 to 10.0
     std::vector<Descriptor<1>> descriptors;
-    for (Real val = 0.0_r; val <= 10.0_r; val += 0.5_r) {
+    for (double val = 0.0; val <= 10.0; val += 0.5) {
         descriptors.push_back({val});
     }
 
     // Sparsifier with a lower bound min_point = 2.0
-    Descriptor<1> min_point{2.0_r};
+    Descriptor<1> min_point{2.0};
     HistogramUniformSparsifier<1> sparsifier(
         42,
         5,
@@ -26,6 +26,6 @@ TEST(TestHistogramUniformSparsifier, MinPointFiltersLowerBound) {
 
     // Verify all selected sparse points are >= min_point (2.0)
     for (const auto& pt: sparse_points) {
-        EXPECT_GE(pt[0], 2.0_r);
+        EXPECT_GE(pt[0], 2.0);
     }
 }

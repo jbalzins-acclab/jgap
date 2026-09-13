@@ -14,13 +14,13 @@ auto makeCoordinationComponents(
     const std::vector<Atoms>& training_data,
     uint64_t seed,
     size_t n_sparse,
-    const std::array<std::pair<Real, Real>, Dim>& ranges
+    const std::array<std::pair<double, double>, Dim>& ranges
 ) {
     auto coord_trans = ValuePtr<CoordinationTransformation<Dim>>(CoordinationTransformation<Dim>(ranges));
 
-    std::array<Real, Dim> length_scales;
-    length_scales.fill(1.0_r);
-    auto kernel_coord = SquaredExpKernel<Dim, 0>(1.0_r, length_scales);
+    std::array<double, Dim> length_scales;
+    length_scales.fill(1.0);
+    auto kernel_coord = SquaredExpKernel<Dim, 0>(1.0, length_scales);
 
     std::array<bool, Dim> use_histogram;
     use_histogram.fill(true);
@@ -29,10 +29,10 @@ auto makeCoordinationComponents(
     return createCoordinationComponents(coord_trans, kernel_coord, sparsifier_coord, training_data);
 }
 
-auto makeMeamComponents(const std::vector<Atoms>& training_data, uint64_t seed, size_t n_sparse, Real cutoff) {
-    auto meam_trans = ValuePtr<MeamTransformation>(MeamTransformation(CosCutoff(cutoff, 0.5_r)));
+auto makeMeamComponents(const std::vector<Atoms>& training_data, uint64_t seed, size_t n_sparse, double cutoff) {
+    auto meam_trans = ValuePtr<MeamTransformation>(MeamTransformation(CosCutoff(cutoff, 0.5)));
 
-    auto kernel_coord = SquaredExpKernel<3, 0>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
+    auto kernel_coord = SquaredExpKernel<3, 0>(1.0, {1.0, 1.0, 1.0});
 
     auto sparsifier_coord = HistogramUniformSparsifier<3>(seed, n_sparse, std::array{true, true, true});
 
@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
 
     // 2-Body Components
     if (true) {
-        auto trans2 = PairDistanceTransformation(CosCutoff(4.5_r, 1.0_r));
-        auto kernel2 = SquaredExpKernel<1, 1>(10.0_r, {1.0_r});
+        auto trans2 = PairDistanceTransformation(CosCutoff(4.5, 1.0));
+        auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
         auto sparsifier2 = HistogramUniformSparsifier<2>(120, 20, std::array{true, false});
         potential.addComponents(
             createTwoBodyComponents<2, SquaredExpKernel<1, 1>>(training_data, trans2, kernel2, sparsifier2)
@@ -79,11 +79,11 @@ int main(int argc, char** argv) {
                 training_data,
                 120,
                 500,
-                std::array<std::pair<Real, Real>, 3>{{
-                    {2.4_r, 2.6_r},
-                    {2.75_r, 2.95_r},
-                    {3.95_r, 4.15_r},
-                    //{4.65_r, 4.85_r},
+                std::array<std::pair<double, double>, 3>{{
+                    {2.4, 2.6},
+                    {2.75, 2.95},
+                    {3.95, 4.15},
+                    //{4.65, 4.85},
                 }}
             )
         );
@@ -95,11 +95,11 @@ int main(int argc, char** argv) {
                 training_data,
                 120,
                 500,
-                std::array<std::pair<Real, Real>, 3>{{
-                    {2.45_r, 2.75_r},
-                    {3.5_r, 3.8_r},
-                    {4.3_r, 4.6_r},
-                    //{5.0_r, 5.3_r},
+                std::array<std::pair<double, double>, 3>{{
+                    {2.45, 2.75},
+                    {3.5, 3.8},
+                    {4.3, 4.6},
+                    //{5.0, 5.3},
                 }}
             )
         );
@@ -107,24 +107,24 @@ int main(int argc, char** argv) {
 
     // MEAM Components
     if (true) {
-        potential.addComponents(makeMeamComponents(training_data, 120, 500, 3.7_r));
+        potential.addComponents(makeMeamComponents(training_data, 120, 500, 3.7));
     }
 
     // EAM Components
     if (false) {
-        auto kernel_eam = SquaredExpKernel<1, 0>(1.0_r, {1.0_r});
+        auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
         auto sparsifier_eam = HistogramUniformSparsifier<1>(120, 20);
         potential.addComponents(
             createEamComponents<SquaredExpKernel<1, 0>>(
-                FSGenPairFunction(4.5_r, 3.0_r), kernel_eam, sparsifier_eam, training_data, EamMode::Blind
+                FSGenPairFunction(4.5, 3.0), kernel_eam, sparsifier_eam, training_data, EamMode::Blind
             )
         );
     }
 
     // 3-Body Components
     if (true) {
-        auto trans3 = Angle3bTransformation(CosCutoff(3.7_r, 0.6_r));
-        auto kernel3 = SquaredExpKernel<3, 1>(1.0_r, {1.0_r, 1.0_r, 1.0_r});
+        auto trans3 = Angle3bTransformation(CosCutoff(3.7, 0.6));
+        auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
         auto sparsifier3 = HistogramUniformSparsifier<4>(120, 500, std::array{true, true, true, false});
         potential.addComponents(
             createThreeBodyComponents<4, SquaredExpKernel<3, 1>>(training_data, trans3, kernel3, sparsifier3)

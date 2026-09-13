@@ -10,7 +10,6 @@
 #include <string_view>
 #include <vector>
 
-#include "jgap/core/Real.hpp"
 #include "jgap/core/Vector3.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Separation.hpp"
@@ -47,7 +46,7 @@ namespace jgap::utils {
 
     std::string formatDuration(double ms);
 
-    constexpr Real factorial(size_t n);
+    constexpr double factorial(size_t n);
 
     double rms(const std::vector<double>&);
     double deviation(const std::vector<double>&);

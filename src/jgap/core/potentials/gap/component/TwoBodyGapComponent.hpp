@@ -27,7 +27,7 @@ namespace jgap {
             ValuePtr<TwoBodyTransformation<Dim>> transformation,
             TKernel kernel,
             std::vector<Descriptor<Dim>> sparse_points,
-            const std::vector<Real>& optional_coeffs = {}
+            const std::vector<double>& optional_coeffs = {}
         ) :
             species(species),
             transformation(std::move(transformation)),
@@ -82,7 +82,7 @@ namespace jgap {
             return result;
         }
 
-        Matrix<RowMajor> sparseToSparseCovariance() const override {
+        Matrix<RowMajor> K_MM() const override {
             Matrix<RowMajor> result(nSparsePoints(), nSparsePoints());
             for (size_t i = 0; i < nSparsePoints(); i++) {
                 for (size_t j = i; j < nSparsePoints(); j++) {
@@ -92,6 +92,7 @@ namespace jgap {
             }
             return result;
         }
+
 
         size_t nSparsePoints() const override { return sparse_points.size(); }
 
@@ -127,9 +128,9 @@ namespace jgap {
                 auto cluster = TabulationData::gridPosAsCluster2(pos);
                 auto transformed = transformation->evaluate(cluster);
 
-                Real& value = table.data_flat[i];
+                double& value = table.data_flat[i];
                 for (size_t sparse_idx = 0; sparse_idx < sparse_points.size(); sparse_idx++) {
-                    constexpr Real iteration_reduction_factor = 2.0;
+                    constexpr double iteration_reduction_factor = 2.0;
                     value += coeffs[sparse_idx] * kernel.value(sparse_points[sparse_idx], transformed)
                              * iteration_reduction_factor;
                 }

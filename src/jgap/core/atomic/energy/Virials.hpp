@@ -1,7 +1,6 @@
 #ifndef JGAP_VIRIALS_HPP
 #define JGAP_VIRIALS_HPP
 
-#include "jgap/core/Real.hpp"
 #include "jgap/core/Vector3.hpp"
 
 namespace jgap {
@@ -18,7 +17,7 @@ namespace jgap {
     /// and then apply the chain rule so that V(q) = \partial q / \partial |r_ij| * V(|r_ij|).
     ///
     struct Virials {
-        Real xx{}, xy{}, xz{}, yy{}, yz{}, zz{};
+        double xx{}, xy{}, xz{}, yy{}, yz{}, zz{};
 
         /// @brief Constructs the symmetric virial stress tensor from the outer product (dyadic) $\vec{r} \otimes
         /// \vec{f}$.
@@ -54,13 +53,13 @@ namespace jgap {
             return *this;
         }
 
-        Virials operator*(Real scalar) const {
+        Virials operator*(double scalar) const {
             return { xx * scalar, xy * scalar, xz * scalar, yy * scalar, yz * scalar, zz * scalar };
         }
 
-        friend Virials operator*(Real scalar, const Virials& v) { return v * scalar; }
+        friend Virials operator*(double scalar, const Virials& v) { return v * scalar; }
 
-        Virials& operator*=(Real scalar) {
+        Virials& operator*=(double scalar) {
             xx *= scalar;
             xy *= scalar;
             xz *= scalar;
@@ -70,8 +69,8 @@ namespace jgap {
             return *this;
         }
 
-        Virials& operator/=(Real scalar) {
-            Real inv = 1.0 / scalar;
+        Virials& operator/=(double scalar) {
+            double inv = 1.0 / scalar;
             xx *= inv;
             xy *= inv;
             xz *= inv;

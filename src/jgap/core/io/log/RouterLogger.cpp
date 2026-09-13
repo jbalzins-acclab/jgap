@@ -1,4 +1,4 @@
-#include "jgap/io/log/RouterLogger.hpp"
+#include "jgap/core/io/log/RouterLogger.hpp"
 
 
 namespace jgap {

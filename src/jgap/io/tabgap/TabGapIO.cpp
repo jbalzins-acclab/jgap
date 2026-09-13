@@ -180,7 +180,7 @@ namespace jgap {
         }
 
         const auto& coeff_grid = spline_cast->getCoefficients();
-        const auto original_grid_size = static_cast<Real>(coeff_grid.sizes[0] - 2);
+        const auto original_grid_size = static_cast<double>(coeff_grid.sizes[0] - 2);
 
         // Original grid bounds: lower = origin + spacing, upper = origin + (sizes - 2) * spacing
         pair_group.createDataSet(/*Original grid, not spline coeffs*/
@@ -215,9 +215,9 @@ namespace jgap {
 
         const auto& coeff_grid = component.getSpline().getCoefficients();
         const auto original_grid_sizes = std::array{
-            static_cast<Real>(coeff_grid.sizes[0] - 2),
-            static_cast<Real>(coeff_grid.sizes[1] - 2),
-            static_cast<Real>(coeff_grid.sizes[2] - 2),
+            static_cast<double>(coeff_grid.sizes[0] - 2),
+            static_cast<double>(coeff_grid.sizes[1] - 2),
+            static_cast<double>(coeff_grid.sizes[2] - 2),
         };
 
         // Original-grid lower limit = coeff origin + spacing; upper limit = coeff origin + (sizes - 2) * spacing
@@ -266,7 +266,7 @@ namespace jgap {
         }
 
         size_t n_rho{}, n_2b{};
-        Real drho{}, dr{};
+        double drho{}, dr{};
         std::map<Species, Grid<1>> energy_per_density_grids;
         std::map<Species2Atomic, Grid<1>> density_grids;
 
@@ -331,7 +331,7 @@ namespace jgap {
         eam_fs_content << drho << " ";
         eam_fs_content << n_2b << " ";
         eam_fs_content << dr << " ";
-        eam_fs_content << dr * static_cast<Real>(n_2b) << std::endl;
+        eam_fs_content << dr * static_cast<double>(n_2b) << std::endl;
 
         // Per-element Sections:
         /*
@@ -403,7 +403,7 @@ namespace jgap {
     }
 
     void TabGapIO::readFromGroup(const HighFive::Group& root, TabGapPotential& pot, bool read_embedded_eam_fs) {
-        std::map<Species, Real> isolated_energies = pot.getIsolatedAtomEnergies();
+        std::map<Species, double> isolated_energies = pot.getIsolatedAtomEnergies();
         std::map<Species2Sorted, TwoBodyTGComponent> two_body_components = pot.getTwoBodyComponents();
         std::map<Species3AtomicSorted, ThreeBodyTGComponent> three_body_components = pot.getThreeBodyComponents();
         std::multimap<Species, EamTGComponent> eam_components = pot.getEamComponents();
@@ -414,7 +414,7 @@ namespace jgap {
             // Read all attributes except Nelements
             for (const auto& attr_name: e0_group.listAttributeNames()) {
                 if (attr_name == "Nelements") continue;
-                Real val;
+                double val;
                 e0_group.getAttribute(attr_name).read(val);
                 isolated_energies[attr_name] += val;
             }
@@ -436,7 +436,7 @@ namespace jgap {
                 group.getAttribute("element_j").read(species_j);
                 Species2Sorted pair{species_i, species_j};
 
-                std::array<Real, 2> limits{}; // origin, cutoff
+                std::array<double, 2> limits{}; // origin, cutoff
                 group.getDataSet("grid_limits").read(limits);
 
                 size_t n_original_grid;
@@ -445,9 +445,9 @@ namespace jgap {
                 // Inverse of write2b: limits store original grid bounds [lower, upper] = [r_min, r_max].
                 // Original grid has N points spanning [lower, upper], so spacing = (upper - lower) / (N - 1).
                 // Spline grid has N + 2 coefficient points with origin shifted back by 1 spacing (lower - spacing).
-                Real lower = limits.at(0);
-                Real upper = limits.at(1);
-                Real spacing = (upper - lower) / static_cast<Real>(n_original_grid - 1);
+                double lower = limits.at(0);
+                double upper = limits.at(1);
+                double spacing = (upper - lower) / static_cast<double>(n_original_grid - 1);
                 Grid<1> spline_grid{{n_original_grid + 2}, {spacing}, {lower - spacing}};
 
                 group.getDataSet("energies").read(spline_grid.data_flat);
@@ -469,7 +469,7 @@ namespace jgap {
                 std::array<size_t, 3> n_original{}; // original grid point counts N per axis (see write3b)
                 group.getDataSet("N").read(n_original);
 
-                std::array<Real, 6> grid_limits{}; // lower xyz, then upper xyz
+                std::array<double, 6> grid_limits{}; // lower xyz, then upper xyz
                 group.getDataSet("grid_limits").read(grid_limits);
 
                 // Inverse of write3b: limits store original grid bounds [lower, upper] per axis.
@@ -478,14 +478,14 @@ namespace jgap {
                 std::array lower{grid_limits[0], grid_limits[1], grid_limits[2]};
                 std::array upper{grid_limits[3], grid_limits[4], grid_limits[5]};
                 std::array spacing{
-                    (upper[0] - lower[0]) / static_cast<Real>(n_original[0] - 1),
-                    (upper[1] - lower[1]) / static_cast<Real>(n_original[1] - 1),
-                    (upper[2] - lower[2]) / static_cast<Real>(n_original[2] - 1)
+                    (upper[0] - lower[0]) / static_cast<double>(n_original[0] - 1),
+                    (upper[1] - lower[1]) / static_cast<double>(n_original[1] - 1),
+                    (upper[2] - lower[2]) / static_cast<double>(n_original[2] - 1)
                 };
                 std::array<size_t, 3> spline_dims{n_original[0] + 2, n_original[1] + 2, n_original[2] + 2};
                 std::array spline_grid_origin{lower[0] - spacing[0], lower[1] - spacing[1], lower[2] - spacing[2]};
 
-                std::vector<Real> spline_coeffs{};
+                std::vector<double> spline_coeffs{};
                 group.getDataSet("energies").read(spline_coeffs);
 
                 assert(
@@ -565,7 +565,7 @@ namespace jgap {
         if (!utils::getLine(file, line)) JGAP_LOG_AND_THROW("Invalid EAM/FS: missing grid spec line");
 
         size_t n_rho, n_r;
-        Real drho, dr, cutoff;
+        double drho, dr, cutoff;
         iss = std::istringstream(line);
         iss >> n_rho >> drho >> n_r >> dr >> cutoff;
 
@@ -610,7 +610,7 @@ namespace jgap {
             }
         }
 
-        std::map<Species, Real> iso_energies = pot.getIsolatedAtomEnergies();
+        std::map<Species, double> iso_energies = pot.getIsolatedAtomEnergies();
         std::map<Species2Sorted, TwoBodyTGComponent> two_body = pot.getTwoBodyComponents();
         std::map<Species3AtomicSorted, ThreeBodyTGComponent> three_body = pot.getThreeBodyComponents();
         std::multimap<Species, EamTGComponent> eam = pot.getEamComponents();
@@ -635,12 +635,12 @@ namespace jgap {
                 Species2Sorted species_pair{elements[i], elements[j]};
                 Grid<1> energy_grid({n_r}, {dr}, {0.0});
 
-                Real r{};
+                double r{};
                 for (size_t k = 0; k < n_r; k++, r += dr) {
                     if (!utils::getLine(file, line)) {
                         JGAP_LOG_AND_THROW("Invalid EAM/FS: incomplete pair potential table");
                     }
-                    Real phi = std::stod(line);
+                    double phi = std::stod(line);
                     energy_grid.data_flat[k] = (r > 0.0 ? phi / r : 0.0);
                 }
 

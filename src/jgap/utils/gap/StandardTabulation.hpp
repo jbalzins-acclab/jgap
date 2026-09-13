@@ -3,11 +3,10 @@
 
 #include <array>
 #include <string>
-#include "jgap/core/Real.hpp"
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/tabulation/TabulationParams.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/Utils.hpp"
@@ -15,8 +14,8 @@
 namespace jgap::utils {
 
     struct StandardTabulationParams {
-        Real r_min_3b = 0.1;
-        Real max_eam_density = 10.0;
+        double r_min_3b = 0.1;
+        double max_eam_density = 10.0;
         size_t n_grid_2b = 5000;
         std::array<size_t, 3> n_grid_3b = {80, 80, 80};
     };

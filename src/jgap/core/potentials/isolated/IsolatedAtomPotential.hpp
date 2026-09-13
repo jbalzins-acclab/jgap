@@ -8,7 +8,7 @@
 namespace jgap {
     class IsolatedAtomPotential : public Potential {
     public:
-        IsolatedAtomPotential(const std::map<Species, Real>& isolated_atom_energies);
+        IsolatedAtomPotential(const std::map<Species, double>& isolated_atom_energies);
         IsolatedAtomPotential(const std::vector<Atoms>& training_data);
 
         AtomicQuantity calculateEnergy(const Atoms& atoms) const override;
@@ -23,10 +23,10 @@ namespace jgap {
 
         IsolatedAtomPotential* clone() const override { return new IsolatedAtomPotential(*this); }
 
-        const std::map<Species, Real>& getIsolatedEnergies() const { return isolated_energies; }
+        const std::map<Species, double>& getIsolatedEnergies() const { return isolated_energies; }
 
     private:
-        std::map<Species, Real> isolated_energies;
+        std::map<Species, double> isolated_energies;
     };
 }
 

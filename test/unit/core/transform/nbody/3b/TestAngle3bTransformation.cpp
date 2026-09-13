@@ -11,9 +11,9 @@ namespace {
     class MockCutoff : public CutoffFunction {
     public:
         // Set the values that the mock will return for a specific distance
-        void add_expected_call(Real r, Real val, Real deriv) { expected_calls[r] = {val, deriv}; }
+        void add_expected_call(double r, double val, double deriv) { expected_calls[r] = {val, deriv}; }
 
-        Real evaluate(Real r) const override {
+        double evaluate(double r) const override {
             auto it = expected_calls.find(r);
             if (it != expected_calls.end()) {
                 return it->second.first;
@@ -22,7 +22,7 @@ namespace {
             return 0.0;
         }
 
-        std::tuple<Real, Real> evaluateAndDifferentiate(Real r) const override {
+        std::tuple<double, double> evaluateAndDifferentiate(double r) const override {
             auto it = expected_calls.find(r);
             if (it != expected_calls.end()) {
                 return it->second;
@@ -31,13 +31,13 @@ namespace {
             return {0.0, 0.0};
         }
 
-        Real getCutoff() const override { return 10.0; }
+        double getCutoff() const override { return 10.0; }
 
         MockCutoff* clone() const override { return new MockCutoff(*this); }
 
     private:
         // Using a map is fine as long as the keys are precise and the header is included.
-        std::map<Real, std::pair<Real, Real>> expected_calls;
+        std::map<double, std::pair<double, double>> expected_calls;
     };
 }
 
@@ -46,11 +46,11 @@ TEST(TestAngle3bTransformation, CorrectlyUsesCutoff) {
     MockCutoff mock_cutoff{};
 
     // Define the properties of our test cluster
-    Real r01 = 2.0, r02 = 3.0, r12 = 4.0;
+    double r01 = 2.0, r02 = 3.0, r12 = 4.0;
 
     // Program the mock to return specific values for the distances it will be called with
-    Real val01 = 0.8, deriv01 = -0.1;
-    Real val02 = 0.6, deriv02 = -0.2;
+    double val01 = 0.8, deriv01 = -0.1;
+    double val02 = 0.6, deriv02 = -0.2;
     mock_cutoff.add_expected_call(r01, val01, deriv01);
     mock_cutoff.add_expected_call(r02, val02, deriv02);
 

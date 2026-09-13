@@ -10,7 +10,7 @@
 
 namespace jgap {
 
-    std::vector<Real> CGLSGapFit::findCoefficients(
+    std::vector<double> CGLSGapFit::findCoefficients(
         std::vector<ValuePtr<GapComponent>>& gap_components, const std::vector<Atoms>& training_data,
         std::vector<EnergyData>& energies_without_external, std::vector<Regularization>& sigmas_inverse
     ) {
@@ -26,7 +26,7 @@ namespace jgap {
         return c;
     }
 
-    std::vector<Real> CGLSGapFit::leastSquares(Matrix<RowMajor>& A, std::vector<Real>& b) {
+    std::vector<double> CGLSGapFit::leastSquares(Matrix<RowMajor>& A, std::vector<double>& b) {
         return linalg::solveLeastSquaresConjugateGradient(A, b, max_iterations, tolerance);
     }
 
@@ -58,7 +58,7 @@ namespace jgap {
 
         JGAP_LOG_INFO(
             "Forming in-memory {}x{}(~{}GB) A matrix (RowMajor)", r + c, c,
-            static_cast<Real>((r + c) * c * sizeof(Real)) / 1024.0 / 1024.0 / 1024.0
+            static_cast<double>((r + c) * c * sizeof(double)) / 1024.0 / 1024.0 / 1024.0
         );
         Matrix<RowMajor> resulting_A(r + c, c);
 
@@ -78,18 +78,25 @@ namespace jgap {
             [&](const std::array<size_t, 3>& rc_and_descriptor_id) {
                 auto& [starting_row, starting_col, descriptor_id] = rc_and_descriptor_id;
 
-                fillU_mm(starting_row, starting_col, gap_components[descriptor_id], resulting_A);
+                auto U = U_MM(gap_components[descriptor_id]);
+                const size_t n = U.nRows();
+                for (size_t i = 0; i < n; i++) {
+                    for (size_t j = 0; j < n; j++) {
+                        resulting_A(starting_row + i, starting_col + j) = U(i, j);
+                    }
+                }
             }
         );
 
         return resulting_A;
     }
 
-    std::vector<Real> CGLSGapFit::formVectorB(
+
+    std::vector<double> CGLSGapFit::formVectorB(
         const std::vector<ValuePtr<GapComponent>>& components, const std::vector<EnergyData>& energy_data,
         const std::vector<Regularization>& sigmas_inverse
     ) {
-        std::vector<Real> b;
+        std::vector<double> b;
         for (size_t i = 0; i < energy_data.size(); i++) {
             if (energy_data[i].energy.has_value()) {
                 assert(sigmas_inverse[i].energy.has_value());
@@ -119,7 +126,7 @@ namespace jgap {
         }
 
         for (const auto& component: components) {
-            b.resize(b.size() + component->nSparsePoints(), 0.0_r);
+            b.resize(b.size() + component->nSparsePoints(), 0.0);
         }
 
         return b;
@@ -181,25 +188,17 @@ namespace jgap {
         }
     }
 
-    void CGLSGapFit::fillU_mm(
-        const size_t starting_row, const size_t starting_col, const ValuePtr<GapComponent>& gap_component,
-        Matrix<RowMajor>& A
-    ) const {
-        auto K_MM_block = gap_component->sparseToSparseCovariance();
+    Matrix<RowMajor> CGLSGapFit::U_MM(const ValuePtr<GapComponent>& gap_component) const {
+        auto K_MM_block = gap_component->K_MM();
 
         const size_t n = K_MM_block.nRows();
         for (size_t i = 0; i < n; i++) K_MM_block(i, i) += jitter;
 
-        auto U_mm_block = choleskyDecomposition(K_MM_block);
-
-        for (size_t i = 0; i < n; i++) {
-            for (size_t j = 0; j < n; j++) {
-                A(starting_row + i, starting_col + j) = U_mm_block(i, j);
-            }
-        }
+        return choleskyDecomposition(K_MM_block);
     }
 
     Matrix<RowMajor> CGLSGapFit::choleskyDecomposition(Matrix<RowMajor>& matrix_block) {
         return linalg::choleskyDecomposition<MatrixLayout::RowMajor>(matrix_block);
     }
-} // namespace jgap
+}
+

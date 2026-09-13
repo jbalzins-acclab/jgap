@@ -6,12 +6,12 @@
 
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/experimental/fit/gap/ElementalQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
+#include "jgap/experimental/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/io/convert/QuipXmlConverter.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
 #include "jgap/io/tabgap/TabGapIO.hpp"
 #include "jgap/jgap.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
         if (frame.getVirials().has_value()) N += 6;
     }
 
-    const double bytes_per_row = static_cast<double>(M) * sizeof(Real);
+    const double bytes_per_row = static_cast<double>(M) * sizeof(double);
     const double kb_per_row = bytes_per_row / 1024.0;
     const double mm_bytes = static_cast<double>(M) * bytes_per_row;
     const double mm_mb = mm_bytes / (1024.0 * 1024.0);
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     const double max_bytes = ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
 
     // In-place peak streaming memory breakdown:
-    // 1. workspace: (M + B) * M * 8 bytes (sizeof(Real))
+    // 1. workspace: (M + B) * M * 8 bytes (sizeof(double))
     // 2. A_chunk input buffer: B * M * 8 bytes
     // Total Peak RAM = (M + B) * M * 8 bytes + B * M * 8 bytes
     //                = mm_bytes + 2 * B * bytes_per_row
@@ -111,11 +111,11 @@ int main(int argc, char** argv) {
     );
 
     // ===== fit using Streaming QR (or Split QR) =====
-    JGAP_LOG_INFO("Fitting HEA GAP potential using StreamingQrGapFit with limit {} GB...", ram_limit_gb);
+    JGAP_LOG_INFO("Fitting HEA GAP potential using ElementIncrementalQRGapFit with limit {} GB...", ram_limit_gb);
     // StreamingQrGapFit fitter(1e-8, ram_limit_gb);
 
     // Elemental QR with automatic single-species splits
-    ElementalQRGapFit fitter(1e-8, ram_limit_gb);
+    ElementIncrementalQRGapFit fitter(1e-8, ram_limit_gb);
 
     auto sigmas = regularization.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);

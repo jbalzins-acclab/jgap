@@ -21,12 +21,12 @@ namespace jgap {
 
     protected:
         struct EnergyData {
-            std::optional<Real> energy;
+            std::optional<double> energy;
             std::optional<Virials> virials;
             std::optional<std::vector<Vector3>> forces;
         };
 
-        virtual std::vector<Real> findCoefficients(
+        virtual std::vector<double> findCoefficients(
             std::vector<ValuePtr<GapComponent>>& gap_components,
             const std::vector<Atoms>& training_data,
             std::vector<EnergyData>& energies_without_external,

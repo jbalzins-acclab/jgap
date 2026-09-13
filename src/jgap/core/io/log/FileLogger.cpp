@@ -1,4 +1,4 @@
-#include "jgap/io/log/FileLogger.hpp"
+#include "jgap/core/io/log/FileLogger.hpp"
 
 #include <chrono>
 #include <format>

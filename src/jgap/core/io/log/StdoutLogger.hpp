@@ -4,7 +4,7 @@
 #include <iostream>
 #include <memory>
 
-#include "jgap/io/log/Logger.hpp"
+#include "jgap/core/io/log/Logger.hpp"
 #include "LogConfig.hpp"
 
 namespace jgap {

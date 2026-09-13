@@ -8,12 +8,12 @@ namespace jgap {
     class SimpleRegularizationRules : public RegularizationRules {
     public:
         SimpleRegularizationRules(
-            Real energy_sigma_per_atom = 0.001,
-            Real force_component_sigma = 0.05,
-            Real virials_iso_sigma_per_atom = 0.1,
-            Real virials_aniso_sigmas_per_atom = 0.02,
-            Real liquid_multiplier = 5.0,
-            Real short_range_multiplier = 5.0
+            double energy_sigma_per_atom = 0.001,
+            double force_component_sigma = 0.05,
+            double virials_iso_sigma_per_atom = 0.1,
+            double virials_aniso_sigmas_per_atom = 0.02,
+            double liquid_multiplier = 5.0,
+            double short_range_multiplier = 5.0
         );
 
         Regularization determine(const Atoms& atoms) const override;
@@ -25,8 +25,8 @@ namespace jgap {
     private:
         PerConfigTypeSigmas defaults;
 
-        Real liquid_multiplier;
-        Real short_range_multiplier;
+        double liquid_multiplier;
+        double short_range_multiplier;
     };
 }
 #endif

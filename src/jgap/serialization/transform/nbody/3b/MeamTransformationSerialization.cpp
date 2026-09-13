@@ -1,6 +1,6 @@
 #include "MeamTransformationSerialization.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/io/log/CurrentLogger.hpp"
+#include "jgap/core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 namespace jgap {

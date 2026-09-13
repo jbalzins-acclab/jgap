@@ -60,7 +60,7 @@ namespace jgap {
             return result;
         }
 
-        ManyBodyDescriptors& operator*=(Real scalar) {
+        ManyBodyDescriptors& operator*=(double scalar) {
             for (size_t i = 0; i < values.size(); i++) {
                 for (size_t dim = 0; dim < Dim; dim++) {
                     values[i][dim] *= scalar;
@@ -75,13 +75,13 @@ namespace jgap {
             return *this;
         }
 
-        ManyBodyDescriptors operator*(Real scalar) const {
+        ManyBodyDescriptors operator*(double scalar) const {
             ManyBodyDescriptors result = *this;
             result *= scalar;
             return result;
         }
 
-        ManyBodyDescriptor<Dim> sum(const std::vector<Real>& coeffs) const {
+        ManyBodyDescriptor<Dim> sum(const std::vector<double>& coeffs) const {
             assert(coeffs.size() == values.size());
             ManyBodyDescriptor<Dim> total(n_atoms);
 

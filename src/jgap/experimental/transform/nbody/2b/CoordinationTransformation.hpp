@@ -12,8 +12,8 @@ namespace jgap {
     template<size_t Dim>
     class CoordinationTransformation final : public TwoBodyTransformation<Dim> {
     public:
-        CoordinationTransformation(const std::array<std::pair<Real, Real>, Dim>& ranges) : ranges(ranges) {
-            max_cutoff = 0.0_r;
+        CoordinationTransformation(const std::array<std::pair<double, double>, Dim>& ranges) : ranges(ranges) {
+            max_cutoff = 0.0;
             for (size_t i = 0; i < Dim; ++i) {
                 wendlands[i] = WendlandFunction(ranges[i].first, ranges[i].second);
                 if (ranges[i].second > max_cutoff) {
@@ -27,7 +27,7 @@ namespace jgap {
         }
 
         TwoBodyDescriptor<Dim> evaluateAndDifferentiate(const Cluster2& pair) const override final {
-            Real r = pair.separation01.magnitude;
+            double r = pair.separation01.magnitude;
             const auto& dir = pair.separation01.direction;
             TwoBodyDescriptor<Dim> desc;
             for (size_t i = 0; i < Dim; ++i) {
@@ -41,14 +41,14 @@ namespace jgap {
         Cutoffs getCutoffs() const override { return Cutoffs{{2, max_cutoff}}; }
         bool isRotationallyInvariant() const override { return true; }
 
-        const std::array<std::pair<Real, Real>, Dim>& getRanges() const { return ranges; }
+        const std::array<std::pair<double, double>, Dim>& getRanges() const { return ranges; }
 
         CoordinationTransformation* clone() const override { return new CoordinationTransformation(*this); }
 
     private:
-        std::array<std::pair<Real, Real>, Dim> ranges;
+        std::array<std::pair<double, double>, Dim> ranges;
         std::array<WendlandFunction, Dim> wendlands;
-        Real max_cutoff;
+        double max_cutoff;
     };
 }
 

@@ -1,14 +1,23 @@
-#ifndef JGAP_BLOCKINCREMENTALQRGAPFIT_HPP
-#define JGAP_BLOCKINCREMENTALQRGAPFIT_HPP
+#ifndef JGAP_ELEMENTINCREMENTALQRGAPFIT_HPP
+#define JGAP_ELEMENTINCREMENTALQRGAPFIT_HPP
 
+#include <memory>
+#include <optional>
+#include <set>
+#include <vector>
+
+#include "jgap/core/atomic/species/Species.hpp"
 #include "jgap/core/linalg/BlockIncrementalQRAccumulator.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
 
 namespace jgap {
-    class BlockIncrementalQRGapFit : public QRGapFit {
+
+    class ElementIncrementalQRGapFit : public QRGapFit {
     public:
-        explicit BlockIncrementalQRGapFit(double jitter, double approx_ram_limit_gb);
-        explicit BlockIncrementalQRGapFit(double approx_ram_limit_gb) : BlockIncrementalQRGapFit(1e-8, approx_ram_limit_gb) {}
+        explicit ElementIncrementalQRGapFit(double jitter, double approx_ram_limit_gb);
+
+        explicit ElementIncrementalQRGapFit(double approx_ram_limit_gb) :
+            ElementIncrementalQRGapFit(1e-8, approx_ram_limit_gb) {}
 
     protected:
         std::vector<double> findCoefficients(
@@ -21,6 +30,7 @@ namespace jgap {
     private:
         double approx_ram_limit_gb;
     };
+
 }
 
 #endif

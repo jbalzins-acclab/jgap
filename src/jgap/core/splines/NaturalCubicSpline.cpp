@@ -5,25 +5,25 @@
 #include "../io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    NaturalCubicSpline::NaturalCubicSpline(const std::vector<Real>& r_vec_in, const std::vector<Real>& e_vec_in) {
+    NaturalCubicSpline::NaturalCubicSpline(const std::vector<double>& r_vec_in, const std::vector<double>& e_vec_in) {
         init(r_vec_in, e_vec_in);
     }
 
-    InterpolationResults<1> NaturalCubicSpline::interpolate(std::array<Real, 1> pos) const {
-        const Real r = pos[0];
+    InterpolationResults<1> NaturalCubicSpline::interpolate(std::array<double, 1> pos) const {
+        const double r = pos[0];
         if (r < r_vec.front()) return {energies.front(), {0.0}};
         if (r > r_vec.back()) return {0.0, {0.0}};
 
         size_t i = findInterval(r);
         double dx = r - r_vec[i];
 
-        Real value = energies[i] + b[i] * dx + c[i] * dx * dx + d[i] * dx * dx * dx;
-        Real derivative = b[i] + 2.0 * c[i] * dx + 3.0 * d[i] * dx * dx;
+        double value = energies[i] + b[i] * dx + c[i] * dx * dx + d[i] * dx * dx * dx;
+        double derivative = b[i] + 2.0 * c[i] * dx + 3.0 * d[i] * dx * dx;
 
         return {value, {derivative}};
     }
 
-    void NaturalCubicSpline::init(const std::vector<Real>& r, const std::vector<Real>& e) {
+    void NaturalCubicSpline::init(const std::vector<double>& r, const std::vector<double>& e) {
         if (r.size() != e.size() || r.size() < 2) {
             JGAP_LOG_ERROR("Spline reference vectors must be the same size and have at least 2 points.", true);
         }
@@ -67,7 +67,7 @@ namespace jgap {
         }
     }
 
-    size_t NaturalCubicSpline::findInterval(Real r) const {
+    size_t NaturalCubicSpline::findInterval(double r) const {
         const auto it = std::ranges::upper_bound(r_vec, r);
         const size_t idx = std::max(size_t{}, static_cast<size_t>(it - r_vec.begin()) - 1);
         return std::min(idx, r_vec.size() - 2);

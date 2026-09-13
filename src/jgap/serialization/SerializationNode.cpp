@@ -169,7 +169,7 @@ namespace jgap {
     void SerializationNode::writeDataSet(const std::string& name, const std::vector<size_t>& data) {
         impl->group.createDataSet(name, data);
     }
-    void SerializationNode::writeDataSet(const std::string& name, const std::vector<Real>& data) {
+    void SerializationNode::writeDataSet(const std::string& name, const std::vector<double>& data) {
         impl->group.createDataSet(name, data);
     }
     void SerializationNode::writeDataSet(const std::string& name, const std::vector<std::string>& data) {
@@ -195,7 +195,7 @@ namespace jgap {
         auto dims = dataset.getSpace().getDimensions();
         assert(dims.size() == 2);
         assert(dims[1] == dim);
-        std::vector<Real> flat_data(dims[0] * dims[1]);
+        std::vector<double> flat_data(dims[0] * dims[1]);
         if (dims[0] > 0) {
             dataset.read_raw(flat_data.data());
         }
@@ -210,13 +210,13 @@ namespace jgap {
     }
 
     // --- DataSet Reads ---
-    std::optional<std::vector<Real>> SerializationNode::readOptionalRealVectorDataSet(const std::string& name) const {
+    std::optional<std::vector<double>> SerializationNode::readOptionalRealVectorDataSet(const std::string& name) const {
         if (!impl->group.exist(name)) return std::nullopt;
-        std::vector<Real> data;
+        std::vector<double> data;
         impl->group.getDataSet(name).read(data);
         return data;
     }
-    std::vector<Real> SerializationNode::readRealVectorDataSet(const std::string& name) const {
+    std::vector<double> SerializationNode::readRealVectorDataSet(const std::string& name) const {
         auto opt = readOptionalRealVectorDataSet(name);
         if (!opt) JGAP_LOG_AND_THROW("Required dataset '{}' not found.", name);
         return opt.value();

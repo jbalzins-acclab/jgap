@@ -25,8 +25,8 @@ namespace {
             const auto& dir02 = cluster.separation02.direction;
             const auto& dir12 = cluster.separation12.direction;
             for (size_t d = 0; d < Dim; ++d) {
-                res.grad_r1[d] = 0.1_r * dir01 - 0.1_r * dir12;
-                res.grad_r2[d] = 0.1_r * dir02 + 0.1_r * dir12;
+                res.grad_r1[d] = 0.1 * dir01 - 0.1 * dir12;
+                res.grad_r2[d] = 0.1 * dir02 + 0.1 * dir12;
             }
             return res;
         }
@@ -48,7 +48,7 @@ namespace {
     class MockKernel : public Kernel<Dim> {
     public:
         using KernelValueAndGradient = typename Kernel<Dim>::KernelValueAndGradient;
-        Real value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
+        double value(const Descriptor<Dim>& q1, const Descriptor<Dim>& q2) const override {
             return Kernel<Dim>::value(q1, q2);
         }
         KernelValueAndGradient valueAndGradient(
@@ -131,7 +131,7 @@ TEST(TestThreeBodyGapComponent, RealThreeBody) {
     Atoms atoms({{0, 0, 0}, {3, 0, 0}, {0, 4, 0}}, {Species("Fe"), Species("Fe"), Species("Ni")});
     auto nl = NeighbourLists(atoms, 6.0);
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
+    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
     auto component = ThreeBodyGapComponent(Species3AtomicSorted("Fe", "Fe", "Ni"), trans, kernel, sparse_points);
 
@@ -152,9 +152,9 @@ TEST(TestThreeBodyGapComponent, RealThreeBody) {
 
 TEST(TestThreeBodyGapComponent, TabulationThreeBody) {
     ValuePtr<ThreeBodyTransformation<4>> trans = Angle3bTransformation(CosCutoff(5.0, 2.0));
-    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0_r, 1.0_r, 1.0_r});
+    auto kernel = SquaredExpKernel<3, 1>(1.0, std::array{1.0, 1.0, 1.0});
     std::vector<Descriptor<4>> sparse_points = {{7.0, 1.0, 5.0, 0.25}};
-    std::vector<Real> coeffs = {0.5};
+    std::vector<double> coeffs = {0.5};
     Species3AtomicSorted species{"Fe", "Fe", "Ni"};
     auto component = ThreeBodyGapComponent(species, trans, kernel, sparse_points);
 
@@ -177,7 +177,7 @@ TEST(TestThreeBodyGapComponent, TabulationThreeBody) {
         auto [triplet, _] = TabulationData::gridPosAsCluster3(grid_pos, species);
 
         auto transformed = trans->evaluate(triplet);
-        Real K = kernel.value(sparse_points[0], transformed);
+        double K = kernel.value(sparse_points[0], transformed);
 
         EXPECT_NEAR(grid.data_flat[i], 2.0 * coeffs[0] * K, 1e-9);
     }

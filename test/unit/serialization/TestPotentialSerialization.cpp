@@ -42,7 +42,7 @@ namespace {
 }
 
 TEST(TestPotentialSerialization, IsolatedAtomPotential) {
-    IsolatedAtomPotential original(std::map<Species, Real>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}});
+    IsolatedAtomPotential original(std::map<Species, double>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}});
 
     auto rt = roundTrip(original, tmpFile("isolated.h5"));
     auto restored = rt.as<IsolatedAtomPotential>();
@@ -55,7 +55,7 @@ TEST(TestPotentialSerialization, IsolatedAtomPotential) {
 }
 
 TEST(TestPotentialSerialization, ScreenedCoulombPotential) {
-    std::map<Species2Sorted, std::array<Real, 6>> coeffs = {{Species2Sorted("Fe,Ni"), {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
+    std::map<Species2Sorted, std::array<double, 6>> coeffs = {{Species2Sorted("Fe,Ni"), {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}};
     ScreenedCoulombPotential original(coeffs, 8.0, 1.0);
 
     auto rt = roundTrip(original, tmpFile("screened_coulomb.h5"));
@@ -76,8 +76,8 @@ TEST(TestPotentialSerialization, ScreenedCoulombPotential) {
 
 TEST(TestPotentialSerialization, SplinePairPotential) {
     SplinePairPotential original;
-    std::vector<Real> r_vec = {1.0, 2.0, 3.0, 4.0};
-    std::vector<Real> energies = {1.0, 0.25, 0.1, 0.0};
+    std::vector<double> r_vec = {1.0, 2.0, 3.0, 4.0};
+    std::vector<double> energies = {1.0, 0.25, 0.1, 0.0};
     original.extend(Species("Fe"), Species("Ni"), r_vec, energies);
 
     auto rt = roundTrip(original, tmpFile("spline_pair.h5"));
@@ -94,8 +94,8 @@ TEST(TestPotentialSerialization, SplinePairPotential) {
 
 TEST(TestPotentialSerialization, CompositePotential) {
     CompositePotential original{std::map<std::string, ValuePtr<Potential>>{
-        {"isolated", IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}})},
-        {"screened_coulomb", ScreenedCoulombPotential(std::map<Species2Sorted, std::array<Real, 6>>{{Species2Sorted("Fe,Ni"),
+        {"isolated", IsolatedAtomPotential(std::map<Species, double>{{Species("Fe"), -3.5}, {Species("Ni"), -2.1}})},
+        {"screened_coulomb", ScreenedCoulombPotential(std::map<Species2Sorted, std::array<double, 6>>{{Species2Sorted("Fe,Ni"),
                                                                             {0.1, 1.2, 0.3, 1.4, 0.5, 1.6}}},
                              8.0, 1.0)},
     }};
@@ -115,13 +115,13 @@ namespace {
     // coefficients (no fitting needed) plus an isolated-atom external potential.
     GapPotential makeSmallGap() {
         std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}, Descriptor<2>{{2.6, 0.5}}};
-        std::vector<Real> coefficients = {0.5, -0.3};
+        std::vector<double> coefficients = {0.5, -0.3};
 
         GapPotential potential;
         auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
         potential.addComponent(ValuePtr<GapComponent>(TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(
             Species2Sorted("Fe,Fe"), transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}), sparse_points, coefficients)));
-        potential.optional_external_potential = IsolatedAtomPotential(std::map<Species, Real>{{Species("Fe"), -3.5}});
+        potential.optional_external_potential = IsolatedAtomPotential(std::map<Species, double>{{Species("Fe"), -3.5}});
         return potential;
     }
 
