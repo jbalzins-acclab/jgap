@@ -31,7 +31,8 @@ namespace jgap::linalg {
         auto R = qr.matrixQR().topLeftCorner(A.nColumns(), A.nColumns());
 
         JGAP_LOG_DEBUG("R^-1 * Q^t_b");
-        EigenVectorCol c = R.template triangularView<Eigen::Upper>().solve(Qt_b.head(A.nColumns()));
+        const size_t n_cols = A.nColumns();
+        EigenVectorCol c = R.template triangularView<Eigen::Upper>().solve(Qt_b.head(n_cols));
 
         double b_norm = b_map.norm();
         if (b_norm > 0.0 && A.nRows() > A.nColumns()) {

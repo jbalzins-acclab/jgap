@@ -162,8 +162,7 @@ namespace jgap::linalg {
         Eigen::Map<const EigenMatrixColMajor> A_eigen(A.data(), total_rows, n_cols);
         Eigen::Map<const EigenVector> b_eigen(b.data(), total_rows);
 
-        // Solve upper-triangular system R_accum * c = y_accum using backward substitution.
-        // triangularView<Eigen::Upper>().solve() leverages optimized BLAS/SIMD triangular solvers.
+        // Exact upper-triangular solve R_accum * c = y_accum
         EigenVector solution_coefficients =
             A_eigen.topRows(n_cols).template triangularView<Eigen::Upper>().solve(b_eigen.head(n_cols));
 

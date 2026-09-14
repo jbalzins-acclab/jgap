@@ -72,11 +72,12 @@ namespace jgap {
         }
 
         const auto& s = (matched_sigmas != nullptr) ? *matched_sigmas : defaults;
+        const double sqrt_natoms = std::sqrt(static_cast<double>(atoms.nAtoms()));
 
         Regularization sigmas;
-        sigmas.energy = s.energy;
+        sigmas.energy = s.energy * sqrt_natoms;
         sigmas.forces = std::vector<Vector3>(atoms.nAtoms(), s.force);
-        sigmas.virials = s.virials;
+        sigmas.virials = s.virials * sqrt_natoms;
         return sigmas;
     }
 }

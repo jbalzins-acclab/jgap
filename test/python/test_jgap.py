@@ -159,10 +159,11 @@ class TestJGAP(unittest.TestCase):
         sigmas3 = rules.determine(atoms3)
         sigmas4 = rules.determine(atoms4)
 
-        self.assertAlmostEqual(sigmas1.energy, 0.001)
-        self.assertAlmostEqual(sigmas2.energy, 0.01)
-        self.assertAlmostEqual(sigmas3.energy, 0.02)
-        self.assertAlmostEqual(sigmas4.energy, 0.05)
+        sqrt2 = np.sqrt(2.0)
+        self.assertAlmostEqual(sigmas1.energy, 0.001 * sqrt2)
+        self.assertAlmostEqual(sigmas2.energy, 0.01 * sqrt2)
+        self.assertAlmostEqual(sigmas3.energy, 0.02 * sqrt2)
+        self.assertAlmostEqual(sigmas4.energy, 0.05 * sqrt2)
 
         all_sigmas = rules.determine_for_all([atoms1, atoms2, atoms3, atoms4])
         self.assertEqual(len(all_sigmas), 4)
