@@ -460,13 +460,16 @@ TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
     ElementIncrementalQRGapFit split_fitter(1e-8, test_ram_gb);
     split_fitter.fit(pot_split, train_data, sigmas);
 
-    // 1. Verify pot_qr and pot_stream match component-wise directly
+    // 1. Verify pot_qr, pot_stream, and pot_split match component-wise directly
     for (size_t c = 0; c < pot_qr.getComponents().size(); ++c) {
         const auto& c_qr = pot_qr.getComponents()[c]->getCoefficients();
         const auto& c_st = pot_stream.getComponents()[c]->getCoefficients();
+        const auto& c_sp = pot_split.getComponents()[c]->getCoefficients();
         ASSERT_EQ(c_qr.size(), c_st.size());
+        ASSERT_EQ(c_qr.size(), c_sp.size());
         for (size_t i = 0; i < c_qr.size(); ++i) {
             EXPECT_NEAR(c_qr[i], c_st[i], 1e-8);
+            EXPECT_NEAR(c_qr[i], c_sp[i], 1e-8);
         }
     }
 

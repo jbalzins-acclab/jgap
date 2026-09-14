@@ -12,7 +12,7 @@ namespace jgap::linalg {
     using EigenMatrixColMajor = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
     using EigenVector = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 
-    size_t BlockIncrementalQRAccumulator::calculateMaxChunkRows(const size_t n_cols, const double approx_ram_limit_gb) {
+    size_t BlockIncrementalQRAccumulator::calculateMaxIncrementBlockRows(const size_t n_cols, const double approx_ram_limit_gb) {
         const double max_bytes = approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
         const double bytes_per_row = static_cast<double>(n_cols) * sizeof(double);
         const double mm_bytes = static_cast<double>(n_cols) * bytes_per_row;
@@ -36,7 +36,7 @@ namespace jgap::linalg {
     }
 
     SharedArray<double> BlockIncrementalQRAccumulator::allocateMatrixMemory(size_t n_cols, double approx_ram_limit_gb) {
-        const size_t total_rows = n_cols + calculateMaxChunkRows(n_cols, approx_ram_limit_gb);
+        const size_t total_rows = n_cols + calculateMaxIncrementBlockRows(n_cols, approx_ram_limit_gb);
         const size_t workspace_bytes = total_rows * n_cols;
         return SharedArray<double>(workspace_bytes);
     }
@@ -133,7 +133,7 @@ namespace jgap::linalg {
 
         if (block_rows == 0) return;
 
-        std::lock_guard<std::mutex> lock(mutex);
+        std::lock_guard lock(mutex);
 
         const size_t total_rows = n_cols + n_increment_block_rows;
         Eigen::Map<EigenMatrixColMajor> A_eigen(A.data(), total_rows, n_cols);

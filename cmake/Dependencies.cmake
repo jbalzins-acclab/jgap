@@ -80,15 +80,37 @@ else ()
 endif ()
 
 # ------------------------------------------------------------------------------
-# 5. BLAS / OpenBLAS (Linear Algebra Acceleration) from Host / System
+# 5. BLAS / Acceleration Libraries from Host / System
 # ------------------------------------------------------------------------------
-find_package(OpenBLAS CONFIG QUIET)
-if (OpenBLAS_FOUND)
-    set(JGAP_BLAS_LIBS OpenBLAS::OpenBLAS)
-else ()
+if (APPLE)
+    set(BLA_VENDOR Apple)
     find_package(BLAS QUIET)
     if (BLAS_FOUND)
         set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+    endif ()
+    unset(BLA_VENDOR)
+endif ()
+
+if (NOT JGAP_BLAS_LIBS)
+    if (APPLE AND NOT OpenBLAS_FOUND)
+        if (EXISTS "/opt/homebrew/opt/openblas")
+            set(OpenBLAS_ROOT "/opt/homebrew/opt/openblas")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/openblas")
+        elseif (EXISTS "/usr/local/opt/openblas")
+            set(OpenBLAS_ROOT "/usr/local/opt/openblas")
+            list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
+        endif ()
+    endif ()
+
+    find_package(OpenBLAS CONFIG QUIET)
+    if (OpenBLAS_FOUND)
+        set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
+        include_directories(${OpenBLAS_INCLUDE_DIRS})
+    else ()
+        find_package(BLAS QUIET)
+        if (BLAS_FOUND)
+            set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+        endif ()
     endif ()
 endif ()
 

@@ -11,14 +11,14 @@ namespace jgap {
     BlockIncrementalQRGapFit::BlockIncrementalQRGapFit(const double jitter, const double approx_ram_limit_gb) :
         QRGapFit(jitter), approx_ram_limit_gb(approx_ram_limit_gb) {}
 
-    std::vector<double> BlockIncrementalQRGapFit::findCoefficients(
-        std::vector<ValuePtr<GapComponent>>& gap_components,
+    void BlockIncrementalQRGapFit::findCoefficients(
+        GapPotential& to_be_fit,
         const std::vector<Atoms>& training_data,
         std::vector<EnergyData>& energies_without_external,
         std::vector<Regularization>& sigmas_inverse
     ) {
         size_t n_cols = 0;
-        for (const auto& comp: gap_components) {
+        for (const auto& comp: to_be_fit.components) {
             n_cols += comp->nSparsePoints();
         }
 
@@ -27,7 +27,7 @@ namespace jgap {
         SharedArray<double> b(A.nRows());
 
         size_t start_col = 0;
-        for (const auto& comp: gap_components) {
+        for (const auto& comp: to_be_fit.components) {
             auto U = U_MM(comp);
             const size_t n = U.nRows();
             for (size_t i = 0; i < n; i++) {
@@ -60,12 +60,16 @@ namespace jgap {
         std::vector<size_t> entry_indices(training_data.size());
         std::iota(entry_indices.begin(), entry_indices.end(), 0);
 
+        std::atomic<size_t> counter{0};
+        const size_t total_entries = entry_indices.size();
+        const size_t log_step = std::max(total_entries / 20, 1uz);
+
         unseqForEach(
             entry_indices.begin(),
             entry_indices.end(),
             [&](const size_t i) {
                 auto A_entry = formInverseSigmaLK_NMForEntry(
-                    gap_components,
+                    to_be_fit.components,
                     training_data[i],
                     energies_without_external[i],
                     sigmas_inverse[i]
@@ -76,9 +80,20 @@ namespace jgap {
                 );
 
                 accumulator.appendBlock(A_entry, b_entry);
+
+                size_t progress = ++counter;
+                if (progress % log_step == 0 || progress == total_entries) {
+                    JGAP_LOG_INFO(
+                        "Structure accumulation progress: {} of {} ({}%)",
+                        progress,
+                        total_entries,
+                        progress * 100 / total_entries
+                    );
+                }
             }
         );
 
-        return accumulator.solve();
+        const auto c = accumulator.solve();
+        to_be_fit.setCoefficients(c);
     }
 }

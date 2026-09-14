@@ -19,8 +19,8 @@ namespace jgap {
     protected:
         double jitter;
 
-        std::vector<double> findCoefficients(
-            std::vector<ValuePtr<GapComponent>>& gap_components,
+        void findCoefficients(
+            GapPotential& to_be_fit,
             const std::vector<Atoms>& training_data,
             std::vector<EnergyData>& energies_without_external,
             std::vector<Regularization>& sigmas_inverse

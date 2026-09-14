@@ -105,8 +105,6 @@ namespace jgap {
             }
         });
 
-        auto fit_coefficients =
-            findCoefficients(to_be_fit.components, training_data, energies_without_external, sigmas_inverse);
-        to_be_fit.setCoefficients(fit_coefficients);
+        findCoefficients(to_be_fit, training_data, energies_without_external, sigmas_inverse);
     }
 }

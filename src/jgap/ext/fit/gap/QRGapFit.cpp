@@ -9,22 +9,27 @@
 
 namespace jgap {
 
-    std::vector<double> QRGapFit::findCoefficients(
-        std::vector<ValuePtr<GapComponent>>& gap_components,
+    void QRGapFit::findCoefficients(
+        GapPotential& to_be_fit,
         const std::vector<Atoms>& training_data,
         std::vector<EnergyData>& energies_without_external,
         std::vector<Regularization>& sigmas_inverse
     ) {
         JGAP_LOG_INFO("Forming matrix A");
-        auto A = formAugmentedCovarianceMatrixA(gap_components, training_data, energies_without_external, sigmas_inverse);
+        auto A = formAugmentedCovarianceMatrixA(
+            to_be_fit.components,
+            training_data,
+            energies_without_external,
+            sigmas_inverse
+            );
 
         JGAP_LOG_INFO("Forming feature vector b");
-        auto b = formNormalizedAugmentedTargetVectorB(gap_components, energies_without_external, sigmas_inverse);
+        auto b = formNormalizedAugmentedTargetVectorB(to_be_fit.components, energies_without_external, sigmas_inverse);
 
         JGAP_LOG_INFO("Doing linear algebra");
         auto c = leastSquares(A, b);
 
-        return c;
+        to_be_fit.setCoefficients(c);
     }
 
     std::vector<double> QRGapFit::leastSquares(Matrix<ColumnMajor>& A, std::vector<double>& b) {

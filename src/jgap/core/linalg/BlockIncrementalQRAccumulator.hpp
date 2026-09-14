@@ -23,7 +23,9 @@ namespace jgap::linalg {
         );
 
         BlockIncrementalQRAccumulator(
-            const Matrix<ColumnMajor>& A, SharedArray<double> b, size_t n_rows_filled
+            const Matrix<ColumnMajor>& A,
+            SharedArray<double> b,
+            size_t n_rows_filled
         );
 
         size_t nIncrementBlockRows() const { return n_increment_block_rows; }
@@ -33,6 +35,8 @@ namespace jgap::linalg {
 
         void finalize();
 
+        SharedArray<double> getMatrixMemorySpace() const { return A.flatData(); }
+
     private:
         size_t n_rows_filled;
         size_t n_cols;
@@ -41,7 +45,7 @@ namespace jgap::linalg {
         SharedArray<double> b;
         std::mutex mutex;
 
-        static size_t calculateMaxChunkRows(size_t n_cols, double approx_ram_limit_gb);
+        static size_t calculateMaxIncrementBlockRows(size_t n_cols, double approx_ram_limit_gb);
         void flushFullBlock();
     };
 }

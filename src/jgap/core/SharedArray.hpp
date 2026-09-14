@@ -59,6 +59,12 @@ namespace jgap {
         T* end() const { return ptr.get() + n_elements; }
 
         size_t size() const { return n_elements; }
+
+        void fill(const T& value) {
+            for (size_t i = 0; i < n_elements; i++) {
+                ptr[i] = value;
+            }
+        }
     };
 
 }
