@@ -1,6 +1,17 @@
 # JGAP
 
-A high-performance C++23 library, command-line tool, and Python framework for fitting and evaluating **Gaussian Approximation Potentials (GAP)**, **Tabulated GAP (tabGAP)**, and **Embedded Atom Method (EAM)** potentials.
+A high-performance C++23 library, command-line tool, and Python framework for fitting and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAP (tabGAP)** potentials.
+
+## DISCLAIMER
+
+This version is still under active development. 
+It comes with a vastly updated architecture, which, at least at its core, seems to be final but lacks final validation testing and proper documentation.
+It seems to be working correctly, and due to the unexpectedly large number of changes in a development branch it
+is merged into the main branch purely as a checkpoint of the current progress.
+One may try to use it already, by compiling via instructions in the remained of this ReadMe, however, 
+note that they were mostly AI-generated and are yet to be verified completely.
+Some examples on how various potentials may be fit already are presented in the /examples folder,
+but they require some polishing that will be done in future commits. 
 
 ---
 
