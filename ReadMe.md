@@ -1,69 +1,216 @@
-# $\vec{ȷ}GAP$
-## Overview
-### Fit 2b+3b+EAM GAP fit
-- On small databases fit coefficients exactly match QUIP output(without virial fit; see /test)
-- Slightly different "uniform" sparsification is available
-- Screened coulomb pre-fit for all element pairs(see resources/dmol-screening-fit & */core/potentials/ZblPotential.cpp)
-- Significant speedup in kernel matrix formation & RAM usage improvement compared to QUIP with basic compilation:
-  - ~20 sec(on my laptop) for Iron potential | ~500Mb
-  - ~1 min(on my laptop) for FeNi potential | ~6Gb RAM
-  - ~3 min(on Puhti node) for CrMnFeNi potential | ~110Gb(shown with "seff", but allocation failed when 120Gb were reserved on last fit attempt) with virial fit
-  - more to be tested.
-  - RAM usage can be estimated from logs(look for matrix size).
-  - ! Linear algebra is slower than QUIP for now (2.2h => 4h for CrMnFeNi)
-- Output in the json format not compatible with QUIP - separate app is compiled to use it.
-  - quip.xml can be converted into it
-- Per config-type regularization not implemented yet, but $\sigma$'s can be specified per structure in ext-xyz(see Utils.cpp)
-### Tabulate 2b+3b+EAM 
-- Very fast(around a minute on my laptop to tabulate CrMnFeNi)
-- Output in .tabgap+.eam.fs (I'm not sure if non-2b+3b+EAM works correctly)
-- Works with quip.xml
+# JGAP
 
-## Compilation/Run guide
-### Prerequisites 
-- CMake 3.11+
-- c++ complier supporting c++23
-  - do "module load gcc/14.2" on Puhti
-  - if you don't have sudo rights but "conda" is available, do something like:
+A high-performance C++23 library, command-line tool, and Python framework for fitting and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAP (tabGAP)** potentials.
+
+## DISCLAIMER
+
+This version is still under active development. 
+It comes with a vastly updated architecture, which, at least at its core, seems to be final but lacks final validation testing and proper documentation.
+It seems to be working correctly, and due to the unexpectedly large number of changes in a development branch it
+is merged into the main branch purely as a checkpoint of the current progress.
+One may try to use it already, by compiling via instructions in the remained of this ReadMe, however, 
+note that they were mostly AI-generated and are yet to be verified completely.
+Some examples on how various potentials may be fit already are presented in the /examples folder,
+but they require some polishing that will be done in future commits. 
+
+---
+
+## 1. Prerequisites
+
+* **CMake $\ge$ 3.25** and **Ninja** (recommended).
+* **C++23 Compliant Compiler**:
+  * **GCC $\ge$ 15** or **Clang $\ge$ 19** (recommended for `#embed` support of built-in screening parameters).
+  * **AppleClang $\ge$ 16** (Xcode 16+) is fully supported.
+  * **GCC 14** / older C++23 compilers work seamlessly by loading runtime screening tables from `resources/`.
+
+---
+
+## 2. Dependencies Overview
+
+`jgap` uses a modern hybrid dependency model:
+
+### Automatic Dependencies (via CMake `FetchContent`)
+The following lightweight C++ libraries are **automatically downloaded and configured** during CMake build. You do **not** need to install them manually:
+* **Eigen3** ($\ge 3.4.0$) — Linear algebra template library.
+* **HighFive** ($\ge 3.0.0$) — Header-only modern C++ wrapper for HDF5.
+* **pugixml** ($\ge 1.15$) — XML parser for QUIP potential conversion (`jgap_convert`).
+* **GoogleTest** ($\ge 1.14$) — Unit testing framework (Debug builds only).
+
+### Host System Dependencies
+The following native runtime libraries should be present on your host system:
+1. **HDF5** (`libhdf5`) — **Required** for reading/writing `.jgap.h5` and `.tabgap.h5` files.
+2. **BLAS / OpenBLAS** — **Strongly Recommended** for accelerated linear algebra (`EIGEN_USE_BLAS`). (On macOS, Apple Accelerate is used automatically if OpenBLAS is not present).
+3. **OpenMP** — **Recommended** for multi-core parallelization (`HAS_OPENMP`). Built into GCC/Clang/Intel compilers; on macOS via `brew install libomp`.
+4. **Python $\ge$ 3.10 + pybind11** — **Optional** for building the `jgap` Python package and ASE calculator.
+
+---
+
+## 3. How to Check Existing Host Dependencies
+
+Before installing new packages, you can verify whether your system or HPC cluster already provides them:
+
+### Using `pkg-config`
 ```bash
-conda create -n myenv
-conda activate myenv
-conda install -c conda-forge gcc
-conda install -c conda-forge gxx_linux-64 # ask ChatGPT what version is suitable for you
-# if you want cmake to auto detect new compilers, add to .bashrc/.zshrc:
-export CC=$CONDA_PREFIX/bin/gcc
-export CXX=$CONDA_PREFIX/bin/g++
+pkg-config --modversion hdf5 openblas
 ```
-- VCPKG:
-  - (Follow instructions: https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash))
+
+### Checking Package Managers
+* **macOS (Homebrew)**:
+  ```bash
+  brew list --formula | grep -E 'hdf5|openblas|libomp'
+  ```
+* **Debian / Ubuntu**:
+  ```bash
+  dpkg -l | grep -E 'libhdf5-dev|libopenblas-dev|libomp-dev'
+  ```
+* **Conda / Mamba**:
+  ```bash
+  conda list | grep -E 'hdf5|openblas|llvm-openmp'
+  ```
+
+### Checking HPC Environment Modules (`Lmod` / `module spider`)
+On supercomputing clusters, OpenMP is natively supported by the compiler module (e.g. `gcc`, `aocc`, `intel`). Use `module spider` to inspect available compiler and library modules:
+
 ```bash
-git clone https://github.com/microsoft/vcpkg.git
-cd vcpkg && ./bootstrap-vcpkg.sh
-nano ~/.bashrc or ~/.zshrc
-export VCPKG_ROOT=/path/to/vcpkg
-export PATH=$VCPKG_ROOT:$PATH
-# in root project dir: 
-vcpkg install
-# vcpkg integrate to see what -DCMAKE_TOOLCHAIN_FILE= to add to "cmake -B build" params
- ```
-### Compile
-- Run something like: 
-```bash
-# on local device
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG"
-# on Puhti: 
-cmake -B build-test   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS="-g -O3 -march=native -ffast-math -funroll-loops -mprefer-vector-width=512" 
-cmake --build build -j ...
+# Check compiler, OpenBLAS, and HDF5
+module spider gcc
+module spider openblas
+module spider hdf5
 ```
-- This should produce 3 executables:
-  - jgap_fit_app - GAP fitting
-  - jgap_predict_app - to use the GAP potential
-  - jgap_tabulate_app - tabulate GAP potential
-  - jgap_convert_quip_xml_app - convert from quip.xyz
-### Run
-(see param samples in /resources)
-- jgap_fit_app fit_param_file.json => outputs potential.json
-- jgap_predict_app potential.json input.xyz output.xyz
-- jgap_tabulate_app tabulation_params.json
-- jgap_convert_quip_xml_app quip.xml
-  - warn: sensitive to format changes in quip.xml - check the code upon error
+
+Example workflow on an Lmod-based HPC cluster:
+```bash
+# 1. Load compiler (provides native OpenMP support) and MPI stack
+module load gcc/15.2.0 openmpi/5.0.10
+
+# 2. Load math and I/O libraries
+module load openblas/0.3.30 hdf5/1.14.6
+```
+
+---
+
+## 4. Installing Host Dependencies
+
+If dependencies are missing on your workstation or cluster, install them using your preferred method:
+
+### macOS (Homebrew)
+```bash
+brew install cmake ninja hdf5 openblas libomp
+```
+*(Apple Accelerate is also detected automatically out-of-the-box on macOS).*
+
+### Ubuntu / Debian (`apt`)
+```bash
+sudo apt update
+sudo apt install -y cmake ninja-build build-essential \
+                    libhdf5-dev libopenblas-dev libomp-dev \
+                    python3-dev python3-pip
+```
+
+### Fedora / RHEL (`dnf`)
+```bash
+sudo dnf install -y cmake ninja-build gcc-c++ \
+                    hdf5-devel openblas-devel libgomp \
+                    python3-devel
+```
+
+### Arch Linux (`pacman`)
+```bash
+sudo pacman -S cmake ninja hdf5 openblas openmp python
+```
+
+### Conda / Mamba (Recommended for User-Space HPC Environments)
+```bash
+conda install -c conda-forge cmake ninja compilers \
+                            hdf5 openblas pybind11
+```
+*(When using Conda, CMake will automatically locate dependencies inside `$CONDA_PREFIX`).*
+
+---
+
+## 5. Building and Testing with CMake Presets
+
+`jgap` provides built-in `CMakePresets.json` profiles for all standard workflows:
+
+### Fast Developer Workflow (Debug + Build + Run All Tests)
+```bash
+cmake --workflow --preset dev
+```
+
+### Release Build (Optimized with `-O3 -ffast-math -march=native`)
+```bash
+cmake --preset release
+cmake --build --preset release
+```
+
+### Install Library, CLI & Python Bindings (to `$HOME/.local`)
+```bash
+cmake --workflow --preset install
+```
+*(To install to a custom prefix or virtual environment, run `cmake --preset release -DCMAKE_INSTALL_PREFIX=/path/to/prefix && cmake --build --preset install`).*
+
+### Run Unit Tests
+```bash
+ctest --preset debug
+```
+
+### AddressSanitizer (Memory Diagnostics)
+```bash
+cmake --preset asan
+cmake --build --preset asan
+ctest --preset asan
+```
+
+---
+
+## 6. Python Package & ASE Calculator
+
+After building or installing `jgap`, the Python bindings are available in `python/jgap`:
+
+```python
+import jgap
+from ase.io import read
+
+# Standard GAP potential fit
+fitter = jgap.StandardGapFit(
+    cutoff_2b=5.0,
+    cutoff_3b=4.0,
+    delta_2b=0.01,
+    delta_3b=0.05,
+    approx_ram_limit_gb=16.0
+)
+fitter.fit("train.xyz")
+fitter.save("potential.jgap.h5")
+
+# Tabulate into fast EAM / tabGAP
+jgap.StandardTabulation.tabulate("potential.jgap.h5", "potential")
+```
+
+Using as an ASE Calculator:
+```python
+from jgap.ase import JGAPCalculator
+from ase.io import read
+
+atoms = read("structure.xyz")
+atoms.calc = JGAPCalculator("potential.jgap.h5")
+
+energy = atoms.get_potential_energy()
+forces = atoms.get_forces()
+```
+
+---
+
+## 7. Command-Line Tools
+
+* **Predict Energy & Forces**:
+  ```bash
+  jgap --predict potential.jgap.h5 input.xyz output.xyz
+  ```
+* **Tabulate Potential (to EAM `.eam.fs` and tabGAP `.tabgap.h5`)**:
+  ```bash
+  jgap --tabulate potential.jgap.h5
+  ```
+* **Convert QUIP XML to HDF5**:
+  ```bash
+  jgap_convert potential.xml potential.jgap.h5
+  ```

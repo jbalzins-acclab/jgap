@@ -1,0 +1,38 @@
+#ifndef JGAP_GAPFIT_HPP
+#define JGAP_GAPFIT_HPP
+
+#include "jgap/core/potentials/gap/GapPotential.hpp"
+#include "jgap/core/atomic/Atoms.hpp"
+#include <vector>
+#include <memory>
+
+#include "regularization/Regularization.hpp"
+
+namespace jgap {
+    class GapFit {
+    public:
+        virtual ~GapFit() = default;
+
+        void fit(
+            GapPotential& to_be_fit,
+            const std::vector<Atoms>& training_data,
+            const std::vector<Regularization>& sigmas
+        );
+
+    protected:
+        struct EnergyData {
+            std::optional<double> energy;
+            std::optional<Virials> virials;
+            std::optional<std::vector<Vector3>> forces;
+        };
+
+        virtual void findCoefficients(
+            GapPotential& to_be_fit,
+            const std::vector<Atoms>& training_data,
+            std::vector<EnergyData>& energies_without_external,
+            std::vector<Regularization>& sigmas_inverse
+        ) = 0;
+    };
+}
+
+#endif

@@ -1,0 +1,85 @@
+#ifndef JGAP_CUTOFFJK3BTRANSFORMATION_HPP
+#define JGAP_CUTOFFJK3BTRANSFORMATION_HPP
+
+#include <algorithm>
+#include <optional>
+
+#include "jgap/core/cutoff/CutoffFunction.hpp"
+#include "jgap/core/transform/nbody/3b/ThreeBodyTransformation.hpp"
+
+namespace jgap {
+
+    class CutoffJK3bTransformation final : public ThreeBodyTransformation<4> {
+    public:
+        CutoffJK3bTransformation(
+            const ValuePtr<CutoffFunction>& main_cutoff,
+            const std::optional<ValuePtr<CutoffFunction>>& cutoff_12_opt = std::nullopt
+        ) :
+            main_cutoff(main_cutoff), cutoff_12(cutoff_12_opt.value_or(main_cutoff)) {}
+
+        Descriptor<4> evaluate(const Cluster3& triplet) const override {
+            return ThreeBodyTransformation<4>::evaluate(triplet);
+        }
+
+        ThreeBodyDescriptor<4> evaluateAndDifferentiate(const Cluster3& triplet) const override final {
+            double r01 = triplet.separation01.magnitude;
+            double r02 = triplet.separation02.magnitude;
+            double r12 = triplet.separation12.magnitude;
+
+            auto [f_cut_01, df_cut_01] = main_cutoff->evaluateAndDifferentiate(r01);
+            auto [f_cut_02, df_cut_02] = main_cutoff->evaluateAndDifferentiate(r02);
+            auto [f_cut_12, df_cut_12] = cutoff_12->evaluateAndDifferentiate(r12);
+
+            const auto& dir01 = triplet.separation01.direction;
+            const auto& dir02 = triplet.separation02.direction;
+            const auto& dir12 = triplet.separation12.direction;
+
+            double dq3_dr01 = df_cut_01 * f_cut_02 * f_cut_12;
+            double dq3_dr02 = df_cut_02 * f_cut_01 * f_cut_12;
+            double dq3_dr12 = df_cut_12 * f_cut_01 * f_cut_02;
+
+            return {
+                .value =
+                    {
+                        r01 + r02,
+                        (r01 - r02) * (r01 - r02),
+                        r12,
+                        f_cut_01 * f_cut_02 * f_cut_12,
+                    },
+                .grad_r1 =
+                    {
+                        dir01,
+                        2.0 * (r01 - r02) * dir01,
+                        -dir12,
+                        dq3_dr01 * dir01 - dq3_dr12 * dir12,
+                    },
+                .grad_r2 = {
+                    dir02,
+                    2.0 * (r02 - r01) * dir02,
+                    dir12,
+                    dq3_dr02 * dir02 + dq3_dr12 * dir12,
+                }
+            };
+        }
+
+        Cutoffs getCutoffs() const override {
+            return Cutoffs{{3, std::max(main_cutoff->getCutoff(), cutoff_12->getCutoff())}};
+        }
+        bool isRotationallyInvariant() const override { return true; }
+
+        const ValuePtr<CutoffFunction>& getMainCutoffFunction() const { return main_cutoff; }
+        const ValuePtr<CutoffFunction>& getCutoff12Function() const { return cutoff_12; }
+
+        CutoffJK3bTransformation* clone() const override { return new CutoffJK3bTransformation(*this); }
+
+        bool isSwapInvariant(size_t idx1, size_t idx2) const override {
+            return (idx1 == 1 && idx2 == 2) || (idx1 == 2 && idx2 == 1);
+        }
+
+    private:
+        ValuePtr<CutoffFunction> main_cutoff;
+        ValuePtr<CutoffFunction> cutoff_12;
+    };
+}
+
+#endif

@@ -1,195 +1,120 @@
-cmake_minimum_required(VERSION 3.11) # TODO: test if that's sufficient
-project(jgap)
-
-set(CMAKE_TOOLCHAIN_FILE "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-# cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+cmake_minimum_required(VERSION 3.25)
+project(jgap VERSION 7.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto -DNDEBUG")
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-#set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED OFF)
 
-set(${PROJECT_SOURCE_DIR}/vcpkg_installed)
+set(PACKAGE_VERSION ${PROJECT_VERSION})
 
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(TBB CONFIG REQUIRED)
-find_package(HighFive CONFIG REQUIRED)
-find_package(pugixml CONFIG REQUIRED)
-find_package(OpenBLAS CONFIG REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+# 1. External & Fetched Dependencies
+include(Dependencies)
 
-file(READ "${CMAKE_SOURCE_DIR}/vcpkg.json" VCPKG_JSON_CONTENT)
-string(REGEX MATCH "\"version\"[ \t]*:[ \t]*\"([^\"]+)\"" _ ${VCPKG_JSON_CONTENT})
-set(PACKAGE_VERSION ${CMAKE_MATCH_1})
+# 2. Version Header Generation
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 configure_file(
-        ${CMAKE_SOURCE_DIR}/include/Version.hpp.in
+        ${CMAKE_SOURCE_DIR}/src/Version.hpp.in
         ${CMAKE_BINARY_DIR}/generated/Version.hpp
         @ONLY
 )
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
-# Function to generate parser registry header
-function(generate_parser_registry_header)
-    # Find all .hpp files in include directory
-    file(GLOB_RECURSE HPP_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
-
-    # Filter for files that likely contain parsers
-    set(PARSER_FILES)
-    foreach(HPP_FILE ${HPP_FILES})
-        # Read file content
-        file(READ "${HPP_FILE}" FILE_CONTENT)
-
-        # Check if file contains REGISTER_PARSER macro
-        if(FILE_CONTENT MATCHES "REGISTER_PARSER")
-            list(APPEND PARSER_FILES "${HPP_FILE}")
-        endif()
-    endforeach()
-
-    # Generate the header content
-    set(HEADER_CONTENT "// Auto-generated parser registry\n")
-    string(APPEND HEADER_CONTENT "#ifndef PARSER_REGISTRY_AUTO_HPP\n")
-    string(APPEND HEADER_CONTENT "#define PARSER_REGISTRY_AUTO_HPP\n\n")
-    string(APPEND HEADER_CONTENT "// Auto-include all parser headers\n")
-
-    foreach(PARSER_FILE ${PARSER_FILES})
-        file(RELATIVE_PATH REL_PATH "${PROJECT_SOURCE_DIR}/include" "${PARSER_FILE}")
-        string(APPEND HEADER_CONTENT "#include \"${REL_PATH}\"\n")
-    endforeach()
-
-    string(APPEND HEADER_CONTENT "\n#endif // PARSER_REGISTRY_AUTO_HPP\n")
-
-    # Write the generated header
-    set(GENERATED_HEADER "${PROJECT_SOURCE_DIR}/include/ParserRegistryAuto.hpp")
-    file(WRITE "${GENERATED_HEADER}" "${HEADER_CONTENT}")
-
-    # Add to library target
-    #target_include_directories(jgap PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-
-    # Make sure the header is regenerated when source files change
-    add_custom_command(
-            OUTPUT "${GENERATED_HEADER}"
-            DEPENDS ${PARSER_FILES}
-            COMMAND ${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}" -DCMAKE_CURRENT_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/generate_parsers.cmake"
-            COMMENT "Regenerating parser registry header"
-    )
-
-    # Add the generated header as a dependency
-    add_custom_target(generate_parser_header DEPENDS "${GENERATED_HEADER}")
-    add_dependencies(jgap generate_parser_header)
-
-    # Report how many parsers were found
-    list(LENGTH PARSER_FILES PARSER_COUNT)
-    message(STATUS "Found ${PARSER_COUNT} parser files for auto-registration")
-endfunction()
-
+# 3. Source Collection & Target Definitions
 file(GLOB_RECURSE ALL_SRC_CPP "${PROJECT_SOURCE_DIR}/src/*.cpp")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/FitApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/PredictApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/TabulateApp\\.cpp$")
-list(FILTER ALL_SRC_CPP EXCLUDE REGEX ".*/ConvertQuipXmlApp\\.cpp$")
-set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP})
-add_library(jgap STATIC ${LIBRARY_SOURCE_FILES})
+file(GLOB_RECURSE ALL_SRC_C "${PROJECT_SOURCE_DIR}/src/*.c")
 
-# Generate parser registry header
-generate_parser_registry_header()
+# Exclude standalone executables and python modules from the main shared library
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/app/.*")
+list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/pybind/.*")
 
-set(FIT_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/FitApp.cpp
-)
-set(PREDICT_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/PredictApp.cpp
-)
-set(TABULATE_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/TabulateApp.cpp
-)
-set(CONVERT_QUIP_XML_APP_SOURCE_FILES
-        ${PROJECT_SOURCE_DIR}/src/ConvertQuipXmlApp.cpp
+set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
+
+add_library(jgap_lib SHARED ${LIBRARY_SOURCE_FILES})
+add_library(jgap::jgap ALIAS jgap_lib)
+
+set_target_properties(jgap_lib PROPERTIES
+        OUTPUT_NAME jgap
+        EXPORT_NAME jgap
+        CXX_VISIBILITY_PRESET default
+        VISIBILITY_INLINES_HIDDEN OFF
 )
 
-add_executable(jgap_fit_app ${FIT_APP_SOURCE_FILES})
-add_executable(jgap_predict_app ${PREDICT_APP_SOURCE_FILES})
-add_executable(jgap_tabulate_app ${TABULATE_APP_SOURCE_FILES})
-add_executable(jgap_convert_quip_xml_app ${CONVERT_QUIP_XML_APP_SOURCE_FILES})
+# Hard guard: jgap MUST be a shared library.
+get_target_property(_jgap_lib_type jgap_lib TYPE)
+if (NOT _jgap_lib_type STREQUAL "SHARED_LIBRARY")
+    message(FATAL_ERROR
+            "jgap_lib must be built as a SHARED library (it is currently ${_jgap_lib_type}). The "
+            "serialization registry and cross-boundary dynamic_cast depend on shared-library symbol "
+            "semantics; a static build breaks them silently.")
+endif ()
 
-target_link_libraries(jgap PRIVATE
+add_executable(jgap
+        ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
+)
+
+if (JGAP_BLAS_LIBS)
+    target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
+endif ()
+
+target_link_libraries(jgap_lib PRIVATE
         Eigen3::Eigen
-        OpenBLAS::OpenBLAS
-)
-
-target_link_libraries(jgap PUBLIC
-        pugixml::static pugixml::pugixml
-        nlohmann_json::nlohmann_json
-        TBB::tbb TBB::tbbmalloc
         HighFive
+        pugixml::pugixml
 )
 
-target_compile_definitions(jgap PRIVATE
-        EIGEN_FAST_MATH
-        EIGEN_USE_BLAS
+if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Resolve libc++ symbols required by pre-compiled static dependencies when building with GCC on macOS
+    target_link_libraries(jgap_lib PRIVATE c++)
+endif ()
+
+if (OpenMP_CXX_FOUND)
+    target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
+    target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)
+endif ()
+
+# Public include dirs so consumers of the target get jgap's headers for free.
+target_include_directories(jgap_lib PUBLIC
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+        "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
-target_link_libraries(jgap_fit_app PRIVATE
-        jgap
-)
+target_compile_definitions(jgap_lib PRIVATE EIGEN_FAST_MATH EIGEN_NO_DEBUG)
+if (JGAP_BLAS_LIBS)
+    target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_BLAS)
+endif ()
 
-target_link_libraries(jgap_predict_app PRIVATE
-        jgap
-)
+target_link_libraries(jgap PRIVATE jgap_lib)
 
-target_link_libraries(jgap_tabulate_app PRIVATE
-        jgap
-)
+# QUIP XML -> .h5 converter app
+add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
+target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::pugixml)
 
-target_link_libraries(jgap_convert_quip_xml_app PRIVATE
-        jgap
-)
-
-add_custom_command(TARGET jgap POST_BUILD
+add_custom_command(TARGET jgap_lib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         ${CMAKE_CURRENT_BINARY_DIR}/resources
 )
 
-add_custom_command(TARGET jgap POST_BUILD
+add_custom_command(TARGET jgap_lib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/test/resources
         ${CMAKE_CURRENT_BINARY_DIR}/test/resources
 )
 
-## TESTS
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    include(FetchContent)
-    FetchContent_Declare(
-            googletest
-            URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-            DOWNLOAD_EXTRACT_TIMESTAMP OLD
-    )
-    FetchContent_MakeAvailable(googletest)
-    enable_testing()
+# 4. Python Bindings
+include(PythonBindings)
 
-    set(TEST_SOURCES
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestIsolatedAtomFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/fit/TestQRGapFit.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/neighbours/TestNeighbourList.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestTwoBodyDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestThreeBodyDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/descriptors/TestEamDescriptor.cpp
-            ${PROJECT_SOURCE_DIR}/test/core/potentials/TestZblPotential.cpp
-            #${PROJECT_SOURCE_DIR}/test/core/utils/TestVirials.cpp
-    )
+# 5. Installation Rules
+include(Installation)
 
-    add_executable(jgap_tests ${TEST_SOURCES})
-    target_link_libraries(jgap_tests
-            gtest_main
-            jgap  # link your library into tests
-            nlohmann_json::nlohmann_json
-    )
-
-    include(GoogleTest)
-    gtest_discover_tests(jgap_tests)
-endif ()
+# 6. Unit Tests (Debug Mode)
+include(Testing)

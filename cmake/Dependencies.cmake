@@ -1,0 +1,125 @@
+include(FetchContent)
+
+# ------------------------------------------------------------------------------
+# 1. Eigen3 (Header-only Linear Algebra) via FetchContent
+# ------------------------------------------------------------------------------
+set(EIGEN_BUILD_DOC OFF CACHE INTERNAL "")
+set(BUILD_TESTING OFF CACHE INTERNAL "")
+set(EIGEN_BUILD_PKGCONFIG OFF CACHE INTERNAL "")
+FetchContent_Declare(
+    Eigen3
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+    GIT_TAG 3.4.0
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
+FetchContent_MakeAvailable(Eigen3)
+
+# ------------------------------------------------------------------------------
+# 2. pugixml (Fast C++ XML library) via FetchContent
+# ------------------------------------------------------------------------------
+FetchContent_Declare(
+    pugixml
+    GIT_REPOSITORY https://github.com/zeux/pugixml.git
+    GIT_TAG v1.15
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
+FetchContent_MakeAvailable(pugixml)
+set(pugixml_FOUND TRUE)
+
+# ------------------------------------------------------------------------------
+# 3. HDF5 (Host C library) & HighFive (C++ Header-only wrapper via FetchContent)
+# ------------------------------------------------------------------------------
+find_package(HDF5 REQUIRED COMPONENTS C)
+set(HIGHFIVE_USE_BOOST OFF CACHE INTERNAL "")
+set(HIGHFIVE_BUILD_DOCS OFF CACHE INTERNAL "")
+set(HIGHFIVE_UNIT_TESTS OFF CACHE INTERNAL "")
+FetchContent_Declare(
+    HighFive
+    GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
+    GIT_TAG v3.0.0-beta2
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
+FetchContent_MakeAvailable(HighFive)
+
+# ------------------------------------------------------------------------------
+# 4. OpenMP (Multi-core Parallelization)
+# ------------------------------------------------------------------------------
+if (APPLE AND NOT OpenMP_CXX_FOUND)
+    if (EXISTS "/opt/homebrew/opt/libomp")
+        set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
+        list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp")
+    elseif (EXISTS "/usr/local/opt/libomp")
+        set(OpenMP_ROOT "/usr/local/opt/libomp")
+        list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/libomp")
+    endif ()
+endif ()
+
+find_package(OpenMP QUIET)
+
+if (APPLE AND NOT OpenMP_CXX_FOUND)
+    if (EXISTS "/opt/homebrew/opt/libomp")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+        find_package(OpenMP QUIET)
+    elseif (EXISTS "/usr/local/opt/libomp")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "/usr/local/opt/libomp/lib/libomp.dylib")
+        find_package(OpenMP QUIET)
+    endif ()
+endif ()
+
+if (OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP enabled: multi-core parallelization will be active (${OpenMP_CXX_VERSION})")
+else ()
+    message(STATUS "OpenMP not found: multi-core parallelization won't be enabled")
+endif ()
+
+# ------------------------------------------------------------------------------
+# 5. BLAS / Acceleration Libraries from Host / System
+# ------------------------------------------------------------------------------
+if (APPLE)
+    set(BLA_VENDOR Apple)
+    find_package(BLAS QUIET)
+    if (BLAS_FOUND)
+        set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+    endif ()
+    unset(BLA_VENDOR)
+endif ()
+
+if (NOT JGAP_BLAS_LIBS)
+    if (APPLE AND NOT OpenBLAS_FOUND)
+        if (EXISTS "/opt/homebrew/opt/openblas")
+            set(OpenBLAS_ROOT "/opt/homebrew/opt/openblas")
+            list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/openblas")
+        elseif (EXISTS "/usr/local/opt/openblas")
+            set(OpenBLAS_ROOT "/usr/local/opt/openblas")
+            list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
+        endif ()
+    endif ()
+
+    find_package(OpenBLAS CONFIG QUIET)
+    if (OpenBLAS_FOUND)
+        set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
+        include_directories(${OpenBLAS_INCLUDE_DIRS})
+    else ()
+        find_package(BLAS QUIET)
+        if (BLAS_FOUND)
+            set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+        endif ()
+    endif ()
+endif ()
+
+if (JGAP_BLAS_LIBS)
+    message(STATUS "BLAS acceleration enabled (${JGAP_BLAS_LIBS})")
+else ()
+    if (OpenMP_CXX_FOUND)
+        message(STATUS "No BLAS found: using Eigen's built-in routines with OpenMP multi-threading")
+    else ()
+        message(STATUS "No BLAS and no OpenMP found: Eigen will run single-threaded")
+    endif ()
+endif ()

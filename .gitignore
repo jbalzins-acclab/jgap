@@ -1,4 +1,4 @@
-build/*
+*/build/*
 logs/*
 notes/*
 cmake-build-debug/*
@@ -6,5 +6,11 @@ vcpkg_installed/*
 *.DS_Store
 .DS_Store
 .idea*
-/include/ParserRegistryAuto.hpp
-/test-local/*
+.vscode*
+test-local/*
+build*/*
+build/
+.cache/*
+*.log
+CMakeUserPresets.json
+compile_commands.json
