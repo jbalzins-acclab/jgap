@@ -59,7 +59,9 @@ namespace jgap {
 
     private:
         static bool forEach(
-            const Species2Atomic& sp, size_t atom_index, const NeighbourLists& neighbour_list,
+            const Species2Atomic& sp,
+            size_t atom_index,
+            const NeighbourLists& neighbour_list,
             Cluster2Callback auto&& callback
         ) {
             const auto& node_species = sp.node;

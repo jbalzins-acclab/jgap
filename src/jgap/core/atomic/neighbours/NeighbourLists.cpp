@@ -5,8 +5,8 @@
 #include <ranges>
 #include <set>
 
-#include "jgap/core/UnseqFor.hpp"
 #include "../../io/log/CurrentLogger.hpp"
+#include "jgap/core/UnseqFor.hpp"
 
 namespace jgap {
 
@@ -21,19 +21,43 @@ namespace jgap {
             return {0, 0, 0};
         }
 
-        std::array maxRep = {pbc[0] ? static_cast<int>(cutoff / lattice->a.norm() + 1) : 0,
-                             pbc[1] ? static_cast<int>(cutoff / lattice->b.norm() + 1) : 0,
-                             pbc[2] ? static_cast<int>(cutoff / lattice->c.norm() + 1) : 0};
+        std::array maxRep = {
+            pbc[0] ? static_cast<int>(cutoff / lattice->a.norm() + 1) : 0,
+            pbc[1] ? static_cast<int>(cutoff / lattice->b.norm() + 1) : 0,
+            pbc[2] ? static_cast<int>(cutoff / lattice->c.norm() + 1) : 0
+        };
 
         // triclinic
-        if (abs(lattice->a.dot(lattice->b)) > 1e-6 || abs(lattice->a.dot(lattice->c)) > 1e-6 ||
-            abs(lattice->b.dot(lattice->c)) > 1e-6) {
+        if (abs(lattice->a.dot(lattice->b)) > 1e-6 || abs(lattice->a.dot(lattice->c)) > 1e-6
+            || abs(lattice->b.dot(lattice->c)) > 1e-6) {
             if (pbc[0]) maxRep[0] = static_cast<int>(cutoff / lattice->a.aproject(lattice->b, lattice->c)) + 1;
             if (pbc[1]) maxRep[1] = static_cast<int>(cutoff / lattice->b.aproject(lattice->a, lattice->c)) + 1;
             if (pbc[2]) maxRep[2] = static_cast<int>(cutoff / lattice->c.aproject(lattice->b, lattice->a)) + 1;
         }
 
         return maxRep;
+    }
+
+    NeighbourLists::NeighbourLists(const NeighbourLists& other, double new_cutoff) :
+        cutoff(new_cutoff), atoms_by_species(other.atoms_by_species) {
+        if (new_cutoff > other.getCutoff()) {
+            JGAP_LOG_AND_THROW("New cutoff must be smaller than or equal to the old cutoff.");
+        }
+
+        neighbours_per_atom.resize(other.nAtoms());
+        for (size_t i = 0; i < other.nAtoms(); i++) {
+            auto& neighbours_i = neighbours_per_atom[i];
+            auto& other_neighbours_i = other.neighbours_per_atom[i];
+
+            for (auto& [species, neighbours]: other_neighbours_i) {
+                auto& neighbours_i = neighbours_per_atom[i][species];
+                for (auto& neighbour: neighbours) {
+                    if (neighbour.separation.magnitude <= new_cutoff) {
+                        neighbours_i.push_back(neighbour);
+                    }
+                }
+            }
+        }
     }
 
     NeighbourLists::NeighbourLists(const Atoms& box, double cutoff) : cutoff(cutoff) {
@@ -85,11 +109,13 @@ namespace jgap {
     std::vector<NeighbourLists> NeighbourLists::form(const std::vector<Atoms>& boxes, double cutoff) {
         std::vector<std::optional<NeighbourLists>> result_opts(boxes.size());
 
-        unseqForIndex(0, boxes.size(),
-                      [&boxes, &result_opts, cutoff](size_t i) { result_opts[i] = NeighbourLists(boxes[i], cutoff); });
+        unseqForIndex(0, boxes.size(), [&boxes, &result_opts, cutoff](size_t i) {
+            result_opts[i] = NeighbourLists(boxes[i], cutoff);
+        });
 
-        return std::views::transform(result_opts,
-                                     [](std::optional<NeighbourLists>& opt) { return std::move(opt.value()); }) |
-               std::ranges::to<std::vector>();
+        return std::views::transform(
+                   result_opts, [](std::optional<NeighbourLists>& opt) { return std::move(opt.value()); }
+               )
+               | std::ranges::to<std::vector>();
     }
 }

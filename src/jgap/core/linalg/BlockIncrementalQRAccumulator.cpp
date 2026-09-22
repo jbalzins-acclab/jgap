@@ -12,7 +12,9 @@ namespace jgap::linalg {
     using EigenMatrixColMajor = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
     using EigenVector = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 
-    size_t BlockIncrementalQRAccumulator::calculateMaxIncrementBlockRows(const size_t n_cols, const double approx_ram_limit_gb) {
+    size_t BlockIncrementalQRAccumulator::calculateMaxIncrementBlockRows(
+        const size_t n_cols, const double approx_ram_limit_gb
+    ) {
         const double max_bytes = approx_ram_limit_gb * 1024.0 * 1024.0 * 1024.0;
         const double bytes_per_row = static_cast<double>(n_cols) * sizeof(double);
         const double mm_bytes = static_cast<double>(n_cols) * bytes_per_row;
@@ -56,7 +58,7 @@ namespace jgap::linalg {
 
     BlockIncrementalQRAccumulator::BlockIncrementalQRAccumulator(
         const Matrix<ColumnMajor>& A, SharedArray<double> b, size_t n_rows_filled
-        ) :
+    ) :
         n_cols(A.nColumns()),
         n_increment_block_rows(A.nRows() - A.nColumns()),
         n_rows_filled(n_rows_filled),
@@ -162,7 +164,8 @@ namespace jgap::linalg {
         Eigen::Map<const EigenMatrixColMajor> A_eigen(A.data(), total_rows, n_cols);
         Eigen::Map<const EigenVector> b_eigen(b.data(), total_rows);
 
-        // Exact upper-triangular solve R_accum * c = y_accum
+        // Solve upper-triangular system R_accum * c = y_accum using backward substitution.
+        // triangularView<Eigen::Upper>().solve() leverages optimized BLAS/SIMD triangular solvers.
         EigenVector solution_coefficients =
             A_eigen.topRows(n_cols).template triangularView<Eigen::Upper>().solve(b_eigen.head(n_cols));
 

@@ -17,11 +17,8 @@ namespace jgap {
     ) {
         JGAP_LOG_INFO("Forming matrix A");
         auto A = formAugmentedCovarianceMatrixA(
-            to_be_fit.components,
-            training_data,
-            energies_without_external,
-            sigmas_inverse
-            );
+            to_be_fit.components, training_data, energies_without_external, sigmas_inverse
+        );
 
         JGAP_LOG_INFO("Forming feature vector b");
         auto b = formNormalizedAugmentedTargetVectorB(to_be_fit.components, energies_without_external, sigmas_inverse);
@@ -87,10 +84,7 @@ namespace jgap {
                 }
 
                 auto A_entry = formInverseSigmaLK_NMForEntry(
-                    gap_components,
-                    struct_data.atoms,
-                    struct_data.energy_data,
-                    struct_data.sigmas_inverse
+                    gap_components, struct_data.atoms, struct_data.energy_data, struct_data.sigmas_inverse
                 );
                 for (size_t col = 0; col < c; ++col) {
                     for (size_t row = 0; row < A_entry.nRows(); ++row) {
@@ -121,8 +115,7 @@ namespace jgap {
     }
 
     std::vector<double> QRGapFit::formTargetVectorBForEntry(
-        const EnergyData& energy_data,
-        const Regularization& sigmas_inverse
+        const EnergyData& energy_data, const Regularization& sigmas_inverse
     ) {
         std::vector<double> b;
         if (energy_data.energy.has_value()) {
@@ -190,11 +183,21 @@ namespace jgap {
 
         Matrix<ColumnMajor> A(n_rows, n_cols);
 
-        std::map<double, NeighbourLists> neighbour_lists;
+        double max_cutoff = 0;
         for (const auto& gap_component: gap_components) {
-            double cutoff = gap_component->getCutoff();
-            if (!neighbour_lists.contains(cutoff)) {
-                neighbour_lists.insert({cutoff, NeighbourLists(atoms, cutoff)});
+            max_cutoff = std::max(max_cutoff, gap_component->getCutoff());
+        }
+
+        auto longest_nl = NeighbourLists(atoms, max_cutoff);
+
+        std::map<double, NeighbourLists> neighbour_lists;
+        neighbour_lists.emplace(max_cutoff, longest_nl);
+
+        for (const auto& gap_component: gap_components) {
+            if (!neighbour_lists.contains(gap_component->getCutoff())) {
+                neighbour_lists.emplace(
+                    gap_component->getCutoff(), NeighbourLists(longest_nl, gap_component->getCutoff())
+                );
             }
         }
 

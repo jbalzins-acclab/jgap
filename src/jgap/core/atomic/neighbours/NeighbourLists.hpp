@@ -23,20 +23,20 @@ namespace jgap {
     struct NeighbourLists {
         using AtomNeighbourLists = std::map<Species, std::vector<NeighbourData>>;
 
-        static std::vector<NeighbourLists> form(const std::vector<Atoms> &boxes, double cutoff);
+        static std::vector<NeighbourLists> form(const std::vector<Atoms>& boxes, double cutoff);
 
+        double cutoff{};
         std::vector<AtomNeighbourLists> neighbours_per_atom;
         std::map<Species, std::vector<size_t>> atoms_by_species;
 
-        NeighbourLists(const Atoms &box, double cutoff);
+        NeighbourLists(const Atoms& box, double cutoff);
+        NeighbourLists(const NeighbourLists& other, double new_cutoff);
 
         size_t nAtoms() const { return neighbours_per_atom.size(); }
         double getCutoff() const { return cutoff; }
 
     private:
-        static std::array<int, 3> findMaxRep(const Atoms &structure, double cutoff);
-
-        double cutoff{};
+        static std::array<int, 3> findMaxRep(const Atoms& structure, double cutoff);
     };
 }
 
