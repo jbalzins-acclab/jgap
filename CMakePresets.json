@@ -64,6 +64,15 @@
       "cacheVariables": {
         "CMAKE_CXX_FLAGS_DEBUG": "-g -fsanitize=address,undefined -fno-omit-frame-pointer"
       }
+    },
+    {
+      "name": "validation",
+      "displayName": "Validation",
+      "description": "Optimized Release build with automated validation benchmark suite enabled",
+      "inherits": "release",
+      "cacheVariables": {
+        "JGAP_BUILD_VALIDATION": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -91,6 +100,10 @@
       "name": "install",
       "configurePreset": "release",
       "targets": ["install"]
+    },
+    {
+      "name": "validation",
+      "configurePreset": "validation"
     }
   ],
   "testPresets": [
@@ -109,6 +122,21 @@
       "configurePreset": "release-tests",
       "output": {
         "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "validation",
+      "configurePreset": "validation",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "validation"
+        }
       },
       "execution": {
         "noTestsAction": "error"
@@ -166,6 +194,25 @@
         {
           "type": "build",
           "name": "install"
+        }
+      ]
+    },
+    {
+      "name": "validation",
+      "displayName": "Validation Workflow",
+      "description": "Configure, build, and run the automated validation benchmark suite",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "validation"
+        },
+        {
+          "type": "build",
+          "name": "validation"
+        },
+        {
+          "type": "test",
+          "name": "validation"
         }
       ]
     }

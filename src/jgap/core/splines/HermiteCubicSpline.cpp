@@ -5,7 +5,10 @@
 #include "../io/log/CurrentLogger.hpp"
 
 namespace jgap {
-    HermiteCubicSpline::HermiteCubicSpline(const Grid<1>& table) { init(table); }
+    HermiteCubicSpline::HermiteCubicSpline(const Grid<1>& table, bool extrapolate_upper) :
+        extrapolate_upper(extrapolate_upper) {
+        init(table);
+    }
 
     InterpolationResults<1> HermiteCubicSpline::interpolate(std::array<double, 1> pos) const {
         const double r = pos[0];
@@ -14,7 +17,15 @@ namespace jgap {
         const size_t n = table.sizes[0];
 
         if (r < origin) return {table({0}), {0.0}};
-        if (r > getCutoff()[0]) return {0.0, {0.0}};
+        if (r > getCutoff()[0]) {
+            if (extrapolate_upper) {
+                const double dx = r - getCutoff()[0];
+                const double value = table({n - 1}) + b[n - 1] * dx;
+                const double derivative = b[n - 1];
+                return {value, {derivative}};
+            }
+            return {0.0, {0.0}};
+        }
 
         size_t i = findInterval(r);
         double dx = r - (origin + static_cast<double>(i) * spacing);

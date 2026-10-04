@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.0.0 LANGUAGES C CXX)
+project(jgap VERSION 7.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -118,3 +118,6 @@ include(Installation)
 
 # 6. Unit Tests (Debug Mode)
 include(Testing)
+
+# 7. Automated Validation Suite
+include(Validation)

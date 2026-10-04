@@ -5,7 +5,7 @@ A high-performance C++23 library, command-line tool, and Python framework for fi
 ## DISCLAIMER
 
 This version is still under active development. 
-It comes with a vastly updated architecture, which, at least at its core, seems to be final but lacks final validation testing and proper documentation.
+It comes with a vastly updated architecture, which, at least at its core, seems to be final but lacks proper documentation.
 It seems to be working correctly, and due to the unexpectedly large number of changes in a development branch it
 is merged into the main branch purely as a checkpoint of the current progress.
 One may try to use it already, by compiling via instructions in the remained of this ReadMe, however, 
@@ -148,6 +148,12 @@ cmake --build --preset release
 cmake --workflow --preset install
 ```
 *(To install to a custom prefix or virtual environment, run `cmake --preset release -DCMAKE_INSTALL_PREFIX=/path/to/prefix && cmake --build --preset install`).*
+
+### Compiling Standalone C++ Examples
+Assuming `jgap` has already been installed (e.g., via `cmake --workflow --preset install`), you can compile standalone C++ programs or examples directly with your compiler linking against `libjgap`, e.g.:
+```bash
+c++ -std=c++23 -O3 -march=native SomeExample.cpp -ljgap -o example
+```
 
 ### Run Unit Tests
 ```bash

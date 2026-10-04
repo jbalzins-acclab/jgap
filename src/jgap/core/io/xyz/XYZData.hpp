@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 
+#include "../../Matrix.hpp"
 #include "../../Vector3.hpp"
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
@@ -18,9 +19,12 @@ namespace jgap {
     using XYZArrayType = std::variant<
         std::vector<int>,
         std::vector<double>,
-        std::vector<Vector3>,
         std::vector<std::string>,
-        std::vector<Species> >;
+        std::vector<Species>,
+        Matrix<RowMajor, int>,
+        Matrix<RowMajor, double>,
+        Matrix<RowMajor, std::string>,
+        std::vector<Vector3> >;
 
     /// Labels for the common ext-xyz property/array names that @ref XYZData::read and @ref Atoms use.
     ///

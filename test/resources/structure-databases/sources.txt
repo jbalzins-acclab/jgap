@@ -1,0 +1,15 @@
+Sources:
+(1) "Multiscale machine-learning interatomic potentials for ferromagnetic and liquid iron" | https://doi.org/10.1088/1361-648X/ac6f39
+(2) "Fast and accurate machine-learned interatomic potentials for large-scale simulations of Cu, Al and Ni" | http://dx.doi.org/10.1103/PhysRevMaterials.9.053807
+(3) "Radiation damage and phase stability of Al_xCrCuFeNi_y alloys using a machine-learned interatomic potential" | https://doi.org/10.1103/tk38-t5rr
+
+- db_Fe.xyz: (1)
+- db_Al.xyz, db_Cu.xyz, db_Ni.xyz: (2)
+
+- feni-train.xyz + feni-test.xyz:
+    "The development and applications of a tabGAP potential for FeNi alloys." - Jegors Balzins' Bachelor's Thesis,
+    which in addition to original data partially includes data from:
+        (1), (2) and (3)
+
+- iter-3-3-train.xyz + iter-3-3-test.xyz: Data for currently unpublished/not-finished CrMnFeNi potential,
+                                          partially including data from the above-mentioned sources.

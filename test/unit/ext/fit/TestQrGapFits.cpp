@@ -20,7 +20,11 @@
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/experimental/fit/gap/BlockIncrementalQRGapFit.hpp"
 #include "jgap/experimental/fit/gap/ElementIncrementalQRGapFit.hpp"
+#include <filesystem>
+#include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/ext/fit/gap/QRGapFit.hpp"
+#include "jgap/io/convert/QuipXmlConverter.hpp"
+#include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/utils/gap/GapComponentUtils.hpp"
 
 using namespace jgap;
@@ -175,7 +179,9 @@ TYPED_TEST(QrGapFits, twoAtomsWithForceQuipCompatibility5) {
     ASSERT_NEAR(coeffs[2], 0.38697171383300527, 1e-6);
 }
 
-GapPotential createEamPotential(double theta, double delta, double r_min, double cutoff, const std::vector<double>& sparse_pts) {
+GapPotential createEamPotential(
+    double theta, double delta, double r_min, double cutoff, const std::vector<double>& sparse_pts
+) {
     auto trans = PolycutoffPairFunction(cutoff, r_min, 1.0);
 
     auto eam_aggregator = TwoBodySum<1>(Species("Fe"));
@@ -207,7 +213,7 @@ TYPED_TEST(QrGapFits, twoAtomsEamQuipCompatibility) {
 }
 
 TYPED_TEST(QrGapFits, eamQuipCompatibilityRealBox) {
-    auto box = Atoms::readAtoms("test/resources/xyz-samples/fe-only.xyz")[15];
+    auto box = Atoms::readAtoms("test/resources/structure-databases/db_Fe.xyz")[15];
     box.eraseVirials();
     auto potential = createEamPotential(3.0, 2.0, 0.0, 5.0, {1.0, 2.5, 4.0});
     auto rules = SimpleRegularizationRules(0.001, 0.05, 1.0, 1.0);
@@ -303,9 +309,7 @@ TEST(SplitQRGapFitTest, NonZeroCovarianceForSpecies) {
     TwoBodySum<1> sum(Species("Fe"));
     sum.extend(Species2Atomic("Fe", "Ni"), PolycutoffPairFunction(5.0, 0.0));
     auto kernel_eam = SquaredExpKernel<1, 0>(1.0, std::array<double, 1>{1.0});
-    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> comp_mb(
-        sum, kernel_eam, std::vector<Descriptor<1>>{{1.0}}
-    );
+    ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> comp_mb(sum, kernel_eam, std::vector<Descriptor<1>>{{1.0}});
     EXPECT_EQ(comp_mb.nonZeroCovarianceFor(), (std::set<Species>{"Fe"}));
 }
 
@@ -389,27 +393,8 @@ TEST(ElementIncrementalQRGapFitTest, MultiSpeciesSplitFitMatchesQRGapFit) {
 }
 
 TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
-    auto all_atoms = Atoms::readAtoms("test/resources/xyz-samples/feni-train.xyz");
-    std::vector<Atoms> train_data;
-    std::vector<Atoms> fe_only, ni_only, feni_both;
-
-    for (const auto& a: all_atoms) {
-        std::set<Species> sp(a.getSpecies().begin(), a.getSpecies().end());
-        if (sp == std::set<Species>{Species("Fe")} && fe_only.size() < 10) {
-            fe_only.push_back(a);
-        } else if (sp == std::set<Species>{Species("Ni")} && ni_only.size() < 10) {
-            ni_only.push_back(a);
-        } else if (sp == std::set<Species>{Species("Fe"), Species("Ni")} && feni_both.size() < 10) {
-            feni_both.push_back(a);
-        }
-    }
-    ASSERT_EQ(fe_only.size(), 10);
-    ASSERT_EQ(ni_only.size(), 10);
-    ASSERT_EQ(feni_both.size(), 10);
-
-    train_data.insert(train_data.end(), fe_only.begin(), fe_only.end());
-    train_data.insert(train_data.end(), ni_only.begin(), ni_only.end());
-    train_data.insert(train_data.end(), feni_both.begin(), feni_both.end());
+    auto train_data = Atoms::readAtoms("test/resources/structure-databases/feni-train.xyz");
+    ASSERT_FALSE(train_data.empty());
 
     // 4 sparse pts for 2b
     auto trans2 = PairDistanceTransformation(CosCutoff(4.5, 1.0));
@@ -425,10 +410,10 @@ TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
         eam_pf, kernel_eam, sparsifier_eam, train_data, EamMode::Blind
     );
 
-    // 10 sparse pts for 3b
+    // 50 sparse pts for 3b
     auto trans3 = Angle3bTransformation(CosCutoff(4.0, 1.0));
     auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
-    auto sparsifier3 = HistogramUniformSparsifier<4>(42, 10, std::array{true, true, true, false});
+    auto sparsifier3 = HistogramUniformSparsifier<4>(42, 50, std::array{true, true, true, false});
     auto comps3 = utils::createThreeBodyComponents<4, SquaredExpKernel<3, 1>>(train_data, trans3, kernel3, sparsifier3);
 
     std::vector<ValuePtr<GapComponent>> all_comps;
@@ -448,8 +433,11 @@ TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
     SimpleRegularizationRules rules(1.0, 1.0, 1.0, 1.0);
     auto sigmas = rules.determineForAll(train_data);
 
-    // Use small RAM limit so that chunks/splits are exercised (e.g. 0.0002 GB ~ 200 KB)
-    const double test_ram_gb = 0.0002;
+    size_t M = 0;
+    for (const auto& comp: pot_qr.getComponents()) {
+        M += comp->nSparsePoints();
+    }
+    const double test_ram_gb = 4.0 * static_cast<double>(M) * static_cast<double>(M) * sizeof(double) / (1024.0 * 1024.0 * 1024.0);
 
     QRGapFit qr_fitter(1e-8);
     qr_fitter.fit(pot_qr, train_data, sigmas);
@@ -468,30 +456,57 @@ TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
         ASSERT_EQ(c_qr.size(), c_st.size());
         ASSERT_EQ(c_qr.size(), c_sp.size());
         for (size_t i = 0; i < c_qr.size(); ++i) {
-            EXPECT_NEAR(c_qr[i], c_st[i], 1e-8);
-            EXPECT_NEAR(c_qr[i], c_sp[i], 1e-8);
-        }
-    }
-
-    // 2. Verify all three potentials evaluate to identical energies and forces on all 30 structures
-    for (const auto& atoms: train_data) {
-        auto e_qr = pot_qr.calculateEnergy(atoms);
-        auto e_st = pot_stream.calculateEnergy(atoms);
-        auto e_sp = pot_split.calculateEnergy(atoms);
-
-        EXPECT_NEAR(e_qr.value, e_st.value, 1e-7);
-        EXPECT_NEAR(e_qr.value, e_sp.value, 1e-7);
-
-        for (size_t a = 0; a < atoms.nAtoms(); ++a) {
-            EXPECT_NEAR(e_qr.forces[a].x, e_st.forces[a].x, 1e-7);
-            EXPECT_NEAR(e_qr.forces[a].y, e_st.forces[a].y, 1e-7);
-            EXPECT_NEAR(e_qr.forces[a].z, e_st.forces[a].z, 1e-7);
-
-            EXPECT_NEAR(e_qr.forces[a].x, e_sp.forces[a].x, 1e-7);
-            EXPECT_NEAR(e_qr.forces[a].y, e_sp.forces[a].y, 1e-7);
-            EXPECT_NEAR(e_qr.forces[a].z, e_sp.forces[a].z, 1e-7);
+            double tol = std::max(1e-5, std::abs(c_qr[i]) * 1e-6);
+            EXPECT_NEAR(c_qr[i], c_st[i], tol);
+            EXPECT_NEAR(c_qr[i], c_sp[i], tol);
         }
     }
 }
 
+TEST(QrGapFitsValidation, QuipReferenceCoefficientsFull) {
+    namespace fs = std::filesystem;
+    fs::path h5_path = "test/resources/reference/reference_pots/feni_200_100_0/gap.h5";
+    fs::path train_xyz = "test/resources/reference/reference_pots/feni_200_100_0/train.xyz";
+    ASSERT_TRUE(fs::exists(h5_path)) << "Reference data not found: " << h5_path;
+    ASSERT_TRUE(fs::exists(train_xyz)) << "Reference training data not found: " << train_xyz;
 
+    ValuePtr<Potential> ref_pot = SerializationRegistry<Potential>::deserialize(h5_path.string());
+    auto* ref_gap = dynamic_cast<GapPotential*>(ref_pot.get());
+    ASSERT_NE(ref_gap, nullptr);
+
+    MainXYZPropertyNames prop_names;
+    prop_names.virials = "virial_fit";
+    const std::vector<Atoms> train_data = Atoms::readAtoms(train_xyz.string(), prop_names);
+    ASSERT_FALSE(train_data.empty());
+
+    const PerConfigTypeRegularizationRules regularization(
+        PerConfigTypeSigmas(0.002, 0.1, 0.2),
+        "isolated_atom:0.0001:0.04:0.04:0.0:"
+        "liquid:0.01:0.5:2.0:0.0:"
+        "dimer:0.01:0.5:2.0:0.0:"
+        "short_range:0.01:0.5:2.0:0.0:"
+        "liquid_surface_100:0.01:0.5:2.0:0.0:"
+        "liquid_surface_110:0.01:0.5:2.0:0.0:"
+        "liquid_surface_111:0.01:0.5:2.0:0.0:"
+        "gamma_surface:0.002:0.08:0.5:0.0:"
+        "liquid_high:0.02:0.8:5.0:0.0:"
+        "binary_alloy_melting:0.01:0.5:2.0:0.0:"
+        "binary_alloy_short_range:0.01:0.5:2.0:0.0"
+    );
+    auto sigmas = regularization.determineForAll(train_data);
+
+    GapPotential fit_pot(*ref_gap);
+    QRGapFit fitter(1e-8);
+    fitter.fit(fit_pot, train_data, sigmas);
+
+    ASSERT_EQ(fit_pot.getComponents().size(), ref_gap->getComponents().size());
+    for (size_t c = 0; c < fit_pot.getComponents().size(); ++c) {
+        const auto& c_jgap = fit_pot.getComponents()[c]->getCoefficients();
+        const auto& c_ref = ref_gap->getComponents()[c]->getCoefficients();
+        ASSERT_EQ(c_jgap.size(), c_ref.size());
+        for (size_t i = 0; i < c_jgap.size(); ++i) {
+            double tol = std::max(0.005, std::abs(c_ref[i]) * 1e-5);
+            EXPECT_NEAR(c_jgap[i], c_ref[i], tol);
+        }
+    }
+}

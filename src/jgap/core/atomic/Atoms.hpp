@@ -18,8 +18,9 @@
 
 namespace jgap {
 
-    /// Types underlying @ref XYZArrayType vector types.
-    using PerAtomProperty = std::variant<int, double, Vector3, std::string, Species>;
+    /// Types underlying @ref XYZArrayType vector and matrix types.
+    using PerAtomProperty = std::variant<int, double, Vector3, std::string, Species,
+                                         std::vector<int>, std::vector<double>, std::vector<std::string>>;
 
     /// Stores the positions and species of atoms in a structure,
     /// as well as information on periodicity, and may optionally store

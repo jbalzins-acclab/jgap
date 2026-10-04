@@ -101,11 +101,28 @@ namespace jgap {
 
             std::visit([&](auto&& arg) {
                 using T = std::decay_t<decltype(arg)>;
-                using ItemT = typename T::value_type;
-                if (!std::holds_alternative<ItemT>(atom_data.at(name))) {
-                    JGAP_LOG_AND_THROW("Type mismatch for array: {} when adding atom", name);
+                if constexpr (std::is_same_v<T, Matrix<RowMajor, int>>) {
+                    if (!std::holds_alternative<std::vector<int>>(atom_data.at(name))) {
+                        JGAP_LOG_AND_THROW("Type mismatch for Matrix<RowMajor, int> array: {} when adding atom", name);
+                    }
+                    arg.appendRow(std::get<std::vector<int>>(atom_data.at(name)));
+                } else if constexpr (std::is_same_v<T, Matrix<RowMajor, double>>) {
+                    if (!std::holds_alternative<std::vector<double>>(atom_data.at(name))) {
+                        JGAP_LOG_AND_THROW("Type mismatch for Matrix<RowMajor, double> array: {} when adding atom", name);
+                    }
+                    arg.appendRow(std::get<std::vector<double>>(atom_data.at(name)));
+                } else if constexpr (std::is_same_v<T, Matrix<RowMajor, std::string>>) {
+                    if (!std::holds_alternative<std::vector<std::string>>(atom_data.at(name))) {
+                        JGAP_LOG_AND_THROW("Type mismatch for Matrix<RowMajor, string> array: {} when adding atom", name);
+                    }
+                    arg.appendRow(std::get<std::vector<std::string>>(atom_data.at(name)));
+                } else {
+                    using ItemT = typename T::value_type;
+                    if (!std::holds_alternative<ItemT>(atom_data.at(name))) {
+                        JGAP_LOG_AND_THROW("Type mismatch for array: {} when adding atom", name);
+                    }
+                    arg.push_back(std::get<ItemT>(atom_data.at(name)));
                 }
-                arg.push_back(std::get<ItemT>(atom_data.at(name)));
             }, array);
         }
     }
@@ -120,7 +137,14 @@ namespace jgap {
 
         for (auto& [name, array] : extra_arrays) {
             std::visit([index](auto&& arg) {
-                arg.erase(arg.begin() + index);
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, Matrix<RowMajor, int>> ||
+                              std::is_same_v<T, Matrix<RowMajor, double>> ||
+                              std::is_same_v<T, Matrix<RowMajor, std::string>>) {
+                    arg.removeRow(index);
+                } else {
+                    arg.erase(arg.begin() + index);
+                }
             }, array);
         }
     }
@@ -174,7 +198,8 @@ namespace jgap {
             virials = std::get<Virials>(info.at(main_property_names.virials));
         }
 
-        if (arrays.contains(main_property_names.forces) && std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.forces))) {
+        if (arrays.contains(main_property_names.forces)
+            && std::holds_alternative<std::vector<Vector3>>(arrays.at(main_property_names.forces))) {
             forces = std::get<std::vector<Vector3>>(arrays.at(main_property_names.forces));
         }
 
@@ -217,7 +242,16 @@ namespace jgap {
 
         for (const auto& [name, array] : extra_arrays) {
             size_t current_size = 0;
-            std::visit([&current_size](auto&& arg) { current_size = arg.size(); }, array);
+            std::visit([&current_size](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, Matrix<RowMajor, int>> ||
+                              std::is_same_v<T, Matrix<RowMajor, double>> ||
+                              std::is_same_v<T, Matrix<RowMajor, std::string>>) {
+                    current_size = arg.nRows();
+                } else {
+                    current_size = arg.size();
+                }
+            }, array);
             if (n != current_size) {
                 JGAP_LOG_AND_THROW("Size mismatch in Atoms: {} has size {} but expected {}", name, current_size, n);
             }
