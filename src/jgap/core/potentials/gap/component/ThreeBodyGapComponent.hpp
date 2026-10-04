@@ -117,7 +117,7 @@ namespace jgap {
             }
 
             auto& table = tables.three_body_grids.getValueGrid(species);
-            const double iteration_reduction_factor = expansion.getPermutationReductionFactor();
+            const double iteration_reduction_factor = Cluster3Expansion::ClusterPermutationsAvailable;
 
             unseqForIndex(0, table.data_flat.size(), [&](size_t i) {
                 auto indices = table.getIndices(i);

@@ -14,3 +14,5 @@ build/
 *.log
 CMakeUserPresets.json
 compile_commands.json
+examples/validation/*
+test/resources/validation/

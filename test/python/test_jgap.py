@@ -174,7 +174,7 @@ class TestJGAP(unittest.TestCase):
 
     def test_read_xyz(self):
         xyz_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../resources/xyz-samples/feni-test.xyz")
+            os.path.join(os.path.dirname(__file__), "../resources/structure-databases/feni-test.xyz")
         )
         if os.path.exists(xyz_path):
             frames = jgap.read_atoms(xyz_path)
@@ -186,7 +186,7 @@ class TestJGAP(unittest.TestCase):
 
     def test_standard_gap_fit_and_tabulate(self):
         xyz_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../resources/xyz-samples/feni-test.xyz")
+            os.path.join(os.path.dirname(__file__), "../resources/structure-databases/feni-test.xyz")
         )
         if not os.path.exists(xyz_path):
             return
@@ -246,7 +246,7 @@ class TestJGAP(unittest.TestCase):
 
     def test_approx_ram_limit_gb(self):
         xyz_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../resources/xyz-samples/feni-test.xyz")
+            os.path.join(os.path.dirname(__file__), "../resources/structure-databases/feni-test.xyz")
         )
         if not os.path.exists(xyz_path):
             return

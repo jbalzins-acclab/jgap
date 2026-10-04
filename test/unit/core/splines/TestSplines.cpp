@@ -167,3 +167,38 @@ TEST(SplineTest, ThreeDimensionalSpline) {
 
     EXPECT_NEAR(expected, interpolated, 1e-3);
 }
+
+TEST(SplineTest, CubicBSplineGradientConsistency) {
+    auto test_fn = [](double x, double y, double z) {
+        return std::cos(1.5 * x) * std::sin(2.0 * y) * (1.0 + 0.5 * z);
+    };
+
+    size_t n = 20;
+    double h = 0.1;
+    std::vector<double> vals;
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            for (size_t k = 0; k < n; ++k) {
+                vals.push_back(test_fn(0.2 + i * h, 0.2 + j * h, 0.2 + k * h));
+            }
+        }
+    }
+
+    Grid<3> grid({n, n, n}, {h, h, h}, {0.2, 0.2, 0.2}, vals);
+    CubicBSpline3D spline = CubicBSpline3D::fit(grid);
+
+    std::array<double, 3> pt = {0.55, 0.75, 0.45};
+    auto interp = spline.interpolate(pt);
+
+    double eps = 1e-5;
+    double num_dx = (spline.interpolate({pt[0] + eps, pt[1], pt[2]}).value -
+                     spline.interpolate({pt[0] - eps, pt[1], pt[2]}).value) / (2.0 * eps);
+    double num_dy = (spline.interpolate({pt[0], pt[1] + eps, pt[2]}).value -
+                     spline.interpolate({pt[0], pt[1] - eps, pt[2]}).value) / (2.0 * eps);
+    double num_dz = (spline.interpolate({pt[0], pt[1], pt[2] + eps}).value -
+                     spline.interpolate({pt[0], pt[1], pt[2] - eps}).value) / (2.0 * eps);
+
+    EXPECT_NEAR(interp.gradient[0], num_dx, 1e-5);
+    EXPECT_NEAR(interp.gradient[1], num_dy, 1e-5);
+    EXPECT_NEAR(interp.gradient[2], num_dz, 1e-5);
+}

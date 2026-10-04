@@ -6,7 +6,7 @@
 using namespace jgap;
 
 TEST(TestNeighbourLists, Sample1CorrectNumberOfNeighbours) {
-    auto atoms = Atoms::readAtoms("test/resources/xyz-samples/iter-3-3-test.xyz");
+    auto atoms = Atoms::readAtoms("test/resources/structure-databases/iter-3-3-test.xyz");
     auto neighbour_lists = NeighbourLists::form(atoms, 5.0);
 
     size_t total_neighbours = 0;
@@ -21,7 +21,7 @@ TEST(TestNeighbourLists, Sample1CorrectNumberOfNeighbours) {
 }
 
 TEST(TestNeighbourLists, Sample2CorrectNumberOfNeighbours) {
-    auto atoms = Atoms::readAtoms("test/resources/xyz-samples/iter-3-3-train.xyz");
+    auto atoms = Atoms::readAtoms("test/resources/structure-databases/iter-3-3-train.xyz");
     auto neighbour_lists = NeighbourLists::form(atoms, 5.0);
 
     size_t total_neighbours = 0;

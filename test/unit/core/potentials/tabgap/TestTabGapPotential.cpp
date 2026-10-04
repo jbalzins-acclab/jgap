@@ -1,4 +1,5 @@
 #include <cmath>
+#include <numeric>
 #include <gtest/gtest.h>
 
 #include "jgap/core/atomic/Atoms.hpp"
@@ -16,6 +17,9 @@
 #include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+
+#include <filesystem>
+#include "jgap/io/tabgap/TabGapIO.hpp"
 
 using namespace jgap;
 
@@ -253,4 +257,70 @@ TEST(TestTabGapPotential, ThreeBodySymmetricDistanceSwapCheck) {
     EXPECT_NO_THROW(
         ThreeBodyTGComponent(same_species, symm_spline)
     );
+}
+
+TEST(TestTabGapPotential, LammpsReferencePredictions) {
+    namespace fs = std::filesystem;
+    fs::path h5_path = "test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.tabgap.h5";
+    fs::path eam_path = "test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.eam.fs";
+    fs::path lammps_xyz = "test/resources/reference/reference_lammps/feni_200_100_0/pred.xyz";
+    ASSERT_TRUE(fs::exists(h5_path)) << "Reference data not found: " << h5_path;
+    ASSERT_TRUE(fs::exists(lammps_xyz)) << "Reference data not found: " << lammps_xyz;
+
+    std::vector<std::string> pot_files = {h5_path.string()};
+    if (fs::exists(eam_path)) {
+        pot_files.push_back(eam_path.string());
+    }
+
+    TabGapPotential potential = TabGapIO::read(pot_files);
+
+    MainXYZPropertyNames prop_names;
+    prop_names.virials = "virial";
+    auto ref_frames = Atoms::readAtoms(lammps_xyz.string(), prop_names);
+    ASSERT_FALSE(ref_frames.empty());
+
+    constexpr double meV = 1e3;
+    std::vector<double> diff_sq_forces;
+    for (const auto& ref_atoms : ref_frames) {
+        size_t n = ref_atoms.nAtoms();
+        ASSERT_GT(n, 0);
+
+        Atoms test_atoms = ref_atoms;
+        auto res = potential.calculateEnergy(test_atoms);
+
+        double e_jgap = res.value / static_cast<double>(n) * meV;
+        double e_ref = ref_atoms.getEnergy().value_or(0.0) / static_cast<double>(n) * meV;
+        EXPECT_NEAR(e_jgap, e_ref, 0.05);
+
+        const auto ref_forces = ref_atoms.getForces();
+        if (ref_forces.has_value()) {
+            ASSERT_EQ(res.forces.size(), ref_forces->size());
+            for (size_t a = 0; a < res.forces.size(); ++a) {
+                double fx_j = res.forces[a].x * meV;
+                double fy_j = res.forces[a].y * meV;
+                double fz_j = res.forces[a].z * meV;
+                double fx_r = (*ref_forces)[a].x * meV;
+                double fy_r = (*ref_forces)[a].y * meV;
+                double fz_r = (*ref_forces)[a].z * meV;
+
+                diff_sq_forces.push_back((fx_j - fx_r) * (fx_j - fx_r));
+                diff_sq_forces.push_back((fy_j - fy_r) * (fy_j - fy_r));
+                diff_sq_forces.push_back((fz_j - fz_r) * (fz_j - fz_r));
+
+                double tol_x = std::max(10.0, std::abs(fx_r) * 1e-4);
+                double tol_y = std::max(10.0, std::abs(fy_r) * 1e-4);
+                double tol_z = std::max(10.0, std::abs(fz_r) * 1e-4);
+
+                EXPECT_NEAR(fx_j, fx_r, tol_x);
+                EXPECT_NEAR(fy_j, fy_r, tol_y);
+                EXPECT_NEAR(fz_j, fz_r, tol_z);
+            }
+        }
+    }
+
+    if (!diff_sq_forces.empty()) {
+        double mean_sq = std::accumulate(diff_sq_forces.begin(), diff_sq_forces.end(), 0.0) / static_cast<double>(diff_sq_forces.size());
+        double f_rmse = std::sqrt(mean_sq);
+        EXPECT_LE(f_rmse, 0.50);
+    }
 }

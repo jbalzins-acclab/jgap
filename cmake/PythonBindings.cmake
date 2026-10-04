@@ -28,7 +28,7 @@ if (Python3_FOUND)
             LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap"
             BUILD_WITH_INSTALL_RPATH FALSE
             BUILD_RPATH "${CMAKE_BINARY_DIR}"
-            INSTALL_RPATH "@loader_path/../../lib;@loader_path/.."
+            INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/.."
         )
 
         # Legacy jgap_ase module for backward compatibility

@@ -5,7 +5,7 @@
 namespace jgap {
 
     EamTGComponent::EamTGComponent(ManyBodyGrids2<1, 1> grids_for_element) :
-        energy_spline(HermiteCubicSpline{grids_for_element.value_grid}),
+        energy_spline(HermiteCubicSpline{grids_for_element.value_grid, /*extrapolate_upper=*/true}),
         spline_density_aggregator{grids_for_element.central_atom_species} {
         for (auto& [species_pair, eam_pf_grid]: grids_for_element.aggregator_grids.value_grids) {
             spline_density_aggregator.extend(

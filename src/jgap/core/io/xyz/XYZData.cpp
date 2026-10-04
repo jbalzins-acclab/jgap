@@ -118,6 +118,35 @@ namespace jgap {
                 prop_infos.push_back({"pos", 'R', 3});
             }
 
+            for (const auto& info: prop_infos) {
+                if (info.type == 'R') {
+                    if (info.count == 3) {
+                        data.arrays[info.name] = std::vector<Vector3>(n_atoms);
+                    } else if (info.count == 1) {
+                        data.arrays[info.name] = std::vector<double>(n_atoms);
+                    } else {
+                        data.arrays[info.name] = Matrix<RowMajor, double>(n_atoms, info.count);
+                    }
+                } else if (info.type == 'I') {
+                    if (info.count == 1) {
+                        data.arrays[info.name] = std::vector<int>(n_atoms);
+                    } else {
+                        data.arrays[info.name] = Matrix<RowMajor, int>(n_atoms, info.count);
+                    }
+                } else if (info.type == 'S') {
+                    if (info.name == main_props.species) {
+                        data.arrays[info.name] = std::vector<Species>();
+                        std::get<std::vector<Species>>(data.arrays[info.name]).reserve(n_atoms);
+                    } else if (info.count == 1) {
+                        data.arrays[info.name] = std::vector<std::string>(n_atoms);
+                    } else {
+                        data.arrays[info.name] = Matrix<RowMajor, std::string>(n_atoms, info.count);
+                    }
+                } else {
+                    JGAP_LOG_AND_THROW("Unsupported property type '{}' in Properties", info.type);
+                }
+            }
+
             for (size_t i = 0; i < n_atoms; ++i) {
                 if (!utils::getLine(in_stream, line)) {
                     JGAP_LOG_AND_THROW("Unexpected end of file at atom #{}", i);
@@ -128,63 +157,64 @@ namespace jgap {
                         if (info.count == 3) {
                             Vector3 v;
                             if (!(iss >> v.x >> v.y >> v.z)) {
-                                JGAP_LOG_AND_THROW(
-                                    "Failed to read as Vector3 for property {} at atom {}", info.name, i
-                                );
+                                JGAP_LOG_AND_THROW("Failed to read as Vector3 for property {} at atom {}", info.name, i);
                             }
-                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Vector3>();
-                            std::get<std::vector<Vector3>>(data.arrays[info.name]).push_back(v);
+                            std::get<std::vector<Vector3>>(data.arrays[info.name])[i] = v;
                         } else if (info.count == 1) {
-                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<double>();
-
                             double r;
                             if (!(iss >> r)) {
                                 JGAP_LOG_AND_THROW("Failed to read as double for property {} at atom {}", info.name, i);
                             }
-                            std::get<std::vector<double>>(data.arrays[info.name]).push_back(r);
+                            std::get<std::vector<double>>(data.arrays[info.name])[i] = r;
                         } else {
-                            JGAP_LOG_AND_THROW("Unsupported double vector size per array");
+                            auto& mat = std::get<Matrix<RowMajor, double>>(data.arrays[info.name]);
+                            for (size_t c = 0; c < static_cast<size_t>(info.count); ++c) {
+                                double r;
+                                if (!(iss >> r)) {
+                                    JGAP_LOG_AND_THROW("Failed to read double for property {} col {} at atom {}", info.name, c, i);
+                                }
+                                mat(i, c) = r;
+                            }
                         }
                     } else if (info.type == 'I') {
-
-                        if (info.count != 1) {
-                            JGAP_LOG_AND_THROW("Unsupported number of ints per array");
+                        if (info.count == 1) {
+                            int val;
+                            if (!(iss >> val)) {
+                                JGAP_LOG_AND_THROW("Failed to read as int for property {} at atom {}", info.name, i);
+                            }
+                            std::get<std::vector<int>>(data.arrays[info.name])[i] = val;
+                        } else {
+                            auto& mat = std::get<Matrix<RowMajor, int>>(data.arrays[info.name]);
+                            for (size_t c = 0; c < static_cast<size_t>(info.count); ++c) {
+                                int val;
+                                if (!(iss >> val)) {
+                                    JGAP_LOG_AND_THROW("Failed to read int for property {} col {} at atom {}", info.name, c, i);
+                                }
+                                mat(i, c) = val;
+                            }
                         }
-
-                        if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<int>();
-
-                        int val;
-                        if (!(iss >> val)) {
-                            JGAP_LOG_AND_THROW("Failed to read as int for property {} at atom {}", info.name, i);
-                        }
-                        std::get<std::vector<int>>(data.arrays[info.name]).push_back(val);
-
                     } else if (info.type == 'S') {
                         if (info.name == main_props.species) {
-                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<Species>();
-
-                            if (info.count != 1) {
-                                JGAP_LOG_AND_THROW("Unsupported number of species per array");
-                            }
-
                             std::string s;
                             if (!(iss >> s)) {
-                                JGAP_LOG_AND_THROW("Failed to read string for property {} at atom {}", info.name, i);
+                                JGAP_LOG_AND_THROW("Failed to read species string for property {} at atom {}", info.name, i);
                             }
                             std::get<std::vector<Species>>(data.arrays[info.name]).push_back(Species(s));
-
-                        } else {
-                            if (!data.arrays.contains(info.name)) data.arrays[info.name] = std::vector<std::string>();
-
-                            if (info.count != 1) {
-                                JGAP_LOG_AND_THROW("Unsupported number of string per array");
-                            }
-
+                        } else if (info.count == 1) {
                             std::string s;
                             if (!(iss >> s)) {
                                 JGAP_LOG_AND_THROW("Failed to read string for property {} at atom {}", info.name, i);
                             }
-                            std::get<std::vector<std::string>>(data.arrays[info.name]).push_back(s);
+                            std::get<std::vector<std::string>>(data.arrays[info.name])[i] = s;
+                        } else {
+                            auto& mat = std::get<Matrix<RowMajor, std::string>>(data.arrays[info.name]);
+                            for (size_t c = 0; c < static_cast<size_t>(info.count); ++c) {
+                                std::string s;
+                                if (!(iss >> s)) {
+                                    JGAP_LOG_AND_THROW("Failed to read string for property {} col {} at atom {}", info.name, c, i);
+                                }
+                                mat(i, c) = s;
+                            }
                         }
                     }
                 }
@@ -215,7 +245,16 @@ namespace jgap {
         size_t n_atoms = 0;
         for (auto const& [name, val]: arrays) {
             size_t current_size = 0;
-            std::visit([&current_size](auto&& arg) { current_size = arg.size(); }, val);
+            std::visit([&current_size](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, Matrix<RowMajor, int>> ||
+                              std::is_same_v<T, Matrix<RowMajor, double>> ||
+                              std::is_same_v<T, Matrix<RowMajor, std::string>>) {
+                    current_size = arg.nRows();
+                } else {
+                    current_size = arg.size();
+                }
+            }, val);
             if (n_atoms == 0)
                 n_atoms = current_size;
             else if (n_atoms != current_size) {
@@ -299,12 +338,16 @@ namespace jgap {
                         prop_tokens.push_back(name + ":I:1");
                     else if constexpr (std::is_same_v<T, std::vector<double>>)
                         prop_tokens.push_back(name + ":R:1");
+                    else if constexpr (std::is_same_v<T, std::vector<std::string>> || std::is_same_v<T, std::vector<Species>>)
+                        prop_tokens.push_back(name + ":S:1");
+                    else if constexpr (std::is_same_v<T, Matrix<RowMajor, int>>)
+                        prop_tokens.push_back(name + ":I:" + std::to_string(arg.nColumns()));
+                    else if constexpr (std::is_same_v<T, Matrix<RowMajor, double>>)
+                        prop_tokens.push_back(name + ":R:" + std::to_string(arg.nColumns()));
+                    else if constexpr (std::is_same_v<T, Matrix<RowMajor, std::string>>)
+                        prop_tokens.push_back(name + ":S:" + std::to_string(arg.nColumns()));
                     else if constexpr (std::is_same_v<T, std::vector<Vector3>>)
                         prop_tokens.push_back(name + ":R:3");
-                    else if constexpr (std::is_same_v<T, std::vector<std::string>>)
-                        prop_tokens.push_back(name + ":S:1");
-                    else if constexpr (std::is_same_v<T, std::vector<Species>>)
-                        prop_tokens.push_back(name + ":S:1");
                 },
                 val
             );
@@ -319,7 +362,19 @@ namespace jgap {
                 std::visit(
                     [&line_tokens, i](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, std::vector<Vector3>>) {
+                        if constexpr (std::is_same_v<T, Matrix<RowMajor, double>>) {
+                            for (size_t c = 0; c < arg.nColumns(); ++c) {
+                                line_tokens.push_back(std::format("{:.16g}", arg(i, c)));
+                            }
+                        } else if constexpr (std::is_same_v<T, Matrix<RowMajor, int>>) {
+                            for (size_t c = 0; c < arg.nColumns(); ++c) {
+                                line_tokens.push_back(std::to_string(arg(i, c)));
+                            }
+                        } else if constexpr (std::is_same_v<T, Matrix<RowMajor, std::string>>) {
+                            for (size_t c = 0; c < arg.nColumns(); ++c) {
+                                line_tokens.push_back(arg(i, c));
+                            }
+                        } else if constexpr (std::is_same_v<T, std::vector<Vector3>>) {
                             line_tokens.push_back(std::format("{:.16g}", arg[i].x));
                             line_tokens.push_back(std::format("{:.16g}", arg[i].y));
                             line_tokens.push_back(std::format("{:.16g}", arg[i].z));
@@ -329,7 +384,7 @@ namespace jgap {
                             line_tokens.push_back(static_cast<Species>(arg[i]).symbol());
                         } else if constexpr (std::is_same_v<T, std::vector<int>>) {
                             line_tokens.push_back(std::to_string(arg[i]));
-                        } else {
+                        } else if constexpr (std::is_same_v<T, std::vector<double>>) {
                             line_tokens.push_back(std::format("{:.16g}", arg[i]));
                         }
                     },
