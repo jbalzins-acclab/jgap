@@ -3,9 +3,9 @@
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
 #include "jgap/core/transform/manybody/NBodyAggregator.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 
 using namespace jgap;
 

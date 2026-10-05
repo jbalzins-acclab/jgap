@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include "jgap/core/ValuePtr.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 
 using namespace jgap;
 

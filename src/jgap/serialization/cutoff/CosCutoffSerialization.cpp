@@ -1,5 +1,5 @@
 #include "CosCutoffSerialization.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 

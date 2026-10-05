@@ -1,5 +1,5 @@
 #include "GapComponentUtils.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 
 namespace jgap::utils {
     std::map<Species, ValuePtr<NBodyAggregator<1>>> createEamAggregators(

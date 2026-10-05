@@ -1,0 +1,81 @@
+[build-system]
+requires = ["scikit-build-core>=0.10.0", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "jgap"
+version = "7.2.0"
+description = "Gaussian Approximation Potentials (GAP) in C++23 with Python bindings and ASE integration"
+readme = "ReadMe.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Jegors Balzins" }]
+keywords = ["molecular-dynamics", "machine-learning", "interatomic-potentials", "materials-science", "gaussian-approximation-potentials", "ase"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+dependencies = [
+    "numpy>=1.22",
+    "ase>=3.22",
+]
+
+[project.urls]
+Homepage = "https://github.com/jegorsbalzins/jgap"
+Repository = "https://github.com/jegorsbalzins/jgap"
+
+[tool.scikit-build]
+cmake.version = ">=3.25"
+build-dir = "build/{wheel_tag}"
+cmake.build-type = "Release"
+wheel.packages = ["python/jgap"]
+
+[tool.scikit-build.sdist]
+include = [
+    "resources/**",
+    "cmake/**",
+    "src/**",
+    "python/**",
+    "CMakeLists.txt",
+    "ReadMe.md",
+]
+
+[tool.scikit-build.cmake.define]
+JGAP_BUILD_TESTS = "OFF"
+JGAP_BUILD_VALIDATION = "OFF"
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-*"
+skip = "*-musllinux_* *i686"
+build-verbosity = 1
+
+# Linux: Ubuntu 24.04-based manylinux_2_34 image with GCC 15 for full #embed support
+manylinux-x86_64-image = "manylinux_2_34"
+manylinux-aarch64-image = "manylinux_2_34"
+
+[tool.cibuildwheel.linux]
+before-all = """
+apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
+add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+apt-get update && \
+apt-get install -y --no-install-recommends ninja-build libhdf5-dev libopenblas-dev libomp-15-dev gcc-15 g++-15 || \
+apt-get install -y --no-install-recommends ninja-build libhdf5-dev libopenblas-dev gcc-14 g++-14
+"""
+environment = { CC = "gcc-15", CXX = "g++-15" }
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+archs = ["arm64", "x86_64"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", CMAKE_PREFIX_PATH = "/opt/homebrew:/usr/local" }
+before-all = "brew install hdf5 openblas libomp ninja gcc"
+repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"

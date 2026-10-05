@@ -1,5 +1,5 @@
 """
-jgap: General Atomic Potential framework for machine-learned interatomic potentials.
+jgap: Gaussian Approximation Potential framework for machine-learned interatomic potentials.
 """
 
 from typing import List, Optional, Union

@@ -2,7 +2,7 @@
 #include <memory>
 #include "jgap/core/atomic/geometry/Cluster2.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
 
 using namespace jgap;
 

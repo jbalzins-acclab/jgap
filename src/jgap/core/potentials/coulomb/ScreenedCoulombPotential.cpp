@@ -1,5 +1,5 @@
 #include "ScreenedCoulombPotential.hpp"
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 
 #include <cmath>
 #include <filesystem>

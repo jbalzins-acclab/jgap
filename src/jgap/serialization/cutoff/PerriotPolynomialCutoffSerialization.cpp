@@ -1,5 +1,5 @@
 #include "PerriotPolynomialCutoffSerialization.hpp"
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 

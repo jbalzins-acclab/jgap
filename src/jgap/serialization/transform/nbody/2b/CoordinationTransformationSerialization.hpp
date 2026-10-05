@@ -2,7 +2,7 @@
 #define JGAP_COORDINATIONSTRANSFORMATIONSERIALIZATION_HPP
 
 #include "jgap/serialization/Serialization.hpp"
-#include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/CoordinationTransformation.hpp"
 
 namespace jgap {
 

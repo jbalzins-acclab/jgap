@@ -1,7 +1,7 @@
 #ifndef JGAP_CAUCHYKERNELSERIALIZATION_HPP
 #define JGAP_CAUCHYKERNELSERIALIZATION_HPP
 
-#include "jgap/experimental/kernels/CauchyKernel.hpp"
+#include "jgap/impl/kernels/CauchyKernel.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 

@@ -1,7 +1,7 @@
 #include "CutoffJK3bTransformationSerialization.hpp"
 
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "../../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"

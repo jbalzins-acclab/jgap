@@ -1,5 +1,5 @@
 #include "CoscutoffPairFunctionSerialization.hpp"
-#include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "../../../../../core/io/log/CurrentLogger.hpp"
 

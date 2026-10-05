@@ -1,19 +1,31 @@
 include(FetchContent)
 
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Don't re-download fetched dependencies")
+
 # ------------------------------------------------------------------------------
-# 1. Eigen3 (Header-only Linear Algebra) via FetchContent
+# 1. Eigen3 (Header-only Linear Algebra)
 # ------------------------------------------------------------------------------
-set(EIGEN_BUILD_DOC OFF CACHE INTERNAL "")
-set(BUILD_TESTING OFF CACHE INTERNAL "")
-set(EIGEN_BUILD_PKGCONFIG OFF CACHE INTERNAL "")
-FetchContent_Declare(
-    Eigen3
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG 3.4.0
-    GIT_SHALLOW TRUE
-    SYSTEM
-)
-FetchContent_MakeAvailable(Eigen3)
+if (APPLE)
+    if (EXISTS "/opt/homebrew/include/eigen3")
+        list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew")
+    elseif (EXISTS "/usr/local/include/eigen3")
+        list(APPEND CMAKE_PREFIX_PATH "/usr/local")
+    endif ()
+endif ()
+
+find_package(Eigen3 3.4 QUIET)
+
+if (NOT TARGET Eigen3::Eigen)
+    set(EIGEN_BUILD_DOC OFF CACHE INTERNAL "")
+    set(BUILD_TESTING OFF CACHE INTERNAL "")
+    set(EIGEN_BUILD_PKGCONFIG OFF CACHE INTERNAL "")
+    FetchContent_Declare(
+        Eigen3
+        URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(Eigen3)
+endif ()
 
 # ------------------------------------------------------------------------------
 # 2. pugixml (Fast C++ XML library) via FetchContent

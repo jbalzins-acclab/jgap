@@ -11,7 +11,7 @@
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 #include "jgap/core/potentials/Potential.hpp"
 
 namespace jgap {

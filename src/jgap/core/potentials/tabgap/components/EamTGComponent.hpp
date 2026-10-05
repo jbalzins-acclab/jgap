@@ -2,7 +2,7 @@
 #define JGAP_EAMTGCOMPONENT_HPP
 #include "TabGapComponent.hpp"
 #include "jgap/core/splines/HermiteCubicSpline.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 
 namespace jgap {
     class EamTGComponent : public TabGapComponent {

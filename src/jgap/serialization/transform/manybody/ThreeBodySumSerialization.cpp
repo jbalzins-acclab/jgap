@@ -1,6 +1,6 @@
 #include "ThreeBodySumSerialization.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
-#include "jgap/experimental/transform/manybody/ThreeBodySum.hpp"
+#include "jgap/impl/transform/manybody/ThreeBodySum.hpp"
 #include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"

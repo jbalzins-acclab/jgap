@@ -1,7 +1,7 @@
 #ifndef JGAP_WENDLANDKERNELSERIALIZATION_HPP
 #define JGAP_WENDLANDKERNELSERIALIZATION_HPP
 
-#include "jgap/experimental/kernels/WendlandKernel.hpp"
+#include "jgap/impl/kernels/WendlandKernel.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 

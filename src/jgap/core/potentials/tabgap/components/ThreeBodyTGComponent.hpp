@@ -4,7 +4,7 @@
 #include "jgap/core/atomic/iteration/Cluster3Expansion.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/splines/CubicBSpline3D.hpp"
-#include "jgap/core/transform/nbody/3b/CosTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/CosTransformation.hpp"
 
 namespace jgap {
 
