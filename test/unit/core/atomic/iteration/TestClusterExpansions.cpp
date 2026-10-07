@@ -154,7 +154,7 @@ TEST(TestClusterExpansions, ClusterPermutationModeReducedVsPermuteSameSpecies) {
     EXPECT_DOUBLE_EQ(c0.separation12.magnitude, c1.separation12.magnitude);
 
     // Derivatives for r12 point in opposite directions in the permuted cluster
-    EXPECT_DOUBLE_EQ((c0.separation12.direction + c1.separation12.direction).norm(), 0.0);
+    EXPECT_NEAR((c0.separation12.direction + c1.separation12.direction).norm(), 0.0, 1e-12);
 
     // Reduction factor is always 2.0 when nodes are different species (e.g. Fe|Cu,Al)
     Cluster3Expansion reduced_diff_species(Species3AtomicSorted("Fe|Al,Cu"), ClusterPermutationMode::NoNodePermutation);

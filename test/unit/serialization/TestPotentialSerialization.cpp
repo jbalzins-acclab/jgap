@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "jgap/core/atomic/Atoms.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
@@ -10,7 +10,7 @@
 #include "jgap/core/potentials/spline/SplinePairPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
 #include "jgap/core/potentials/coulomb/ScreenedCoulombPotential.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;

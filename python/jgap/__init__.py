@@ -1,5 +1,5 @@
 """
-jgap: General Atomic Potential framework for machine-learned interatomic potentials.
+jgap: Gaussian Approximation Potential framework for machine-learned interatomic potentials.
 """
 
 from typing import List, Optional, Union
@@ -10,6 +10,8 @@ try:
     from ._jgap import (
         Vector3,
         Species,
+        Species2Sorted,
+        Species3AtomicSorted,
         Lattice,
         Virials,
         AtomicQuantity,
@@ -24,6 +26,10 @@ try:
         ScaledRegularizationRules,
         EamPairFunctionType,
         EamMode,
+        ThreeBodyTransformationType,
+        StandardGap2bParams,
+        StandardGapEamParams,
+        StandardGap3bParams,
         StandardGapParams,
         standard_gap_fit,
         StandardTabulationParams,
@@ -37,6 +43,8 @@ except ImportError as err:
         from _jgap import (
             Vector3,
             Species,
+            Species2Sorted,
+            Species3AtomicSorted,
             Lattice,
             Virials,
             AtomicQuantity,
@@ -51,6 +59,10 @@ except ImportError as err:
             ScaledRegularizationRules,
             EamPairFunctionType,
             EamMode,
+            ThreeBodyTransformationType,
+            StandardGap2bParams,
+            StandardGapEamParams,
+            StandardGap3bParams,
             StandardGapParams,
             standard_gap_fit,
             StandardTabulationParams,
@@ -134,6 +146,8 @@ except ImportError:
 __all__ = [
     "Vector3",
     "Species",
+    "Species2Sorted",
+    "Species3AtomicSorted",
     "Lattice",
     "Virials",
     "AtomicQuantity",
@@ -148,6 +162,10 @@ __all__ = [
     "ScaledRegularizationRules",
     "EamPairFunctionType",
     "EamMode",
+    "ThreeBodyTransformationType",
+    "StandardGap2bParams",
+    "StandardGapEamParams",
+    "StandardGap3bParams",
     "StandardGapParams",
     "standard_gap_fit",
     "StandardTabulationParams",

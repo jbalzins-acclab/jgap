@@ -5,18 +5,18 @@
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/gap/GapPotential.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/potentials/isolated/IsolatedAtomPotential.hpp"
 #include "jgap/core/potentials/tabgap/TabGapPotential.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/3b/Angle3bTransformation.hpp"
 
 #include <filesystem>
 #include "jgap/io/tabgap/TabGapIO.hpp"
@@ -261,17 +261,22 @@ TEST(TestTabGapPotential, ThreeBodySymmetricDistanceSwapCheck) {
 
 TEST(TestTabGapPotential, LammpsReferencePredictions) {
     namespace fs = std::filesystem;
-    fs::path h5_path = "test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.tabgap.h5";
-    fs::path eam_path = "test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.eam.fs";
-    fs::path lammps_xyz = "test/resources/reference/reference_lammps/feni_200_100_0/pred.xyz";
+    auto resolve = [](const fs::path& rel) -> fs::path {
+        if (fs::exists(rel)) return rel;
+        if (fs::exists(fs::path("..") / rel)) return fs::path("..") / rel;
+        if (fs::exists(fs::path("../..") / rel)) return fs::path("../..") / rel;
+        return rel;
+    };
+
+    fs::path h5_path = resolve("test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.tabgap.h5");
+    fs::path eam_path = resolve("test/resources/reference/reference_tables/feni_200_100_0/feni_200_100_0.eam.fs");
+    fs::path lammps_xyz = resolve("test/resources/reference/reference_lammps/feni_200_100_0/pred.xyz");
+
     ASSERT_TRUE(fs::exists(h5_path)) << "Reference data not found: " << h5_path;
+    ASSERT_TRUE(fs::exists(eam_path)) << "Reference EAM data not found: " << eam_path;
     ASSERT_TRUE(fs::exists(lammps_xyz)) << "Reference data not found: " << lammps_xyz;
 
-    std::vector<std::string> pot_files = {h5_path.string()};
-    if (fs::exists(eam_path)) {
-        pot_files.push_back(eam_path.string());
-    }
-
+    std::vector<std::string> pot_files = {h5_path.string(), eam_path.string()};
     TabGapPotential potential = TabGapIO::read(pot_files);
 
     MainXYZPropertyNames prop_names;

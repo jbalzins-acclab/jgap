@@ -1,0 +1,92 @@
+# .gitlab-ci.yml
+# Continuous Integration pipeline for GitLab MRs and default branch
+
+stages:
+  - build-and-install
+  - test
+  - validation
+  - examples
+
+default:
+  image: ubuntu:24.04
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends software-properties-common
+    - add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    - apt-get update && apt-get install -y --no-install-recommends
+        build-essential gcc-15 g++-15 cmake ninja-build libhdf5-dev
+        libopenblas-dev python3-dev python3-pip python3-venv git
+    - export CC=gcc-15
+    - export CXX=g++-15
+    - python3 -m venv /opt/venv
+    - . /opt/venv/bin/activate
+    - pip install --upgrade pip
+    - pip install pybind11 numpy scipy ase pandas
+
+# Run on merge requests and main/master/documentation branches
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|master|documentation)$/
+
+# 1. Release Build & Install
+install-job:
+  stage: build-and-install
+  script:
+    - . /opt/venv/bin/activate
+    - cmake --preset release -DCMAKE_INSTALL_PREFIX=$CI_PROJECT_DIR/.local -DPython3_EXECUTABLE=/opt/venv/bin/python
+    - cmake --build --preset install
+  artifacts:
+    paths:
+      - .local/
+    expire_in: 2 hours
+
+# 2. Unit Tests
+unit-tests-job:
+  stage: test
+  dependencies: []
+  script:
+    - . /opt/venv/bin/activate
+    - cmake --preset release-tests -DPython3_EXECUTABLE=/opt/venv/bin/python
+    - cmake --build --preset release-tests
+    - ctest --preset release --output-on-failure
+
+# 3. Validation Suite
+validation-job:
+  stage: validation
+  dependencies: []
+  script:
+    - . /opt/venv/bin/activate
+    - cmake --preset validation -DPython3_EXECUTABLE=/opt/venv/bin/python
+    - cmake --build --preset validation
+    - ctest --preset validation --output-on-failure
+
+# 4. Standalone Examples Compilation & Smoke Test
+examples-job:
+  stage: examples
+  dependencies:
+    - install-job
+  script:
+    - . /opt/venv/bin/activate
+    - export CPATH="$CI_PROJECT_DIR/.local/include"
+    - export LIBRARY_PATH="$CI_PROJECT_DIR/.local/lib"
+    - export LD_LIBRARY_PATH="$CI_PROJECT_DIR/.local/lib:$LD_LIBRARY_PATH"
+    - PY_SITE=$(python3 -c "import sys; print(f'$CI_PROJECT_DIR/.local/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')")
+    - export PYTHONPATH="$PY_SITE:$PYTHONPATH"
+
+    - echo "Compiling BasicFit...
+    - g++-15 -std=c++23 -O3 -march=native examples/basic_fit/BasicFit.cpp -ljgap -o examples/basic_fit/basic_fit
+
+    - echo "Compiling StandardFit..."
+    - g++-15 -std=c++23 -O3 -march=native examples/standard_fit/StandardFit.cpp -ljgap -o examples/standard_fit/standard_fit
+
+    - echo "Compiling CustomFit..."
+    - g++-15 -std=c++23 -O3 -march=native examples/custom_fit/CustomFit.cpp -ljgap -o examples/custom_fit/custom_fit
+
+    - echo "Compiling CustomExperimentFit..."
+    - g++-15 -std=c++23 -O3 -march=native examples/custom_experiment_fit/CustomExperimentFit.cpp -ljgap -o examples/custom_experiment_fit/custom_experiment_fit
+
+    - echo "Smoke-testing custom experiment fit..."
+    - ./examples/custom_experiment_fit/custom_experiment_fit test/resources/structure-databases/db_Fe.xyz fe_gitlab_test --ram-limit 2.0
+
+    - echo "Smoke-testing ASE integration..."
+    - python3 examples/ase_integration/test_potential_with_ase.py fe_gitlab_test.tabgap.h5 test/resources/structure-databases/db_Fe.xyz --no-config-errors --skip-bulk

@@ -1,7 +1,7 @@
 #ifndef JGAP_MEAMTRANSFORMATIONSERIALIZATION_HPP
 #define JGAP_MEAMTRANSFORMATIONSERIALIZATION_HPP
 
-#include "jgap/experimental/transform/nbody/3b/MeamTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/MeamTransformation.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 

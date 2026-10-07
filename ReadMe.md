@@ -1,212 +1,66 @@
 # JGAP
 
-A high-performance C++23 library, command-line tool, and Python framework for fitting and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAP (tabGAP)** potentials.
-
-## DISCLAIMER
-
-This version is still under active development. 
-It comes with a vastly updated architecture, which, at least at its core, seems to be final but lacks proper documentation.
-It seems to be working correctly, and due to the unexpectedly large number of changes in a development branch it
-is merged into the main branch purely as a checkpoint of the current progress.
-One may try to use it already, by compiling via instructions in the remained of this ReadMe, however, 
-note that they were mostly AI-generated and are yet to be verified completely.
-Some examples on how various potentials may be fit already are presented in the /examples folder,
-but they require some polishing that will be done in future commits. 
+A high-performance C++23 library, command-line toolkit, and Python framework for fitting, tabulating, and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAP (tabGAP)**.
 
 ---
 
-## 1. Prerequisites
+## 1. Quickstart: Compile & Install
 
-* **CMake $\ge$ 3.25** and **Ninja** (recommended).
-* **C++23 Compliant Compiler**:
-  * **GCC $\ge$ 15** or **Clang $\ge$ 19** (recommended for `#embed` support of built-in screening parameters).
-  * **AppleClang $\ge$ 16** (Xcode 16+) is fully supported.
-  * **GCC 14** / older C++23 compilers work seamlessly by loading runtime screening tables from `resources/`.
+You can compile and install `jgap` (both the C++ shared library, CLI tools, and the Python interface into your active virtual environment) in just two commands:
+
+```bash
+# 1. Configure optimized Release build targeting your active Python virtual environment
+cmake --preset release -DPython3_EXECUTABLE=$(which python) -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV
+
+# 2. Build and install library, CLI executables, and Python package
+cmake --build --preset install
+```
+
+> [!NOTE]
+> If installing to your user directory outside a virtual environment, use `-DCMAKE_INSTALL_PREFIX=$HOME/.local` (or run `cmake --workflow --preset install`). For Conda environments, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`.
+>
+> For full prerequisites (C++23 compilers, HDF5, OpenBLAS), package manager commands (macOS, Ubuntu, Conda), HPC cluster instructions, and troubleshooting, see the **[Compilation & Installation Guide](docs/Compilation.md)**.
 
 ---
 
-## 2. Dependencies Overview
+## 2. Python Quickstart & ASE Calculator
 
-`jgap` uses a modern hybrid dependency model:
-
-### Automatic Dependencies (via CMake `FetchContent`)
-The following lightweight C++ libraries are **automatically downloaded and configured** during CMake build. You do **not** need to install them manually:
-* **Eigen3** ($\ge 3.4.0$) — Linear algebra template library.
-* **HighFive** ($\ge 3.0.0$) — Header-only modern C++ wrapper for HDF5.
-* **pugixml** ($\ge 1.15$) — XML parser for QUIP potential conversion (`jgap_convert`).
-* **GoogleTest** ($\ge 1.14$) — Unit testing framework (Debug builds only).
-
-### Host System Dependencies
-The following native runtime libraries should be present on your host system:
-1. **HDF5** (`libhdf5`) — **Required** for reading/writing `.jgap.h5` and `.tabgap.h5` files.
-2. **BLAS / OpenBLAS** — **Strongly Recommended** for accelerated linear algebra (`EIGEN_USE_BLAS`). (On macOS, Apple Accelerate is used automatically if OpenBLAS is not present).
-3. **OpenMP** — **Recommended** for multi-core parallelization (`HAS_OPENMP`). Built into GCC/Clang/Intel compilers; on macOS via `brew install libomp`.
-4. **Python $\ge$ 3.10 + pybind11** — **Optional** for building the `jgap` Python package and ASE calculator.
-
----
-
-## 3. How to Check Existing Host Dependencies
-
-Before installing new packages, you can verify whether your system or HPC cluster already provides them:
-
-### Using `pkg-config`
-```bash
-pkg-config --modversion hdf5 openblas
-```
-
-### Checking Package Managers
-* **macOS (Homebrew)**:
-  ```bash
-  brew list --formula | grep -E 'hdf5|openblas|libomp'
-  ```
-* **Debian / Ubuntu**:
-  ```bash
-  dpkg -l | grep -E 'libhdf5-dev|libopenblas-dev|libomp-dev'
-  ```
-* **Conda / Mamba**:
-  ```bash
-  conda list | grep -E 'hdf5|openblas|llvm-openmp'
-  ```
-
-### Checking HPC Environment Modules (`Lmod` / `module spider`)
-On supercomputing clusters, OpenMP is natively supported by the compiler module (e.g. `gcc`, `aocc`, `intel`). Use `module spider` to inspect available compiler and library modules:
-
-```bash
-# Check compiler, OpenBLAS, and HDF5
-module spider gcc
-module spider openblas
-module spider hdf5
-```
-
-Example workflow on an Lmod-based HPC cluster:
-```bash
-# 1. Load compiler (provides native OpenMP support) and MPI stack
-module load gcc/15.2.0 openmpi/5.0.10
-
-# 2. Load math and I/O libraries
-module load openblas/0.3.30 hdf5/1.14.6
-```
-
----
-
-## 4. Installing Host Dependencies
-
-If dependencies are missing on your workstation or cluster, install them using your preferred method:
-
-### macOS (Homebrew)
-```bash
-brew install cmake ninja hdf5 openblas libomp
-```
-*(Apple Accelerate is also detected automatically out-of-the-box on macOS).*
-
-### Ubuntu / Debian (`apt`)
-```bash
-sudo apt update
-sudo apt install -y cmake ninja-build build-essential \
-                    libhdf5-dev libopenblas-dev libomp-dev \
-                    python3-dev python3-pip
-```
-
-### Fedora / RHEL (`dnf`)
-```bash
-sudo dnf install -y cmake ninja-build gcc-c++ \
-                    hdf5-devel openblas-devel libgomp \
-                    python3-devel
-```
-
-### Arch Linux (`pacman`)
-```bash
-sudo pacman -S cmake ninja hdf5 openblas openmp python
-```
-
-### Conda / Mamba (Recommended for User-Space HPC Environments)
-```bash
-conda install -c conda-forge cmake ninja compilers \
-                            hdf5 openblas pybind11
-```
-*(When using Conda, CMake will automatically locate dependencies inside `$CONDA_PREFIX`).*
-
----
-
-## 5. Building and Testing with CMake Presets
-
-`jgap` provides built-in `CMakePresets.json` profiles for all standard workflows:
-
-### Fast Developer Workflow (Debug + Build + Run All Tests)
-```bash
-cmake --workflow --preset dev
-```
-
-### Release Build (Optimized with `-O3 -ffast-math -march=native`)
-```bash
-cmake --preset release
-cmake --build --preset release
-```
-
-### Install Library, CLI & Python Bindings (to `$HOME/.local`)
-```bash
-cmake --workflow --preset install
-```
-*(To install to a custom prefix or virtual environment, run `cmake --preset release -DCMAKE_INSTALL_PREFIX=/path/to/prefix && cmake --build --preset install`).*
-
-### Compiling Standalone C++ Examples
-Assuming `jgap` has already been installed (e.g., via `cmake --workflow --preset install`), you can compile standalone C++ programs or examples directly with your compiler linking against `libjgap`, e.g.:
-```bash
-c++ -std=c++23 -O3 -march=native SomeExample.cpp -ljgap -o example
-```
-
-### Run Unit Tests
-```bash
-ctest --preset debug
-```
-
-### AddressSanitizer (Memory Diagnostics)
-```bash
-cmake --preset asan
-cmake --build --preset asan
-ctest --preset asan
-```
-
----
-
-## 6. Python Package & ASE Calculator
-
-After building or installing `jgap`, the Python bindings are available in `python/jgap`:
+`jgap` integrates directly with Python and the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/):
 
 ```python
 import jgap
-from ase.io import read
-
-# Standard GAP potential fit
-fitter = jgap.StandardGapFit(
-    cutoff_2b=5.0,
-    cutoff_3b=4.0,
-    delta_2b=0.01,
-    delta_3b=0.05,
-    approx_ram_limit_gb=16.0
-)
-fitter.fit("train.xyz")
-fitter.save("potential.jgap.h5")
-
-# Tabulate into fast EAM / tabGAP
-jgap.StandardTabulation.tabulate("potential.jgap.h5", "potential")
-```
-
-Using as an ASE Calculator:
-```python
 from jgap.ase import JGAPCalculator
 from ase.io import read
 
+# 1. Load training database
+training_data = jgap.read_atoms("train.xyz")
+
+# 2. Fit a standard 2-body + 3-body + EAM GAP potential
+params = jgap.StandardGapParams(
+    seed=120,
+    approx_ram_limit_gb=2.0
+)
+sigmas = jgap.PerConfigTypeRegularizationRules(
+    jgap.PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)
+).determine_for_all(training_data)
+
+jgap.standard_gap_fit("potential.jgap.h5", training_data, sigmas, params)
+
+# 3. Tabulate into fast 3D cubic B-spline table and EAM (.tabgap.h5 and .eam.fs)
+jgap.standard_tabulation("potential.jgap.h5", "potential")
+
+# 4. Evaluate using the ASE Calculator
 atoms = read("structure.xyz")
-atoms.calc = JGAPCalculator("potential.jgap.h5")
+atoms.calc = JGAPCalculator("potential.jgap.h5") # Supports .jgap.h5 and .tabgap.h5
 
 energy = atoms.get_potential_energy()
 forces = atoms.get_forces()
+stress = atoms.get_stress()
 ```
 
 ---
 
-## 7. Command-Line Tools
+## 3. Command-Line Tools
 
 * **Predict Energy & Forces**:
   ```bash
@@ -216,7 +70,84 @@ forces = atoms.get_forces()
   ```bash
   jgap --tabulate potential.jgap.h5
   ```
-* **Convert QUIP XML to HDF5**:
+* **Convert Legacy QUIP XML to HDF5**:
   ```bash
   jgap_convert potential.xml potential.jgap.h5
   ```
+
+---
+
+## 4. Performance & Benchmarks
+
+> [!IMPORTANT]
+> **Mathematical Equivalence**: Given the same set of sparse representative points, JGAP produces regression coefficients identical to QUIP reference fits up to floating-point roundoff errors ($c_\mathrm{JGAP} \approx c_\mathrm{QUIP}$, with cosine similarity $> 1 - 10^{-10}$ and normalized RMSE on average $< 10^{-4}\%$).
+
+All benchmarks below were conducted on an **Apple M2 MacBook** (8 CPU cores, macOS, 8 GB Unified Memory) using the Fe–Ni alloy training database across systematic sweeps over training database size ($N_\mathrm{db}$) and 3-body sparse point count ($M_\mathrm{3b}$). Parallel execution across neighbor lists, descriptor evaluation, and B-spline tabulation is powered by OpenMP (configurable via `export OMP_NUM_THREADS=8`).
+
+### JGAP vs QUIP: Fitting Time & Peak Memory
+
+This comparison benchmarks JGAP's standard in-memory solver (`QRGapFit` / FullQR) against reference QUIP (`gap_fit`). JGAP delivers an **18× – 44× wall-clock speedup** over reference QUIP for linear regression fitting while substantially decreasing peak memory usage. In addition, elemental fitting (`ElementIncrementalQRGapFit`) may improve multi-component alloy fitting times even further by solving lower-order elemental sub-problems independently.
+
+| Fitting Execution Time (s) | Peak Memory Consumption (GB) |
+| :---: | :---: |
+| ![Fitting Time Comparison](docs/figures/fit_time_comparison.png) | ![Peak Memory Comparison](docs/figures/fit_memory_comparison.png) |
+
+### Out-of-Core Incremental QR Solvers
+
+Standard GAP training requires storing the full observation design matrix $\mathbf{A} \in \mathbb{R}^{(N_\mathrm{obs} + M) \times M}$ in RAM, creating a severe memory bottleneck for large datasets or high sparse point counts. To overcome this limitation, JGAP introduces novel out-of-core streaming QR fitting techniques:
+
+* **`BlockIncrementalQRGapFit`**: Streams structures in configurable observation blocks $B$, incrementally accumulating Householder transformations into a compact upper-triangular matrix $\mathbf{R} \in \mathbb{R}^{M \times M}$ without ever materializing the full design matrix in RAM.
+* **`ElementIncrementalQRGapFit`**: Partitions training data by elemental complexity—solving single-element components first before streaming multi-element configurations—dynamically sizing observation buffers according to an approximate memory target (`approx_ram_limit_gb`). *(Note: in practice, actual peak process memory is higher than this target due to dataset storage, descriptor buffers, and runtime memory overheads).*
+
+| Incremental QR Fit Time Scaling | Incremental QR Peak Memory (RSS) Scaling |
+| :---: | :---: |
+| ![QR Variants Fit Times](docs/figures/qr_variants_fit_times.png) | ![QR Variants Peak Memory](docs/figures/qr_variants_peak_rss_scaling.png) |
+
+As shown above, the streaming incremental solvers reduce peak memory consumption by **over 10× – 12×** compared to standard Full QR, allowing large potentials to be fitted on ordinary workstations and laptops with zero loss in mathematical accuracy.
+
+> [!NOTE]
+> For detailed theoretical derivations, numerical stability proofs, and extended scaling analyses of these techniques, see the Master's thesis [[1]](#7-references--citations).
+
+---
+
+## 5. LAMMPS Integration
+
+* **EAM Potentials**: The generated `.eam.fs` files can be directly evaluated inside LAMMPS via standard `pair_style eam/fs`.
+* **Tabulated GAP Potentials (`.tabgap.h5`)**: Direct evaluation of multi-body B-spline `.tabgap.h5` potentials inside LAMMPS simulations is supported via the external tabGAP LAMMPS package available at **[gitlab.com/jezper/tabgap](https://gitlab.com/jezper/tabgap)**.
+
+---
+
+## 6. Documentation Index
+
+* **[Compilation & Installation Guide](docs/Compilation.md)**: Complete guide on toolchains, dependencies, virtual environments, HPC modules, and CMake presets.
+* **[Developer & Extension Guide](docs/Development.md)**: Architectural diagrams, HDF5 serialization mechanisms, adding custom extensions (cutoffs, kernels, potentials), and running tests.
+* **[Conventions & Standards](docs/Conventions.md)**: Physical units, memory layout, Voigt stress conventions, and coding style.
+* **[Examples Catalog](examples/ReadMe.md)**: Guide to C++ and Python examples, including standalone single-file C++ compilation commands.
+
+---
+
+## 7. References & Citations
+
+If you use **JGAP** in your work, please cite:
+
+* **[1] JGAP**:  
+  > J. Baļzins, *Efficient training and tabulation of Gaussian approximation potentials*, Master's thesis (University of Helsinki, 2026) [link will be added after it would be published in [helda.helsinki.fi](https://helda.helsinki.fi)].
+
+If you use **GAP** (Gaussian Approximation Potentials), please cite:
+
+* **[2] GAP**:  
+  > A. P. Bartók, M. C. Payne, R. Kondor, and G. Csányi, *Gaussian Approximation Potentials: The Accuracy of Quantum Mechanics, without the Electrons*, Phys. Rev. Letters 104, 136403 (2010), https://doi.org/10.1103/PhysRevLett.104.136403, [APS Link](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.104.136403).
+
+If you use **tabGAP** (tabulation and tabulated potentials), please cite:
+
+* **[3] tabGAP (Complex Alloys)**:  
+  > J. Byggmästar, K. Nordlund, and F. Djurabekova, *Simple machine-learned interatomic potentials for complex alloys*, Phys. Rev. Materials 6, 083801 (2022), https://doi.org/10.1103/PhysRevMaterials.6.083801, https://arxiv.org/abs/2203.08458.
+
+* **[4] tabGAP (Refractory HEAs)**:  
+  > J. Byggmästar, K. Nordlund, and F. Djurabekova, *Modeling refractory high-entropy alloys with efficient machine-learned interatomic potentials: Defects and segregation*, Phys. Rev. B 104, 104101 (2021), https://doi.org/10.1103/PhysRevB.104.104101, https://arxiv.org/abs/2106.03369.
+
+---
+
+## 8. License
+
+This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)** — see the [LICENSE](LICENSE) file for details.

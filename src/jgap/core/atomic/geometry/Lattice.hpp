@@ -2,6 +2,7 @@
 #define JGAP_LATTICE_HPP
 
 #include <array>
+#include <cmath>
 
 #include "../../Vector3.hpp"
 
@@ -13,7 +14,7 @@ namespace jgap {
         Vector3 b;
         Vector3 c;
 
-        double volume() const { return abs(a.cross(b).dot(c)); }
+        double volume() const { return std::abs(a.cross(b).dot(c)); }
     };
 }
 

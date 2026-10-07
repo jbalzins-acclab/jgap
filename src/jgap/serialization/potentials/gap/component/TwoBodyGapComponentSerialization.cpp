@@ -1,7 +1,7 @@
 #include "TwoBodyGapComponentSerialization.hpp"
 
-#include "jgap/experimental/kernels/CauchyKernel.hpp"
-#include "jgap/experimental/kernels/WendlandKernel.hpp"
+#include "jgap/impl/kernels/CauchyKernel.hpp"
+#include "jgap/impl/kernels/WendlandKernel.hpp"
 
 namespace jgap {
 

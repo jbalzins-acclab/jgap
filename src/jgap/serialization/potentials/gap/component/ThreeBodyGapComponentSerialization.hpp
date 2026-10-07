@@ -6,7 +6,7 @@
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/atomic/descriptor/Descriptor.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/gap/component/GapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/serialization/Serialization.hpp"

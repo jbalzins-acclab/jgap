@@ -1,5 +1,5 @@
 #include "EamTGComponent.hpp"
-#include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/SplinePairTransformation.hpp"
 
 
 namespace jgap {

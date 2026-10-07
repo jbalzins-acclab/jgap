@@ -8,8 +8,8 @@
 #include <set>
 #include "../../core/io/log/CurrentLogger.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/CompositePotential.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
@@ -18,12 +18,12 @@
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/potentials/spline/SplinePairPotential.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
-#include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/FSGenPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/3b/Angle3bTransformation.hpp"
 
 namespace jgap {
     ValuePtr<Potential> QuipXmlConverter::transform(const std::filesystem::path& xml_filename) {

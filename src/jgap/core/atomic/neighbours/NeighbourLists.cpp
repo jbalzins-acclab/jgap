@@ -1,5 +1,6 @@
 #include "NeighbourLists.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <ranges>
@@ -28,8 +29,8 @@ namespace jgap {
         };
 
         // triclinic
-        if (abs(lattice->a.dot(lattice->b)) > 1e-6 || abs(lattice->a.dot(lattice->c)) > 1e-6
-            || abs(lattice->b.dot(lattice->c)) > 1e-6) {
+        if (std::abs(lattice->a.dot(lattice->b)) > 1e-6 || std::abs(lattice->a.dot(lattice->c)) > 1e-6
+            || std::abs(lattice->b.dot(lattice->c)) > 1e-6) {
             if (pbc[0]) maxRep[0] = static_cast<int>(cutoff / lattice->a.aproject(lattice->b, lattice->c)) + 1;
             if (pbc[1]) maxRep[1] = static_cast<int>(cutoff / lattice->b.aproject(lattice->a, lattice->c)) + 1;
             if (pbc[2]) maxRep[2] = static_cast<int>(cutoff / lattice->c.aproject(lattice->b, lattice->a)) + 1;

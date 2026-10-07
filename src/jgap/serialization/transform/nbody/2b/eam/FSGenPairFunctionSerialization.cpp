@@ -1,5 +1,5 @@
 #include "FSGenPairFunctionSerialization.hpp"
-#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/FSGenPairFunction.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "../../../../../core/io/log/CurrentLogger.hpp"
 

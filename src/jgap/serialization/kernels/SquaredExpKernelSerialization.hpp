@@ -1,7 +1,7 @@
 #ifndef JGAP_SQUAREDEXPKERNELSERIALIZATION_HPP
 #define JGAP_SQUAREDEXPKERNELSERIALIZATION_HPP
 
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 

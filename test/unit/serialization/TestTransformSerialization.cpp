@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 
-#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
 #include "jgap/core/splines/Grid.hpp"
 #include "jgap/core/splines/HermiteCubicSpline.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
-#include "jgap/core/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/FSGenPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
-#include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
-#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
-#include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/CoscutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/FSGenPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/SplinePairTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;

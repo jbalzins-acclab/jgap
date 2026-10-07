@@ -3,12 +3,12 @@
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/core/atomic/neighbours/NeighbourLists.hpp"
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
-#include "jgap/core/cutoff/CosCutoff.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
 #include "jgap/core/kernels/Kernel.hpp"
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
 #include "jgap/core/tabulation/TabulationData.hpp"
-#include "jgap/core/transform/nbody/2b/PairDistanceTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/PairDistanceTransformation.hpp"
 #include "jgap/core/transform/nbody/2b/TwoBodyTransformation.hpp"
 
 using namespace jgap;

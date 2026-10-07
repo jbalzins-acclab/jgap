@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <numeric>
 #include <random>
@@ -60,10 +61,23 @@ TEST(TestGapPotential, QuipReferencePredictionSubset) {
         const auto ref_forces = ref_atoms.getForces();
         if (ref_forces.has_value()) {
             ASSERT_EQ(res.forces.size(), ref_forces->size());
-            for (size_t a = 0; a < res.forces.size(); ++a) {
-                EXPECT_NEAR(res.forces[a].x * meV, (*ref_forces)[a].x * meV, 0.5);
-                EXPECT_NEAR(res.forces[a].y * meV, (*ref_forces)[a].y * meV, 0.5);
-                EXPECT_NEAR(res.forces[a].z * meV, (*ref_forces)[a].z * meV, 0.5);
+            bool force_failed = false;
+            for (size_t a = 0; a < res.forces.size() && !force_failed; ++a) {
+                if (std::abs(res.forces[a].x * meV - (*ref_forces)[a].x * meV) > 0.5) {
+                    EXPECT_NEAR(res.forces[a].x * meV, (*ref_forces)[a].x * meV, 0.5)
+                        << "Frame " << f << ", atom " << a << " (Fx)";
+                    force_failed = true;
+                }
+                if (!force_failed && std::abs(res.forces[a].y * meV - (*ref_forces)[a].y * meV) > 0.5) {
+                    EXPECT_NEAR(res.forces[a].y * meV, (*ref_forces)[a].y * meV, 0.5)
+                        << "Frame " << f << ", atom " << a << " (Fy)";
+                    force_failed = true;
+                }
+                if (!force_failed && std::abs(res.forces[a].z * meV - (*ref_forces)[a].z * meV) > 0.5) {
+                    EXPECT_NEAR(res.forces[a].z * meV, (*ref_forces)[a].z * meV, 0.5)
+                        << "Frame " << f << ", atom " << a << " (Fz)";
+                    force_failed = true;
+                }
             }
         }
     }

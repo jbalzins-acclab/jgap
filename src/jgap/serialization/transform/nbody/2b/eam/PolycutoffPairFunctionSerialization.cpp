@@ -1,5 +1,5 @@
 #include "PolycutoffPairFunctionSerialization.hpp"
-#include "jgap/core/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "../../../../../core/io/log/CurrentLogger.hpp"
 

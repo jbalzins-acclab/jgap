@@ -13,11 +13,11 @@
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/core/transform/nbody/2b/eam/EamPairFunction.hpp"
-#include "jgap/experimental/transform/manybody/ThreeBodySum.hpp"
-#include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
-#include "jgap/experimental/transform/nbody/3b/MeamTransformation.hpp"
+#include "jgap/impl/transform/manybody/ThreeBodySum.hpp"
+#include "jgap/impl/transform/nbody/2b/CoordinationTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/MeamTransformation.hpp"
 
 namespace jgap::utils {
 

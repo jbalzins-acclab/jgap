@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <gtest/gtest.h>
-#include "jgap/experimental/cutoff/WendlandFunction.hpp"
-#include "jgap/experimental/transform/nbody/2b/CoordinationTransformation.hpp"
+#include "jgap/impl/cutoff/WendlandFunction.hpp"
+#include "jgap/impl/transform/nbody/2b/CoordinationTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;

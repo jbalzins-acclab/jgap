@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "jgap/core/cutoff/CosCutoff.hpp"
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/CosCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 
 using namespace jgap;

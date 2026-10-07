@@ -28,29 +28,37 @@ if (Python3_FOUND)
             LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap"
             BUILD_WITH_INSTALL_RPATH FALSE
             BUILD_RPATH "${CMAKE_BINARY_DIR}"
-            INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/.."
+            INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/..;@loader_path"
         )
 
         # Legacy jgap_ase module for backward compatibility
         pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
         target_link_libraries(jgap_ase PRIVATE jgap_lib)
 
-        execute_process(
-            COMMAND "${Python3_EXECUTABLE}" -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
-            OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        if (NOT _PY_SITE_PACKAGES_REL)
-            set(_PY_SITE_PACKAGES_REL "lib/python3/site-packages")
-        endif ()
+        if (SKBUILD)
+            # scikit-build-core packaging for PyPI wheels
+            install(TARGETS _jgap DESTINATION "jgap")
+            install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "."
+                    FILES_MATCHING PATTERN "*.py")
+            install(TARGETS jgap_lib DESTINATION "jgap")
+        else ()
+            execute_process(
+                COMMAND "${Python3_EXECUTABLE}" -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
+                OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+            if (NOT _PY_SITE_PACKAGES_REL)
+                set(_PY_SITE_PACKAGES_REL "lib/python3/site-packages")
+            endif ()
 
-        install(TARGETS _jgap DESTINATION "${_PY_SITE_PACKAGES_REL}/jgap")
-        install(TARGETS jgap_ase DESTINATION "${_PY_SITE_PACKAGES_REL}")
-        install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "${_PY_SITE_PACKAGES_REL}"
-                FILES_MATCHING PATTERN "*.py")
-        if (EXISTS "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py")
-            install(FILES "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py" DESTINATION "${_PY_SITE_PACKAGES_REL}")
+            install(TARGETS _jgap DESTINATION "${_PY_SITE_PACKAGES_REL}/jgap")
+            install(TARGETS jgap_ase DESTINATION "${_PY_SITE_PACKAGES_REL}")
+            install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "${_PY_SITE_PACKAGES_REL}"
+                    FILES_MATCHING PATTERN "*.py")
+            if (EXISTS "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py")
+                install(FILES "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py" DESTINATION "${_PY_SITE_PACKAGES_REL}")
+            endif ()
         endif ()
     else ()
         message(STATUS "pybind11 not found: skipping _jgap Python module build")

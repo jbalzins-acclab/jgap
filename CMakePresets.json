@@ -42,6 +42,7 @@
       "displayName": "Release with Tests",
       "description": "Optimized Release build with unit tests enabled",
       "inherits": "release",
+      "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": {
         "JGAP_BUILD_TESTS": "ON"
       }
@@ -113,15 +114,40 @@
       "output": {
         "outputOnFailure": true
       },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
+      },
       "execution": {
         "noTestsAction": "error"
       }
     },
     {
       "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "release-tests",
       "configurePreset": "release-tests",
       "output": {
         "outputOnFailure": true
+      },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
       },
       "execution": {
         "noTestsAction": "error"
@@ -178,7 +204,7 @@
         },
         {
           "type": "test",
-          "name": "release"
+          "name": "release-tests"
         }
       ]
     },

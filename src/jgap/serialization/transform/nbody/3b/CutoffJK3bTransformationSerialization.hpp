@@ -3,7 +3,7 @@
 
 #include "jgap/core/ValuePtr.hpp"
 #include "jgap/core/transform/nbody/3b/ThreeBodyTransformation.hpp"
-#include "jgap/experimental/transform/nbody/3b/CutoffJK3bTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/CutoffJK3bTransformation.hpp"
 #include "jgap/serialization/Serialization.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 

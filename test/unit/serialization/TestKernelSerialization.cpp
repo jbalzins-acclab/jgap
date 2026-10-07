@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "jgap/core/kernels/SquaredExpKernel.hpp"
-#include "jgap/experimental/kernels/CauchyKernel.hpp"
-#include "jgap/experimental/kernels/WendlandKernel.hpp"
+#include "jgap/impl/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/kernels/CauchyKernel.hpp"
+#include "jgap/impl/kernels/WendlandKernel.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
 #include "jgap/serialization/kernels/CauchyKernelSerialization.hpp"
 #include "jgap/serialization/kernels/SquaredExpKernelSerialization.hpp"

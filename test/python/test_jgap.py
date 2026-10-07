@@ -274,6 +274,99 @@ class TestJGAP(unittest.TestCase):
         self.assertAlmostEqual(scaled_rules.min_scale, 1.0)
         self.assertIn("ScaledRegularizationRules", repr(scaled_rules))
 
+    def test_species_sorted_types(self):
+        s2 = jgap.Species2Sorted(jgap.Species("Fe"), jgap.Species("Ni"))
+        self.assertEqual(s2.to_string(), "Fe,Ni")
+        self.assertEqual(len(s2.nodes), 2)
+        s2_parsed = jgap.Species2Sorted("Ni,Fe")
+        self.assertEqual(s2, s2_parsed)
+
+        s3 = jgap.Species3AtomicSorted(jgap.Species("Fe"), jgap.Species("Ni"), jgap.Species("Fe"))
+        self.assertEqual(s3.root.symbol, "Fe")
+        self.assertEqual(s3.to_string(), "Fe|Fe,Ni")
+        s3_parsed = jgap.Species3AtomicSorted("Fe|Ni,Fe")
+        self.assertEqual(s3, s3_parsed)
+
+    def test_split_standard_gap_params(self):
+        # Default construction
+        params = jgap.StandardGapParams()
+        self.assertIsNotNone(params.default_2b)
+        self.assertIsNotNone(params.default_eam)
+        self.assertIsNotNone(params.default_3b)
+        self.assertEqual(params.default_3b.transformation_type, jgap.ThreeBodyTransformationType.Angle)
+        self.assertEqual(len(params.species_2b), 0)
+        self.assertEqual(len(params.species_eam), 0)
+        self.assertEqual(len(params.species_3b), 0)
+
+        # Erasing default 2b
+        params.default_2b = None
+        self.assertIsNone(params.default_2b)
+
+        # Setting 3b transformation to Distances
+        params.default_3b.transformation_type = jgap.ThreeBodyTransformationType.Distances
+        self.assertEqual(params.default_3b.transformation_type, jgap.ThreeBodyTransformationType.Distances)
+
+        # Species-specific params construction
+        p2 = jgap.StandardGap2bParams(species=("Fe", "Ni"), cutoff=4.2, n_sparse=15)
+        self.assertIsNotNone(p2.species)
+        self.assertEqual(p2.cutoff, 4.2)
+        self.assertEqual(p2.n_sparse, 15)
+
+        peam = jgap.StandardGapEamParams(species="Fe", eam_mode=jgap.EamMode.FSsym, cutoff=4.0)
+        self.assertEqual(peam.species.symbol, "Fe")
+        self.assertEqual(peam.eam_mode, jgap.EamMode.FSsym)
+
+        p3 = jgap.StandardGap3bParams(
+            species=("Fe", "Fe", "Ni"),
+            transformation_type=jgap.ThreeBodyTransformationType.Distances,
+            cutoff=3.5,
+            n_sparse=50,
+        )
+        self.assertEqual(p3.transformation_type, jgap.ThreeBodyTransformationType.Distances)
+        self.assertEqual(p3.species.to_string(), "Fe|Fe,Ni")
+
+        # Assign lists and methods
+        params.species_2b = [p2]
+        self.assertEqual(len(params.species_2b), 1)
+        params.add_species_eam(peam)
+        self.assertEqual(len(params.species_eam), 1)
+        params.add_species_3b(p3)
+        self.assertEqual(len(params.species_3b), 1)
+
+    def test_standard_gap_fit_with_distances_3b_and_species_override(self):
+        xyz_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../resources/structure-databases/feni-test.xyz")
+        )
+        if not os.path.exists(xyz_path):
+            return
+
+        frames = jgap.read_atoms(xyz_path)[:3]
+        rules = jgap.SimpleRegularizationRules()
+        sigmas = rules.determine_for_all(frames)
+
+        params = jgap.StandardGapParams(seed=42)
+        # Erase default 2b to test non-species erasure
+        params.default_2b = None
+        # Add species-specific 2b only for Fe-Fe
+        params.add_species_2b(
+            jgap.StandardGap2bParams(species=("Fe", "Fe"), cutoff=3.5, n_sparse=5)
+        )
+        # Configure default 3b to use Distances3bTransformation
+        params.default_3b.transformation_type = jgap.ThreeBodyTransformationType.Distances
+        params.default_3b.cutoff = 3.0
+        params.default_3b.n_sparse = 20
+        params.default_eam.n_sparse = 5
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pot_file = os.path.join(tmpdir, "distances_3b.jgap.h5")
+            jgap.standard_gap_fit(pot_file, frames, sigmas, params)
+            self.assertTrue(os.path.exists(pot_file))
+
+            pot = jgap.load_potential(pot_file)
+            res = pot.calculate_energy(frames[0])
+            self.assertIsInstance(res.energy, float)
+            self.assertEqual(res.forces.shape, (len(frames[0]), 3))
+
 
 if __name__ == "__main__":
     unittest.main()

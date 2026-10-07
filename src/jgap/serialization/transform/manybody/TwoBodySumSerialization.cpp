@@ -1,6 +1,6 @@
 #include "TwoBodySumSerialization.hpp"
 #include "jgap/core/atomic/species/composition/Species2Atomic.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "../../../core/io/log/CurrentLogger.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"

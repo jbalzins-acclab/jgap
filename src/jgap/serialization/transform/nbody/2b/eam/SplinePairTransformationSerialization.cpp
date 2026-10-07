@@ -2,7 +2,7 @@
 
 #include "jgap/core/splines/Grid.hpp"
 #include "jgap/core/splines/HermiteCubicSpline.hpp"
-#include "jgap/core/transform/nbody/2b/eam/SplinePairTransformation.hpp"
+#include "jgap/impl/transform/nbody/2b/eam/SplinePairTransformation.hpp"
 #include "jgap/serialization/SerializationNode.hpp"
 #include "../../../../../core/io/log/CurrentLogger.hpp"
 

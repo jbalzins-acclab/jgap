@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "jgap/core/cutoff/PerriotPolynomialCutoff.hpp"
+#include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 
 using namespace jgap;
 

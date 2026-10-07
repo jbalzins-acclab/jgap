@@ -2,7 +2,7 @@
 #include <map>
 #include <tuple>
 #include "jgap/core/cutoff/CutoffFunction.hpp"
-#include "jgap/core/transform/nbody/3b/Angle3bTransformation.hpp"
+#include "jgap/impl/transform/nbody/3b/Angle3bTransformation.hpp"
 
 using namespace jgap;
 
