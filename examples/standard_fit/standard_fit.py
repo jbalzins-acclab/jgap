@@ -40,11 +40,32 @@ def main():
     params = jgap.StandardGapParams(
         seed=120,
         screened_coulomb_dataset_file=args.screened_coulomb_dataset_file,
-        eam_pair_function=jgap.EamPairFunctionType.FSGen3,
-        eam_mode=jgap.EamMode.Blind,
-        n_sparse3=500,
         approx_ram_limit_gb=args.ram_limit,
     )
+
+    # Configure default parameters
+    if params.default_eam is not None:
+        params.default_eam.eam_pair_function = jgap.EamPairFunctionType.FSGen3
+        params.default_eam.eam_mode = jgap.EamMode.Blind
+
+    if params.default_3b is not None:
+        params.default_3b.n_sparse = 500
+        # Option: use Distances3bTransformation for 3b instead of Angle (default):
+        # params.default_3b.transformation_type = jgap.ThreeBodyTransformationType.Distances
+
+    # Default non-species parameters can also be disabled by erasing them (setting to None):
+    # params.default_2b = None
+
+    # Species-specific parameters can be provided (multiple components per species allowed):
+    # params.species_3b.append(
+    #     jgap.StandardGap3bParams(
+    #         species=("Fe", "Fe", "Ni"),
+    #         transformation_type=jgap.ThreeBodyTransformationType.Distances,
+    #         cutoff=3.7,
+    #         cutoff_width=0.6,
+    #         n_sparse=500,
+    #     )
+    # )
 
     rules = jgap.PerConfigTypeRegularizationRules(
         jgap.PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)

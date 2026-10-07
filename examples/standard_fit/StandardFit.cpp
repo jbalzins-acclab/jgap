@@ -54,9 +54,26 @@ int main(int argc, char** argv) {
     if (positional_args.size() == 3) {
         params.screened_coulomb_dataset_file = positional_args[2]; // otherwise the built-in screening dataset is used
     }
-    params.eam_pair_function = EamPairFunctionType::Polycutoff;
-    params.eam_mode = EamMode::FSsym;
-    params.n_sparse3 = 625;
+    if (params.default_eam) {
+        params.default_eam->eam_pair_function = EamPairFunctionType::Polycutoff;
+        params.default_eam->eam_mode = EamMode::FSsym;
+    }
+    if (params.default_3b) {
+        params.default_3b->n_sparse = 625;
+        // Option: use Distances3bTransformation instead of Angle (default):
+        // params.default_3b->transformation_type = ThreeBodyTransformationType::Distances;
+    }
+    // Default non-species parameters can be disabled by erasing them (setting to std::nullopt):
+    // params.default_2b = std::nullopt;
+    //
+    // Species-specific parameters can be added to species_2b, species_eam, or species_3b:
+    // params.species_3b.push_back(StandardGap3bParams{
+    //     .species = Species3AtomicSorted("Fe|Fe,Ni"),
+    //     .transformation_type = ThreeBodyTransformationType::Distances,
+    //     .cutoff = 3.7,
+    //     .cutoff_width = 0.6,
+    //     .n_sparse = 500,
+    // });
     params.approx_ram_limit_gb = ram_limit_gb;
 
     PerConfigTypeRegularizationRules rules{PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)};

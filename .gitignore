@@ -1,18 +1,33 @@
+# Build & IDE artifacts
 */build/*
-logs/*
-notes/*
-cmake-build-debug/*
-vcpkg_installed/*
-*.DS_Store
-.DS_Store
-.idea*
-.vscode*
-test-local/*
 build*/*
 build/
-.cache/*
-*.log
+cmake-build-debug/*
 CMakeUserPresets.json
 compile_commands.json
+vcpkg_installed/*
+.cache/*
+*.log
+logs/*
+notes/*
+.DS_Store
+*.DS_Store
+.idea*
+.vscode*
+
+# Testing & Local scratch
+test-local/*
 examples/validation/*
 test/resources/validation/
+.pytest_cache/
+
+# Python & compiled binary outputs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.dylib
+*.egg-info/
+dist/
+wheelhouse/

@@ -21,8 +21,6 @@ jobs:
             arch: x86_64
           - os: macos-14
             arch: arm64
-          - os: macos-13
-            arch: x86_64
 
     steps:
       - name: Checkout Code

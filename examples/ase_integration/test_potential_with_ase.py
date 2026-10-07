@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-test_potetnial_with_ase.py
+test_potential_with_ase.py
 
 Evaluates a fitted potential using the Atomic Simulation Environment (ASE):
   1. Per-config-type validation errors (Energy RMSE/MAE in meV/atom, Force RMSE in meV/Å,
-     and Virial RMSE in meV/atom) against reference values in <test_xyz>.
+     and Virial RMSE in meV/atom) against reference values in [test_xyz] if provided.
      Can be disabled via --no-config-errors.
   2. Bulk physical properties: optimal lattice constant (a0), elastic constants (C11, C12, C44),
      bulk modulus (B), and relaxed vacancy formation energy (Evac_f) for BCC Fe.
      Optimization steps are capped at --max-steps (default: 100, as in validation).
 
 Usage:
-    python test_potetnial_with_ase.py <potential_file> <test_xyz> [--no-config-errors] [--skip-bulk] [--max-steps <N>]
+    python test_potential_with_ase.py <potential_file> [test_xyz] [--no-config-errors] [--skip-bulk] [--max-steps <N>]
 """
 
 import os
@@ -230,7 +230,12 @@ def main():
         description="Evaluate a fitted potential with ASE: compute per-config-type errors and bulk physical properties."
     )
     parser.add_argument("potential_file", help="Path to .jgap.h5 or .tabgap.h5 potential")
-    parser.add_argument("test_xyz", help="Path to test XYZ dataset containing reference energies, forces, and virials")
+    parser.add_argument(
+        "test_xyz",
+        nargs="?",
+        default=None,
+        help="Optional path to test XYZ dataset containing reference energies, forces, and virials",
+    )
     parser.add_argument(
         "--no-config-errors",
         action="store_true",
@@ -254,16 +259,16 @@ def main():
         print(f"Error: Potential file '{args.potential_file}' not found.")
         sys.exit(1)
 
-    if not os.path.exists(args.test_xyz):
-        print(f"Error: Test XYZ dataset '{args.test_xyz}' not found.")
-        sys.exit(1)
-
     print(f"Using potential: {args.potential_file}")
     calc = JGAPCalculator(args.potential_file)
 
-    # 1. Per config-type error printing (enabled by default, disabled with --no-config-errors)
-    if not args.no_config_errors:
-        evaluate_per_config_type_errors(args.test_xyz, calc)
+    # 1. Per config-type error printing (evaluated whenever test_xyz is provided)
+    if args.test_xyz:
+        if not os.path.exists(args.test_xyz):
+            print(f"Error: Test XYZ dataset '{args.test_xyz}' not found.")
+            sys.exit(1)
+        if not args.no_config_errors:
+            evaluate_per_config_type_errors(args.test_xyz, calc)
 
     # 2. Bulk physical properties calculation
     if not args.skip_bulk:

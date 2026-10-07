@@ -41,7 +41,7 @@ All internal computations and user interfaces strictly adhere to standard atomic
 * **Value Semantics with `ValuePtr<T>`**:
   Polymorphic components (cutoffs, kernels, transformations) are managed via `ValuePtr<T>`, which provides deep-copying value semantics via a virtual `.clone()` method while preventing pointer slicing.
 * **Code Formatting**:
-  All C++ files follow the rules specified in the root [`.clang-format`](file:///Users/jegorsbalzins/jgap/.clang-format). Run `clang-format -i <file>` prior to submitting changes.
+  All C++ files follow the rules specified in the root [`.clang-format`](../.clang-format). Run `clang-format -i <file>` prior to submitting changes.
 * **Shared Library Symbol Visibility**:
   `jgap_lib` is strictly built as a shared library with default symbol visibility to support runtime constructor-based registration (`REGISTER_SERIALIZATION`).
 

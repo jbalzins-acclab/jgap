@@ -12,7 +12,7 @@ This directory contains standalone examples demonstrating how to use `jgap` from
 | **[`custom_fit/`](custom_fit/CustomFit.cpp)** | C++ | Advanced multi-component Fe-Ni potential showcasing multiple kernel types (`WendlandKernel`, `CauchyKernel`, `SquaredExpKernel`), MEAM descriptor (`ThreeBodySum` + `MeamTransformation`), `PerriotPolynomialCutoff`, and `ScaledRegularizationRules`. |
 | **[`custom_experiment_fit/`](custom_experiment_fit/CustomExperimentFit.cpp)** | C++ | Demonstrates user-defined custom kernels: implements `FractionalExpKernel` ($-\|r/\ell\|^{1.5}$, strictly positive definite by Schoenberg's theorem), 2b-only GAP, directly tabulates to `.tabgap.h5` without saving GAP potential. |
 | **[`standard_fit/`](standard_fit/)** | C++ & Python | Standard fitting and tabulation pipeline with `ElementIncrementalQRGapFit`: [C++ version (`StandardFit.cpp`)](standard_fit/StandardFit.cpp) and [Python version (`standard_fit.py`)](standard_fit/standard_fit.py). |
-| **[`ase_integration/`](ase_integration/test_potetnial_with_ase.py)** | Python | Evaluates fitted potentials with ASE: per-config-type validation errors (Energy RMSE/MAE in meV/atom, Force RMSE in meV/Å, Virial RMSE in meV/atom) and bulk Fe properties with capped relaxation steps (`--max-steps 100`). |
+| **[`ase_integration/`](ase_integration/test_potential_with_ase.py)** | Python | Evaluates fitted potentials with ASE: bulk Fe properties with capped relaxation steps (`--max-steps 100`), and optional per-config-type validation errors (Energy RMSE/MAE in meV/atom, Force RMSE in meV/Å, Virial RMSE in meV/atom) whenever a test XYZ dataset is supplied. |
 
 ---
 
@@ -75,14 +75,11 @@ python examples/standard_fit/standard_fit.py \
     fe_potential \
     --ram-limit 2.0
 
-# Evaluate potential with ASE (per-config-type E/F/Virial RMSE and bulk BCC Fe properties)
-python examples/ase_integration/test_potetnial_with_ase.py \
+# Evaluate bulk properties only (testset.xyz is optional):
+python examples/ase_integration/test_potential_with_ase.py fe_exp.tabgap.h5
+
+# Evaluate bulk properties and per-config-type E/F/Virial errors:
+python examples/ase_integration/test_potential_with_ase.py \
     fe_exp.tabgap.h5 \
     test/resources/structure-databases/db_Fe.xyz
-
-# Optionally disable per-config-type error table:
-python examples/ase_integration/test_potetnial_with_ase.py \
-    fe_exp.tabgap.h5 \
-    test/resources/structure-databases/db_Fe.xyz \
-    --no-config-errors
 ```

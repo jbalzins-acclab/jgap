@@ -7,14 +7,17 @@ name = "jgap"
 version = "7.2.0"
 description = "Gaussian Approximation Potentials (GAP) in C++23 with Python bindings and ASE integration"
 readme = "ReadMe.md"
-requires-python = ">=3.10"
-license = { text = "MIT" }
+requires-python = ">=3.8"
+license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Jegors Balzins" }]
-keywords = ["molecular-dynamics", "machine-learning", "interatomic-potentials", "materials-science", "gaussian-approximation-potentials", "ase"]
+keywords = ["molecular-dynamics", "machine-learning", "interatomic-potentials", "materials-science", "gaussian-approximation-potentials", "GAP", "ase", "tabGAP"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -26,13 +29,13 @@ classifiers = [
     "Operating System :: MacOS",
 ]
 dependencies = [
-    "numpy>=1.22",
+    "numpy>=1.20",
     "ase>=3.22",
 ]
 
 [project.urls]
-Homepage = "https://github.com/jegorsbalzins/jgap"
-Repository = "https://github.com/jegorsbalzins/jgap"
+Homepage = "https://github.com/jbalzins-acclab/jgap/"
+Repository = "https://github.com/jbalzins-acclab/jgap/"
 
 [tool.scikit-build]
 cmake.version = ">=3.25"
@@ -48,14 +51,16 @@ include = [
     "python/**",
     "CMakeLists.txt",
     "ReadMe.md",
+    "LICENSE",
 ]
 
 [tool.scikit-build.cmake.define]
 JGAP_BUILD_TESTS = "OFF"
 JGAP_BUILD_VALIDATION = "OFF"
+CMAKE_CXX_FLAGS_RELEASE = "-O3 -ffast-math"
 
 [tool.cibuildwheel]
-build = "cp310-* cp311-* cp312-* cp313-*"
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
 skip = "*-musllinux_* *i686"
 build-verbosity = 1
 
@@ -75,7 +80,7 @@ environment = { CC = "gcc-15", CXX = "g++-15" }
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-archs = ["arm64", "x86_64"]
-environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", CMAKE_PREFIX_PATH = "/opt/homebrew:/usr/local" }
-before-all = "brew install hdf5 openblas libomp ninja gcc"
+archs = ["arm64"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", CMAKE_PREFIX_PATH = "/opt/homebrew" }
+before-all = "brew install hdf5 libomp ninja gcc"
 repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"

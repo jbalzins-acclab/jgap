@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -13,6 +14,8 @@
 #include "jgap/core/atomic/energy/Virials.hpp"
 #include "jgap/core/atomic/geometry/Lattice.hpp"
 #include "jgap/core/atomic/species/Species.hpp"
+#include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
+#include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeSigmas.hpp"
 #include "jgap/core/fit/gap/regularization/Regularization.hpp"
@@ -21,6 +24,7 @@
 #include "jgap/core/fit/gap/regularization/SimpleRegularizationRules.hpp"
 #include "jgap/core/potentials/Cutoffs.hpp"
 #include "jgap/core/potentials/Potential.hpp"
+#include "jgap/impl/transform/nbody/3b/Distances3bTransformation.hpp"
 #include "jgap/io/PotentialLoader.hpp"
 #include "jgap/utils/gap/StandardGapFit.hpp"
 #include "jgap/utils/gap/StandardGapParams.hpp"
@@ -43,7 +47,6 @@ namespace {
         }
         return arr;
     }
-
 
     std::vector<Vector3> numpyToPositions(py::array_t<double> arr) {
         auto buf = arr.request();
@@ -87,7 +90,7 @@ namespace {
 
     Lattice numpyToLattice(py::array_t<double> arr) {
         auto buf = arr.request();
-        const double* ptr = static_cast<const double*>(buf.ptr);
+        const double* ptr = static_cast<double*>(buf.ptr);
         if (buf.ndim == 2 && buf.shape[0] == 3 && buf.shape[1] == 3) {
             return Lattice{
                 Vector3(ptr[0], ptr[1], ptr[2]),
@@ -129,13 +132,94 @@ namespace {
 
     Virials voigtToVirials(py::array_t<double> arr) {
         auto buf = arr.request();
-        const double* ptr = static_cast<const double*>(buf.ptr);
+        const double* ptr = static_cast<double*>(buf.ptr);
         if (buf.ndim == 1 && buf.shape[0] == 6) {
             return Virials{ptr[0], ptr[5], ptr[4], ptr[1], ptr[3], ptr[2]};
         } else if (buf.ndim == 2 && buf.shape[0] == 3 && buf.shape[1] == 3) {
             return Virials{ptr[0], ptr[1], ptr[2], ptr[4], ptr[5], ptr[8]};
         }
         throw std::invalid_argument("Expected (6,) Voigt array or (3, 3) matrix for Virials");
+    }
+
+    inline std::optional<Species> parseSpeciesOpt(const py::object& obj) {
+        if (obj.is_none()) return std::nullopt;
+        if (py::isinstance<Species>(obj)) return obj.cast<Species>();
+        if (py::isinstance<py::str>(obj)) return Species(obj.cast<std::string>());
+        throw std::invalid_argument("Expected Species, str, or None");
+    }
+
+    inline std::optional<Species2Sorted> parseSpecies2Opt(const py::object& obj) {
+        if (obj.is_none()) return std::nullopt;
+        if (py::isinstance<Species2Sorted>(obj)) return obj.cast<Species2Sorted>();
+        if (py::isinstance<py::str>(obj)) {
+            std::string s = obj.cast<std::string>();
+            std::replace(s.begin(), s.end(), '-', ',');
+            return Species2Sorted(s);
+        }
+        if (py::isinstance<py::tuple>(obj) || py::isinstance<py::list>(obj)) {
+            auto seq = obj.cast<py::sequence>();
+            if (seq.size() != 2) throw std::invalid_argument("Expected 2 species elements");
+            Species s1 = py::isinstance<Species>(seq[0]) ? seq[0].cast<Species>() : Species(seq[0].cast<std::string>());
+            Species s2 = py::isinstance<Species>(seq[1]) ? seq[1].cast<Species>() : Species(seq[1].cast<std::string>());
+            return Species2Sorted(s1, s2);
+        }
+        throw std::invalid_argument("Expected Species2Sorted, str, 2-tuple, or None");
+    }
+
+    inline std::optional<Species3AtomicSorted> parseSpecies3Opt(const py::object& obj) {
+        if (obj.is_none()) return std::nullopt;
+        if (py::isinstance<Species3AtomicSorted>(obj)) return obj.cast<Species3AtomicSorted>();
+        if (py::isinstance<py::str>(obj)) {
+            std::string s = obj.cast<std::string>();
+            if (s.find('|') == std::string::npos) {
+                std::replace(s.begin(), s.end(), '-', ',');
+                auto comma1 = s.find(',');
+                if (comma1 != std::string::npos) {
+                    std::string root = s.substr(0, comma1);
+                    std::string rest = s.substr(comma1 + 1);
+                    s = root + "|" + rest;
+                }
+            } else {
+                std::replace(s.begin(), s.end(), '-', ',');
+            }
+            return Species3AtomicSorted(s);
+        }
+        if (py::isinstance<py::tuple>(obj) || py::isinstance<py::list>(obj)) {
+            auto seq = obj.cast<py::sequence>();
+            if (seq.size() != 3) throw std::invalid_argument("Expected 3 species elements (root, node1, node2)");
+            Species root = py::isinstance<Species>(seq[0]) ? seq[0].cast<Species>() : Species(seq[0].cast<std::string>());
+            Species s1 = py::isinstance<Species>(seq[1]) ? seq[1].cast<Species>() : Species(seq[1].cast<std::string>());
+            Species s2 = py::isinstance<Species>(seq[2]) ? seq[2].cast<Species>() : Species(seq[2].cast<std::string>());
+            return Species3AtomicSorted(root, s1, s2);
+        }
+        throw std::invalid_argument("Expected Species3AtomicSorted, str, 3-tuple, or None");
+    }
+
+    inline std::vector<utils::StandardGap2bParams> parse2bParamsList(const py::object& obj) {
+        std::vector<utils::StandardGap2bParams> res;
+        if (obj.is_none()) return res;
+        for (const auto& item : obj) {
+            res.push_back(item.cast<utils::StandardGap2bParams>());
+        }
+        return res;
+    }
+
+    inline std::vector<utils::StandardGapEamParams> parseEamParamsList(const py::object& obj) {
+        std::vector<utils::StandardGapEamParams> res;
+        if (obj.is_none()) return res;
+        for (const auto& item : obj) {
+            res.push_back(item.cast<utils::StandardGapEamParams>());
+        }
+        return res;
+    }
+
+    inline std::vector<utils::StandardGap3bParams> parse3bParamsList(const py::object& obj) {
+        std::vector<utils::StandardGap3bParams> res;
+        if (obj.is_none()) return res;
+        for (const auto& item : obj) {
+            res.push_back(item.cast<utils::StandardGap3bParams>());
+        }
+        return res;
     }
 
 } // anonymous namespace
@@ -195,6 +279,44 @@ PYBIND11_MODULE(_jgap, m) {
         .def("__str__", &Species::symbol)
         .def("__eq__", &Species::operator==)
         .def("__hash__", [](const Species& s) { return std::hash<uint16_t>{}(s.getId()); });
+
+    // =========================================================================
+    // Species2Sorted & Species3AtomicSorted
+    // =========================================================================
+    py::class_<Species2Sorted>(m, "Species2Sorted")
+        .def(py::init<Species, Species>(), py::arg("s1"), py::arg("s2"))
+        .def(py::init<const std::string&>(), py::arg("encoded"))
+        .def_property_readonly("nodes", [](const Species2Sorted& s) {
+            return py::make_tuple(s.nodes[0], s.nodes[1]);
+        })
+        .def("to_string", &Species2Sorted::toString)
+        .def("__str__", &Species2Sorted::toString)
+        .def("__repr__", [](const Species2Sorted& s) {
+            return "<Species2Sorted '" + s.toString() + "'>";
+        })
+        .def("__eq__", &Species2Sorted::operator==)
+        .def("__lt__", &Species2Sorted::operator<)
+        .def("__hash__", [](const Species2Sorted& s) {
+            return std::hash<std::string>{}(s.toString());
+        });
+
+    py::class_<Species3AtomicSorted>(m, "Species3AtomicSorted")
+        .def(py::init<Species, Species, Species>(), py::arg("root"), py::arg("s1"), py::arg("s2"))
+        .def(py::init<const std::string&>(), py::arg("encoded"))
+        .def_property_readonly("root", [](const Species3AtomicSorted& s) { return s.root; })
+        .def_property_readonly("nodes", [](const Species3AtomicSorted& s) {
+            return py::make_tuple(s.nodes[0], s.nodes[1]);
+        })
+        .def("to_string", &Species3AtomicSorted::toString)
+        .def("__str__", &Species3AtomicSorted::toString)
+        .def("__repr__", [](const Species3AtomicSorted& s) {
+            return "<Species3AtomicSorted '" + s.toString() + "'>";
+        })
+        .def("__eq__", &Species3AtomicSorted::operator==)
+        .def("__lt__", &Species3AtomicSorted::operator<)
+        .def("__hash__", [](const Species3AtomicSorted& s) {
+            return std::hash<std::string>{}(s.toString());
+        });
 
     // =========================================================================
     // Lattice
@@ -500,6 +622,128 @@ PYBIND11_MODULE(_jgap, m) {
         .export_values();
 
     // =========================================================================
+    // 3B Transformation Enum
+    // =========================================================================
+    py::enum_<utils::ThreeBodyTransformationType>(m, "ThreeBodyTransformationType")
+        .value("Angle", utils::ThreeBodyTransformationType::Angle)
+        .value("Distances", utils::ThreeBodyTransformationType::Distances)
+        .export_values();
+
+    // =========================================================================
+    // StandardGap 2b, Eam, 3b Params
+    // =========================================================================
+    py::class_<utils::StandardGap2bParams>(m, "StandardGap2bParams")
+        .def(py::init([](py::object species, double cutoff, double cutoff_width, size_t n_sparse) {
+            utils::StandardGap2bParams p;
+            p.species = parseSpecies2Opt(species);
+            p.cutoff = cutoff;
+            p.cutoff_width = cutoff_width;
+            p.n_sparse = n_sparse;
+            return p;
+        }),
+        py::arg("species") = py::none(),
+        py::arg("cutoff") = 4.5,
+        py::arg("cutoff_width") = 1.0,
+        py::arg("n_sparse") = 20)
+        .def_property("species",
+            [](const utils::StandardGap2bParams& p) -> py::object {
+                if (p.species) return py::cast(*p.species);
+                return py::none();
+            },
+            [](utils::StandardGap2bParams& p, py::object val) {
+                p.species = parseSpecies2Opt(val);
+            })
+        .def_readwrite("cutoff", &utils::StandardGap2bParams::cutoff)
+        .def_readwrite("cutoff_width", &utils::StandardGap2bParams::cutoff_width)
+        .def_readwrite("n_sparse", &utils::StandardGap2bParams::n_sparse)
+        .def("__repr__", [](const utils::StandardGap2bParams& p) {
+            std::ostringstream oss;
+            oss << "<StandardGap2bParams species=" << (p.species ? p.species->toString() : "None")
+                << ", cutoff=" << p.cutoff
+                << ", cutoff_width=" << p.cutoff_width
+                << ", n_sparse=" << p.n_sparse << ">";
+            return oss.str();
+        })
+        .def("__eq__", &utils::StandardGap2bParams::operator==);
+
+    py::class_<utils::StandardGapEamParams>(m, "StandardGapEamParams")
+        .def(py::init([](py::object species, EamMode eam_mode, utils::EamPairFunctionType eam_pair_function, double cutoff, size_t n_sparse, double min_density) {
+            utils::StandardGapEamParams p;
+            p.species = parseSpeciesOpt(species);
+            p.eam_mode = eam_mode;
+            p.eam_pair_function = eam_pair_function;
+            p.cutoff = cutoff;
+            p.n_sparse = n_sparse;
+            p.min_density = min_density;
+            return p;
+        }),
+        py::arg("species") = py::none(),
+        py::arg("eam_mode") = EamMode::Blind,
+        py::arg("eam_pair_function") = utils::EamPairFunctionType::FSGen3,
+        py::arg("cutoff") = 4.5,
+        py::arg("n_sparse") = 20,
+        py::arg("min_density") = 0.05)
+        .def_property("species",
+            [](const utils::StandardGapEamParams& p) -> py::object {
+                if (p.species) return py::cast(*p.species);
+                return py::none();
+            },
+            [](utils::StandardGapEamParams& p, py::object val) {
+                p.species = parseSpeciesOpt(val);
+            })
+        .def_readwrite("eam_mode", &utils::StandardGapEamParams::eam_mode)
+        .def_readwrite("eam_pair_function", &utils::StandardGapEamParams::eam_pair_function)
+        .def_readwrite("cutoff", &utils::StandardGapEamParams::cutoff)
+        .def_readwrite("n_sparse", &utils::StandardGapEamParams::n_sparse)
+        .def_readwrite("min_density", &utils::StandardGapEamParams::min_density)
+        .def("__repr__", [](const utils::StandardGapEamParams& p) {
+            std::ostringstream oss;
+            oss << "<StandardGapEamParams species=" << (p.species ? p.species->symbol() : "None")
+                << ", cutoff=" << p.cutoff
+                << ", n_sparse=" << p.n_sparse
+                << ", min_density=" << p.min_density << ">";
+            return oss.str();
+        })
+        .def("__eq__", &utils::StandardGapEamParams::operator==);
+
+    py::class_<utils::StandardGap3bParams>(m, "StandardGap3bParams")
+        .def(py::init([](py::object species, utils::ThreeBodyTransformationType transformation_type, double cutoff, double cutoff_width, size_t n_sparse) {
+            utils::StandardGap3bParams p;
+            p.species = parseSpecies3Opt(species);
+            p.transformation_type = transformation_type;
+            p.cutoff = cutoff;
+            p.cutoff_width = cutoff_width;
+            p.n_sparse = n_sparse;
+            return p;
+        }),
+        py::arg("species") = py::none(),
+        py::arg("transformation_type") = utils::ThreeBodyTransformationType::Angle,
+        py::arg("cutoff") = 3.7,
+        py::arg("cutoff_width") = 0.6,
+        py::arg("n_sparse") = 500)
+        .def_property("species",
+            [](const utils::StandardGap3bParams& p) -> py::object {
+                if (p.species) return py::cast(*p.species);
+                return py::none();
+            },
+            [](utils::StandardGap3bParams& p, py::object val) {
+                p.species = parseSpecies3Opt(val);
+            })
+        .def_readwrite("transformation_type", &utils::StandardGap3bParams::transformation_type)
+        .def_readwrite("cutoff", &utils::StandardGap3bParams::cutoff)
+        .def_readwrite("cutoff_width", &utils::StandardGap3bParams::cutoff_width)
+        .def_readwrite("n_sparse", &utils::StandardGap3bParams::n_sparse)
+        .def("__repr__", [](const utils::StandardGap3bParams& p) {
+            std::ostringstream oss;
+            oss << "<StandardGap3bParams species=" << (p.species ? p.species->toString() : "None")
+                << ", transformation_type=" << (p.transformation_type == utils::ThreeBodyTransformationType::Angle ? "Angle" : "Distances")
+                << ", cutoff=" << p.cutoff
+                << ", cutoff_width=" << p.cutoff_width
+                << ", n_sparse=" << p.n_sparse << ">";
+            return oss.str();
+        })
+        .def("__eq__", &utils::StandardGap3bParams::operator==);
+
     // =========================================================================
     // StandardGapParams
     // =========================================================================
@@ -507,67 +751,140 @@ PYBIND11_MODULE(_jgap, m) {
         .def(py::init([](
             size_t seed,
             std::optional<std::string> screened_coulomb_dataset_file,
-            double cutoff2,
-            double cutoff2_width,
-            size_t n_sparse2,
-            EamMode eam_mode,
-            utils::EamPairFunctionType eam_pair_function,
-            size_t eam_n_sparse,
-            double eam_min_density,
-            double cutoff3,
-            double cutoff3_width,
-            size_t n_sparse3,
-            double approx_ram_limit_gb
+            double approx_ram_limit_gb,
+            std::optional<utils::StandardGap2bParams> default_2b,
+            std::optional<utils::StandardGapEamParams> default_eam,
+            std::optional<utils::StandardGap3bParams> default_3b,
+            py::object species_2b,
+            py::object species_eam,
+            py::object species_3b,
+            // Legacy kwargs for backward compatibility
+            std::optional<double> cutoff2,
+            std::optional<double> cutoff2_width,
+            std::optional<size_t> n_sparse2,
+            std::optional<EamMode> eam_mode,
+            std::optional<utils::EamPairFunctionType> eam_pair_function,
+            std::optional<size_t> eam_n_sparse,
+            std::optional<double> eam_min_density,
+            std::optional<double> cutoff3,
+            std::optional<double> cutoff3_width,
+            std::optional<size_t> n_sparse3
         ) {
             utils::StandardGapParams p;
             p.seed = seed;
             p.screened_coulomb_dataset_file = screened_coulomb_dataset_file;
-            p.cutoff2 = cutoff2;
-            p.cutoff2_width = cutoff2_width;
-            p.n_sparse2 = n_sparse2;
-            p.eam_mode = eam_mode;
-            p.eam_pair_function = eam_pair_function;
-            p.eam_n_sparse = eam_n_sparse;
-            p.eam_min_density = eam_min_density;
-            p.cutoff3 = cutoff3;
-            p.cutoff3_width = cutoff3_width;
-            p.n_sparse3 = n_sparse3;
             p.approx_ram_limit_gb = approx_ram_limit_gb;
+            p.default_2b = default_2b;
+            p.default_eam = default_eam;
+            p.default_3b = default_3b;
+            p.species_2b = parse2bParamsList(species_2b);
+            p.species_eam = parseEamParamsList(species_eam);
+            p.species_3b = parse3bParamsList(species_3b);
+
+            // Apply legacy kwargs if default was retained
+            if (p.default_2b) {
+                if (cutoff2.has_value()) p.default_2b->cutoff = *cutoff2;
+                if (cutoff2_width.has_value()) p.default_2b->cutoff_width = *cutoff2_width;
+                if (n_sparse2.has_value()) p.default_2b->n_sparse = *n_sparse2;
+            }
+            if (p.default_eam) {
+                if (eam_mode.has_value()) p.default_eam->eam_mode = *eam_mode;
+                if (eam_pair_function.has_value()) p.default_eam->eam_pair_function = *eam_pair_function;
+                if (eam_n_sparse.has_value()) p.default_eam->n_sparse = *eam_n_sparse;
+                if (eam_min_density.has_value()) p.default_eam->min_density = *eam_min_density;
+            }
+            if (p.default_3b) {
+                if (cutoff3.has_value()) p.default_3b->cutoff = *cutoff3;
+                if (cutoff3_width.has_value()) p.default_3b->cutoff_width = *cutoff3_width;
+                if (n_sparse3.has_value()) p.default_3b->n_sparse = *n_sparse3;
+            }
             return p;
         }),
         py::arg("seed") = 42,
         py::arg("screened_coulomb_dataset_file") = std::nullopt,
-        py::arg("cutoff2") = 4.5,
-        py::arg("cutoff2_width") = 1.0,
-        py::arg("n_sparse2") = 20,
-        py::arg("eam_mode") = EamMode::Blind,
-        py::arg("eam_pair_function") = utils::EamPairFunctionType::FSGen3,
-        py::arg("eam_n_sparse") = 20,
-        py::arg("eam_min_density") = 0.05,
-        py::arg("cutoff3") = 3.7,
-        py::arg("cutoff3_width") = 0.6,
-        py::arg("n_sparse3") = 500,
-        py::arg("approx_ram_limit_gb") = 4.0)
+        py::arg("approx_ram_limit_gb") = 4.0,
+        py::arg("default_2b") = utils::StandardGap2bParams{},
+        py::arg("default_eam") = utils::StandardGapEamParams{},
+        py::arg("default_3b") = utils::StandardGap3bParams{},
+        py::arg("species_2b") = py::none(),
+        py::arg("species_eam") = py::none(),
+        py::arg("species_3b") = py::none(),
+        py::arg("cutoff2") = std::nullopt,
+        py::arg("cutoff2_width") = std::nullopt,
+        py::arg("n_sparse2") = std::nullopt,
+        py::arg("eam_mode") = std::nullopt,
+        py::arg("eam_pair_function") = std::nullopt,
+        py::arg("eam_n_sparse") = std::nullopt,
+        py::arg("eam_min_density") = std::nullopt,
+        py::arg("cutoff3") = std::nullopt,
+        py::arg("cutoff3_width") = std::nullopt,
+        py::arg("n_sparse3") = std::nullopt)
         .def_readwrite("seed", &utils::StandardGapParams::seed)
         .def_readwrite("screened_coulomb_dataset_file", &utils::StandardGapParams::screened_coulomb_dataset_file)
-        .def_readwrite("cutoff2", &utils::StandardGapParams::cutoff2)
-        .def_readwrite("cutoff2_width", &utils::StandardGapParams::cutoff2_width)
-        .def_readwrite("n_sparse2", &utils::StandardGapParams::n_sparse2)
-        .def_readwrite("eam_mode", &utils::StandardGapParams::eam_mode)
-        .def_readwrite("eam_pair_function", &utils::StandardGapParams::eam_pair_function)
-        .def_readwrite("eam_n_sparse", &utils::StandardGapParams::eam_n_sparse)
-        .def_readwrite("eam_min_density", &utils::StandardGapParams::eam_min_density)
-        .def_readwrite("cutoff3", &utils::StandardGapParams::cutoff3)
-        .def_readwrite("cutoff3_width", &utils::StandardGapParams::cutoff3_width)
-        .def_readwrite("n_sparse3", &utils::StandardGapParams::n_sparse3)
         .def_readwrite("approx_ram_limit_gb", &utils::StandardGapParams::approx_ram_limit_gb)
+        .def_readwrite("default_2b", &utils::StandardGapParams::default_2b)
+        .def_readwrite("default_eam", &utils::StandardGapParams::default_eam)
+        .def_readwrite("default_3b", &utils::StandardGapParams::default_3b)
+        .def_property(
+            "species_2b",
+            [](const utils::StandardGapParams& p) { return p.species_2b; },
+            [](utils::StandardGapParams& p, const py::object& obj) { p.species_2b = parse2bParamsList(obj); })
+        .def_property(
+            "species_eam",
+            [](const utils::StandardGapParams& p) { return p.species_eam; },
+            [](utils::StandardGapParams& p, const py::object& obj) { p.species_eam = parseEamParamsList(obj); })
+        .def_property(
+            "species_3b",
+            [](const utils::StandardGapParams& p) { return p.species_3b; },
+            [](utils::StandardGapParams& p, const py::object& obj) { p.species_3b = parse3bParamsList(obj); })
+        .def("add_species_2b", [](utils::StandardGapParams& p, const utils::StandardGap2bParams& item) {
+            p.species_2b.push_back(item);
+        })
+        .def("add_species_eam", [](utils::StandardGapParams& p, const utils::StandardGapEamParams& item) {
+            p.species_eam.push_back(item);
+        })
+        .def("add_species_3b", [](utils::StandardGapParams& p, const utils::StandardGap3bParams& item) {
+            p.species_3b.push_back(item);
+        })
+        // Backwards compatibility properties forwarding to default_2b / default_eam / default_3b
+        .def_property("cutoff2",
+            [](const utils::StandardGapParams& p) { return p.default_2b ? p.default_2b->cutoff : 0.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_2b) p.default_2b->cutoff = v; })
+        .def_property("cutoff2_width",
+            [](const utils::StandardGapParams& p) { return p.default_2b ? p.default_2b->cutoff_width : 0.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_2b) p.default_2b->cutoff_width = v; })
+        .def_property("n_sparse2",
+            [](const utils::StandardGapParams& p) { return p.default_2b ? p.default_2b->n_sparse : 0; },
+            [](utils::StandardGapParams& p, size_t v) { if (p.default_2b) p.default_2b->n_sparse = v; })
+        .def_property("eam_mode",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->eam_mode : EamMode::Blind; },
+            [](utils::StandardGapParams& p, EamMode v) { if (p.default_eam) p.default_eam->eam_mode = v; })
+        .def_property("eam_pair_function",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->eam_pair_function : utils::EamPairFunctionType::FSGen3; },
+            [](utils::StandardGapParams& p, utils::EamPairFunctionType v) { if (p.default_eam) p.default_eam->eam_pair_function = v; })
+        .def_property("eam_n_sparse",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->n_sparse : 0; },
+            [](utils::StandardGapParams& p, size_t v) { if (p.default_eam) p.default_eam->n_sparse = v; })
+        .def_property("eam_min_density",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->min_density : 0.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_eam) p.default_eam->min_density = v; })
+        .def_property("cutoff3",
+            [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->cutoff : 0.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_3b) p.default_3b->cutoff = v; })
+        .def_property("cutoff3_width",
+            [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->cutoff_width : 0.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_3b) p.default_3b->cutoff_width = v; })
+        .def_property("n_sparse3",
+            [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->n_sparse : 0; },
+            [](utils::StandardGapParams& p, size_t v) { if (p.default_3b) p.default_3b->n_sparse = v; })
         .def("__repr__", [](const utils::StandardGapParams& p) {
             std::ostringstream oss;
-            oss << "<StandardGapParams cutoff2=" << p.cutoff2
-                << ", n_sparse2=" << p.n_sparse2
-                << ", eam_n_sparse=" << p.eam_n_sparse
-                << ", cutoff3=" << p.cutoff3
-                << ", n_sparse3=" << p.n_sparse3
+            oss << "<StandardGapParams has_default_2b=" << p.default_2b.has_value()
+                << ", has_default_eam=" << p.default_eam.has_value()
+                << ", has_default_3b=" << p.default_3b.has_value()
+                << ", species_2b=" << p.species_2b.size()
+                << ", species_eam=" << p.species_eam.size()
+                << ", species_3b=" << p.species_3b.size()
                 << ", approx_ram_limit_gb=" << p.approx_ram_limit_gb
                 << ", seed=" << p.seed << ">";
             return oss.str();

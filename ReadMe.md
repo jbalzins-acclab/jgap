@@ -38,8 +38,7 @@ training_data = jgap.read_atoms("train.xyz")
 # 2. Fit a standard 2-body + 3-body + EAM GAP potential
 params = jgap.StandardGapParams(
     seed=120,
-    n_sparse3=500,
-    eam_mode=jgap.EamMode.Blind
+    approx_ram_limit_gb=2.0
 )
 sigmas = jgap.PerConfigTypeRegularizationRules(
     jgap.PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)
@@ -78,19 +77,36 @@ stress = atoms.get_stress()
 
 ---
 
-## 4. Multi-Threading & Performance
+## 4. Performance & Benchmarks
 
-`jgap` utilizes OpenMP multi-threading across neighbor-list construction, energy/force evaluation, and spline tabulation.
+> [!IMPORTANT]
+> **Mathematical Equivalence**: Given the same set of sparse representative points, JGAP produces regression coefficients identical to QUIP reference fits up to floating-point roundoff errors ($c_\mathrm{JGAP} \approx c_\mathrm{QUIP}$, with cosine similarity $> 1 - 10^{-10}$ and normalized RMSE on average $< 10^{-4}\%$).
 
-By default, OpenMP automatically runs with the **maximum number of available CPU cores/threads** on your system. If you need to restrict or throttle core allocation (e.g. on shared HPC nodes, in CI, or when running multiple jobs in parallel), set the standard environment variable:
+All benchmarks below were conducted on an **Apple M2 MacBook** (8 CPU cores, macOS, 8 GB Unified Memory) using the Fe–Ni alloy training database across systematic sweeps over training database size ($N_\mathrm{db}$) and 3-body sparse point count ($M_\mathrm{3b}$). Parallel execution across neighbor lists, descriptor evaluation, and B-spline tabulation is powered by OpenMP (configurable via `export OMP_NUM_THREADS=8`).
 
-```bash
-export OMP_NUM_THREADS=8
-```
+### JGAP vs QUIP: Fitting Time & Peak Memory
 
-### Performance Benchmarks & Scaling
+This comparison benchmarks JGAP's standard in-memory solver (`QRGapFit` / FullQR) against reference QUIP (`gap_fit`). JGAP delivers an **18× – 44× wall-clock speedup** over reference QUIP for linear regression fitting while substantially decreasing peak memory usage. In addition, elemental fitting (`ElementIncrementalQRGapFit`) may improve multi-component alloy fitting times even further by solving lower-order elemental sub-problems independently.
+
+| Fitting Execution Time (s) | Peak Memory Consumption (GB) |
+| :---: | :---: |
+| ![Fitting Time Comparison](docs/figures/fit_time_comparison.png) | ![Peak Memory Comparison](docs/figures/fit_memory_comparison.png) |
+
+### Out-of-Core Incremental QR Solvers
+
+Standard GAP training requires storing the full observation design matrix $\mathbf{A} \in \mathbb{R}^{(N_\mathrm{obs} + M) \times M}$ in RAM, creating a severe memory bottleneck for large datasets or high sparse point counts. To overcome this limitation, JGAP introduces novel out-of-core streaming QR fitting techniques:
+
+* **`BlockIncrementalQRGapFit`**: Streams structures in configurable observation blocks $B$, incrementally accumulating Householder transformations into a compact upper-triangular matrix $\mathbf{R} \in \mathbb{R}^{M \times M}$ without ever materializing the full design matrix in RAM.
+* **`ElementIncrementalQRGapFit`**: Partitions training data by elemental complexity—solving single-element components first before streaming multi-element configurations—dynamically sizing observation buffers according to an approximate memory target (`approx_ram_limit_gb`). *(Note: in practice, actual peak process memory is higher than this target due to dataset storage, descriptor buffers, and runtime memory overheads).*
+
+| Incremental QR Fit Time Scaling | Incremental QR Peak Memory (RSS) Scaling |
+| :---: | :---: |
+| ![QR Variants Fit Times](docs/figures/qr_variants_fit_times.png) | ![QR Variants Peak Memory](docs/figures/qr_variants_peak_rss_scaling.png) |
+
+As shown above, the streaming incremental solvers reduce peak memory consumption by **over 10× – 12×** compared to standard Full QR, allowing large potentials to be fitted on ordinary workstations and laptops with zero loss in mathematical accuracy.
+
 > [!NOTE]
-> *(Placeholder: Detailed performance comparison plots against QUIP, evaluation latency scaling across atom counts, and memory footprint comparisons will be published here).*
+> For detailed theoretical derivations, numerical stability proofs, and extended scaling analyses of these techniques, see the Master's thesis [[1]](#7-references--citations).
 
 ---
 
@@ -112,5 +128,26 @@ export OMP_NUM_THREADS=8
 
 ## 7. References & Citations
 
-> [!NOTE]
-> *(Placeholder: Bibliographic references and citations for Gaussian Approximation Potentials, tabGAP, and foundational methods will be listed here).*
+If you use **JGAP** in your work, please cite:
+
+* **[1] JGAP**:  
+  > J. Baļzins, *Efficient training and tabulation of Gaussian approximation potentials*, Master's thesis (University of Helsinki, 2026) [link will be added after it would be published in [helda.helsinki.fi](https://helda.helsinki.fi)].
+
+If you use **GAP** (Gaussian Approximation Potentials), please cite:
+
+* **[2] GAP**:  
+  > A. P. Bartók, M. C. Payne, R. Kondor, and G. Csányi, *Gaussian Approximation Potentials: The Accuracy of Quantum Mechanics, without the Electrons*, Phys. Rev. Letters 104, 136403 (2010), https://doi.org/10.1103/PhysRevLett.104.136403, [APS Link](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.104.136403).
+
+If you use **tabGAP** (tabulation and tabulated potentials), please cite:
+
+* **[3] tabGAP (Complex Alloys)**:  
+  > J. Byggmästar, K. Nordlund, and F. Djurabekova, *Simple machine-learned interatomic potentials for complex alloys*, Phys. Rev. Materials 6, 083801 (2022), https://doi.org/10.1103/PhysRevMaterials.6.083801, https://arxiv.org/abs/2203.08458.
+
+* **[4] tabGAP (Refractory HEAs)**:  
+  > J. Byggmästar, K. Nordlund, and F. Djurabekova, *Modeling refractory high-entropy alloys with efficient machine-learned interatomic potentials: Defects and segregation*, Phys. Rev. B 104, 104101 (2021), https://doi.org/10.1103/PhysRevB.104.104101, https://arxiv.org/abs/2106.03369.
+
+---
+
+## 8. License
+
+This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)** — see the [LICENSE](LICENSE) file for details.

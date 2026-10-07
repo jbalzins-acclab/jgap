@@ -229,10 +229,3 @@ In `src/pybind/PyJGAP.cpp`:
      ```bash
      ctest --test-dir build/validation -L validation --output-on-failure
      ```
-
----
-
-## 6. In-Code Documentation Note
-
-> [!NOTE]
-> Detailed in-code Doxygen documentation across all C++ components and interfaces is currently being curated and will be expanded in upcoming iterations. When submitting new classes and functions, include standard `@brief`, `@param`, `@return`, and threading notes on public headers.
