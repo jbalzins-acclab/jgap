@@ -59,7 +59,7 @@ jobs:
           pip install --upgrade pip
           pip install pybind11 numpy scipy ase pandas
 
-      - name: 1. Release Build & Install (with Validation Targets)
+      - name: 1. Release Build & Install (with Tests & Validation Targets)
         run: |
           source $HOME/venv/bin/activate
           cmake --preset release \
@@ -68,20 +68,15 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DJGAP_BUILD_TESTS=ON \
             -DJGAP_BUILD_VALIDATION=ON \
             -DPython3_EXECUTABLE=$HOME/venv/bin/python
+          cmake --build --preset release
           cmake --build --preset install
 
-      - name: 2. Build & Run Unit Tests
+      - name: 2. Run Unit Tests
         run: |
           source $HOME/venv/bin/activate
-          cmake --preset release-tests \
-            -DCMAKE_C_COMPILER=gcc-15 \
-            -DCMAKE_CXX_COMPILER=g++-15 \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DPython3_EXECUTABLE=$HOME/venv/bin/python
-          cmake --build --preset release-tests
           ctest --preset release --output-on-failure
 
       - name: 3. Compile Standalone Examples (Without CMake)
