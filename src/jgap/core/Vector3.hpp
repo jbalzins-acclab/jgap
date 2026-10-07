@@ -75,26 +75,26 @@ namespace jgap {
 
         constexpr double square() const { return x * x + y * y + z * z; }
 
-        double norm() const { return sqrt(x * x + y * y + z * z); }
+        double norm() const { return std::sqrt(x * x + y * y + z * z); }
 
         double project(const Vector3& other) const { return dot(other) / other.norm(); }
 
         /// @return This vector's component perpendicular to the other.
-        double aproject(const Vector3& other) const { return sqrt(norm() * norm() - project(other) * project(other)); }
+        double aproject(const Vector3& other) const { return std::sqrt(norm() * norm() - project(other) * project(other)); }
 
         /// @return This vector's component perpendicular to the plane in which u and v lie.
         double aproject(const Vector3& u, const Vector3& v) const {
             Vector3 _cross = u.cross(v);
             if (_cross.norm() == 0.0) [[unlikely]]
                 return this->aproject(u);
-            [[likely]] return abs(this->project(_cross));
+            [[likely]] return std::abs(this->project(_cross));
         }
 
         Vector3 normalize() const { return *this * (1.0 / norm()); }
 
         double minComponent() const {
-            const double t = abs(x) < abs(y) ? x : y;
-            return abs(t) < abs(z) ? abs(t) : abs(z);
+            const double t = std::abs(x) < std::abs(y) ? x : y;
+            return std::abs(t) < std::abs(z) ? std::abs(t) : std::abs(z);
         }
 
         constexpr bool operator==(const Vector3& other) const { return x == other.x && y == other.y && z == other.z; }

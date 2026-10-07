@@ -1,5 +1,7 @@
 #include "IsolatedAtomPotential.hpp"
 
+#include <cmath>
+
 #include "jgap/core/atomic/Atoms.hpp"
 #include "../../io/log/StdoutLogger.hpp"
 
@@ -26,7 +28,7 @@ namespace jgap {
 
             if (isolated_energies.contains(species)) {
                 JGAP_LOG_WARN("Duplicate isolated_atom box of species {}", species.symbol());
-                if (abs(isolated_energies[species] - atoms.getEnergy().value()) > 1e-6) {
+                if (std::abs(isolated_energies[species] - atoms.getEnergy().value()) > 1e-6) {
                     JGAP_LOG_AND_THROW("Energies in duplicate isolated_atom boxes of species {} vary significantly",
                                        species.symbol());
                 }

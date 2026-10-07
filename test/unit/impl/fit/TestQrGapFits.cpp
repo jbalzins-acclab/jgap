@@ -457,8 +457,16 @@ TEST(ElementIncrementalQRGapFitTest, FeNiTrainDatasetConsistencyAcrossFitters) {
         ASSERT_EQ(c_qr.size(), c_sp.size());
         for (size_t i = 0; i < c_qr.size(); ++i) {
             double tol = std::max(1e-5, std::abs(c_qr[i]) * 1e-6);
-            EXPECT_NEAR(c_qr[i], c_st[i], tol);
-            EXPECT_NEAR(c_qr[i], c_sp[i], tol);
+            if (std::abs(c_qr[i] - c_st[i]) > tol) {
+                EXPECT_NEAR(c_qr[i], c_st[i], tol)
+                    << "Component " << c << " stream mismatch at index " << i;
+                break;
+            }
+            if (std::abs(c_qr[i] - c_sp[i]) > tol) {
+                EXPECT_NEAR(c_qr[i], c_sp[i], tol)
+                    << "Component " << c << " split mismatch at index " << i;
+                break;
+            }
         }
     }
 }
@@ -506,7 +514,11 @@ TEST(QrGapFitsValidation, QuipReferenceCoefficientsFull) {
         ASSERT_EQ(c_jgap.size(), c_ref.size());
         for (size_t i = 0; i < c_jgap.size(); ++i) {
             double tol = std::max(0.005, std::abs(c_ref[i]) * 1e-5);
-            EXPECT_NEAR(c_jgap[i], c_ref[i], tol);
+            if (std::abs(c_jgap[i] - c_ref[i]) > tol) {
+                EXPECT_NEAR(c_jgap[i], c_ref[i], tol)
+                    << "Component " << c << " mismatch at index " << i;
+                break;
+            }
         }
     }
 }
