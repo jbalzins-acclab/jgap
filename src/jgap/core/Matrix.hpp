@@ -2,6 +2,9 @@
 #define JGAP_MATRIX_HPP
 
 #include <cassert>
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 #include "SharedArray.hpp"
 
