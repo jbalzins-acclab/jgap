@@ -19,7 +19,7 @@
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/fit/gap/regularization/ScaledRegularizationRules.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 #include "jgap/impl/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/impl/kernels/CauchyKernel.hpp"

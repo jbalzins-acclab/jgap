@@ -15,7 +15,7 @@
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
-#include "jgap/core/transform/manybody/TwoBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/impl/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/jgap.hpp"
 

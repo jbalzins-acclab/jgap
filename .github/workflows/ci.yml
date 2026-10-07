@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('pyproject.toml') }}
+          key: ${{ runner.os }}-venv-v2-${{ hashFiles('pyproject.toml', '.github/workflows/ci.yml') }}
 
       - name: Install System Dependencies
         run: |
@@ -57,7 +57,7 @@ jobs:
           python3 -m venv $HOME/venv
           source $HOME/venv/bin/activate
           pip install --upgrade pip
-          pip install pybind11 numpy scipy ase pandas
+          pip install pybind11 numpy scipy ase pandas elastic
 
       - name: 1. Release Build & Install (with Tests & Validation Targets)
         run: |
@@ -86,16 +86,16 @@ jobs:
           export LIBRARY_PATH="$HOME/.local/lib"
           export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
 
-          echo "Compiling BasicFit..."
+          echo "Compiling BasicFit... "
           g++-15 -std=c++23 -O3 -march=native examples/basic_fit/BasicFit.cpp -ljgap -o examples/basic_fit/basic_fit
 
-          echo "Compiling StandardFit..."
+          echo "Compiling StandardFit... "
           g++-15 -std=c++23 -O3 -march=native examples/standard_fit/StandardFit.cpp -ljgap -o examples/standard_fit/standard_fit
 
-          echo "Compiling CustomFit..."
+          echo "Compiling CustomFit... "
           g++-15 -std=c++23 -O3 -march=native examples/custom_fit/CustomFit.cpp -ljgap -o examples/custom_fit/custom_fit
 
-          echo "Compiling CustomExperimentFit..."
+          echo "Compiling CustomExperimentFit... "
           g++-15 -std=c++23 -O3 -march=native examples/custom_experiment_fit/CustomExperimentFit.cpp -ljgap -o examples/custom_experiment_fit/custom_experiment_fit
 
       - name: 4. End-to-End Examples Smoke Test
@@ -105,13 +105,13 @@ jobs:
           PY_SITE=$(python3 -c "import sys; print(f'$HOME/.local/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')")
           export PYTHONPATH="$PY_SITE:$PYTHONPATH"
 
-          echo "Running CustomExperimentFit..."
+          echo "Running CustomExperimentFit... "
           ./examples/custom_experiment_fit/custom_experiment_fit \
             test/resources/structure-databases/db_Fe.xyz \
             fe_ci_test \
             --ram-limit 2.0
 
-          echo "Running ASE integration evaluation..."
+          echo "Running ASE integration evaluation... "
           python3 examples/ase_integration/test_potential_with_ase.py \
             fe_ci_test.tabgap.h5 \
             test/resources/structure-databases/db_Fe.xyz \
