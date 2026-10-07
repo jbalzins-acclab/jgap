@@ -22,6 +22,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup ccache Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-ccache-
+
+      - name: Cache Python Virtualenv
+        id: cache-venv
+        uses: actions/cache@v4
+        with:
+          path: ~/venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('pyproject.toml') }}
+
       - name: Install System Dependencies
         run: |
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
@@ -32,24 +46,29 @@ jobs:
             g++-15 \
             libhdf5-dev \
             libopenblas-dev \
+            ccache \
             python3-dev \
             python3-venv \
             python3-pip
 
       - name: Set up Python Environment
+        if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           python3 -m venv $HOME/venv
           source $HOME/venv/bin/activate
           pip install --upgrade pip
           pip install pybind11 numpy scipy ase pandas
 
-      - name: 1. Release Build & Install
+      - name: 1. Release Build & Install (with Validation Targets)
         run: |
           source $HOME/venv/bin/activate
           cmake --preset release \
             -DCMAKE_C_COMPILER=gcc-15 \
             -DCMAKE_CXX_COMPILER=g++-15 \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DJGAP_BUILD_VALIDATION=ON \
             -DPython3_EXECUTABLE=$HOME/venv/bin/python
           cmake --build --preset install
 
@@ -59,21 +78,13 @@ jobs:
           cmake --preset release-tests \
             -DCMAKE_C_COMPILER=gcc-15 \
             -DCMAKE_CXX_COMPILER=g++-15 \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DPython3_EXECUTABLE=$HOME/venv/bin/python
           cmake --build --preset release-tests
           ctest --preset release --output-on-failure
 
-      - name: 3. Build & Run Validation Suite
-        run: |
-          source $HOME/venv/bin/activate
-          cmake --preset validation \
-            -DCMAKE_C_COMPILER=gcc-15 \
-            -DCMAKE_CXX_COMPILER=g++-15 \
-            -DPython3_EXECUTABLE=$HOME/venv/bin/python
-          cmake --build --preset validation
-          ctest --preset validation --output-on-failure
-
-      - name: 4. Compile Standalone Examples (Without CMake)
+      - name: 3. Compile Standalone Examples (Without CMake)
         run: |
           source $HOME/venv/bin/activate
           export CPATH="$HOME/.local/include"
@@ -92,7 +103,7 @@ jobs:
           echo "Compiling CustomExperimentFit..."
           g++-15 -std=c++23 -O3 -march=native examples/custom_experiment_fit/CustomExperimentFit.cpp -ljgap -o examples/custom_experiment_fit/custom_experiment_fit
 
-      - name: 5. End-to-End Examples Smoke Test
+      - name: 4. End-to-End Examples Smoke Test
         run: |
           source $HOME/venv/bin/activate
           export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"

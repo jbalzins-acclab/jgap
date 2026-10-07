@@ -23,5 +23,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR JGAP_BUILD_TESTS OR BUILD_TESTING)
     )
 
     include(GoogleTest)
-    gtest_discover_tests(jgap_tests)
+    gtest_discover_tests(jgap_tests
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
 endif ()
