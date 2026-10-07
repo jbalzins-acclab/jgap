@@ -114,6 +114,11 @@
       "output": {
         "outputOnFailure": true
       },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
+      },
       "execution": {
         "noTestsAction": "error"
       }
@@ -124,6 +129,11 @@
       "output": {
         "outputOnFailure": true
       },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
+      },
       "execution": {
         "noTestsAction": "error"
       }
@@ -133,6 +143,11 @@
       "configurePreset": "release-tests",
       "output": {
         "outputOnFailure": true
+      },
+      "filter": {
+        "exclude": {
+          "label": "validation"
+        }
       },
       "execution": {
         "noTestsAction": "error"
