@@ -2,7 +2,6 @@
 #define JGAP_MATRIX_HPP
 
 #include <cassert>
-#include <mdspan>
 
 #include "SharedArray.hpp"
 
@@ -47,22 +46,6 @@ namespace jgap {
                 return memory_space[i * columns + j];
             }
             return memory_space[j * rows + i];
-        }
-
-        auto mdspan() {
-            if constexpr (Layout == MatrixLayout::RowMajor) {
-                return std::mdspan<T, std::dextents<size_t, 2>, std::layout_right>(data(), rows, columns);
-            } else {
-                return std::mdspan<T, std::dextents<size_t, 2>, std::layout_left>(data(), rows, columns);
-            }
-        }
-
-        auto mdspan() const {
-            if constexpr (Layout == MatrixLayout::RowMajor) {
-                return std::mdspan<const T, std::dextents<size_t, 2>, std::layout_right>(data(), rows, columns);
-            } else {
-                return std::mdspan<const T, std::dextents<size_t, 2>, std::layout_left>(data(), rows, columns);
-            }
         }
 
         SharedArray<T>& flatData() { return memory_space; }
