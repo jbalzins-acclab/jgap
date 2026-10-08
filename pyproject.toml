@@ -71,4 +71,4 @@ repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
 environment = { MACOSX_DEPLOYMENT_TARGET = "14.0", CC = "/opt/homebrew/opt/llvm/bin/clang", CXX = "/opt/homebrew/opt/llvm/bin/clang++", CMAKE_PREFIX_PATH = "/opt/homebrew;/opt/homebrew/opt/llvm", LDFLAGS = "-L/opt/homebrew/opt/llvm/lib -Wl,-rpath,/opt/homebrew/opt/llvm/lib", CPPFLAGS = "-I/opt/homebrew/opt/llvm/include" }
-repair-wheel-command = "DYLD_LIBRARY_PATH=/opt/homebrew/lib:/opt/homebrew/opt/libomp/lib:/opt/homebrew/opt/llvm/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+repair-wheel-command = "env -u MACOSX_DEPLOYMENT_TARGET delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"

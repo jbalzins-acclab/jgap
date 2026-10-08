@@ -25,12 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pre-built Python environments from PyPA manylinux image
+# Copy pre-built Python environments and internal support tools (including auditwheel) from PyPA manylinux
+COPY --from=manylinux /opt/_internal /opt/_internal
 COPY --from=manylinux /opt/python /opt/python
-
-# Install auditwheel into python 3.12 and create symlink
-RUN /opt/python/cp312-cp312/bin/pip install --no-cache-dir auditwheel \
-    && ln -s /opt/python/cp312-cp312/bin/auditwheel /usr/local/bin/auditwheel
+COPY --from=manylinux /usr/local/bin/auditwheel /usr/local/bin/auditwheel
 
 ENV CC=gcc-15
 ENV CXX=g++-15
