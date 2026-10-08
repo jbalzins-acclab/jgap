@@ -36,6 +36,18 @@ jobs:
       - name: Install cibuildwheel
         run: pip install cibuildwheel==2.22.0
 
+      # On Linux: build the dedicated manylinux-compatible builder container with GCC 15
+      - name: Prepare Ubuntu 24.04 Builder Container (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          docker build -t jgap-linux-builder -f containers/manylinux.Dockerfile .
+
+      # On macOS: install LLVM and dependencies with Homebrew
+      - name: Install macOS Dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install hdf5 libomp ninja llvm || true
+
       - name: Build Wheels
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
