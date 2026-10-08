@@ -3,7 +3,7 @@ From: ubuntu:24.04
 
 %labels
     Author "Jegors Balzins"
-    Version "7.2.1"
+    Version "7.2.2"
     Description "JGAP: Gaussian Approximation Potentials in C++23 with Python & ASE"
 
 %post

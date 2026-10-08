@@ -68,6 +68,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_INSTALL_PREFIX=$HOME/.local \
+            -DCMAKE_JOB_POOLS:STRING=link_pool=2 \
+            -DCMAKE_JOB_POOL_LINK=link_pool \
             -DJGAP_BUILD_TESTS=ON \
             -DJGAP_BUILD_VALIDATION=ON \
             -DPython3_EXECUTABLE=$HOME/venv/bin/python
