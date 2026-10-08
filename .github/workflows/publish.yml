@@ -97,7 +97,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.22.0
+        run: pip install cibuildwheel==4.3.0
 
       # On Linux: build the dedicated manylinux builder container with GCC 15
       - name: Prepare Ubuntu 24.04 Builder Container (Linux only)
