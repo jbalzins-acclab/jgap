@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "jgap"
-version = "7.2.4"
+version = "7.2.5"
 description = "Gaussian Approximation Potentials (GAP) in C++23 with Python interface and ASE integration"
 readme = "ReadMe.md"
 requires-python = ">=3.9"

@@ -21,6 +21,8 @@ namespace jgap::utils {
         double cutoff = 4.5;
         double cutoff_width = 1.0;
         size_t n_sparse = 20;
+        double energy_scale = 10.0;
+        double length_scale = 1.0;
 
         bool operator==(const StandardGap2bParams& other) const = default;
     };
@@ -32,6 +34,8 @@ namespace jgap::utils {
         double cutoff = 4.5;
         size_t n_sparse = 20;
         double min_density = 0.05;
+        double energy_scale = 1.0;
+        double length_scale = 1.0;
 
         bool operator==(const StandardGapEamParams& other) const = default;
     };
@@ -42,6 +46,8 @@ namespace jgap::utils {
         double cutoff = 3.7;
         double cutoff_width = 0.6;
         size_t n_sparse = 500;
+        double energy_scale = 1.0;
+        std::array<double, 3> length_scales = {1.0, 1.0, 1.0};
 
         bool operator==(const StandardGap3bParams& other) const = default;
     };

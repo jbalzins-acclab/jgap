@@ -27,6 +27,7 @@ try:
         EamPairFunctionType,
         EamMode,
         ThreeBodyTransformationType,
+        MainXYZPropertyNames,
         StandardGap2bParams,
         StandardGapEamParams,
         StandardGap3bParams,
@@ -60,6 +61,7 @@ except ImportError as err:
             EamPairFunctionType,
             EamMode,
             ThreeBodyTransformationType,
+            MainXYZPropertyNames,
             StandardGap2bParams,
             StandardGapEamParams,
             StandardGap3bParams,
@@ -131,6 +133,19 @@ def _atoms_from_ase(cls, ase_atoms):
             atoms.energy = float(res["energy"])
         if "forces" in res:
             atoms.forces = np.ascontiguousarray(res["forces"], dtype=np.float64)
+        if "stress" in res and lat is not None:
+            stress = np.asarray(res["stress"], dtype=np.float64)
+            vol = np.abs(np.linalg.det(cell))
+            virials = -stress * vol
+            atoms.virials = Virials(virials)
+
+    # Check for virials in ase_atoms.info
+    for key in ("virial", "virials", "dft_virial"):
+        if key in getattr(ase_atoms, "info", {}):
+            val = ase_atoms.info[key]
+            if isinstance(val, (np.ndarray, list)):
+                atoms.virials = Virials(np.asarray(val, dtype=np.float64))
+            break
 
     return atoms
 
@@ -163,6 +178,7 @@ __all__ = [
     "EamPairFunctionType",
     "EamMode",
     "ThreeBodyTransformationType",
+    "MainXYZPropertyNames",
     "StandardGap2bParams",
     "StandardGapEamParams",
     "StandardGap3bParams",

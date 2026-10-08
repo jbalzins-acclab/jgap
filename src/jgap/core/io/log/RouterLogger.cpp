@@ -6,14 +6,14 @@ namespace jgap {
     RouterLogger::RouterLogger(LogConfig cfg, std::string file_path)
         : cfg(cfg) {
         // Setup stdout logger depending on routing
-        if (cfg.routing == OutputRouting::BothStdoutAndFiles || cfg.routing == OutputRouting::MixedNonDebugStdout) {
+        if (cfg.routing == OutputRouting::StdoutOnly || cfg.routing == OutputRouting::BothStdoutAndFiles || cfg.routing == OutputRouting::MixedNonDebugStdout) {
             // For stdout, metadata visibility is FilesOnly -> only include metadata in files by default
             const auto stdoutMeta = (cfg.metadata == MetadataVisibility::Both) ? MetadataVisibility::Both : MetadataVisibility::None;
             stdout_logger = std::make_shared<StdoutLogger>(cfg.stdout_log_debug, stdoutMeta);
         }
 
-        // Setup file logger depending on routing
-        if (cfg.routing == OutputRouting::FilesOnly || cfg.routing == OutputRouting::BothStdoutAndFiles || cfg.routing == OutputRouting::MixedNonDebugStdout) {
+        // Setup file logger depending on routing (or if an explicit file_path was provided)
+        if (!file_path.empty() || cfg.routing == OutputRouting::FilesOnly || cfg.routing == OutputRouting::BothStdoutAndFiles || cfg.routing == OutputRouting::MixedNonDebugStdout) {
             file_logger = std::make_shared<FileLogger>(std::move(file_path), cfg.metadata == MetadataVisibility::None ? MetadataVisibility::None : MetadataVisibility::FilesOnly);
         }
     }
@@ -23,6 +23,8 @@ namespace jgap {
         switch (cfg.routing) {
             case OutputRouting::None: return false;
             case OutputRouting::FilesOnly: return false;
+            case OutputRouting::StdoutOnly:
+                return level != LogLevel::Debug || cfg.stdout_log_debug;
             case OutputRouting::BothStdoutAndFiles: return true;
             case OutputRouting::MixedNonDebugStdout:
                 return level != LogLevel::Debug || cfg.stdout_log_debug;
