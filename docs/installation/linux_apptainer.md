@@ -19,7 +19,7 @@ This guide covers running and building `jgap` on **any Linux distribution** (Ubu
 If a pre-built image is hosted on a container registry:
 ```bash
 # Pull or convert directly in user space (no root required)
-apptainer pull jgap.sif docker://ghcr.io/yourusername/jgap:latest
+apptainer pull jgap.sif docker://ghcr.io/jbalzins-acclab/jgap:latest
 ```
 
 ### Option B: Build from Definition File (`containers/jgap.def`)
