@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "jgap"
-version = "7.2.3"
+version = "7.2.4"
 description = "Gaussian Approximation Potentials (GAP) in C++23 with Python interface and ASE integration"
 readme = "ReadMe.md"
 requires-python = ">=3.9"
@@ -64,7 +64,7 @@ build-verbosity = 1
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "jgap-linux-builder"
-environment = { CC = "gcc-15", CXX = "g++-15", AUDITWHEEL_PLAT = "manylinux_2_39_x86_64", LDFLAGS = "-static-libstdc++ -static-libgcc" }
+environment = { CC = "gcc-15", CXX = "g++-15", AUDITWHEEL_PLAT = "manylinux_2_39_x86_64", LDFLAGS = "-static-libstdc++ -Wl,--exclude-libs,ALL -fno-gnu-unique" }
 repair-wheel-command = "auditwheel -v repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]

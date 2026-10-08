@@ -23,7 +23,7 @@ if (Python3_FOUND)
         target_link_libraries(_jgap PRIVATE jgap_lib)
 
         if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
-            target_link_options(_jgap PRIVATE "-static-libstdc++" "-static-libgcc")
+            target_link_options(_jgap PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL" "-fno-gnu-unique")
         endif ()
 
         # Legacy jgap_ase module for backward compatibility

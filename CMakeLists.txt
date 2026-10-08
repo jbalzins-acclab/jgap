@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.2.3 LANGUAGES C CXX)
+project(jgap VERSION 7.2.4 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -76,8 +76,8 @@ if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif ()
 
 if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
-    # Statically link libstdc++ and libgcc into wheel binaries to ensure manylinux portability without host GCC 15
-    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-static-libgcc")
+    # Statically link libstdc++ into wheel binaries while hiding internal symbols to prevent runtime collisions
+    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL" "-fno-gnu-unique")
 endif ()
 
 if (OpenMP_CXX_FOUND)

@@ -52,7 +52,23 @@ Pre-compiled binary wheels distributed on PyPI target generic CPU architectures 
 
 Compiling `jgap` directly on your HPC cluster compute nodes enables **`-march=native`** vector extensions (e.g. **AVX-512**, **AVX2**, and **FMA**), yielding substantial performance gains.
 
-### HPC Step-by-Step Instructions
+### Native Recompilation via Pip (`--no-binary`)
+
+To bypass prebuilt generic wheels and compile directly on your cluster compute node with `-march=native`:
+
+```bash
+pip install jgap --no-binary jgap \
+  -Ccmake.define.CMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -ffast-math"
+```
+
+* `--no-binary jgap`: Forces `pip` to download the source distribution (`sdist`) and build locally.
+* `-Ccmake.define.CMAKE_CXX_FLAGS_RELEASE="..."`: Injects `-march=native` directly into the CMake release configuration.
+
+---
+
+### Direct CMake Workflow (Full C++ Library & CLI)
+
+To build the standalone C++ CLI tools (`jgap`, `jgap_convert`) alongside the Python interface:
 
 1. **Load Environment Modules** (example for SLURM / Lmod clusters with GCC 15):
    ```bash

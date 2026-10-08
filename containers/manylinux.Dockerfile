@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
-    patchelf \
     libcrypt1 \
     && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
     && apt-get update \
@@ -25,9 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pre-built Python environments and internal support tools (including auditwheel) from PyPA manylinux
+# Copy pre-built Python environments, patchelf, and auditwheel from PyPA manylinux
 COPY --from=manylinux /opt/_internal /opt/_internal
 COPY --from=manylinux /opt/python /opt/python
+COPY --from=manylinux /usr/local/bin/patchelf /usr/local/bin/patchelf
 COPY --from=manylinux /usr/local/bin/auditwheel /usr/local/bin/auditwheel
 
 # Copy runtime shared libraries required by manylinux Python dynamic extensions (OpenSSL 1.1, libffi, libbz2)

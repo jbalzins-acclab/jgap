@@ -39,6 +39,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pugixml)
 set(pugixml_FOUND TRUE)
+if (TARGET pugixml-static)
+    target_compile_definitions(pugixml-static PUBLIC "DBL_DIG=15")
+endif ()
 
 # ------------------------------------------------------------------------------
 # 3. HDF5 (Host C library) & HighFive (C++ Header-only wrapper via FetchContent)

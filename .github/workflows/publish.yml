@@ -12,8 +12,69 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check_artifacts:
+    name: Check Pre-built Artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifacts_found: ${{ steps.check.outputs.artifacts_found }}
+      run_id: ${{ steps.check.outputs.run_id }}
+    steps:
+      - name: Checkout Code
+        if: github.event_name == 'release'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - name: Search for Pre-built Wheels from PR / Previous Runs
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" != "release" ]; then
+            echo "Event is ${{ github.event_name }}; building fresh distributions."
+            echo "artifacts_found=false" >> "$GITHUB_OUTPUT"
+            echo "run_id=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Searching for pre-built wheels in recent workflow runs..."
+          CANDIDATE_SHAS=$(git rev-list --max-count=20 HEAD)
+          echo "Candidate commit SHAs:"
+          echo "$CANDIDATE_SHAS"
+
+          # Query recent successful runs of this workflow
+          RUNS=$(gh run list --workflow publish.yml --status success --json databaseId,headSha --limit 30)
+
+          FOUND_RUN_ID=""
+          for RUN_ID in $(echo "$RUNS" | jq -r '.[].databaseId'); do
+            RUN_SHA=$(echo "$RUNS" | jq -r ".[] | select(.databaseId==$RUN_ID) | .headSha")
+            if echo "$CANDIDATE_SHAS" | grep -q "$RUN_SHA"; then
+              ARTIFACT_COUNT=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts --jq '[.artifacts[] | select(.name | startswith("cibw-"))] | length')
+              if [ "$ARTIFACT_COUNT" -ge 2 ]; then
+                echo "Found matching run $RUN_ID with $ARTIFACT_COUNT cibw artifacts!"
+                FOUND_RUN_ID="$RUN_ID"
+                break
+              fi
+            fi
+          done
+
+          if [ -n "$FOUND_RUN_ID" ]; then
+            echo "Reusing pre-built distributions from run $FOUND_RUN_ID (no rebuild needed)."
+            echo "artifacts_found=true" >> "$GITHUB_OUTPUT"
+            echo "run_id=$FOUND_RUN_ID" >> "$GITHUB_OUTPUT"
+          else
+            echo "No pre-built distributions found. Triggering fallback rebuild."
+            echo "artifacts_found=false" >> "$GITHUB_OUTPUT"
+            echo "run_id=" >> "$GITHUB_OUTPUT"
+          fi
+
   build_wheels:
     name: Build wheels on ${{ matrix.os }} (${{ matrix.arch }})
+    needs: [check_artifacts]
+    if: needs.check_artifacts.outputs.artifacts_found != 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -63,6 +124,8 @@ jobs:
 
   build_sdist:
     name: Build Source Distribution (sdist)
+    needs: [check_artifacts]
+    if: needs.check_artifacts.outputs.artifacts_found != 'true'
     runs-on: ubuntu-24.04
 
     steps:
@@ -87,14 +150,23 @@ jobs:
 
   publish:
     name: Publish Distributions to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [check_artifacts, build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: >-
+      always() &&
+      github.event_name == 'release' &&
+      github.event.action == 'published' &&
+      !cancelled() &&
+      needs.check_artifacts.result == 'success' &&
+      (needs.build_wheels.result == 'success' || needs.build_wheels.result == 'skipped') &&
+      (needs.build_sdist.result == 'success' || needs.build_sdist.result == 'skipped')
     environment:
       name: pypi
       url: https://pypi.org/p/jgap
     permissions:
       id-token: write  # Mandatory for PyPI Trusted Publishing (OIDC)
+      actions: read    # Required to download artifacts across runs
+      contents: read
 
     steps:
       - name: Download all built distributions
@@ -103,6 +175,24 @@ jobs:
           pattern: cibw-*
           merge-multiple: true
           path: dist
+          run-id: ${{ needs.check_artifacts.outputs.run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify package distributions
+        run: |
+          echo "Inspecting distributions to publish in dist/:"
+          ls -la dist/
+          WHEEL_COUNT=$(ls -1 dist/*.whl 2>/dev/null | wc -l)
+          SDIST_COUNT=$(ls -1 dist/*.tar.gz 2>/dev/null | wc -l)
+          echo "Found $WHEEL_COUNT wheel(s) and $SDIST_COUNT sdist package(s)."
+          if [ "$WHEEL_COUNT" -eq 0 ]; then
+            echo "Error: No wheel (.whl) files found in dist/!" >&2
+            exit 1
+          fi
+          if [ "$SDIST_COUNT" -eq 0 ]; then
+            echo "Error: No sdist (.tar.gz) package found in dist/!" >&2
+            exit 1
+          fi
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
