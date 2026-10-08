@@ -4,13 +4,14 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base dependencies and GCC 15 toolchain
+# Install base dependencies, GCC 15 toolchain, and libcrypt1 required by manylinux python binaries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     ca-certificates \
     curl \
     git \
     patchelf \
+    libcrypt1 \
     && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -27,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy pre-built Python environments from PyPA manylinux image
 COPY --from=manylinux /opt/python /opt/python
 
-# Install auditwheel into one of the Python environments and make it globally accessible
+# Install auditwheel into python 3.12 and create symlink
 RUN /opt/python/cp312-cp312/bin/pip install --no-cache-dir auditwheel \
     && ln -s /opt/python/cp312-cp312/bin/auditwheel /usr/local/bin/auditwheel
 
