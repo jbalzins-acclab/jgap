@@ -94,7 +94,7 @@ namespace jgap::utils {
             const auto& pair = *p.species;
 
             auto trans2 = PairDistanceTransformation(CosCutoff(p.cutoff, p.cutoff_width));
-            auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
+            auto kernel2 = SquaredExpKernel<1, 1>(p.energy_scale, {p.length_scale});
             auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, p.n_sparse, std::array{true, false});
             TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
                 pair, trans2, kernel2, sparsifier2, training_data
@@ -120,7 +120,7 @@ namespace jgap::utils {
                 }
 
                 auto trans2 = PairDistanceTransformation(CosCutoff(def_p.cutoff, def_p.cutoff_width));
-                auto kernel2 = SquaredExpKernel<1, 1>(10.0, {1.0});
+                auto kernel2 = SquaredExpKernel<1, 1>(def_p.energy_scale, {def_p.length_scale});
                 auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, def_p.n_sparse, std::array{true, false});
                 TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
                     pair, trans2, kernel2, sparsifier2, training_data
@@ -175,7 +175,7 @@ namespace jgap::utils {
                 aggregator.extend({central_species, contributor_species}, std::move(pf_clone));
             }
 
-            auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
+            auto kernel_eam = SquaredExpKernel<1, 0>(p.energy_scale, {p.length_scale});
             auto sparsifier_eam = HistogramUniformSparsifier<1>(
                 params.seed, p.n_sparse, std::nullopt, std::nullopt, Descriptor<1>{p.min_density}
             );
@@ -221,7 +221,7 @@ namespace jgap::utils {
             const auto& triplet = *p.species;
 
             auto trans3 = makeStandard3bTransformation(p.transformation_type, p.cutoff, p.cutoff_width);
-            auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
+            auto kernel3 = SquaredExpKernel<3, 1>(p.energy_scale, p.length_scales);
             auto sparsifier3 =
                 HistogramUniformSparsifier<4>(params.seed, p.n_sparse, std::array{true, true, true, false});
             ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(
@@ -248,7 +248,7 @@ namespace jgap::utils {
                 }
 
                 auto trans3 = makeStandard3bTransformation(def_p.transformation_type, def_p.cutoff, def_p.cutoff_width);
-                auto kernel3 = SquaredExpKernel<3, 1>(1.0, {1.0, 1.0, 1.0});
+                auto kernel3 = SquaredExpKernel<3, 1>(def_p.energy_scale, def_p.length_scales);
                 auto sparsifier3 =
                     HistogramUniformSparsifier<4>(params.seed, def_p.n_sparse, std::array{true, true, true, false});
                 ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(

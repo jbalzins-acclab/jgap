@@ -25,6 +25,7 @@
 #include "jgap/core/potentials/Cutoffs.hpp"
 #include "jgap/core/potentials/Potential.hpp"
 #include "jgap/impl/transform/nbody/3b/Distances3bTransformation.hpp"
+#include "jgap/core/io/xyz/XYZData.hpp"
 #include "jgap/io/PotentialLoader.hpp"
 #include "jgap/utils/gap/StandardGapFit.hpp"
 #include "jgap/utils/gap/StandardGapParams.hpp"
@@ -379,6 +380,63 @@ PYBIND11_MODULE(_jgap, m) {
         });
 
     // =========================================================================
+    // MainXYZPropertyNames
+    // =========================================================================
+    py::class_<MainXYZPropertyNames>(m, "MainXYZPropertyNames")
+        .def(py::init<std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string>(),
+             py::arg("positions") = "pos",
+             py::arg("species") = "species",
+             py::arg("forces") = "force",
+             py::arg("virials") = "virial",
+             py::arg("energy") = "energy",
+             py::arg("lattice") = "Lattice",
+             py::arg("pbc") = "pbc",
+             py::arg("config_type") = "config_type")
+        .def_readwrite("positions", &MainXYZPropertyNames::positions)
+        .def_readwrite("species", &MainXYZPropertyNames::species)
+        .def_readwrite("forces", &MainXYZPropertyNames::forces)
+        .def_readwrite("virials", &MainXYZPropertyNames::virials)
+        .def_readwrite("energy", &MainXYZPropertyNames::energy)
+        .def_readwrite("lattice", &MainXYZPropertyNames::lattice)
+        .def_readwrite("pbc", &MainXYZPropertyNames::pbc)
+        .def_readwrite("config_type", &MainXYZPropertyNames::config_type)
+        .def("__repr__", [](const MainXYZPropertyNames& p) {
+            std::ostringstream oss;
+            oss << "<MainXYZPropertyNames energy=\"" << p.energy
+                << "\", forces=\"" << p.forces
+                << "\", virials=\"" << p.virials << "\">";
+            return oss.str();
+        });
+
+    auto readAtomsImpl = [](
+        const std::string& filename,
+        const std::optional<MainXYZPropertyNames>& prop_names,
+        const std::optional<std::string>& positions,
+        const std::optional<std::string>& species,
+        const std::optional<std::string>& forces,
+        const std::optional<std::string>& force,
+        const std::optional<std::string>& virials,
+        const std::optional<std::string>& virial,
+        const std::optional<std::string>& energy,
+        const std::optional<std::string>& lattice,
+        const std::optional<std::string>& pbc,
+        const std::optional<std::string>& config_type
+    ) {
+        MainXYZPropertyNames props = prop_names.value_or(MainXYZPropertyNames{});
+        if (positions) props.positions = *positions;
+        if (species) props.species = *species;
+        if (forces) props.forces = *forces;
+        if (force) props.forces = *force;
+        if (virials) props.virials = *virials;
+        if (virial) props.virials = *virial;
+        if (energy) props.energy = *energy;
+        if (lattice) props.lattice = *lattice;
+        if (pbc) props.pbc = *pbc;
+        if (config_type) props.config_type = *config_type;
+        return Atoms::readAtoms(filename, props);
+    };
+
+    // =========================================================================
     // Atoms
     // =========================================================================
     py::class_<Atoms>(m, "Atoms")
@@ -478,9 +536,21 @@ PYBIND11_MODULE(_jgap, m) {
         .def("wrap_positions", &Atoms::wrapPositions)
         .def("write", py::overload_cast<const std::string&>(&Atoms::write, py::const_))
 
-        .def_static("read_atoms", [](const std::string& filename) {
-            return Atoms::readAtoms(filename);
-        }, py::arg("filename"))
+        .def_static("read_atoms", readAtomsImpl,
+            py::arg("filename"),
+            py::arg("prop_names") = std::nullopt,
+            py::arg("positions") = std::nullopt,
+            py::arg("species") = std::nullopt,
+            py::arg("forces") = std::nullopt,
+            py::arg("force") = std::nullopt,
+            py::arg("virials") = std::nullopt,
+            py::arg("virial") = std::nullopt,
+            py::arg("energy") = std::nullopt,
+            py::arg("lattice") = std::nullopt,
+            py::arg("pbc") = std::nullopt,
+            py::arg("config_type") = std::nullopt,
+            py::call_guard<py::gil_scoped_release>(),
+            "Read XYZ dataset into a list of Atoms, optionally specifying custom property names")
 
         .def("__repr__", [](const Atoms& a) {
             std::ostringstream oss;
@@ -633,18 +703,22 @@ PYBIND11_MODULE(_jgap, m) {
     // StandardGap 2b, Eam, 3b Params
     // =========================================================================
     py::class_<utils::StandardGap2bParams>(m, "StandardGap2bParams")
-        .def(py::init([](py::object species, double cutoff, double cutoff_width, size_t n_sparse) {
+        .def(py::init([](py::object species, double cutoff, double cutoff_width, size_t n_sparse, double energy_scale, double length_scale) {
             utils::StandardGap2bParams p;
             p.species = parseSpecies2Opt(species);
             p.cutoff = cutoff;
             p.cutoff_width = cutoff_width;
             p.n_sparse = n_sparse;
+            p.energy_scale = energy_scale;
+            p.length_scale = length_scale;
             return p;
         }),
         py::arg("species") = py::none(),
         py::arg("cutoff") = 4.5,
         py::arg("cutoff_width") = 1.0,
-        py::arg("n_sparse") = 20)
+        py::arg("n_sparse") = 20,
+        py::arg("energy_scale") = 10.0,
+        py::arg("length_scale") = 1.0)
         .def_property("species",
             [](const utils::StandardGap2bParams& p) -> py::object {
                 if (p.species) return py::cast(*p.species);
@@ -656,18 +730,22 @@ PYBIND11_MODULE(_jgap, m) {
         .def_readwrite("cutoff", &utils::StandardGap2bParams::cutoff)
         .def_readwrite("cutoff_width", &utils::StandardGap2bParams::cutoff_width)
         .def_readwrite("n_sparse", &utils::StandardGap2bParams::n_sparse)
+        .def_readwrite("energy_scale", &utils::StandardGap2bParams::energy_scale)
+        .def_readwrite("length_scale", &utils::StandardGap2bParams::length_scale)
         .def("__repr__", [](const utils::StandardGap2bParams& p) {
             std::ostringstream oss;
             oss << "<StandardGap2bParams species=" << (p.species ? p.species->toString() : "None")
                 << ", cutoff=" << p.cutoff
                 << ", cutoff_width=" << p.cutoff_width
-                << ", n_sparse=" << p.n_sparse << ">";
+                << ", n_sparse=" << p.n_sparse
+                << ", energy_scale=" << p.energy_scale
+                << ", length_scale=" << p.length_scale << ">";
             return oss.str();
         })
         .def("__eq__", &utils::StandardGap2bParams::operator==);
 
     py::class_<utils::StandardGapEamParams>(m, "StandardGapEamParams")
-        .def(py::init([](py::object species, EamMode eam_mode, utils::EamPairFunctionType eam_pair_function, double cutoff, size_t n_sparse, double min_density) {
+        .def(py::init([](py::object species, EamMode eam_mode, utils::EamPairFunctionType eam_pair_function, double cutoff, size_t n_sparse, double min_density, double energy_scale, double length_scale) {
             utils::StandardGapEamParams p;
             p.species = parseSpeciesOpt(species);
             p.eam_mode = eam_mode;
@@ -675,6 +753,8 @@ PYBIND11_MODULE(_jgap, m) {
             p.cutoff = cutoff;
             p.n_sparse = n_sparse;
             p.min_density = min_density;
+            p.energy_scale = energy_scale;
+            p.length_scale = length_scale;
             return p;
         }),
         py::arg("species") = py::none(),
@@ -682,7 +762,9 @@ PYBIND11_MODULE(_jgap, m) {
         py::arg("eam_pair_function") = utils::EamPairFunctionType::FSGen3,
         py::arg("cutoff") = 4.5,
         py::arg("n_sparse") = 20,
-        py::arg("min_density") = 0.05)
+        py::arg("min_density") = 0.05,
+        py::arg("energy_scale") = 1.0,
+        py::arg("length_scale") = 1.0)
         .def_property("species",
             [](const utils::StandardGapEamParams& p) -> py::object {
                 if (p.species) return py::cast(*p.species);
@@ -696,31 +778,56 @@ PYBIND11_MODULE(_jgap, m) {
         .def_readwrite("cutoff", &utils::StandardGapEamParams::cutoff)
         .def_readwrite("n_sparse", &utils::StandardGapEamParams::n_sparse)
         .def_readwrite("min_density", &utils::StandardGapEamParams::min_density)
+        .def_readwrite("energy_scale", &utils::StandardGapEamParams::energy_scale)
+        .def_readwrite("length_scale", &utils::StandardGapEamParams::length_scale)
+        .def_property("density_scale",
+            [](const utils::StandardGapEamParams& p) { return p.length_scale; },
+            [](utils::StandardGapEamParams& p, double v) { p.length_scale = v; })
         .def("__repr__", [](const utils::StandardGapEamParams& p) {
             std::ostringstream oss;
             oss << "<StandardGapEamParams species=" << (p.species ? p.species->symbol() : "None")
                 << ", cutoff=" << p.cutoff
                 << ", n_sparse=" << p.n_sparse
-                << ", min_density=" << p.min_density << ">";
+                << ", min_density=" << p.min_density
+                << ", energy_scale=" << p.energy_scale
+                << ", length_scale=" << p.length_scale << ">";
             return oss.str();
         })
         .def("__eq__", &utils::StandardGapEamParams::operator==);
 
     py::class_<utils::StandardGap3bParams>(m, "StandardGap3bParams")
-        .def(py::init([](py::object species, utils::ThreeBodyTransformationType transformation_type, double cutoff, double cutoff_width, size_t n_sparse) {
+        .def(py::init([](py::object species, utils::ThreeBodyTransformationType transformation_type, double cutoff, double cutoff_width, size_t n_sparse, double energy_scale, py::object length_scales, py::object length_scale) {
             utils::StandardGap3bParams p;
             p.species = parseSpecies3Opt(species);
             p.transformation_type = transformation_type;
             p.cutoff = cutoff;
             p.cutoff_width = cutoff_width;
             p.n_sparse = n_sparse;
+            p.energy_scale = energy_scale;
+            if (!length_scale.is_none()) {
+                double val = length_scale.cast<double>();
+                p.length_scales = {val, val, val};
+            }
+            if (!length_scales.is_none()) {
+                if (py::isinstance<py::float_>(length_scales) || py::isinstance<py::int_>(length_scales)) {
+                    double val = length_scales.cast<double>();
+                    p.length_scales = {val, val, val};
+                } else {
+                    auto vec = length_scales.cast<std::vector<double>>();
+                    if (vec.size() != 3) throw std::invalid_argument("Expected length_scales of size 3");
+                    p.length_scales = {vec[0], vec[1], vec[2]};
+                }
+            }
             return p;
         }),
         py::arg("species") = py::none(),
         py::arg("transformation_type") = utils::ThreeBodyTransformationType::Angle,
         py::arg("cutoff") = 3.7,
         py::arg("cutoff_width") = 0.6,
-        py::arg("n_sparse") = 500)
+        py::arg("n_sparse") = 500,
+        py::arg("energy_scale") = 1.0,
+        py::arg("length_scales") = py::none(),
+        py::arg("length_scale") = py::none())
         .def_property("species",
             [](const utils::StandardGap3bParams& p) -> py::object {
                 if (p.species) return py::cast(*p.species);
@@ -733,13 +840,22 @@ PYBIND11_MODULE(_jgap, m) {
         .def_readwrite("cutoff", &utils::StandardGap3bParams::cutoff)
         .def_readwrite("cutoff_width", &utils::StandardGap3bParams::cutoff_width)
         .def_readwrite("n_sparse", &utils::StandardGap3bParams::n_sparse)
+        .def_readwrite("energy_scale", &utils::StandardGap3bParams::energy_scale)
+        .def_property("length_scales",
+            [](const utils::StandardGap3bParams& p) { return p.length_scales; },
+            [](utils::StandardGap3bParams& p, const std::array<double, 3>& v) { p.length_scales = v; })
+        .def_property("length_scale",
+            [](const utils::StandardGap3bParams& p) { return p.length_scales[0]; },
+            [](utils::StandardGap3bParams& p, double v) { p.length_scales = {v, v, v}; })
         .def("__repr__", [](const utils::StandardGap3bParams& p) {
             std::ostringstream oss;
             oss << "<StandardGap3bParams species=" << (p.species ? p.species->toString() : "None")
                 << ", transformation_type=" << (p.transformation_type == utils::ThreeBodyTransformationType::Angle ? "Angle" : "Distances")
                 << ", cutoff=" << p.cutoff
                 << ", cutoff_width=" << p.cutoff_width
-                << ", n_sparse=" << p.n_sparse << ">";
+                << ", n_sparse=" << p.n_sparse
+                << ", energy_scale=" << p.energy_scale
+                << ", length_scales=[" << p.length_scales[0] << ", " << p.length_scales[1] << ", " << p.length_scales[2] << "]>";
             return oss.str();
         })
         .def("__eq__", &utils::StandardGap3bParams::operator==);
@@ -768,7 +884,14 @@ PYBIND11_MODULE(_jgap, m) {
             std::optional<double> eam_min_density,
             std::optional<double> cutoff3,
             std::optional<double> cutoff3_width,
-            std::optional<size_t> n_sparse3
+            std::optional<size_t> n_sparse3,
+            std::optional<double> energy_scale_2b,
+            std::optional<double> length_scale_2b,
+            std::optional<double> energy_scale_eam,
+            std::optional<double> length_scale_eam,
+            std::optional<double> energy_scale_3b,
+            py::object length_scales_3b,
+            std::optional<double> length_scale_3b
         ) {
             utils::StandardGapParams p;
             p.seed = seed;
@@ -793,10 +916,29 @@ PYBIND11_MODULE(_jgap, m) {
                 if (eam_n_sparse.has_value()) p.default_eam->n_sparse = *eam_n_sparse;
                 if (eam_min_density.has_value()) p.default_eam->min_density = *eam_min_density;
             }
+            if (p.default_2b) {
+                if (energy_scale_2b.has_value()) p.default_2b->energy_scale = *energy_scale_2b;
+                if (length_scale_2b.has_value()) p.default_2b->length_scale = *length_scale_2b;
+            }
+            if (p.default_eam) {
+                if (energy_scale_eam.has_value()) p.default_eam->energy_scale = *energy_scale_eam;
+                if (length_scale_eam.has_value()) p.default_eam->length_scale = *length_scale_eam;
+            }
             if (p.default_3b) {
                 if (cutoff3.has_value()) p.default_3b->cutoff = *cutoff3;
                 if (cutoff3_width.has_value()) p.default_3b->cutoff_width = *cutoff3_width;
                 if (n_sparse3.has_value()) p.default_3b->n_sparse = *n_sparse3;
+                if (energy_scale_3b.has_value()) p.default_3b->energy_scale = *energy_scale_3b;
+                if (length_scale_3b.has_value()) p.default_3b->length_scales = {*length_scale_3b, *length_scale_3b, *length_scale_3b};
+                if (!length_scales_3b.is_none()) {
+                    if (py::isinstance<py::float_>(length_scales_3b) || py::isinstance<py::int_>(length_scales_3b)) {
+                        double v = length_scales_3b.cast<double>();
+                        p.default_3b->length_scales = {v, v, v};
+                    } else {
+                        auto vec = length_scales_3b.cast<std::vector<double>>();
+                        if (vec.size() == 3) p.default_3b->length_scales = {vec[0], vec[1], vec[2]};
+                    }
+                }
             }
             return p;
         }),
@@ -818,7 +960,14 @@ PYBIND11_MODULE(_jgap, m) {
         py::arg("eam_min_density") = std::nullopt,
         py::arg("cutoff3") = std::nullopt,
         py::arg("cutoff3_width") = std::nullopt,
-        py::arg("n_sparse3") = std::nullopt)
+        py::arg("n_sparse3") = std::nullopt,
+        py::arg("energy_scale_2b") = std::nullopt,
+        py::arg("length_scale_2b") = std::nullopt,
+        py::arg("energy_scale_eam") = std::nullopt,
+        py::arg("length_scale_eam") = std::nullopt,
+        py::arg("energy_scale_3b") = std::nullopt,
+        py::arg("length_scales_3b") = py::none(),
+        py::arg("length_scale_3b") = std::nullopt)
         .def_readwrite("seed", &utils::StandardGapParams::seed)
         .def_readwrite("screened_coulomb_dataset_file", &utils::StandardGapParams::screened_coulomb_dataset_file)
         .def_readwrite("approx_ram_limit_gb", &utils::StandardGapParams::approx_ram_limit_gb)
@@ -877,6 +1026,30 @@ PYBIND11_MODULE(_jgap, m) {
         .def_property("n_sparse3",
             [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->n_sparse : 0; },
             [](utils::StandardGapParams& p, size_t v) { if (p.default_3b) p.default_3b->n_sparse = v; })
+        .def_property("energy_scale_2b",
+            [](const utils::StandardGapParams& p) { return p.default_2b ? p.default_2b->energy_scale : 10.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_2b) p.default_2b->energy_scale = v; })
+        .def_property("length_scale_2b",
+            [](const utils::StandardGapParams& p) { return p.default_2b ? p.default_2b->length_scale : 1.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_2b) p.default_2b->length_scale = v; })
+        .def_property("energy_scale_eam",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->energy_scale : 1.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_eam) p.default_eam->energy_scale = v; })
+        .def_property("length_scale_eam",
+            [](const utils::StandardGapParams& p) { return p.default_eam ? p.default_eam->length_scale : 1.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_eam) p.default_eam->length_scale = v; })
+        .def_property("energy_scale_3b",
+            [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->energy_scale : 1.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_3b) p.default_3b->energy_scale = v; })
+        .def_property("length_scale_3b",
+            [](const utils::StandardGapParams& p) { return p.default_3b ? p.default_3b->length_scales[0] : 1.0; },
+            [](utils::StandardGapParams& p, double v) { if (p.default_3b) p.default_3b->length_scales = {v, v, v}; })
+        .def_property("length_scales_3b",
+            [](const utils::StandardGapParams& p) -> py::object {
+                if (p.default_3b) return py::cast(p.default_3b->length_scales);
+                return py::none();
+            },
+            [](utils::StandardGapParams& p, const std::array<double, 3>& v) { if (p.default_3b) p.default_3b->length_scales = v; })
         .def("__repr__", [](const utils::StandardGapParams& p) {
             std::ostringstream oss;
             oss << "<StandardGapParams has_default_2b=" << p.default_2b.has_value()
@@ -969,9 +1142,21 @@ PYBIND11_MODULE(_jgap, m) {
         return std::shared_ptr<Potential>(val.release());
     }, py::arg("paths"), "Load a Potential from multiple file paths (e.g. .tabgap.h5 and .eam.fs)");
 
-    m.def("read_atoms", [](const std::string& filename) {
-        return Atoms::readAtoms(filename);
-    }, py::arg("filename"), "Read XYZ dataset into a list of Atoms");
+    m.def("read_atoms", readAtomsImpl,
+        py::arg("filename"),
+        py::arg("prop_names") = std::nullopt,
+        py::arg("positions") = std::nullopt,
+        py::arg("species") = std::nullopt,
+        py::arg("forces") = std::nullopt,
+        py::arg("force") = std::nullopt,
+        py::arg("virials") = std::nullopt,
+        py::arg("virial") = std::nullopt,
+        py::arg("energy") = std::nullopt,
+        py::arg("lattice") = std::nullopt,
+        py::arg("pbc") = std::nullopt,
+        py::arg("config_type") = std::nullopt,
+        py::call_guard<py::gil_scoped_release>(),
+        "Read XYZ dataset into a list of Atoms, optionally specifying custom property names");
 
     m.def("write_atoms", [](const std::vector<Atoms>& frames, const std::string& filename) {
         if (frames.empty()) return;

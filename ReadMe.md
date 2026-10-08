@@ -29,16 +29,26 @@ import jgap
 from jgap.ase import JGAPCalculator
 from ase.io import read
 
-# 1. Load training database
-training_data = jgap.read_atoms("train.xyz")
+# 1. Load training database (custom property names like virial/energy/force supported)
+training_data = jgap.read_atoms("train.xyz", virial="virial")  # e.g. virial="dft_virial"
 
 # 2. Fit a standard 2-body + 3-body + EAM GAP potential
 params = jgap.StandardGapParams(
     seed=120,
-    approx_ram_limit_gb=2.0
+    approx_ram_limit_gb=2.0,
+    # Configurable energy (delta) & length scales:
+    energy_scale_2b=10.0, length_scale_2b=1.0,
+    energy_scale_eam=1.0, length_scale_eam=1.0,
+    energy_scale_3b=1.0,  length_scale_3b=1.0,
 )
 sigmas = jgap.PerConfigTypeRegularizationRules(
-    jgap.PerConfigTypeSigmas(0.001, 0.05, 0.1, 0.02)
+    default_sigmas=jgap.PerConfigTypeSigmas(energy=0.001, force=0.05, virials_iso=0.1, virials_aniso=0.02),
+    exact_config_type_sigmas={
+        "isolated_atom": jgap.PerConfigTypeSigmas(energy=0.0001, force=0.01, virials=0.1),
+    },
+    config_type_contains_sigmas={
+        "liquid": jgap.PerConfigTypeSigmas(energy=0.005, force=0.1, virials_iso=0.2, virials_aniso=0.05),
+    },
 ).determine_for_all(training_data)
 
 jgap.standard_gap_fit("potential.jgap.h5", training_data, sigmas, params)

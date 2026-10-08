@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     const auto total_start = std::chrono::steady_clock::now();
 
     JGAP_LOG_INFO("Fitting on {} using ElementIncrementalQRGapFit (RAM limit: {} GB)", training_file, ram_limit_gb);
-    auto training_data = Atoms::readAtoms(training_file);
+    auto training_data = Atoms::readAtoms(training_file, {.virials = "virial"});
 
     StandardGapParams params{.seed = 120};
     if (positional_args.size() == 3) {
