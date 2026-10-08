@@ -40,7 +40,6 @@ Repository = "https://github.com/jbalzins-acclab/jgap/"
 cmake.version = ">=3.25"
 build-dir = "build/{wheel_tag}"
 cmake.build-type = "Release"
-wheel.packages = ["python/jgap"]
 
 [tool.scikit-build.sdist]
 include = [
