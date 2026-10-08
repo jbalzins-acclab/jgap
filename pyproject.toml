@@ -65,8 +65,8 @@ build-verbosity = 1
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "jgap-linux-builder"
-environment = { CC = "gcc-15", CXX = "g++-15", AUDITWHEEL_PLAT = "manylinux_2_39_x86_64" }
-repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+environment = { CC = "gcc-15", CXX = "g++-15", AUDITWHEEL_PLAT = "manylinux_2_39_x86_64", LDFLAGS = "-static-libstdc++ -static-libgcc" }
+repair-wheel-command = "auditwheel repair -v -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
 archs = ["arm64"]

@@ -75,6 +75,11 @@ if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(jgap_lib PRIVATE c++)
 endif ()
 
+if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
+    # Statically link libstdc++ and libgcc into wheel binaries to ensure manylinux portability without host GCC 15
+    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-static-libgcc")
+endif ()
+
 if (OpenMP_CXX_FOUND)
     target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
     target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)

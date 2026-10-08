@@ -22,6 +22,10 @@ if (Python3_FOUND)
         pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
         target_link_libraries(_jgap PRIVATE jgap_lib)
 
+        if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
+            target_link_options(_jgap PRIVATE "-static-libstdc++" "-static-libgcc")
+        endif ()
+
         # Place the built extension directly into python/jgap/ for in-tree use
         set_target_properties(_jgap PROPERTIES
             OUTPUT_NAME _jgap
@@ -36,7 +40,14 @@ if (Python3_FOUND)
         target_link_libraries(jgap_ase PRIVATE jgap_lib)
 
         if (SKBUILD)
-            # scikit-build-core packaging for PyPI wheels
+            # scikit-build-core packaging for PyPI wheels: keep RPATH strictly local within package
+            set_target_properties(_jgap PROPERTIES
+                INSTALL_RPATH "@loader_path;@loader_path/.dylibs"
+            )
+            set_target_properties(jgap_lib PROPERTIES
+                INSTALL_RPATH "@loader_path;@loader_path/.dylibs"
+                INSTALL_NAME_DIR "@rpath"
+            )
             install(TARGETS _jgap DESTINATION "jgap")
             install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "."
                     FILES_MATCHING PATTERN "*.py")
