@@ -4,26 +4,23 @@ A high-performance C++23 library, command-line toolkit, and Python framework for
 
 ---
 
-## 1. Quickstart: Compile & Install
+## 1. Quickstart: Python & `pip`
 
-You can compile and install `jgap` (both the C++ shared library, CLI tools, and the Python interface into your active virtual environment) in just two commands:
+### Installation via `pip`
+
+Install the Python package and ASE calculator directly from PyPI:
 
 ```bash
-# 1. Configure optimized Release build targeting your active Python virtual environment
-cmake --preset release -DPython3_EXECUTABLE=$(which python) -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV
-
-# 2. Build and install library, CLI executables, and Python package
-cmake --build --preset install
+pip install jgap
 ```
 
+> [!TIP]
+> **HPC Clusters & Maximum Performance**: Pre-compiled binary wheels distributed via PyPI target generic CPU architectures for universal portability. On HPC clusters and dedicated compute nodes, compiling `jgap` from source enables hardware-level **`-march=native`** vector extensions (AVX-512, AVX2, FMA). See the **[HPC & Native Compilation Guide](docs/Compilation.md#4-hpc-clusters--marchnative-compilation)**.
+
 > [!NOTE]
-> If installing to your user directory outside a virtual environment, use `-DCMAKE_INSTALL_PREFIX=$HOME/.local` (or run `cmake --workflow --preset install`). For Conda environments, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`.
->
-> For full prerequisites (C++23 compilers, HDF5, OpenBLAS), package manager commands (macOS, Ubuntu, Conda), HPC cluster instructions, and troubleshooting, see the **[Compilation & Installation Guide](docs/Compilation.md)**.
+> For containerized workflows without local compiler dependencies (Docker / Apptainer `.sif` on HPC clusters), see the **[Apptainer & Container Guide](docs/installation/linux_apptainer.md)**.
 
----
-
-## 2. Python Quickstart & ASE Calculator
+### Python & ASE Calculator Example
 
 `jgap` integrates directly with Python and the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/):
 
@@ -57,6 +54,26 @@ energy = atoms.get_potential_energy()
 forces = atoms.get_forces()
 stress = atoms.get_stress()
 ```
+
+---
+
+## 2. Compile & Install from Source (C++ Library & CLI)
+
+You can compile and install `jgap` (the C++ shared library, CLI tools, and Python interface) using CMake's unified workflow preset:
+
+```bash
+# Configure, build optimized Release targets, and install in a single command
+cmake --workflow --preset install
+```
+
+> [!NOTE]
+> * **Python Virtual Environments**: To install the Python interface into your active virtual environment, configure with:
+>   ```bash
+>   cmake --preset release -DPython3_EXECUTABLE=$(which python) -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV
+>   cmake --build --preset install
+>   ```
+>   *(For Conda environments, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`).*
+> * **Prerequisites & System Dependencies**: For compiler requirements (C++23 with GCC 15 or Clang 19+), libraries (HDF5, OpenBLAS), package manager setup (macOS, Ubuntu, Conda), and HPC instructions, see the **[Compilation & Installation Guide](docs/Compilation.md)**.
 
 ---
 

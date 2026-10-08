@@ -22,26 +22,46 @@ if (Python3_FOUND)
         pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
         target_link_libraries(_jgap PRIVATE jgap_lib)
 
-        # Place the built extension directly into python/jgap/ for in-tree use
-        set_target_properties(_jgap PROPERTIES
-            OUTPUT_NAME _jgap
-            LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap"
-            BUILD_WITH_INSTALL_RPATH FALSE
-            BUILD_RPATH "${CMAKE_BINARY_DIR}"
-            INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/..;@loader_path"
-        )
+        if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
+            target_link_options(_jgap PRIVATE "-static-libstdc++" "-static-libgcc")
+        endif ()
 
         # Legacy jgap_ase module for backward compatibility
         pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
         target_link_libraries(jgap_ase PRIVATE jgap_lib)
 
         if (SKBUILD)
-            # scikit-build-core packaging for PyPI wheels
+            # scikit-build-core packaging for PyPI wheels: keep RPATH strictly local within package
+            if (APPLE)
+                set(_WHEEL_RPATH "@loader_path;@loader_path/.dylibs")
+            else ()
+                set(_WHEEL_RPATH "$ORIGIN;$ORIGIN/.libs")
+            endif ()
+
+            set_target_properties(_jgap PROPERTIES
+                OUTPUT_NAME _jgap
+                BUILD_WITH_INSTALL_RPATH TRUE
+                INSTALL_RPATH "${_WHEEL_RPATH}"
+            )
+            set_target_properties(jgap_lib PROPERTIES
+                BUILD_WITH_INSTALL_RPATH TRUE
+                INSTALL_RPATH "${_WHEEL_RPATH}"
+                INSTALL_NAME_DIR "@rpath"
+            )
             install(TARGETS _jgap DESTINATION "jgap")
             install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "."
                     FILES_MATCHING PATTERN "*.py")
             install(TARGETS jgap_lib DESTINATION "jgap")
         else ()
+            # Place the built extension directly into python/jgap/ for in-tree use only
+            set_target_properties(_jgap PROPERTIES
+                OUTPUT_NAME _jgap
+                LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap"
+                BUILD_WITH_INSTALL_RPATH FALSE
+                BUILD_RPATH "${CMAKE_BINARY_DIR}"
+                INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/..;@loader_path"
+            )
+
             execute_process(
                 COMMAND "${Python3_EXECUTABLE}" -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
                 OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
