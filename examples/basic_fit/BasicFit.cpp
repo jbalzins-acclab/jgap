@@ -15,8 +15,8 @@
 #include "jgap/core/atomic/species/composition/Species2Sorted.hpp"
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
-#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/impl/fit/gap/ElementIncrementalQRGapFit.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/jgap.hpp"
 
 using namespace jgap;
@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
         } else if (arg.starts_with("ram_limit=")) {
             ram_limit_gb = std::stod(arg.substr(10));
         } else if (arg == "-h" || arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n"
+            std::cout << "Usage: " << argv[0]
+                      << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n"
                       << "  --ram-limit <gb>   RAM limit in GB for ElementIncrementalQRGapFit (default: 2.0)\n";
             return 0;
         } else {
@@ -46,7 +47,8 @@ int main(int argc, char** argv) {
     }
 
     if (positional_args.size() < 2 || positional_args.size() > 3) {
-        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n";
         return 1;
     }
     const std::string training_file = positional_args[0];
@@ -56,7 +58,9 @@ int main(int argc, char** argv) {
 
     const auto start = std::chrono::steady_clock::now();
 
-    JGAP_LOG_INFO("Manual assembly fit on {} using ElementIncrementalQRGapFit (RAM limit: {} GB)", training_file, ram_limit_gb);
+    JGAP_LOG_INFO(
+        "Manual assembly fit on {} using ElementIncrementalQRGapFit (RAM limit: {} GB)", training_file, ram_limit_gb
+    );
     auto training_data = Atoms::readAtoms(training_file);
 
     const size_t seed = 120;
@@ -78,8 +82,8 @@ int main(int argc, char** argv) {
 
     // Discover species from training data
     std::set<Species> elements;
-    for (const auto& atoms : training_data) {
-        for (const auto& s : atoms.getSpecies()) {
+    for (const auto& atoms: training_data) {
+        for (const auto& s: atoms.getSpecies()) {
             elements.insert(s);
         }
     }
@@ -95,15 +99,15 @@ int main(int argc, char** argv) {
         auto sparsifier2 = HistogramUniformSparsifier<2>(seed, n_sparse2, std::array{true, false});
 
         std::set<Species2Sorted> pairs;
-        for (const auto& atoms : training_data) {
+        for (const auto& atoms: training_data) {
             NeighbourLists nl(atoms, cutoff2);
             auto sets = Species2Sorted::getAll(nl);
             pairs.insert(sets.begin(), sets.end());
         }
-        for (const auto& pair : pairs) {
-            potential.addComponent(TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(
-                pair, trans2, kernel2, sparsifier2, training_data
-            ));
+        for (const auto& pair: pairs) {
+            potential.addComponent(
+                TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>(pair, trans2, kernel2, sparsifier2, training_data)
+            );
         }
     }
 
@@ -112,21 +116,19 @@ int main(int argc, char** argv) {
     // ====================================================================================
     if (eam_n_sparse > 0) {
         auto kernel_eam = SquaredExpKernel<1, 0>(1.0, {1.0});
-        auto sparsifier_eam = HistogramUniformSparsifier<1>(
-            seed, eam_n_sparse, std::nullopt, std::nullopt, Descriptor<1>{0.05}
-        );
+        auto sparsifier_eam =
+            HistogramUniformSparsifier<1>(seed, eam_n_sparse, std::nullopt, std::nullopt, Descriptor<1>{0.05});
 
-        for (const auto& central : elements) {
+        for (const auto& central: elements) {
             auto aggregator = std::make_unique<TwoBodySum<1>>(central);
-            for (const auto& contributor : elements) {
+            for (const auto& contributor: elements) {
                 aggregator->extend({central, contributor}, eam_pf);
             }
-            potential.addComponent(ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
-                ValuePtr<NBodyAggregator<1>>(std::move(aggregator)),
-                kernel_eam,
-                sparsifier_eam,
-                training_data
-            ));
+            potential.addComponent(
+                ManyBodyGapComponent<1, SquaredExpKernel<1, 0>>(
+                    ValuePtr<NBodyAggregator<1>>(std::move(aggregator)), kernel_eam, sparsifier_eam, training_data
+                )
+            );
         }
     }
 
@@ -139,15 +141,15 @@ int main(int argc, char** argv) {
         auto sparsifier3 = HistogramUniformSparsifier<4>(seed, n_sparse3, std::array{true, true, true, false});
 
         std::set<Species3AtomicSorted> triplets;
-        for (const auto& atoms : training_data) {
+        for (const auto& atoms: training_data) {
             NeighbourLists nl(atoms, cutoff3);
             auto sets = Species3AtomicSorted::getAll(nl);
             triplets.insert(sets.begin(), sets.end());
         }
-        for (const auto& triplet : triplets) {
-            potential.addComponent(ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(
-                triplet, trans3, kernel3, sparsifier3, training_data
-            ));
+        for (const auto& triplet: triplets) {
+            potential.addComponent(
+                ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>>(triplet, trans3, kernel3, sparsifier3, training_data)
+            );
         }
     }
 
@@ -176,7 +178,7 @@ int main(int argc, char** argv) {
 
     // Tabulation with custom 12x12x12 3B grid
     StandardTabulationParams tab_params;
-    tab_params.n_grid_3b = {12, 12, 12};
+    tab_params.n_grid_3b = {100, 100, 100};
     standardTabulation(potential, output_prefix, tab_params);
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;

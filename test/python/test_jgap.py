@@ -293,7 +293,7 @@ class TestJGAP(unittest.TestCase):
         self.assertIsNotNone(params.default_2b)
         self.assertIsNotNone(params.default_eam)
         self.assertIsNotNone(params.default_3b)
-        self.assertEqual(params.default_3b.transformation_type, jgap.ThreeBodyTransformationType.Angle)
+        self.assertEqual(params.default_3b.transformation_type, jgap.ThreeBodyTransformationType.Angle3b)
         self.assertEqual(len(params.species_2b), 0)
         self.assertEqual(len(params.species_eam), 0)
         self.assertEqual(len(params.species_3b), 0)

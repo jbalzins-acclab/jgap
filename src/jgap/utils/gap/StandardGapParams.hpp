@@ -14,7 +14,7 @@ namespace jgap::utils {
 
     enum class EamPairFunctionType { FSGen2, FSGen3, Coscutoff, Polycutoff };
 
-    enum class ThreeBodyTransformationType { Angle, Distances };
+    enum class ThreeBodyTransformationType { Angle3b, Distances };
 
     struct StandardGap2bParams {
         std::optional<Species2Sorted> species{}; // If not provided, applies as non-species default
@@ -42,7 +42,7 @@ namespace jgap::utils {
 
     struct StandardGap3bParams {
         std::optional<Species3AtomicSorted> species{}; // If not provided, applies as non-species default
-        ThreeBodyTransformationType transformation_type = ThreeBodyTransformationType::Angle;
+        ThreeBodyTransformationType transformation_type = ThreeBodyTransformationType::Angle3b;
         double cutoff = 3.7;
         double cutoff_width = 0.6;
         size_t n_sparse = 500;

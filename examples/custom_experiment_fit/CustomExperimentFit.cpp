@@ -25,10 +25,7 @@ using namespace jgap::utils;
 
 // =============================================================================
 // User-Defined Custom Kernel: Fractional Exponential Kernel (power p = 1.5)
-//   k(x, y) = \sigma^2 * exp( - ||(x - y) / \ell||^1.5 ) * cutoff(x) * cutoff(y)
-//
-// By Schoenberg's theorem (1938), exp(-||r||^p) is strictly positive definite
-// if and only if 0 < p <= 2. The power p = 1.5 guarantees positive definiteness.
+//   k(x, y) = \sigma^2 * exp( - ||(x - y) / \theta||^1.5 ) * cutoff(x) * cutoff(y)
 // =============================================================================
 template<size_t ExpDimensions, size_t CutoffDimensions>
     requires(CutoffDimensions <= 1)
@@ -122,8 +119,11 @@ int main(int argc, char** argv) {
 
     const auto start = std::chrono::steady_clock::now();
 
-    JGAP_LOG_INFO("Custom Experiment 2b-only fit with FractionalExpKernel (-|r/l|^1.5) on {} (RAM limit: {} GB)",
-                  training_file, ram_limit_gb);
+    JGAP_LOG_INFO(
+        "Custom Experiment 2b-only fit with FractionalExpKernel (-|r/l|^1.5) on {} (RAM limit: {} GB)",
+        training_file,
+        ram_limit_gb
+    );
     auto training_data = Atoms::readAtoms(training_file);
 
     const size_t seed = 42;
@@ -139,15 +139,15 @@ int main(int argc, char** argv) {
     auto sparsifier2 = HistogramUniformSparsifier<2>(seed, n_sparse2, std::array{true, false});
 
     std::set<Species2Sorted> pairs;
-    for (const auto& atoms : training_data) {
+    for (const auto& atoms: training_data) {
         NeighbourLists nl(atoms, cutoff2);
         auto sets = Species2Sorted::getAll(nl);
         pairs.insert(sets.begin(), sets.end());
     }
-    for (const auto& pair : pairs) {
-        potential.addComponent(TwoBodyGapComponent<2, FractionalExpKernel<1, 1>>(
-            pair, trans2, custom_kernel, sparsifier2, training_data
-        ));
+    for (const auto& pair: pairs) {
+        potential.addComponent(
+            TwoBodyGapComponent<2, FractionalExpKernel<1, 1>>(pair, trans2, custom_kernel, sparsifier2, training_data)
+        );
     }
 
     // Isolated atom external potential
@@ -159,7 +159,8 @@ int main(int argc, char** argv) {
     auto sigmas = rules.determineForAll(training_data);
     fitter.fit(potential, training_data, sigmas);
 
-    // Note: We do NOT serialize the GAP potential here, only tabulate and save the tabGAP potential
+    // Note: We do NOT serialize the GAP potential here, for an experiment it might be sufficient to test tabulated
+    // version directly first and figure out serialization boilerplate later.
     JGAP_LOG_INFO("Skipping GAP serialization; tabulating directly to .tabgap.h5...");
     StandardTabulationParams tab_params;
     tab_params.n_grid_2b = 5000;

@@ -1,125 +1,98 @@
 # Compilation & Installation Guide
 
-`jgap` is a high-performance C++23 library, CLI toolkit, and Python framework. Because different environments have different privileges, package managers, and hardware capabilities, dedicated installation guides and workflow presets are detailed below.
+`jgap` is a high-performance C++23 library with a CLI toolkit and a Python interface. Since different environments have different privileges, package managers, and hardware capabilities, dedicated installation guides and workflow presets are detailed below.
 
 ---
 
-## 1. Quickstart: One-Command Build & Install
+## 1. Core Technical Requirements Summary
 
-If your system already has the prerequisite C++23 compiler and libraries installed, you can configure, build, and install the library, CLI tools, and Python interface in a single command using CMake's unified workflow preset:
+* **Compilers**:
+  * **GCC $\ge$ 15**
+  * **Clang $\ge$ 19**
+* **Build System**: CMake $\ge$ 3.25 (Ninja is optional but recommended for faster builds).
+* **C++ Libraries**: HDF5 (`libhdf5`), (optionally) OpenBLAS or Apple Accelerate, (optionally) OpenMP or Apple's GCD.
+* **Python**: Python $\ge$ 3.9 with `pybind11`, `numpy`, and `ase` (some examples require `scipy` and `elastic`).
 
-```bash
-# Configure, build optimized Release targets, and install in a single command
-cmake --workflow --preset install
-```
 
-> [!TIP]
-> **Active Python Virtual Environment**: To install into your virtualenv or Conda environment, pass `-DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV` (or `$CONDA_PREFIX`):
-> ```bash
-> cmake --preset release -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV -DPython3_EXECUTABLE=$(which python)
-> cmake --build --preset install
-> ```
-
----
-
-## 2. Quick Selector: Choose Your Environment
-
-Select the detailed guide matching your platform and access level:
+Some tips for installing the dependencies based on your system can be found in:
 
 | Platform | Access Level / Tool | Guide |
 | :--- | :--- | :--- |
-| **macOS** (Apple Silicon) | Homebrew available | [**macOS Installation Guide**](installation/macos.md) |
-| **Linux** (Ubuntu, Debian, Fedora, Arch) | `sudo` root rights available | [**Linux (`sudo`) Guide**](installation/linux_sudo.md) |
-| **Linux** (Any distribution / Server) | No `sudo` — Conda / Mamba / Pixi | [**Linux (Conda / User-Space) Guide**](installation/linux_conda.md) |
-| **Linux** (Any distribution / HPC) | No `sudo` — Apptainer / Singularity `.sif` | [**Linux (Apptainer `.sif`) Guide**](installation/linux_apptainer.md) |
+| **macOS** (Apple Silicon) | Homebrew available | [**macOS Installation Guide**](installation/MacOS.md) |
+| **Linux** | No `sudo` — Conda | [**Linux (Conda / User-Space) Guide**](installation/Linux-Conda.md) |
+| **Linux on HPC Clusters** | No `sudo` - `module` command is available| [**Linux on HPC Clusters Guide**](installation/Linux-HPC.md) |
+
+Regardless of installation type, its strongly recomnended that the following is performed in a virtual environment (e.g. `python -m venv ...`) to avoid all kinds of package conflicts.
 
 ---
 
-## 3. Core Technical Requirements Summary
+## 2. Basic Compilation and Optimized `pip` Installation
 
-* **Compilers**:
-  * **Linux**: **GCC $\ge$ 15** or **Clang $\ge$ 19** (GCC 14 does not support `#embed`).
-  * **macOS**: AppleClang $\ge$ 16 (Xcode 16+ on Apple Silicon) or Homebrew LLVM Clang.
-* **Build System**: CMake $\ge$ 3.25 and Ninja.
-* **C++ Libraries**: HDF5 (`libhdf5`), OpenBLAS (or Apple Accelerate), OpenMP.
-* **Python**: Python $\ge$ 3.9 with `pybind11`, `numpy`, and `ase`.
+Regardles of wether you want to use only the basic functionality availaible in JGAP's Python interface or you want to use JGAP as a library, 
+peak performance requires system-specific compilation flags, which are disabled when using the defualt `pip install jgap` command from PyPI.
 
----
+Assuming you've loaded all the needed dependencies as described in the `docs/installation` folder, and activated the virtual environmen of your choice, 
+JGAP can be compiled (including Python installation to your venv) via a simple command:
 
-## 4. HPC Clusters & `-march=native` Compilation
+```bash
+   cmake --workflow --preset install
+```
 
-Pre-compiled binary wheels distributed on PyPI target generic CPU architectures for universal portability. However, in High-Performance Computing (HPC) workflows—where descriptor evaluation, neighbor listing, and 3D B-spline tabulation run millions of times—hardware-level CPU vectorization is critical.
+This will install JGAP with all its functionalities to your virtual environment, and when it is active you should be able to compile standalone tools with simple commands, like: 
+```bash
+c++ -std=c++23 -O3 -march=native BasicFit.cpp -ljgap -o basic_fit
+```
 
-Compiling `jgap` directly on your HPC cluster compute nodes enables **`-march=native`** vector extensions (e.g. **AVX-512**, **AVX2**, and **FMA**), yielding substantial performance gains.
+> [!NOTE]
+> If you run `cmake --workflow --preset install` without using a virtual environment, the `libjgap` library will be installed into `$HOME/.local`.
+> For one-line compilation commands to work, you may need to add it to your `$PATH` in `~/.zshrc` or `~/.bashrc`:
+> ```bash
+> # 1. CLI tools (jgap, jgap_convert)
+> export PATH="$HOME/.local/bin:$PATH"
+> # 2. C++ Headers (#include <jgap/...>)
+> export CPLUS_INCLUDE_PATH="$HOME/.local/include${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}"
+> # 3. Linker search path for -ljgap at compile-time
+> export LIBRARY_PATH="$HOME/.local/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+> # 4. Dynamic loader runtime search path for libjgap.dylib
+> export DYLD_LIBRARY_PATH="$HOME/.local/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+> export DYLD_FALLBACK_LIBRARY_PATH="$HOME/.local/lib${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+> ```
+> Additionally, adding `-Wl,-rpath,$HOME/.local/lib` to the compilation command may help.
 
-### Native Recompilation via Pip (`--no-binary`)
+> [!TIP]
+> To clean up `$HOME/.local` run:
+> ```bash
+> rm -rf ~/.local/include/jgap \
+>        ~/.local/lib/cmake/jgap \
+>        ~/.local/lib/libjgap.* \
+>        ~/.local/bin/jgap* \
+>        ~/.local/lib/python*/site-packages/jgap*
+> ```
 
-To bypass prebuilt generic wheels and compile directly on your cluster compute node with `-march=native`:
+You can check Python package is installed correctly by running:
+
+```bash
+python -c "import jgap; print('OK')"
+```
+
+If you only want to use JGAP's Python interface, the following command might be sufficient, given all the dependancies are available as normal:
 
 ```bash
 pip install jgap --no-binary jgap \
   -Ccmake.define.CMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -ffast-math"
 ```
 
-* `--no-binary jgap`: Forces `pip` to download the source distribution (`sdist`) and build locally.
-* `-Ccmake.define.CMAKE_CXX_FLAGS_RELEASE="..."`: Injects `-march=native` directly into the CMake release configuration.
-
----
-
-### Direct CMake Workflow (Full C++ Library & CLI)
-
-To build the standalone C++ CLI tools (`jgap`, `jgap_convert`) alongside the Python interface:
-
-1. **Load Environment Modules** (example for SLURM / Lmod clusters with GCC 15):
-   ```bash
-   module purge
-   module load gcc/15     # Or llvm/clang-19
-   module load openblas
-   module load hdf5
-   module load cmake
-   module load ninja
-   module load python/3.12
-   ```
-
-2. **Activate Your Python Environment**:
-   ```bash
-   python3 -m venv ~/jgap-env
-   source ~/jgap-env/bin/activate
-   pip install --upgrade pip
-   pip install pybind11 numpy scipy ase
-   ```
-
-3. **Compile and Install with `-march=native`**:
-   The `release` preset applies `-O3 -ffast-math -march=native` by default:
-   ```bash
-   # Configure directly on a compute node (or interactive job) to target its exact microarchitecture:
-   cmake --preset release \
-     -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV \
-     -DPython3_EXECUTABLE=$(which python)
-
-   # Build in parallel and install
-   cmake --build --preset install -j$(nproc)
-   ```
-
-4. **Verify SIMD Vectorization in SLURM Job Scripts**:
-   ```bash
-   #!/bin/bash
-   #SBATCH --job-name=jgap_fit
-   #SBATCH --nodes=1
-   #SBATCH --cpus-per-task=16
-   #SBATCH --time=04:00:00
-
-   source ~/jgap-env/bin/activate
-   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-
-   jgap --predict potential.jgap.h5 structures.xyz output.xyz
-   ```
+If you do not need Python interface, on the other hand, you may compile via:
+```bash
+   cmake --preset release -DJGAP_BUILD_PYTHON=OFF
+cmake --build --preset install
+```
 
 ---
 
 ## 5. CMake Workflow Presets Reference
 
-`jgap` provides unified CMake presets (`CMakePresets.json`) across all platforms:
+If you want to modify JGAP, you may find the following CMake presets (`CMakePresets.json`) useful:
 
 | Preset Name | Type | Description |
 | :--- | :--- | :--- |
@@ -152,9 +125,18 @@ cmake --preset asan && cmake --build --preset asan && ctest --preset asan
 
 ## 6. Troubleshooting & FAQs
 
+### Ninja Build Tool is Optional
+Ninja is optional. If Ninja is not available on your cluster module tree or package manager:
+1. You can install it into your virtual environment in seconds via `pip install ninja`.
+2. Or build using standard Makefiles:
+   ```bash
+   cmake -B build -DCMAKE_BUILD_TYPE=Release
+   cmake --build build -j$(nproc)
+   ```
+
 ### Python Extension Links to Wrong Python Version
 If CMake selects a system Python rather than your active virtual environment's Python:
-1. Delete the `build/` directory: `rm -rf build`.
+1. Delete the `build/` directory: `rm -rf build` .
 2. Explicitly specify the interpreter path during configuration:
    ```bash
    cmake --preset release -DPython3_EXECUTABLE=$(which python)

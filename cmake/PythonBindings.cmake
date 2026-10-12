@@ -1,5 +1,14 @@
 ## PYTHON / PYBIND11 MODULE (_jgap & jgap package)
 
+option(JGAP_BUILD_PYTHON "Build Python bindings (_jgap module and jgap package)" ON)
+if (NOT JGAP_BUILD_PYTHON)
+    message(STATUS "Python bindings disabled (JGAP_BUILD_PYTHON=OFF): skipping Python module build")
+    return()
+endif ()
+
+# Prioritize active virtual environment (venv / conda)
+set(Python3_FIND_VIRTUALENV FIRST)
+
 find_package(Python3 COMPONENTS Interpreter Development.Module OPTIONAL_COMPONENTS Development QUIET)
 if (NOT Python3_FOUND)
     find_package(Python3 COMPONENTS Interpreter QUIET)
@@ -53,31 +62,54 @@ if (Python3_FOUND)
                     FILES_MATCHING PATTERN "*.py")
             install(TARGETS jgap_lib DESTINATION "jgap")
         else ()
-            # Place the built extension directly into python/jgap/ for in-tree use only
+            # Determine destination site-packages directory
+            if (Python3_SITEARCH)
+                file(RELATIVE_PATH _REL_CHECK "${CMAKE_INSTALL_PREFIX}" "${Python3_SITEARCH}")
+                if (NOT _REL_CHECK MATCHES "^\\.\\.")
+                    set(_PY_INSTALL_DIR "${_REL_CHECK}")
+                else ()
+                    set(_PY_INSTALL_DIR "${Python3_SITEARCH}")
+                endif ()
+            else ()
+                execute_process(
+                    COMMAND "${Python3_EXECUTABLE}" -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
+                    OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET
+                )
+                if (NOT _PY_SITE_PACKAGES_REL)
+                    set(_PY_SITE_PACKAGES_REL "lib/python3/site-packages")
+                endif ()
+                set(_PY_INSTALL_DIR "${_PY_SITE_PACKAGES_REL}")
+            endif ()
+
+            if (APPLE)
+                set(_PY_INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/..;@loader_path;${CMAKE_INSTALL_FULL_LIBDIR}")
+            else ()
+                set(_PY_INSTALL_RPATH "\$ORIGIN/../../..;\$ORIGIN/../../../${CMAKE_INSTALL_LIBDIR};\$ORIGIN/..;\$ORIGIN;${CMAKE_INSTALL_FULL_LIBDIR}")
+            endif ()
+
             set_target_properties(_jgap PROPERTIES
                 OUTPUT_NAME _jgap
                 LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap"
                 BUILD_WITH_INSTALL_RPATH FALSE
                 BUILD_RPATH "${CMAKE_BINARY_DIR}"
-                INSTALL_RPATH "@loader_path/../../..;@loader_path/../../lib;@loader_path/..;@loader_path"
+                INSTALL_RPATH "${_PY_INSTALL_RPATH}"
             )
 
-            execute_process(
-                COMMAND "${Python3_EXECUTABLE}" -c "import sys; print(f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')"
-                OUTPUT_VARIABLE _PY_SITE_PACKAGES_REL
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET
+            set_target_properties(jgap_ase PROPERTIES
+                OUTPUT_NAME jgap_ase
+                BUILD_WITH_INSTALL_RPATH FALSE
+                BUILD_RPATH "${CMAKE_BINARY_DIR}"
+                INSTALL_RPATH "${_PY_INSTALL_RPATH}"
             )
-            if (NOT _PY_SITE_PACKAGES_REL)
-                set(_PY_SITE_PACKAGES_REL "lib/python3/site-packages")
-            endif ()
 
-            install(TARGETS _jgap DESTINATION "${_PY_SITE_PACKAGES_REL}/jgap")
-            install(TARGETS jgap_ase DESTINATION "${_PY_SITE_PACKAGES_REL}")
-            install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "${_PY_SITE_PACKAGES_REL}"
+            install(TARGETS _jgap DESTINATION "${_PY_INSTALL_DIR}/jgap")
+            install(TARGETS jgap_ase DESTINATION "${_PY_INSTALL_DIR}")
+            install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "${_PY_INSTALL_DIR}"
                     FILES_MATCHING PATTERN "*.py")
             if (EXISTS "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py")
-                install(FILES "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py" DESTINATION "${_PY_SITE_PACKAGES_REL}")
+                install(FILES "${PROJECT_SOURCE_DIR}/scripts/ASE/jgap_calculator.py" DESTINATION "${_PY_INSTALL_DIR}")
             endif ()
         endif ()
     else ()

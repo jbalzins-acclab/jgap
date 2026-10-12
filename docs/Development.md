@@ -1,68 +1,51 @@
 # Developer & Extension Guide
 
-This guide covers the internal architecture of `jgap`, how to run unit tests and validation suites, how the serialization system works, and how to extend the framework with new components.
+This guide covers the internal architecture of JGAP, how to run unit tests and validation suites, how the serialization system works, and how to extend the framework with new components.
 
 ---
 
-## 1. System Architecture
+## 1. System Architecture & Components
 
-The following diagram illustrates how atomic representations, cluster expansions, aggregators, kernels, components, external baselines, fitting solvers, and tabulation engines interconnect in `jgap`:
+JGAP models GAP interactions through a modular, component-based potential architecture. 
+A `GapPotential` (Gaussian Approximation Potential) and its tabulated counterpart `TabGapPotential`—are built from an assembly of independent **Components** alongside an optional external baseline potential.
 
-```mermaid
-flowchart TD
-    subgraph InputData ["1. Training Data & Preprocessing"]
-        XYZ["Extended XYZ Trajectories"] --> Atoms["Atoms (Positions, Lattice, Forces, Virials)"]
-        Atoms --> NList["NeighbourLists (Periodic Boundary Cells)"]
-        NList --> ClusterExp["Cluster Expansions (Cluster2Expansion, Cluster3Expansion)"]
-    end
+### How Components Work
 
-    subgraph Representations ["2. Transformations & Aggregations"]
-        ClusterExp --> Trans["Coordinate Transformations (2B Distance, 3B Angle, EAM Density)"]
-        Trans -->|Sampled descriptors| Sparsify["Sparsifiers (HistogramUniformSparsifier)"]
-        Sparsify --> SparsePoints["Sparse Points (X_sparse)"]
-        Trans --> Aggregators["N-Body Aggregators (TwoBodySum, ThreeBodySum)"]
-    end
+Components (`GapComponent` and `TabGapComponent`) encapsulate the physical interactions, geometric representations, and mathematical kernels for a specific interaction order (such as 2-body pair distances, 3-body angular triplets, and many-body/EAM electron densities):
 
-    subgraph MathematicalObjects ["3. Kernels & Components"]
-        Kernels["Independent Covariance Kernels (SquaredExp, Wendland, Cauchy)"]
-        Trans -.-> GapComp
-        SparsePoints --> GapComp
-        Kernels --> GapComp["GAP Components (TwoBody, ThreeBody, ManyBody)"]
-        ExtPot["Optional External Potential (Screened Coulomb ZBL, Isolated Atom)"]
-        GapComp --> GapPotInput["GapPotential (Model Definition)"]
-        ExtPot --> GapPotInput
-    end
+1. **Neighbor Extraction & Coordinate Transformations**:
+   Neighbor lists (`NeighbourLists`) are constructed for atomic configurations under periodic or free boundary conditions and expanded into 2-body pairs or 3-body triplets (`Cluster2Expansion`, `Cluster3Expansion`). Concrete coordinate transformations (e.g. `PairDistanceTransformation`, `Angle3bTransformation`, `FSGenPairFunction`) map these spatial clusters into invariant descriptor coordinates.
 
-    subgraph Solvers ["4. Linear Solvers & Fitting (GapFit)"]
-        GapPotInput -->|Input model layout & ext pot| GapFitEngine["GapFit Engine (QRGapFit, Block/Element Incremental)"]
-        Aggregators -->|Direct training representations| GapFitEngine
-        Atoms -->|Energy, forces & virials targets| GapFitEngine
-        Sigmas["Regularization Sigmas (PerConfigTypeRules)"] --> GapFitEngine
-        GapFitEngine -->|Solves & assigns linear coefficients| GapPotOutput["Fitted GapPotential (Model + Coefficients)"]
-    end
+2. **Many-Body Aggregation (`NBodyAggregator`)**:
+   For many-body and EAM components (`ManyBodyGapComponent`, `EamTGComponent`), local atomic environments cannot be described by isolated pair or triplet terms alone. Instead, an `NBodyAggregator` (such as `TwoBodySum` or `ThreeBodySum`) sums neighbor cluster contributions around each central atom into an atomic descriptor vector (e.g. local electron density $\rho_i = \sum_{j} \phi(r_{ij})$), along with derivative tensors needed for force and virial evaluations.
 
-    subgraph EvaluationAndTabulation ["5. Output, Tabulation & Integration"]
-        GapPotOutput --> H5[".jgap.h5 Serialization File"]
-        GapPotOutput --> PyASE["Python ASE Calculator (JGAPCalculator)"]
-        GapPotOutput --> Tabulator["Spline Tabulator (1D Natural/Hermite & 3D Cubic B-Splines)"]
-        Tabulator --> TabH5[".tabgap.h5 Spline Table"]
-        Tabulator --> EAMFS[".eam.fs EAM Table"]
-        EAMFS --> LAMMPS_EAM["LAMMPS pair_style eam/fs"]
-        TabH5 -.-> ExtLAMMPS["LAMMPS tabGAP Engine (External Plugin)"]
-    end
-```
+3. **Sparsification & Representative Basis (`Sparsifier`)**:
+   Rather than treating all atomic environments in the training database as Gaussian process basis centers, each component maintains a representative subset of **Sparse Points** . All descriptors present across training configurations (`getAllDescriptors`) are passed to a `Sparsifier` (such as `HistogramUniformSparsifier` or `FromFileSparsifier`), which selects an evenly distributed basis set across descriptor space (e.g., by partitioning descriptor space into multidimensional histogram bins to ensure uniform coverage and prevent clustering in over-represented equilibrium geometries).
+
+4. **Covariance Kernels & Covariate Evaluation**:
+   Covariance kernels (e.g. `SquaredExpKernel`) are independent mathematical functions. A component combines its coordinate representation with a kernel and its sparse basis  to compute covariance blocks:
+   * **$K_{MM}$**: Covariance matrix between sparse points.
+   * **Covariates ($K_{NM}$)**: Evaluated per training configuration via `GapComponent::covariate(neighbour_list)`, which maps the configuration's atomic clusters (or aggregated many-body descriptors) against the sparse points to compute energy covariances and analytical force/virial derivatives for the design matrix.
+
+5. **Linear Expansion Coefficients**:
+   During fitting (`GapFit`), the linear solver solves the regularized system against DFT reference residuals ($y_{\text{target}} = y_{\text{DFT}} - y_{\text{ext}}$). Each component stores its solved linear coefficients ($c_j$) via `setCoefficients`, which scale the basis functions.
+
+6. **Energy, Force & Virial Prediction**:
+   At evaluation time, the total energy of a `GapPotential` is the sum of energies predicted across its constituent components plus any external baseline potential. Analytical derivatives with respect to atomic coordinates yield forces and virials.
+
+7. **Tabulation Support**:
+   To tabulate a GAP, low-dimensional external potentials and components evaluate their energy contributions onto discrete grids (`tabulate` / `fillTables`).
 
 ### Architectural Key Concepts
-1. **Cluster Expansions & Transformations**: Neighbor lists are expanded into 2-body pairs and 3-body triplets (`Cluster2Expansion`, `Cluster3Expansion`) before applying non-linear coordinate mappings (e.g. `Angle3bTransformation`, `FSGenPairFunction`).
-2. **Dual Path for Transformed Representations**:
-   * A subset of transformed descriptors is sampled by `HistogramUniformSparsifier` to generate the representative basis set (**Sparse Points** $X_s$).
-   * During fitting, transformed descriptors from all training configurations are gathered via **N-Body Aggregators** (`TwoBodySum`, `ThreeBodySum`) and fed directly into the design matrix assembly.
-3. **Independent Kernels & Component Assembly**: Covariance kernels (`SquaredExpKernel`, `WendlandKernel`, `CauchyKernel`) are purely mathematical objects defined independently of descriptors. A **GAP Component** combines a specific transformation, its sparse basis set $X_s$, and a covariance kernel.
-4. **`GapPotential` as Both Input and Output of Fitting**:
+1. **Cluster Expansions & Coordinate Transformations**: Neighbor lists are expanded into 2-body pairs and 3-body triplets (`Cluster2Expansion`, `Cluster3Expansion`) before applying non-linear coordinate mappings (e.g. `Angle3bTransformation`, `FSGenPairFunction`).
+2. **Many-Body Density Aggregators (`NBodyAggregator`)**: In many-body and EAM models, `TwoBodySum` or `ThreeBodySum` accumulate cluster transformations around each central atom to form atomic descriptors (such as local electron density $\rho_i$) and coordinate derivative tensors.
+3. **Descriptor Sparsification (`Sparsifier`)**: Training configurations yield a dense set of descriptors. `HistogramUniformSparsifier` bins the descriptor space to select representative **Sparse Points**  with uniform coverage, preventing over-representation of common configurations.
+4. **Independent Kernels & Component Assembly**: Covariance kernels are purely mathematical objects defined independently of descriptors. A GAP Component combines a specific transformation (or aggregator), its sparse basis set , and a covariance kernel.
+5. **`GapPotential` as Both Input and Output of Fitting**:
    * **As Input**: `GapPotential` defines the model architecture (the collection of components, kernels, sparse points) and optionally an `optional_external_potential` (such as ZBL `ScreenedCoulombPotential` and `IsolatedAtomPotential`).
    * **Residual Fitting**: During `GapFit`, the external potential evaluates baseline contributions, which are subtracted from DFT reference targets ($y_{\text{target}} = y_{\text{DFT}} - y_{\text{ext}}$).
    * **As Output**: The linear solver (`QRGapFit` or low-memory streaming variants) solves the regularized system and assigns the resulting coefficients ($c_j$ / $\boldsymbol{\alpha}$) directly into the components of the `GapPotential`.
-5. **External Simulation Engines**:
+6. **External Simulation Engines**:
    * `.eam.fs` files run directly in LAMMPS via standard `pair_style eam/fs`.
    * Multi-body `.tabgap.h5` tables run inside LAMMPS via the external plugin repository [gitlab.com/jezper/tabgap](https://gitlab.com/jezper/tabgap).
 
@@ -98,6 +81,38 @@ The source code in `src/jgap/` maintains a clean separation between **core abstr
   * High-level fitting driver (`standardGapFit`), parameter structs (`StandardGapParams`, `StandardTabulationParams`).
 * **`pybind/`**:
   * Python C-extension interface (`PyJGAP.cpp`).
+
+### Core Design Idioms: `ValuePtr` & Template Architecture
+
+#### 1. Polymorphic Value Semantics (`ValuePtr<T>`)
+In interatomic potential codebases, managing polymorphic types via raw pointers or standard smart pointers (`std::unique_ptr<Base>`) often introduces verbose boilerplate, manual heap management, and a loss of regular value semantics. JGAP solves this using `ValuePtr<T>` (`src/jgap/core/ValuePtr.hpp`):
+
+* **The `Cloneable` Concept**: Constrains `T` to classes providing a `.clone()` method returning `T*` and a virtual destructor:
+  ```cpp
+  template<typename T>
+  concept Cloneable = requires(const T& obj) {
+      { obj.clone() } -> std::convertible_to<T*>;
+  } && std::has_virtual_destructor_v<T>;
+  ```
+* **Deep Copying by Default**: Copying a `ValuePtr<T>` automatically clones the underlying object, giving composite potentials (like `GapPotential` and `CompositePotential`) clean value semantics without slicing.
+* **Zero-Allocation Moves**: Moving a `ValuePtr<T>` transfers pointer ownership without heap allocations or cloning.
+* **Elimination of Allocation Boilerplate**: Derived types can be assigned directly to base pointers without explicit `std::make_unique`:
+  ```cpp
+  ValuePtr<Potential> pot = ScreenedCoulombPotential(...);
+  ```
+* **Safe Downcasting**: Provides a type-safe `.as<Derived>()` method wrapping `dynamic_cast<Derived*>(...)`.
+
+#### 2. Template Architecture & Dimensionality
+JGAP combines compile-time generic programming for high-performance inner loops with runtime dynamic polymorphism for high-level model assembly:
+
+* **Compile-Time Dimensionality (`size_t Dim`)**:
+  Coordinate transformations (`TwoBodyTransformation<Dim>`, `ThreeBodyTransformation<Dim>`), covariance kernels (`Kernel<Dim, DerivDim>`), descriptors (`Descriptor<Dim>`), and aggregators (`NBodyAggregator<Dim>`) are templated on spatial/descriptor dimensionality (`size_t Dim`). This enables fixed-size array allocations (`std::array`), loop unrolling, and SIMD auto-vectorization in tight evaluation loops.
+* **Concepts & Inlined Kernel Evaluation**:
+  C++20 concepts (such as `CKernelOfDim<Dim>`) constrain kernel implementations. Concrete components like `TwoBodyGapComponent<Dim, TKernel>` accept kernel types as template parameters, allowing the compiler to inline kernel covariance and gradient evaluations directly rather than paying the cost of virtual method dispatches per atomic pair or triplet.
+* **Dynamic Boundaries at Component Level**:
+  To prevent templates from infecting the entire codebase, top-level interfaces (`GapComponent`, `Potential`, `TabGapComponent`) use dynamic polymorphism. For example, `GapPotential` manages a heterogeneous vector of `ValuePtr<GapComponent>`, allowing models combining different body-orders, dimensions, and kernel formulations to be fitted and evaluated interchangeably.
+* **Explicit Template Instantiation**:
+  For standard dimensions (`Dim = 1, 2, 3, 4`), serializers and implementations are explicitly instantiated in `.cpp` translation units. This keeps header compilation times manageable while ensuring necessary symbols are exported in the shared library for runtime registries and Python bindings.
 
 ### Shared Library Requirement
 `jgap_lib` is built strictly as a **shared library (`SHARED`)**. The dynamic serialization registry and polymorphic casting across module boundaries rely on shared-library symbol visibility.
@@ -140,9 +155,43 @@ The source code in `src/jgap/` maintains a clean separation between **core abstr
 
 ---
 
-## 4. How to Add Extensions
+## 4. How to Add Extensions & New Components
 
-### 1. Adding a New Cutoff Function
+### General Guidelines for New Components & Extensions
+
+When adding new components, cutoffs, kernels, or potential types to `jgap`, follow these general principles:
+
+* **Serialization is Required for objects (Potentials and their parts parametrization) that are intended to be saved for later reuse**:
+  If a new component, potential, or parameter object is meant to be saved to or loaded from a `.jgap.h5` potential file, you **must** implement its serialization class inheriting from `Serialization<TBase>` (e.g. `Serialization<GapComponent>` or `Serialization<Potential>`) and register it with `REGISTER_SERIALIZATION(...)` in `src/jgap/serialization/`. Without this, the polymorphic `SerializationRegistry` cannot persist or restore the object.
+* **Add and Run Unit Tests (`add/run`)**:
+  Whenever adding a new component or extending mathematical primitives, add unit tests in `test/unit/` covering forward evaluation, analytical forces and virials, boundary conditions, and serialization round-trips. Always run the unit test suite (`cmake --workflow --preset dev` or `./build/debug/jgap_tests`) to confirm that all tests pass locally.
+* **Validation Suite for Existing Logic**:
+  Whenever modifying, refactoring, or optimizing **existing logic** (such as descriptor representations, covariance formulas, solvers, existing component evaluation, or tabulation grids), the automated validation suite **must** be executed (`cmake --workflow --preset validation` or `ctest -L validation`). If numerical outputs or formulas intentionally change, the reference baselines or test tolerances must be adjusted accordingly.
+
+---
+
+### 1. Adding a New GAP Component
+1. Inherit from `GapComponent` in `src/jgap/core/potentials/gap/component/`:
+   ```cpp
+   #include "jgap/core/potentials/gap/component/GapComponent.hpp"
+
+   class CustomGapComponent : public GapComponent {
+   public:
+       std::optional<AtomicQuantities> covariate(const NeighbourLists& nl) const override;
+       Matrix<RowMajor> K_MM() const override;
+       size_t nSparsePoints() const override;
+       Cutoffs getCutoffs() const override;
+       std::set<Species> nonZeroCovarianceFor() const override;
+       void tabulate(TabulationData& tables) const override;
+       CustomGapComponent* clone() const override;
+   };
+   ```
+2. Implement serialization in `src/jgap/serialization/potentials/gap/component/`:
+   - Implement `CustomGapComponentSerialization` deriving from `Serialization<GapComponent>`.
+   - Register it with `REGISTER_SERIALIZATION(CustomGapComponentSerialization, GapComponent);`.
+3. Add unit tests in `test/unit/potentials/` verifying covariate calculations, energy/force evaluation, and HDF5 serialization round-trips.
+
+### 2. Adding a New Cutoff Function
 1. Inherit from `CutoffFunction` in `src/jgap/impl/cutoff/`:
    ```cpp
    #include "jgap/core/cutoff/CutoffFunction.hpp"
@@ -159,16 +208,18 @@ The source code in `src/jgap/` maintains a clean separation between **core abstr
 2. Create `MyCutoffSerialization.cpp` in `src/jgap/serialization/cutoff/`:
    - Implement `serialize` and `deserialize` storing parameters to HDF5.
    - Register via `REGISTER_SERIALIZATION(MyCutoffSerialization, CutoffFunction);`.
+3. Add unit tests in `test/unit/cutoff/` verifying evaluation, derivatives, and serialization round-trips.
 
-### 2. Adding a New Covariance Kernel
+### 3. Adding a New Covariance Kernel
 1. Inherit from `Kernel<Dim, DerivDim>` in `src/jgap/impl/kernels/`:
    ```cpp
    #include "jgap/core/kernels/Kernel.hpp"
    ```
 2. Implement covariance calculation, distance functions, and gradients.
 3. Add serialization in `src/jgap/serialization/kernels/` with `REGISTER_SERIALIZATION(..., Kernel<Dim, DerivDim>)`.
+4. Add unit tests in `test/unit/kernels/`.
 
-### 3. Adding a New Potential Type
+### 4. Adding a New Potential Type
 1. Inherit from `Potential` in `src/jgap/impl/potentials/`:
    ```cpp
    #include "jgap/core/potentials/Potential.hpp"
@@ -184,8 +235,9 @@ The source code in `src/jgap/` maintains a clean separation between **core abstr
 2. Implement `calculateEnergy` to compute total energy, forces (`AtomicQuantity.forces`), and virials (`AtomicQuantity.virials`).
 3. Implement `fillTables` to evaluate the potential over tabulation grids for fast spline export.
 4. Implement and register its serializer in `src/jgap/serialization/potentials/` with `REGISTER_SERIALIZATION(CustomPotentialSerialization, Potential)`.
+5. Add unit tests in `test/unit/potentials/`.
 
-### 4. Exposing Extensions to Python
+### 5. Exposing Extensions to Python
 In `src/pybind/PyJGAP.cpp`:
 1. Bind the new class using `py::class_<T>`.
 2. Ensure methods returning C++ objects convert safely to Python-managed instances or NumPy arrays.
@@ -216,6 +268,11 @@ In `src/pybind/PyJGAP.cpp`:
 * Location: `test/validation/`.
 * Verifies numerical accuracy against external references (QUIP XML baselines, tabGAP HDF5 tables, and LAMMPS outputs).
 * Includes physical elemental property testing ($a_0, B, C_{ij}, E_{\text{vac}}^f, E_{\text{coh}}$) via ASE + `elastic`.
+
+> [!IMPORTANT]
+> **Modifying Existing Logic**:
+> Whenever you significantly modify existing logic in `jgap` (e.g. core transformations, covariance kernels, fitting solvers, baseline potentials, or spline tabulation), you should run and/or adjust the validation suite. This ensures physical predictions, reference compatibility with QUIP and LAMMPS, and elemental material property thresholds ($a_0, B, C_{ij}, E_{\text{vac}}^f, E_{\text{coh}}$) remain verified.
+
 * **Execution**:
   1. Extract reference datasets (if not already extracted):
      ```bash
