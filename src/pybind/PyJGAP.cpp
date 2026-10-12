@@ -30,6 +30,7 @@
 #include "jgap/utils/gap/StandardGapFit.hpp"
 #include "jgap/utils/gap/StandardGapParams.hpp"
 #include "jgap/utils/gap/StandardTabulation.hpp"
+#include "jgap/core/UnseqFor.hpp"
 
 namespace py = pybind11;
 using namespace jgap;
@@ -240,6 +241,25 @@ PYBIND11_MODULE(_jgap, m) {
         return false;
 #endif
     }, "Returns true if jgap was compiled with LAPACKE acceleration for Eigen (QR/Cholesky).");
+
+    m.def("is_blas_enabled", []() {
+#ifdef EIGEN_USE_BLAS
+        return true;
+#else
+        return false;
+#endif
+    }, "Returns true if jgap was compiled with BLAS acceleration (e.g. Apple Accelerate or OpenBLAS).");
+
+    m.def("is_accelerated", []() {
+#if defined(EIGEN_USE_LAPACKE) || defined(EIGEN_USE_BLAS)
+        return true;
+#else
+        return false;
+#endif
+    }, "Returns true if jgap was compiled with linear algebra hardware acceleration (BLAS or LAPACKE).");
+
+    m.def("get_num_threads", &jgap::getNumThreads, "Returns the number of threads used for parallel loops.");
+    m.def("set_num_threads", &jgap::setNumThreads, py::arg("n"), "Sets the number of threads used for OpenMP parallel loops and enables nested parallelism.");
 
     // =========================================================================
     // Vector3

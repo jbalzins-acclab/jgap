@@ -40,3 +40,24 @@ module load ninja 2>/dev/null || true
 ```bash
 pip install pybind11 numpy scipy ase elastic
 ```
+
+---
+
+## 5. Multi-Core Execution & Threading
+
+On HPC clusters, you may need to explicitly configure `OMP_NUM_THREADS` to match your allocated cores, e.g.:
+
+```bash
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+```
+
+Depending on your cluster setup and BLAS backend, you can also experiment with setting `OPENBLAS_NUM_THREADS` or `MKL_NUM_THREADS` (e.g. `1` or matching your allocation) for best performance.
+
+You can also inspect and configure the active thread count dynamically in Python:
+
+```python
+import jgap
+
+print(f"JGAP active threads: {jgap.get_num_threads()}")
+jgap.set_num_threads(20)  # Dynamically configure thread pool
+```

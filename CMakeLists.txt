@@ -53,74 +53,69 @@ list(FILTER ALL_SRC_CPP EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/src/pybind/.*")
 
 set(LIBRARY_SOURCE_FILES ${ALL_SRC_CPP} ${ALL_SRC_C})
 
-add_library(jgap_lib SHARED ${LIBRARY_SOURCE_FILES})
-add_library(jgap::jgap ALIAS jgap_lib)
-
-set_target_properties(jgap_lib PROPERTIES
-        OUTPUT_NAME jgap
-        EXPORT_NAME jgap
-        CXX_VISIBILITY_PRESET default
-        VISIBILITY_INLINES_HIDDEN OFF
-)
-
-# Hard guard: jgap MUST be a shared library.
-get_target_property(_jgap_lib_type jgap_lib TYPE)
-if (NOT _jgap_lib_type STREQUAL "SHARED_LIBRARY")
-    message(FATAL_ERROR
-            "jgap_lib must be built as a SHARED library (it is currently ${_jgap_lib_type}). The "
-            "serialization registry and cross-boundary dynamic_cast depend on shared-library symbol "
-            "semantics; a static build breaks them silently.")
-endif ()
-
-if (JGAP_LAPACK_LIBS)
-    target_link_libraries(jgap_lib PRIVATE ${JGAP_LAPACK_LIBS})
-endif ()
-if (JGAP_BLAS_LIBS)
-    target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
-endif ()
-
-target_link_libraries(jgap_lib PRIVATE
-        Eigen3::Eigen
-        HighFive
-        pugixml::pugixml
-        HDF5::HDF5
-)
-target_include_directories(jgap_lib PRIVATE ${HDF5_INCLUDE_DIRS})
-
-if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # Resolve libc++ symbols required by pre-compiled static dependencies when building with GCC on macOS
-    target_link_libraries(jgap_lib PRIVATE c++)
-endif ()
-
-if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
-    # Statically link libstdc++ into wheel binaries while hiding internal symbols to prevent runtime collisions
-    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL")
-endif ()
-
-if (APPLE)
-    target_compile_definitions(jgap_lib PUBLIC HAS_GCD)
-elseif (OpenMP_CXX_FOUND)
-    target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
-    target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)
-endif ()
-
-# Public include dirs so consumers of the target get jgap's headers for free.
-target_include_directories(jgap_lib PUBLIC
-        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
-        "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>"
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-)
-
-target_compile_definitions(jgap_lib PUBLIC EIGEN_FAST_MATH EIGEN_NO_DEBUG "JGAP_VERSION=\"${PROJECT_VERSION}\"")
-if (JGAP_BLAS_LIBS)
-    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_BLAS)
-endif ()
-if (LAPACKE_FOUND)
-    target_include_directories(jgap_lib PUBLIC ${LAPACKE_INCLUDE_DIR})
-    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
-endif ()
-
 if (NOT SKBUILD)
+    add_library(jgap_lib SHARED ${LIBRARY_SOURCE_FILES})
+    add_library(jgap::jgap ALIAS jgap_lib)
+
+    set_target_properties(jgap_lib PROPERTIES
+            OUTPUT_NAME jgap
+            EXPORT_NAME jgap
+            CXX_VISIBILITY_PRESET default
+            VISIBILITY_INLINES_HIDDEN OFF
+    )
+
+    # Hard guard: jgap MUST be a shared library.
+    get_target_property(_jgap_lib_type jgap_lib TYPE)
+    if (NOT _jgap_lib_type STREQUAL "SHARED_LIBRARY")
+        message(FATAL_ERROR
+                "jgap_lib must be built as a SHARED library (it is currently ${_jgap_lib_type}). The "
+                "serialization registry and cross-boundary dynamic_cast depend on shared-library symbol "
+                "semantics; a static build breaks them silently.")
+    endif ()
+
+    if (JGAP_LAPACK_LIBS)
+        target_link_libraries(jgap_lib PRIVATE ${JGAP_LAPACK_LIBS})
+    endif ()
+    if (JGAP_BLAS_LIBS)
+        target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
+    endif ()
+
+    target_link_libraries(jgap_lib PRIVATE
+            Eigen3::Eigen
+            HighFive
+            pugixml::pugixml
+            HDF5::HDF5
+    )
+    target_include_directories(jgap_lib PRIVATE ${HDF5_INCLUDE_DIRS})
+
+    if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # Resolve libc++ symbols required by pre-compiled static dependencies when building with GCC on macOS
+        target_link_libraries(jgap_lib PRIVATE c++)
+    endif ()
+
+    if (APPLE)
+        target_compile_definitions(jgap_lib PUBLIC HAS_GCD)
+    elseif (OpenMP_CXX_FOUND)
+        target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
+        target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)
+    endif ()
+
+    # Public include dirs so consumers of the target get jgap's headers for free.
+    target_include_directories(jgap_lib PUBLIC
+            "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+            "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>"
+            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+    )
+
+    target_compile_definitions(jgap_lib PUBLIC EIGEN_FAST_MATH EIGEN_NO_DEBUG "JGAP_VERSION=\"${PROJECT_VERSION}\"")
+    if (JGAP_BLAS_LIBS)
+        target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_BLAS)
+    endif ()
+    if (LAPACKE_FOUND)
+        target_include_directories(jgap_lib PUBLIC ${LAPACKE_INCLUDE_DIR})
+        target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
+    endif ()
+
     # Standalone CLI tools (skipped when building Python wheels)
     add_executable(jgap
             ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
@@ -130,19 +125,19 @@ if (NOT SKBUILD)
     # QUIP XML -> .h5 converter app
     add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
     target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::pugixml)
+
+    add_custom_command(TARGET jgap_lib POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/resources
+            ${CMAKE_CURRENT_BINARY_DIR}/resources
+    )
+
+    add_custom_command(TARGET jgap_lib POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/resources
+            ${CMAKE_CURRENT_BINARY_DIR}/test/resources
+    )
 endif ()
-
-add_custom_command(TARGET jgap_lib POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-        ${CMAKE_CURRENT_BINARY_DIR}/resources
-)
-
-add_custom_command(TARGET jgap_lib POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/resources
-        ${CMAKE_CURRENT_BINARY_DIR}/test/resources
-)
 
 # 4. Python Bindings
 include(PythonBindings)

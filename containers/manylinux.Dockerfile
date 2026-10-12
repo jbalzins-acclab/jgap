@@ -6,8 +6,11 @@ RUN dnf install -y epel-release \
     && dnf install -y \
        hdf5-devel \
        openblas-devel \
+       openblas-openmp \
+       openblas-threads \
        lapack-devel \
        ninja-build \
+    && ln -sf /usr/lib64/libopenblaso.so /usr/lib64/libopenblas.so \
     && dnf clean all
 
 # Install GCC 15 toolchain from conda-forge (built against glibc 2.28 sysroot)
