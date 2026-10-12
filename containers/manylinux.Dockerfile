@@ -1,10 +1,12 @@
 FROM quay.io/pypa/manylinux_2_28_x86_64
 
-# Install EPEL repository and system development libraries (HDF5, OpenBLAS, Ninja)
+# Install EPEL repository and system development libraries (HDF5, OpenBLAS, LAPACK, Ninja)
 RUN dnf install -y epel-release \
+    && (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true) \
     && dnf install -y \
        hdf5-devel \
        openblas-devel \
+       lapack-devel \
        ninja-build \
     && dnf clean all
 

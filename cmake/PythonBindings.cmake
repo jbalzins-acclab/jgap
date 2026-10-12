@@ -29,6 +29,9 @@ if (Python3_FOUND)
     if (pybind11_FOUND)
         message(STATUS "pybind11 found for Python ${Python3_VERSION} (${Python3_EXECUTABLE}): building _jgap Python module")
         if (SKBUILD)
+            if (NOT LAPACKE_FOUND)
+                message(FATAL_ERROR "LAPACKE acceleration is REQUIRED for Python wheels (SKBUILD=ON), but LAPACKE was not found!")
+            endif ()
             # Monolithic Python wheel module: compile library sources directly into _jgap to ensure a single,
             # self-contained binary with a single unified C++ runtime, preventing cross-DSO allocator collisions.
             pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp" ${LIBRARY_SOURCE_FILES})

@@ -161,24 +161,12 @@ find_path(LAPACKE_INCLUDE_DIR
 set(JGAP_LAPACK_LIBS "")
 set(LAPACKE_FOUND FALSE)
 if (LAPACKE_INCLUDE_DIR)
-    # If OpenBLAS is used, LAPACKE symbols are already built into libopenblas (no separate liblapacke).
-    # Only search for standalone liblapacke if OpenBLAS is NOT the BLAS provider.
-    if (NOT OpenBLAS_FOUND)
-        find_library(LAPACKE_LIBRARY
-            NAMES lapacke
-            PATH_SUFFIXES lapack
-        )
-        if (LAPACKE_LIBRARY)
-            set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
-        endif ()
-    endif ()
-
-    # Verify that LAPACKE actually links with the available BLAS/LAPACK libraries
     set(_BACKUP_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
     set(_BACKUP_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
     set(CMAKE_REQUIRED_INCLUDES ${LAPACKE_INCLUDE_DIR})
-    set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS} ${JGAP_LAPACK_LIBS})
 
+    # Stage 1: Check if BLAS library already provides LAPACKE (e.g. OpenBLAS with bundled LAPACKE)
+    set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS})
     check_cxx_source_compiles("
     #include <lapacke.h>
     int main() {
@@ -186,15 +174,39 @@ if (LAPACKE_INCLUDE_DIR)
         double tau[1] = {0.0};
         return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
     }
-    " LAPACKE_WORKS)
+    " LAPACKE_WORKS_BLAS_ALONE)
+
+    if (LAPACKE_WORKS_BLAS_ALONE)
+        set(LAPACKE_FOUND TRUE)
+        message(STATUS "LAPACKE acceleration enabled via BLAS library (${LAPACKE_INCLUDE_DIR})")
+    else ()
+        # Stage 2: BLAS library does not bundle LAPACKE; search for standalone liblapacke
+        find_library(LAPACKE_LIBRARY
+            NAMES lapacke
+            PATH_SUFFIXES lapack
+        )
+        if (LAPACKE_LIBRARY)
+            set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS} ${LAPACKE_LIBRARY})
+            check_cxx_source_compiles("
+            #include <lapacke.h>
+            int main() {
+                double a[1] = {0.0};
+                double tau[1] = {0.0};
+                return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+            }
+            " LAPACKE_WORKS_WITH_LIB)
+            if (LAPACKE_WORKS_WITH_LIB)
+                set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+                set(LAPACKE_FOUND TRUE)
+                message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+            endif ()
+        endif ()
+    endif ()
 
     set(CMAKE_REQUIRED_INCLUDES ${_BACKUP_CMAKE_REQUIRED_INCLUDES})
     set(CMAKE_REQUIRED_LIBRARIES ${_BACKUP_CMAKE_REQUIRED_LIBRARIES})
 
-    if (LAPACKE_WORKS)
-        set(LAPACKE_FOUND TRUE)
-        message(STATUS "LAPACKE acceleration enabled (${LAPACKE_INCLUDE_DIR})")
-    else ()
+    if (NOT LAPACKE_FOUND)
         message(STATUS "LAPACKE header found at ${LAPACKE_INCLUDE_DIR} but linking failed: Eigen QR will use built-in routines")
     endif ()
 else ()
