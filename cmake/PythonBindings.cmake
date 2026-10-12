@@ -64,7 +64,7 @@ if (Python3_FOUND)
             endif ()
             if (LAPACKE_FOUND)
                 target_include_directories(_jgap PRIVATE ${LAPACKE_INCLUDE_DIR})
-                target_compile_definitions(_jgap PRIVATE EIGEN_USE_LAPACKE)
+                target_compile_definitions(_jgap PRIVATE EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
             endif ()
 
             if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -92,7 +92,7 @@ if (Python3_FOUND)
             target_compile_definitions(_jgap PRIVATE "JGAP_VERSION=\"${PROJECT_VERSION}\"")
             if (LAPACKE_FOUND)
                 target_include_directories(_jgap PRIVATE ${LAPACKE_INCLUDE_DIR})
-                target_compile_definitions(_jgap PRIVATE EIGEN_USE_LAPACKE)
+                target_compile_definitions(_jgap PRIVATE EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
             endif ()
 
             # Legacy jgap_ase module for backward compatibility
@@ -101,7 +101,7 @@ if (Python3_FOUND)
             target_compile_definitions(jgap_ase PRIVATE "JGAP_VERSION=\"${PROJECT_VERSION}\"")
             if (LAPACKE_FOUND)
                 target_include_directories(jgap_ase PRIVATE ${LAPACKE_INCLUDE_DIR})
-                target_compile_definitions(jgap_ase PRIVATE EIGEN_USE_LAPACKE)
+                target_compile_definitions(jgap_ase PRIVATE EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
             endif ()
 
             # Determine destination site-packages directory

@@ -14,7 +14,12 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # 1. External & Fetched Dependencies
 include(Dependencies)
 
-# 2. Version Header Generation & Installation Prefix Resolution
+# Suppress GCC 15 template-body checking on uninstantiated Eigen LAPACKE templates
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-Wno-template-body" COMPILER_HAS_WNO_TEMPLATE_BODY)
+if (COMPILER_HAS_WNO_TEMPLATE_BODY)
+    add_compile_options("-Wno-template-body")
+endif ()
 # Auto-detect active Python virtualenv or Conda environment if default preset prefix is used
 if (CMAKE_INSTALL_PREFIX STREQUAL "$ENV{HOME}/.local" OR CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     if (DEFINED ENV{VIRTUAL_ENV} AND NOT "$ENV{VIRTUAL_ENV}" STREQUAL "")
@@ -112,7 +117,7 @@ if (JGAP_BLAS_LIBS)
 endif ()
 if (LAPACKE_FOUND)
     target_include_directories(jgap_lib PUBLIC ${LAPACKE_INCLUDE_DIR})
-    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_LAPACKE)
+    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_LAPACKE "lapack_complex_float=std::complex<float>" "lapack_complex_double=std::complex<double>")
 endif ()
 
 if (NOT SKBUILD)
