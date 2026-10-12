@@ -150,12 +150,15 @@ find_path(LAPACKE_INCLUDE_DIR
         ${OpenBLAS_ROOT}/include
         /opt/homebrew/opt/openblas/include
         /usr/local/opt/openblas/include
+        /opt/local/include
     PATHS
         /usr/include
         /usr/include/openblas
+        /usr/include/lapacke
         /usr/local/include
         /usr/local/include/openblas
         /opt/homebrew/include
+        /opt/local/include/lapack
 )
 
 set(JGAP_LAPACK_LIBS "")
@@ -165,40 +168,131 @@ if (LAPACKE_INCLUDE_DIR)
     set(_BACKUP_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
     set(CMAKE_REQUIRED_INCLUDES ${LAPACKE_INCLUDE_DIR})
 
-    # Stage 1: Check if BLAS library already provides LAPACKE (e.g. OpenBLAS with bundled LAPACKE)
-    set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS})
-    check_cxx_source_compiles("
-    #include <lapacke.h>
-    int main() {
-        double a[1] = {0.0};
-        double tau[1] = {0.0};
-        return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
-    }
-    " LAPACKE_WORKS_BLAS_ALONE)
+    # Stage 1: Check if BLAS library already provides LAPACKE (e.g. OpenBLAS built with bundled LAPACKE)
+    if (JGAP_BLAS_LIBS)
+        set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS})
+        check_cxx_source_compiles("
+        #include <lapacke.h>
+        int main() {
+            double a[1] = {0.0};
+            double tau[1] = {0.0};
+            return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+        }
+        " LAPACKE_WORKS_BLAS_ALONE)
 
-    if (LAPACKE_WORKS_BLAS_ALONE)
-        set(LAPACKE_FOUND TRUE)
-        message(STATUS "LAPACKE acceleration enabled via BLAS library (${LAPACKE_INCLUDE_DIR})")
-    else ()
-        # Stage 2: BLAS library does not bundle LAPACKE; search for standalone liblapacke
+        if (LAPACKE_WORKS_BLAS_ALONE)
+            set(LAPACKE_FOUND TRUE)
+            message(STATUS "LAPACKE acceleration enabled via BLAS library (${LAPACKE_INCLUDE_DIR})")
+        endif ()
+    endif ()
+
+    # Stage 2: BLAS library does not bundle LAPACKE; search for standalone liblapacke and liblapack
+    if (NOT LAPACKE_FOUND)
         find_library(LAPACKE_LIBRARY
             NAMES lapacke
             PATH_SUFFIXES lapack
+            HINTS
+                /opt/local/lib/lapack
+                /opt/local/lib
+                /usr/lib64
+                /usr/lib
+                /usr/local/lib
+                /opt/homebrew/lib
         )
+        find_library(LAPACK_LIBRARY
+            NAMES lapack
+            PATH_SUFFIXES lapack
+            HINTS
+                /opt/local/lib/lapack
+                /opt/local/lib
+                /usr/lib64
+                /usr/lib
+                /usr/local/lib
+                /opt/homebrew/lib
+        )
+
         if (LAPACKE_LIBRARY)
-            set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS} ${LAPACKE_LIBRARY})
-            check_cxx_source_compiles("
-            #include <lapacke.h>
-            int main() {
-                double a[1] = {0.0};
-                double tau[1] = {0.0};
-                return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
-            }
-            " LAPACKE_WORKS_WITH_LIB)
-            if (LAPACKE_WORKS_WITH_LIB)
-                set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
-                set(LAPACKE_FOUND TRUE)
-                message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+            # Try 1: LAPACKE + LAPACK + BLAS (standard Netlib LAPACKE order: wrapper -> lapack -> blas)
+            if (LAPACK_LIBRARY)
+                set(CMAKE_REQUIRED_LIBRARIES ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY} ${JGAP_BLAS_LIBS})
+                check_cxx_source_compiles("
+                #include <lapacke.h>
+                int main() {
+                    double a[1] = {0.0};
+                    double tau[1] = {0.0};
+                    return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+                }
+                " LAPACKE_WORKS_WITH_LAPACK_AND_BLAS)
+                if (LAPACKE_WORKS_WITH_LAPACK_AND_BLAS)
+                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
+                    set(LAPACKE_FOUND TRUE)
+                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                endif ()
+            endif ()
+
+            # Try 2: LAPACKE + BLAS (when BLAS provides LAPACK symbols and standalone LAPACKE provides the C interface)
+            if (NOT LAPACKE_FOUND)
+                set(CMAKE_REQUIRED_LIBRARIES ${LAPACKE_LIBRARY} ${JGAP_BLAS_LIBS})
+                check_cxx_source_compiles("
+                #include <lapacke.h>
+                int main() {
+                    double a[1] = {0.0};
+                    double tau[1] = {0.0};
+                    return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+                }
+                " LAPACKE_WORKS_WITH_LIB)
+                if (LAPACKE_WORKS_WITH_LIB)
+                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+                    set(LAPACKE_FOUND TRUE)
+                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                endif ()
+            endif ()
+
+            # Try 3: LAPACKE + LAPACK + BLAS + gfortran (for Linux/GCC when Fortran runtime needs explicit link)
+            if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
+                find_library(GFORTRAN_LIBRARY
+                    NAMES gfortran
+                    HINTS
+                        /opt/local/lib
+                        /usr/lib64
+                        /usr/lib
+                        /usr/local/lib
+                        /opt/homebrew/lib
+                )
+                if (GFORTRAN_LIBRARY)
+                    set(CMAKE_REQUIRED_LIBRARIES ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY} ${JGAP_BLAS_LIBS} ${GFORTRAN_LIBRARY})
+                    check_cxx_source_compiles("
+                    #include <lapacke.h>
+                    int main() {
+                        double a[1] = {0.0};
+                        double tau[1] = {0.0};
+                        return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+                    }
+                    " LAPACKE_WORKS_WITH_GFORTRAN)
+                    if (LAPACKE_WORKS_WITH_GFORTRAN)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY} ${GFORTRAN_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY}, ${LAPACK_LIBRARY}, and ${GFORTRAN_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+            endif ()
+
+            # Try 4: Standalone LAPACKE + LAPACK without BLAS
+            if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
+                set(CMAKE_REQUIRED_LIBRARIES ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
+                check_cxx_source_compiles("
+                #include <lapacke.h>
+                int main() {
+                    double a[1] = {0.0};
+                    double tau[1] = {0.0};
+                    return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+                }
+                " LAPACKE_WORKS_STANDALONE)
+                if (LAPACKE_WORKS_STANDALONE)
+                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
+                    set(LAPACKE_FOUND TRUE)
+                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                endif ()
             endif ()
         endif ()
     endif ()

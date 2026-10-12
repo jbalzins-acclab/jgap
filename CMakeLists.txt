@@ -67,11 +67,11 @@ if (NOT _jgap_lib_type STREQUAL "SHARED_LIBRARY")
             "semantics; a static build breaks them silently.")
 endif ()
 
-if (JGAP_BLAS_LIBS)
-    target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
-endif ()
 if (JGAP_LAPACK_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_LAPACK_LIBS})
+endif ()
+if (JGAP_BLAS_LIBS)
+    target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
 endif ()
 
 target_link_libraries(jgap_lib PRIVATE
