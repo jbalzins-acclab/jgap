@@ -106,13 +106,13 @@ target_include_directories(jgap_lib PUBLIC
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
-target_compile_definitions(jgap_lib PRIVATE EIGEN_FAST_MATH EIGEN_NO_DEBUG "JGAP_VERSION=\"${PROJECT_VERSION}\"")
+target_compile_definitions(jgap_lib PUBLIC EIGEN_FAST_MATH EIGEN_NO_DEBUG "JGAP_VERSION=\"${PROJECT_VERSION}\"")
 if (JGAP_BLAS_LIBS)
-    target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_BLAS)
+    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_BLAS)
 endif ()
 if (LAPACKE_FOUND)
-    target_include_directories(jgap_lib PRIVATE ${LAPACKE_INCLUDE_DIR})
-    target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_LAPACKE)
+    target_include_directories(jgap_lib PUBLIC ${LAPACKE_INCLUDE_DIR})
+    target_compile_definitions(jgap_lib PUBLIC EIGEN_USE_LAPACKE)
 endif ()
 
 if (NOT SKBUILD)
