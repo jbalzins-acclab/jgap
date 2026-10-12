@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "jgap"
-version = "7.2.7"
+version = "7.2.8"
 description = "Gaussian Approximation Potentials (GAP) in C++23 with Python interface and ASE integration"
 readme = "ReadMe.md"
 requires-python = ">=3.9"
@@ -63,10 +63,11 @@ CMAKE_CXX_FLAGS_RELEASE = "-O3 -ffast-math"
 build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-* cp315-*"
 skip = "*-musllinux_* *i686"
 build-verbosity = 1
+test-command = "python -c \"import jgap; print('jgap module verified successfully:', jgap.__file__)\""
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "jgap-linux-builder"
-environment = { CC = "gcc-15", CXX = "g++-15", CPATH = "/usr/include", LIBRARY_PATH = "/usr/lib64", AUDITWHEEL_PLAT = "manylinux_2_28_x86_64", LDFLAGS = "-L/usr/lib64 -Wl,-rpath-link,/usr/lib64 -static-libstdc++ -Wl,--exclude-libs,ALL -fno-gnu-unique" }
+environment = { CC = "gcc-15", CXX = "g++-15", CPATH = "/usr/include", LIBRARY_PATH = "/usr/lib64", AUDITWHEEL_PLAT = "manylinux_2_28_x86_64", LDFLAGS = "-L/usr/lib64 -Wl,-rpath-link,/usr/lib64 -static-libstdc++ -Wl,--exclude-libs,ALL" }
 repair-wheel-command = "auditwheel -v repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]

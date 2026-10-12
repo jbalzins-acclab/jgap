@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.2.7 LANGUAGES C CXX)
+project(jgap VERSION 7.2.8 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,10 +67,6 @@ if (NOT _jgap_lib_type STREQUAL "SHARED_LIBRARY")
             "semantics; a static build breaks them silently.")
 endif ()
 
-add_executable(jgap
-        ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
-)
-
 if (JGAP_BLAS_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
 endif ()
@@ -90,7 +86,7 @@ endif ()
 
 if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
     # Statically link libstdc++ into wheel binaries while hiding internal symbols to prevent runtime collisions
-    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL" "-fno-gnu-unique")
+    target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL")
 endif ()
 
 if (APPLE)
@@ -112,11 +108,17 @@ if (JGAP_BLAS_LIBS)
     target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_BLAS)
 endif ()
 
-target_link_libraries(jgap PRIVATE jgap_lib)
+if (NOT SKBUILD)
+    # Standalone CLI tools (skipped when building Python wheels)
+    add_executable(jgap
+            ${PROJECT_SOURCE_DIR}/src/app/MainApp.cpp
+    )
+    target_link_libraries(jgap PRIVATE jgap_lib)
 
-# QUIP XML -> .h5 converter app
-add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
-target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::pugixml)
+    # QUIP XML -> .h5 converter app
+    add_executable(jgap_convert ${PROJECT_SOURCE_DIR}/src/app/ConvertApp.cpp)
+    target_link_libraries(jgap_convert PRIVATE jgap_lib pugixml::pugixml)
+endif ()
 
 add_custom_command(TARGET jgap_lib POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

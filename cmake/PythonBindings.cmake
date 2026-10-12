@@ -28,18 +28,39 @@ if (Python3_FOUND)
     find_package(pybind11 CONFIG QUIET)
     if (pybind11_FOUND)
         message(STATUS "pybind11 found for Python ${Python3_VERSION} (${Python3_EXECUTABLE}): building _jgap Python module")
-        pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
-        target_link_libraries(_jgap PRIVATE jgap_lib)
-
-        if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
-            target_link_options(_jgap PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL" "-fno-gnu-unique")
-        endif ()
-
-        # Legacy jgap_ase module for backward compatibility
-        pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
-        target_link_libraries(jgap_ase PRIVATE jgap_lib)
-
         if (SKBUILD)
+            # Monolithic Python wheel module: compile library sources directly into _jgap to ensure a single,
+            # self-contained binary with a single unified C++ runtime, preventing cross-DSO allocator collisions.
+            pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp" ${LIBRARY_SOURCE_FILES})
+            target_link_libraries(_jgap PRIVATE
+                Eigen3::Eigen
+                HighFive
+                pugixml::pugixml
+                HDF5::HDF5
+            )
+            if (JGAP_BLAS_LIBS)
+                target_link_libraries(_jgap PRIVATE ${JGAP_BLAS_LIBS})
+            endif ()
+            if (APPLE)
+                target_compile_definitions(_jgap PUBLIC HAS_GCD)
+            elseif (OpenMP_CXX_FOUND)
+                target_compile_definitions(_jgap PUBLIC HAS_OPENMP)
+                target_link_libraries(_jgap PUBLIC OpenMP::OpenMP_CXX)
+            endif ()
+            target_include_directories(_jgap PRIVATE
+                "${PROJECT_SOURCE_DIR}/src"
+                "${CMAKE_BINARY_DIR}/generated"
+                ${HDF5_INCLUDE_DIRS}
+            )
+            target_compile_definitions(_jgap PRIVATE EIGEN_FAST_MATH EIGEN_NO_DEBUG)
+            if (JGAP_BLAS_LIBS)
+                target_compile_definitions(_jgap PRIVATE EIGEN_USE_BLAS)
+            endif ()
+
+            if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                target_link_options(_jgap PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL")
+            endif ()
+
             # scikit-build-core packaging for PyPI wheels: keep RPATH strictly local within package
             if (APPLE)
                 set(_WHEEL_RPATH "@loader_path;@loader_path/.dylibs")
@@ -52,16 +73,17 @@ if (Python3_FOUND)
                 BUILD_WITH_INSTALL_RPATH TRUE
                 INSTALL_RPATH "${_WHEEL_RPATH}"
             )
-            set_target_properties(jgap_lib PROPERTIES
-                BUILD_WITH_INSTALL_RPATH TRUE
-                INSTALL_RPATH "${_WHEEL_RPATH}"
-                INSTALL_NAME_DIR "@rpath"
-            )
             install(TARGETS _jgap DESTINATION "jgap")
             install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/jgap" DESTINATION "."
                     FILES_MATCHING PATTERN "*.py")
-            install(TARGETS jgap_lib DESTINATION "jgap")
         else ()
+            pybind11_add_module(_jgap "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
+            target_link_libraries(_jgap PRIVATE jgap_lib)
+
+            # Legacy jgap_ase module for backward compatibility
+            pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
+            target_link_libraries(jgap_ase PRIVATE jgap_lib)
+        endif ()
             # Determine destination site-packages directory
             if (Python3_SITEARCH)
                 file(RELATIVE_PATH _REL_CHECK "${CMAKE_INSTALL_PREFIX}" "${Python3_SITEARCH}")
