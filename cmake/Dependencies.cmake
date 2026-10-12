@@ -76,35 +76,52 @@ endif ()
 # ------------------------------------------------------------------------------
 # 5. BLAS / Acceleration Libraries from Host / System
 # ------------------------------------------------------------------------------
-if (APPLE)
+# On macOS, check for OpenBLAS (e.g. Homebrew) first since it provides both BLAS
+# and LAPACKE for multi-threaded QR acceleration, unlike Apple Accelerate.
+if (APPLE AND NOT OpenBLAS_FOUND)
+    if (EXISTS "/opt/homebrew/opt/openblas")
+        set(OpenBLAS_ROOT "/opt/homebrew/opt/openblas")
+        list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/openblas")
+    elseif (EXISTS "/usr/local/opt/openblas")
+        set(OpenBLAS_ROOT "/usr/local/opt/openblas")
+        list(PREPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
+    else ()
+        find_program(BREW_EXECUTABLE brew)
+        if (BREW_EXECUTABLE)
+            execute_process(
+                COMMAND ${BREW_EXECUTABLE} --prefix openblas
+                OUTPUT_VARIABLE _BREW_OPENBLAS_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+            if (_BREW_OPENBLAS_PREFIX AND EXISTS "${_BREW_OPENBLAS_PREFIX}")
+                set(OpenBLAS_ROOT "${_BREW_OPENBLAS_PREFIX}")
+                list(PREPEND CMAKE_PREFIX_PATH "${_BREW_OPENBLAS_PREFIX}")
+            endif ()
+        endif ()
+    endif ()
+endif ()
+
+find_package(OpenBLAS CONFIG QUIET)
+if (NOT OpenBLAS_FOUND)
+    find_package(OpenBLAS QUIET)
+endif ()
+
+if (OpenBLAS_FOUND)
+    set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
+    set(JGAP_BLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIRS})
+    include_directories(${OpenBLAS_INCLUDE_DIRS})
+elseif (APPLE)
     set(BLA_VENDOR Apple)
     find_package(BLAS QUIET)
     if (BLAS_FOUND)
         set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
     endif ()
     unset(BLA_VENDOR)
-endif ()
-
-if (NOT JGAP_BLAS_LIBS)
-    if (APPLE AND NOT OpenBLAS_FOUND)
-        if (EXISTS "/opt/homebrew/opt/openblas")
-            set(OpenBLAS_ROOT "/opt/homebrew/opt/openblas")
-            list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/openblas")
-        elseif (EXISTS "/usr/local/opt/openblas")
-            set(OpenBLAS_ROOT "/usr/local/opt/openblas")
-            list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
-        endif ()
-    endif ()
-
-    find_package(OpenBLAS CONFIG QUIET)
-    if (OpenBLAS_FOUND)
-        set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
-        include_directories(${OpenBLAS_INCLUDE_DIRS})
-    else ()
-        find_package(BLAS QUIET)
-        if (BLAS_FOUND)
-            set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
-        endif ()
+else ()
+    find_package(BLAS QUIET)
+    if (BLAS_FOUND)
+        set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
     endif ()
 endif ()
 
@@ -128,22 +145,32 @@ include(CheckCXXSourceCompiles)
 find_path(LAPACKE_INCLUDE_DIR
     NAMES lapacke.h
     PATH_SUFFIXES openblas lapack lapacke
+    HINTS
+        ${OpenBLAS_INCLUDE_DIRS}
+        ${OpenBLAS_ROOT}/include
+        /opt/homebrew/opt/openblas/include
+        /usr/local/opt/openblas/include
     PATHS
         /usr/include
         /usr/include/openblas
         /usr/local/include
         /usr/local/include/openblas
         /opt/homebrew/include
-        /opt/homebrew/opt/openblas/include
-        /opt/homebrew/opt/lapack/include
 )
 
 set(JGAP_LAPACK_LIBS "")
 set(LAPACKE_FOUND FALSE)
 if (LAPACKE_INCLUDE_DIR)
-    find_library(LAPACKE_LIBRARY NAMES lapacke)
-    if (LAPACKE_LIBRARY)
-        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+    # If OpenBLAS is used, LAPACKE symbols are already built into libopenblas (no separate liblapacke).
+    # Only search for standalone liblapacke if OpenBLAS is NOT the BLAS provider.
+    if (NOT OpenBLAS_FOUND)
+        find_library(LAPACKE_LIBRARY
+            NAMES lapacke
+            PATH_SUFFIXES lapack
+        )
+        if (LAPACKE_LIBRARY)
+            set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+        endif ()
     endif ()
 
     # Verify that LAPACKE actually links with the available BLAS/LAPACK libraries
