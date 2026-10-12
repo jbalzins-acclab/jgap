@@ -10,7 +10,7 @@
   * **GCC $\ge$ 15**
   * **Clang $\ge$ 19**
 * **Build System**: CMake $\ge$ 3.25 (Ninja is optional but recommended for faster builds).
-* **C++ Libraries**: HDF5 (`libhdf5`), (optionally) OpenBLAS or Apple Accelerate, (optionally) OpenMP or Apple's GCD.
+* **C++ Libraries**: HDF5 (`libhdf5`), (optionally) OpenBLAS / LAPACKE (`liblapacke`, `liblapack`) for multi-threaded QR and Cholesky acceleration, (optionally) OpenMP or Apple's GCD.
 * **Python**: Python $\ge$ 3.9 with `pybind11`, `numpy`, and `ase` (some examples require `scipy` and `elastic`).
 
 

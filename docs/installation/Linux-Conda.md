@@ -40,9 +40,9 @@ If the Ninja is not installed, run:
 conda install -c conda-forge -y ninja
 ```
 
-#### C. Dependencies (HDF5 & OpenBLAS)
+#### C. Dependencies (HDF5, OpenBLAS, LAPACK)
 ```bash
-conda install -c conda-forge -y hdf5 openblas
+conda install -c conda-forge -y hdf5 openblas lapack
 ```
 
 #### D. Python Environment & Scientific Stack (ASE)

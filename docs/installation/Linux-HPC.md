@@ -14,6 +14,7 @@ To load the dependencies that we assume to be preinstalled:
    module purge
    module load gcc/15     # Or llvm/clang-19
    module load openblas
+   module load lapack     # For LAPACKE QR acceleration (if separated from OpenBLAS)
    module load hdf5
    module load cmake
    ```
