@@ -1,51 +1,30 @@
-FROM quay.io/pypa/manylinux_2_28_x86_64 AS manylinux
+FROM quay.io/pypa/manylinux_2_28_x86_64
 
-FROM ubuntu:24.04
+# Install EPEL repository and system development libraries (HDF5, OpenBLAS, Ninja)
+RUN dnf install -y epel-release \
+    && dnf install -y \
+       hdf5-devel \
+       openblas-devel \
+       ninja-build \
+    && dnf clean all
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Install GCC 15 toolchain from conda-forge (built against glibc 2.28 sysroot)
+ENV MAMBA_ROOT_PREFIX=/opt/conda
+RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin/ --strip-components=1 bin/micromamba \
+    && micromamba create -y -r /opt/conda -n gcc15 -c conda-forge gcc=15 gxx=15 \
+    && micromamba clean --all -y
 
-# Install base dependencies, GCC 15 toolchain, and libcrypt1 required by manylinux python binaries
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    ca-certificates \
-    curl \
-    git \
-    libcrypt1 \
-    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-    gcc-15 \
-    g++-15 \
-    cmake \
-    ninja-build \
-    libhdf5-dev \
-    libopenblas-dev \
-    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
-    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100 \
-    && rm -rf /var/lib/apt/lists/*
+# Symlink GCC 15 binaries into /usr/local/bin
+RUN ln -sf /opt/conda/envs/gcc15/bin/x86_64-conda-linux-gnu-gcc /usr/local/bin/gcc-15 \
+    && ln -sf /opt/conda/envs/gcc15/bin/x86_64-conda-linux-gnu-g++ /usr/local/bin/g++-15 \
+    && ln -sf /usr/local/bin/gcc-15 /usr/local/bin/gcc \
+    && ln -sf /usr/local/bin/g++-15 /usr/local/bin/g++
 
-# Copy pre-built Python environments, patchelf, and auditwheel from PyPA manylinux
-COPY --from=manylinux /opt/_internal /opt/_internal
-COPY --from=manylinux /opt/python /opt/python
-COPY --from=manylinux /usr/local/bin/patchelf /usr/local/bin/patchelf
-COPY --from=manylinux /usr/local/bin/auditwheel /usr/local/bin/auditwheel
-
-# Copy runtime shared libraries required by manylinux Python dynamic extensions (OpenSSL 1.1, libffi, libbz2)
-COPY --from=manylinux /usr/lib64/libssl.so.1.1* /usr/local/lib/
-COPY --from=manylinux /usr/lib64/libcrypto.so.1.1* /usr/local/lib/
-COPY --from=manylinux /usr/lib64/libffi.so* /usr/local/lib/
-COPY --from=manylinux /usr/lib64/libbz2.so* /usr/local/lib/
-
-# Setup CA certificate paths and dynamic linker cache for OpenSSL 1.1 runtime
-RUN mkdir -p /etc/pki/tls/certs /etc/pki/ca-trust/extracted/pem \
-    && ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt \
-    && ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/cert.pem \
-    && ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
-    && ldconfig
-
+ENV PATH="/opt/conda/envs/gcc15/bin:${PATH}"
 ENV CC=gcc-15
 ENV CXX=g++-15
-ENV AUDITWHEEL_PLAT=manylinux_2_39_x86_64
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV CMAKE_INCLUDE_PATH="/usr/include"
+ENV CMAKE_LIBRARY_PATH="/usr/lib64"
+ENV AUDITWHEEL_PLAT=manylinux_2_28_x86_64
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8

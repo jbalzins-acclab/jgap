@@ -100,7 +100,7 @@ jobs:
         run: pip install cibuildwheel==4.3.0
 
       # On Linux: build the dedicated manylinux builder container with GCC 15
-      - name: Prepare Ubuntu 24.04 Builder Container (Linux only)
+      - name: Prepare manylinux_2_28 Builder Container with GCC 15 (Linux only)
         if: runner.os == 'Linux'
         run: |
           docker build -t jgap-linux-builder -f containers/manylinux.Dockerfile .
