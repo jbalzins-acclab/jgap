@@ -83,7 +83,7 @@ if (Python3_FOUND)
             # Legacy jgap_ase module for backward compatibility
             pybind11_add_module(jgap_ase "${PROJECT_SOURCE_DIR}/src/pybind/PyJGAP.cpp")
             target_link_libraries(jgap_ase PRIVATE jgap_lib)
-        endif ()
+
             # Determine destination site-packages directory
             if (Python3_SITEARCH)
                 file(RELATIVE_PATH _REL_CHECK "${CMAKE_INSTALL_PREFIX}" "${Python3_SITEARCH}")
