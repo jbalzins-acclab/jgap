@@ -4,6 +4,7 @@
 #include <fstream>
 #include <highfive/H5File.hpp>
 #include <sstream>
+#include <iomanip>
 
 #include "jgap/core/atomic/species/composition/Species2Atomic.hpp"
 #include "jgap/core/potentials/tabgap/components/ThreeBodyTGComponent.hpp"

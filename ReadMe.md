@@ -1,6 +1,6 @@
 # JGAP
 
-A high-performance C++23 library, command-line toolkit, and Python framework for fitting, tabulating, and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAP (tabGAP)**.
+A high-performance C++23 library with command-line toolkit and Python interface for fitting, tabulating, and evaluating **Gaussian Approximation Potentials (GAP)** and **Tabulated GAPs (tabGAPs)**.
 
 ---
 
@@ -14,15 +14,9 @@ Install the Python package and ASE calculator directly from PyPI:
 pip install jgap
 ```
 
-> [!TIP]
-> **HPC Clusters & Maximum Performance**: Pre-compiled binary wheels distributed via PyPI target generic CPU architectures for universal portability. On HPC clusters and dedicated compute nodes, compiling `jgap` from source enables hardware-level **`-march=native`** vector extensions (AVX-512, AVX2, FMA). See the **[HPC & Native Compilation Guide](docs/Compilation.md#4-hpc-clusters--marchnative-compilation)**.
-
-> [!NOTE]
-> For containerized workflows without local compiler dependencies (Docker / Apptainer `.sif` on HPC clusters), see the **[Apptainer & Container Guide](docs/installation/linux_apptainer.md)**.
-
 ### Python & ASE Calculator Example
 
-`jgap` integrates directly with Python and the [Atomic Simulation Environment (ASE)](https://wiki.fysik.dtu.dk/ase/):
+JGAP integrates directly with Python and the [Atomic Simulation Environment (ASE)](https://ase.gitlab.io/ase/):
 
 ```python
 import jgap
@@ -69,45 +63,42 @@ stress = atoms.get_stress()
 
 ## 2. Compile & Install from Source (C++ Library & CLI)
 
-You can compile and install `jgap` (the C++ shared library, CLI tools, and Python interface) using CMake's unified workflow preset:
+Pre-compiled binary wheels distributed via PyPI target generic CPU architectures for universal portability.
+For peak performance and extended fexiblity of the C++ Library,
+you can compile and install JGAP (the C++ shared library, CLI tools, and Python interface) from source with all the hardware-specific optimizations enabled, using CMake's unified workflow preset (assuming all the dependencies are installed; see [Compilation & Installation Guide](docs/Compilation.md)):
 
 ```bash
 # Configure, build optimized Release targets, and install in a single command
 cmake --workflow --preset install
 ```
 
-> [!NOTE]
-> * **Python Virtual Environments**: To install the Python interface into your active virtual environment, configure with:
->   ```bash
->   cmake --preset release -DPython3_EXECUTABLE=$(which python) -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV
->   cmake --build --preset install
->   ```
->   *(For Conda environments, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`).*
-> * **Prerequisites & System Dependencies**: For compiler requirements (C++23 with GCC 15 or Clang 19+), libraries (HDF5, OpenBLAS), package manager setup (macOS, Ubuntu, Conda), and HPC instructions, see the **[Compilation & Installation Guide](docs/Compilation.md)**.
-
 ---
 
-## 3. Command-Line Tools
+## 3. Command-Line Tools and Library Usage Examples
 
+Some out of the box CLI tools are provided:
 * **Predict Energy & Forces**:
   ```bash
   jgap --predict potential.jgap.h5 input.xyz output.xyz
   ```
-* **Tabulate Potential (to EAM `.eam.fs` and tabGAP `.tabgap.h5`)**:
+* **Tabulate a Potential**:
   ```bash
   jgap --tabulate potential.jgap.h5
   ```
-* **Convert Legacy QUIP XML to HDF5**:
+* **Convert Legacy QUIP XML to JGAP's HDF5 Format**:
   ```bash
   jgap_convert potential.xml potential.jgap.h5
   ```
+
+But generally one needs to use JGAP either as a C++ library or through its Python interface. 
+[Examples](examples/) are intended to dempnstrate all the main functionality.
 
 ---
 
 ## 4. Performance & Benchmarks
 
 > [!IMPORTANT]
-> **Mathematical Equivalence**: Given the same set of sparse representative points, JGAP produces regression coefficients identical to QUIP reference fits up to floating-point roundoff errors ($c_\mathrm{JGAP} \approx c_\mathrm{QUIP}$, with cosine similarity $> 1 - 10^{-10}$ and normalized RMSE on average $< 10^{-4}\%$).
+> **Mathematical Equivalence**: Given the same set of sparse representative points, JGAP produces regression coefficients identical to QUIP reference fits up to floating-point roundoff errors ($c_\mathrm{JGAP} \approx c_\mathrm{QUIP}$, with cosine similarity $> 1 - 10^{-10}$ and normalized RMSE on average $< 10^{-4}\\%$).
 
 All benchmarks below were conducted on an **Apple M2 MacBook** (8 CPU cores, macOS, 8 GB Unified Memory) using the Fe–Ni alloy training database across systematic sweeps over training database size ($N_\mathrm{db}$) and 3-body sparse point count ($M_\mathrm{3b}$). Parallel execution across neighbor lists, descriptor evaluation, and B-spline tabulation is powered by OpenMP (configurable via `export OMP_NUM_THREADS=8`).
 
@@ -119,18 +110,18 @@ This comparison benchmarks JGAP's standard in-memory solver (`QRGapFit` / FullQR
 | :---: | :---: |
 | ![Fitting Time Comparison](docs/figures/fit_time_comparison.png) | ![Peak Memory Comparison](docs/figures/fit_memory_comparison.png) |
 
-### Out-of-Core Incremental QR Solvers
+### Incremental QR Solvers
 
-Standard GAP training requires storing the full observation design matrix $\mathbf{A} \in \mathbb{R}^{(N_\mathrm{obs} + M) \times M}$ in RAM, creating a severe memory bottleneck for large datasets or high sparse point counts. To overcome this limitation, JGAP introduces novel out-of-core streaming QR fitting techniques:
+Standard GAP training requires storing the full covariance matrix $\mathbf{A} \in \mathbb{R}^{(N_\mathrm{obs} + M) \times M}$ in RAM, creating a severe memory bottleneck for large datasets or high sparse point counts. To overcome this limitation, JGAP introduces novel block-incremental QR fitting techniques:
 
-* **`BlockIncrementalQRGapFit`**: Streams structures in configurable observation blocks $B$, incrementally accumulating Householder transformations into a compact upper-triangular matrix $\mathbf{R} \in \mathbb{R}^{M \times M}$ without ever materializing the full design matrix in RAM.
-* **`ElementIncrementalQRGapFit`**: Partitions training data by elemental complexity—solving single-element components first before streaming multi-element configurations—dynamically sizing observation buffers according to an approximate memory target (`approx_ram_limit_gb`). *(Note: in practice, actual peak process memory is higher than this target due to dataset storage, descriptor buffers, and runtime memory overheads).*
+* **`BlockIncrementalQRGapFit`**: Streams structures in configurable observation blocks $B$, incrementally accumulating Householder transformations into a compact upper-triangular matrix $\mathbf{R} \in \mathbb{R}^{M \times M}$ without ever materializing the full covariance matrix in RAM. Memory usage can be adjusted for best balance beteween memory usage and fitting time (more memory -> faster fitting unless OS starts doing RAM compression/swapping).
+* **`ElementIncrementalQRGapFit`**: Partitions training data by elemental complexity and ignores large blocks of zeros in the covarince matrix by, e.g., applying single element QR updates separately.
 
 | Incremental QR Fit Time Scaling | Incremental QR Peak Memory (RSS) Scaling |
 | :---: | :---: |
 | ![QR Variants Fit Times](docs/figures/qr_variants_fit_times.png) | ![QR Variants Peak Memory](docs/figures/qr_variants_peak_rss_scaling.png) |
 
-As shown above, the streaming incremental solvers reduce peak memory consumption by **over 10× – 12×** compared to standard Full QR, allowing large potentials to be fitted on ordinary workstations and laptops with zero loss in mathematical accuracy.
+As shown above, the block-incremental solvers reduce peak memory consumption by **over 10× – 12×** compared to standard in-memory full QR, without loss of speed. `ElementIncrementalQRGapFit` is both faster and more memory efficient than other solvers, and it is used by deafult in JGAP.
 
 > [!NOTE]
 > For detailed theoretical derivations, numerical stability proofs, and extended scaling analyses of these techniques, see the Master's thesis [[1]](#7-references--citations).
@@ -140,16 +131,16 @@ As shown above, the streaming incremental solvers reduce peak memory consumption
 ## 5. LAMMPS Integration
 
 * **EAM Potentials**: The generated `.eam.fs` files can be directly evaluated inside LAMMPS via standard `pair_style eam/fs`.
-* **Tabulated GAP Potentials (`.tabgap.h5`)**: Direct evaluation of multi-body B-spline `.tabgap.h5` potentials inside LAMMPS simulations is supported via the external tabGAP LAMMPS package available at **[gitlab.com/jezper/tabgap](https://gitlab.com/jezper/tabgap)**.
+* **Tabulated GAP Potentials (`.tabgap.h5`)**: Direct evaluation of multi-body B-spline `.tabgap.h5` potentials inside LAMMPS simulations is supported via the external tabGAP LAMMPS package available at **[here](https://gitlab.com/jezper/tabgap)**.
 
 ---
 
 ## 6. Documentation Index
 
-* **[Compilation & Installation Guide](docs/Compilation.md)**: Complete guide on toolchains, dependencies, virtual environments, HPC modules, and CMake presets.
-* **[Developer & Extension Guide](docs/Development.md)**: Architectural diagrams, HDF5 serialization mechanisms, adding custom extensions (cutoffs, kernels, potentials), and running tests.
-* **[Conventions & Standards](docs/Conventions.md)**: Physical units, memory layout, Voigt stress conventions, and coding style.
-* **[Examples Catalog](examples/ReadMe.md)**: Guide to C++ and Python examples, including standalone single-file C++ compilation commands.
+* **[Compilation & Installation Guide](docs/Compilation.md)**: Guide on compilation.
+* **[Developer & Extension Guide](docs/Development.md)**: Guide for making adjustments to JGAP.
+* **[Examples Catalog](examples/ReadMe.md)**: C++ and Python examples.
+* **[Validation Strategy](test/ReadMe.md)**: Some description of tests that were used to validate JGAP's accuracy.
 
 ---
 

@@ -1,9 +1,11 @@
 #ifndef JGAP_STANDARDGAPFIT_HPP
 #define JGAP_STANDARDGAPFIT_HPP
 
+#include <functional>
 #include <set>
 #include <utility>
 #include "StandardGapParams.hpp"
+#include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/atomic/Atoms.hpp"
 #include "jgap/impl/cutoff/CosCutoff.hpp"
 #include "jgap/impl/kernels/SquaredExpKernel.hpp"
@@ -51,7 +53,7 @@ namespace jgap::utils {
     ) {
         auto cut = CosCutoff(cutoff, cutoff_width);
         switch (type) {
-            case ThreeBodyTransformationType::Angle:
+            case ThreeBodyTransformationType::Angle3b:
                 return Angle3bTransformation(cut);
             case ThreeBodyTransformationType::Distances:
                 return Distances3bTransformation(cut);
@@ -78,6 +80,8 @@ namespace jgap::utils {
             }
         }
 
+        std::vector<std::function<std::optional<ValuePtr<GapComponent>>()>> component_builders;
+
         // ====================================================================================
         // 2-Body Components
         // ====================================================================================
@@ -92,16 +96,16 @@ namespace jgap::utils {
         for (const auto& p: params.species_2b) {
             if (!p.species.has_value() || p.n_sparse == 0) continue;
             const auto& pair = *p.species;
-
-            auto trans2 = PairDistanceTransformation(CosCutoff(p.cutoff, p.cutoff_width));
-            auto kernel2 = SquaredExpKernel<1, 1>(p.energy_scale, {p.length_scale});
-            auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, p.n_sparse, std::array{true, false});
-            TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
-                pair, trans2, kernel2, sparsifier2, training_data
-            );
-            if (comp.nSparsePoints() == 0) continue;
-
-            potential.addComponent(std::move(comp));
+            component_builders.push_back([&training_data, pair, p, seed = params.seed]() -> std::optional<ValuePtr<GapComponent>> {
+                auto trans2 = PairDistanceTransformation(CosCutoff(p.cutoff, p.cutoff_width));
+                auto kernel2 = SquaredExpKernel<1, 1>(p.energy_scale, {p.length_scale});
+                auto sparsifier2 = HistogramUniformSparsifier<2>(seed, p.n_sparse, std::array{true, false});
+                TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
+                    pair, trans2, kernel2, sparsifier2, training_data
+                );
+                if (comp.nSparsePoints() == 0) return std::nullopt;
+                return ValuePtr<GapComponent>(std::move(comp));
+            });
         }
 
         // Add default 2-body components for all pairs NOT in specific_2b_pairs
@@ -119,15 +123,16 @@ namespace jgap::utils {
                     continue; // Already handled by specific params
                 }
 
-                auto trans2 = PairDistanceTransformation(CosCutoff(def_p.cutoff, def_p.cutoff_width));
-                auto kernel2 = SquaredExpKernel<1, 1>(def_p.energy_scale, {def_p.length_scale});
-                auto sparsifier2 = HistogramUniformSparsifier<2>(params.seed, def_p.n_sparse, std::array{true, false});
-                TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
-                    pair, trans2, kernel2, sparsifier2, training_data
-                );
-                if (comp.nSparsePoints() == 0) continue;
-
-                potential.addComponent(std::move(comp));
+                component_builders.push_back([&training_data, pair, def_p, seed = params.seed]() -> std::optional<ValuePtr<GapComponent>> {
+                    auto trans2 = PairDistanceTransformation(CosCutoff(def_p.cutoff, def_p.cutoff_width));
+                    auto kernel2 = SquaredExpKernel<1, 1>(def_p.energy_scale, {def_p.length_scale});
+                    auto sparsifier2 = HistogramUniformSparsifier<2>(seed, def_p.n_sparse, std::array{true, false});
+                    TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> comp(
+                        pair, trans2, kernel2, sparsifier2, training_data
+                    );
+                    if (comp.nSparsePoints() == 0) return std::nullopt;
+                    return ValuePtr<GapComponent>(std::move(comp));
+                });
             }
         }
 
@@ -141,58 +146,59 @@ namespace jgap::utils {
             }
         }
 
-        auto buildEamComponent = [&](const Species& central_species, const StandardGapEamParams& p) {
+        auto queueEamComponent = [&](const Species& central_species, const StandardGapEamParams& p) {
             if (p.n_sparse == 0) return;
-            auto eam_pf = makeStandardEamPairFunction(p.eam_pair_function, p.cutoff);
+            component_builders.push_back([&training_data, &all_species, central_species, p, seed = params.seed]() -> std::optional<ValuePtr<GapComponent>> {
+                auto eam_pf = makeStandardEamPairFunction(p.eam_pair_function, p.cutoff);
 
-            auto aggregator = TwoBodySum<1>(central_species);
-            auto Z_center_opt = central_species.atomicNumber();
-            if (!Z_center_opt && p.eam_mode != EamMode::Blind && p.eam_mode != EamMode::EAM) {
-                JGAP_LOG_AND_THROW("Central species of unknown atomic number - incompatible with the EAM mode");
-            }
-            double Z_center = static_cast<double>(Z_center_opt.value_or(0));
+                auto aggregator = TwoBodySum<1>(central_species);
+                auto Z_center_opt = central_species.atomicNumber();
+                if (!Z_center_opt && p.eam_mode != EamMode::Blind && p.eam_mode != EamMode::EAM) {
+                    JGAP_LOG_AND_THROW("Central species of unknown atomic number - incompatible with the EAM mode");
+                }
+                double Z_center = static_cast<double>(Z_center_opt.value_or(0));
 
-            for (const auto& contributor_species: all_species) {
-                auto pf_clone = eam_pf;
-                auto& eam_pf_clone = dynamic_cast<EamPairFunction&>(*pf_clone);
+                for (const auto& contributor_species: all_species) {
+                    auto pf_clone = eam_pf;
+                    auto& eam_pf_clone = dynamic_cast<EamPairFunction&>(*pf_clone);
 
-                auto Z_contrib_opt = contributor_species.atomicNumber();
-                if (!Z_contrib_opt && p.eam_mode != EamMode::Blind) {
-                    JGAP_LOG_AND_THROW("Contributor species of unknown atomic number - incompatible with the EAM mode");
+                    auto Z_contrib_opt = contributor_species.atomicNumber();
+                    if (!Z_contrib_opt && p.eam_mode != EamMode::Blind) {
+                        JGAP_LOG_AND_THROW("Contributor species of unknown atomic number - incompatible with the EAM mode");
+                    }
+
+                    double prefactor = 1.0;
+                    double Z_contrib = static_cast<double>(Z_contrib_opt.value_or(0));
+                    if (p.eam_mode == EamMode::FSsym) {
+                        prefactor = std::sqrt(Z_contrib * Z_center) / 40.0;
+                    } else if (p.eam_mode == EamMode::FSgen) {
+                        prefactor = std::pow(Z_center, 0.1) * std::sqrt(Z_contrib) / 10.0;
+                    } else if (p.eam_mode == EamMode::EAM) {
+                        prefactor = std::sqrt(Z_contrib) / 10.0;
+                    }
+
+                    eam_pf_clone.setPrefactor(prefactor);
+                    aggregator.extend({central_species, contributor_species}, std::move(pf_clone));
                 }
 
-                double prefactor = 1.0;
-                double Z_contrib = static_cast<double>(Z_contrib_opt.value_or(0));
-                if (p.eam_mode == EamMode::FSsym) {
-                    prefactor = std::sqrt(Z_contrib * Z_center) / 40.0;
-                } else if (p.eam_mode == EamMode::FSgen) {
-                    prefactor = std::pow(Z_center, 0.1) * std::sqrt(Z_contrib) / 10.0;
-                } else if (p.eam_mode == EamMode::EAM) {
-                    prefactor = std::sqrt(Z_contrib) / 10.0;
-                }
+                auto kernel_eam = SquaredExpKernel<1, 0>(p.energy_scale, {p.length_scale});
+                auto sparsifier_eam = HistogramUniformSparsifier<1>(
+                    seed, p.n_sparse, std::nullopt, std::nullopt, Descriptor<1>{p.min_density}
+                );
 
-                eam_pf_clone.setPrefactor(prefactor);
-                aggregator.extend({central_species, contributor_species}, std::move(pf_clone));
-            }
-
-            auto kernel_eam = SquaredExpKernel<1, 0>(p.energy_scale, {p.length_scale});
-            auto sparsifier_eam = HistogramUniformSparsifier<1>(
-                params.seed, p.n_sparse, std::nullopt, std::nullopt, Descriptor<1>{p.min_density}
-            );
-
-            ValuePtr<NBodyAggregator<1>> agg_ptr = std::move(aggregator);
-            ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> comp(
-                agg_ptr, kernel_eam, sparsifier_eam, training_data
-            );
-            if (comp.nSparsePoints() == 0) return;
-
-            potential.addComponent(std::move(comp));
+                ValuePtr<NBodyAggregator<1>> agg_ptr = std::move(aggregator);
+                ManyBodyGapComponent<1, SquaredExpKernel<1, 0>> comp(
+                    agg_ptr, kernel_eam, sparsifier_eam, training_data
+                );
+                if (comp.nSparsePoints() == 0) return std::nullopt;
+                return ValuePtr<GapComponent>(std::move(comp));
+            });
         };
 
         // Add species-specific EAM components
         for (const auto& p: params.species_eam) {
             if (p.species.has_value() && all_species.contains(*p.species)) {
-                buildEamComponent(*p.species, p);
+                queueEamComponent(*p.species, p);
             }
         }
 
@@ -200,7 +206,7 @@ namespace jgap::utils {
         if (params.default_eam.has_value()) {
             for (const auto& central_species: all_species) {
                 if (!specific_eam_species.contains(central_species)) {
-                    buildEamComponent(central_species, *params.default_eam);
+                    queueEamComponent(central_species, *params.default_eam);
                 }
             }
         }
@@ -219,17 +225,17 @@ namespace jgap::utils {
         for (const auto& p: params.species_3b) {
             if (!p.species.has_value() || p.n_sparse == 0) continue;
             const auto& triplet = *p.species;
-
-            auto trans3 = makeStandard3bTransformation(p.transformation_type, p.cutoff, p.cutoff_width);
-            auto kernel3 = SquaredExpKernel<3, 1>(p.energy_scale, p.length_scales);
-            auto sparsifier3 =
-                HistogramUniformSparsifier<4>(params.seed, p.n_sparse, std::array{true, true, true, false});
-            ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(
-                triplet, trans3, kernel3, sparsifier3, training_data
-            );
-            if (comp.nSparsePoints() == 0) continue;
-
-            potential.addComponent(std::move(comp));
+            component_builders.push_back([&training_data, triplet, p, seed = params.seed]() -> std::optional<ValuePtr<GapComponent>> {
+                auto trans3 = makeStandard3bTransformation(p.transformation_type, p.cutoff, p.cutoff_width);
+                auto kernel3 = SquaredExpKernel<3, 1>(p.energy_scale, p.length_scales);
+                auto sparsifier3 =
+                    HistogramUniformSparsifier<4>(seed, p.n_sparse, std::array{true, true, true, false});
+                ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(
+                    triplet, trans3, kernel3, sparsifier3, training_data
+                );
+                if (comp.nSparsePoints() == 0) return std::nullopt;
+                return ValuePtr<GapComponent>(std::move(comp));
+            });
         }
 
         // Add default 3-body components for triplets not in specific_3b_triplets
@@ -247,16 +253,28 @@ namespace jgap::utils {
                     continue; // Already handled by specific params
                 }
 
-                auto trans3 = makeStandard3bTransformation(def_p.transformation_type, def_p.cutoff, def_p.cutoff_width);
-                auto kernel3 = SquaredExpKernel<3, 1>(def_p.energy_scale, def_p.length_scales);
-                auto sparsifier3 =
-                    HistogramUniformSparsifier<4>(params.seed, def_p.n_sparse, std::array{true, true, true, false});
-                ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(
-                    triplet, trans3, kernel3, sparsifier3, training_data
-                );
-                if (comp.nSparsePoints() == 0) continue;
+                component_builders.push_back([&training_data, triplet, def_p, seed = params.seed]() -> std::optional<ValuePtr<GapComponent>> {
+                    auto trans3 = makeStandard3bTransformation(def_p.transformation_type, def_p.cutoff, def_p.cutoff_width);
+                    auto kernel3 = SquaredExpKernel<3, 1>(def_p.energy_scale, def_p.length_scales);
+                    auto sparsifier3 =
+                        HistogramUniformSparsifier<4>(seed, def_p.n_sparse, std::array{true, true, true, false});
+                    ThreeBodyGapComponent<4, SquaredExpKernel<3, 1>> comp(
+                        triplet, trans3, kernel3, sparsifier3, training_data
+                    );
+                    if (comp.nSparsePoints() == 0) return std::nullopt;
+                    return ValuePtr<GapComponent>(std::move(comp));
+                });
+            }
+        }
 
-                potential.addComponent(std::move(comp));
+        std::vector<std::optional<ValuePtr<GapComponent>>> constructed_components(component_builders.size());
+        unseqForIndex(0, component_builders.size(), [&](size_t i) {
+            constructed_components[i] = component_builders[i]();
+        });
+
+        for (auto& comp_opt: constructed_components) {
+            if (comp_opt.has_value()) {
+                potential.addComponent(std::move(*comp_opt));
             }
         }
 

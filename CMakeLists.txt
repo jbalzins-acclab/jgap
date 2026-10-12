@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.2.5 LANGUAGES C CXX)
+project(jgap VERSION 7.2.6 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,7 +14,18 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # 1. External & Fetched Dependencies
 include(Dependencies)
 
-# 2. Version Header Generation
+# 2. Version Header Generation & Installation Prefix Resolution
+# Auto-detect active Python virtualenv or Conda environment if default preset prefix is used
+if (CMAKE_INSTALL_PREFIX STREQUAL "$ENV{HOME}/.local" OR CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    if (DEFINED ENV{VIRTUAL_ENV} AND NOT "$ENV{VIRTUAL_ENV}" STREQUAL "")
+        set(CMAKE_INSTALL_PREFIX "$ENV{VIRTUAL_ENV}" CACHE PATH "Installation prefix" FORCE)
+        message(STATUS "Active Python virtualenv detected: default install prefix set to ${CMAKE_INSTALL_PREFIX}")
+    elseif (DEFINED ENV{CONDA_PREFIX} AND NOT "$ENV{CONDA_PREFIX}" STREQUAL "")
+        set(CMAKE_INSTALL_PREFIX "$ENV{CONDA_PREFIX}" CACHE PATH "Installation prefix" FORCE)
+        message(STATUS "Active Conda environment detected: default install prefix set to ${CMAKE_INSTALL_PREFIX}")
+    endif ()
+endif ()
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
@@ -80,7 +91,9 @@ if (UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND SKBUILD)
     target_link_options(jgap_lib PRIVATE "-static-libstdc++" "-Wl,--exclude-libs,ALL" "-fno-gnu-unique")
 endif ()
 
-if (OpenMP_CXX_FOUND)
+if (APPLE)
+    target_compile_definitions(jgap_lib PUBLIC HAS_GCD)
+elseif (OpenMP_CXX_FOUND)
     target_compile_definitions(jgap_lib PUBLIC HAS_OPENMP)
     target_link_libraries(jgap_lib PUBLIC OpenMP::OpenMP_CXX)
 endif ()

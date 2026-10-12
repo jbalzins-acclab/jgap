@@ -695,7 +695,7 @@ PYBIND11_MODULE(_jgap, m) {
     // 3B Transformation Enum
     // =========================================================================
     py::enum_<utils::ThreeBodyTransformationType>(m, "ThreeBodyTransformationType")
-        .value("Angle", utils::ThreeBodyTransformationType::Angle)
+        .value("Angle3b", utils::ThreeBodyTransformationType::Angle3b)
         .value("Distances", utils::ThreeBodyTransformationType::Distances)
         .export_values();
 
@@ -821,7 +821,7 @@ PYBIND11_MODULE(_jgap, m) {
             return p;
         }),
         py::arg("species") = py::none(),
-        py::arg("transformation_type") = utils::ThreeBodyTransformationType::Angle,
+        py::arg("transformation_type") = utils::ThreeBodyTransformationType::Angle3b,
         py::arg("cutoff") = 3.7,
         py::arg("cutoff_width") = 0.6,
         py::arg("n_sparse") = 500,
@@ -850,7 +850,7 @@ PYBIND11_MODULE(_jgap, m) {
         .def("__repr__", [](const utils::StandardGap3bParams& p) {
             std::ostringstream oss;
             oss << "<StandardGap3bParams species=" << (p.species ? p.species->toString() : "None")
-                << ", transformation_type=" << (p.transformation_type == utils::ThreeBodyTransformationType::Angle ? "Angle" : "Distances")
+                << ", transformation_type=" << (p.transformation_type == utils::ThreeBodyTransformationType::Angle3b ? "Angle3b" : "Distances")
                 << ", cutoff=" << p.cutoff
                 << ", cutoff_width=" << p.cutoff_width
                 << ", n_sparse=" << p.n_sparse

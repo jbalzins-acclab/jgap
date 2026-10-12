@@ -7,11 +7,13 @@ Evaluates a fitted potential using the Atomic Simulation Environment (ASE):
      and Virial RMSE in meV/atom) against reference values in [test_xyz] if provided.
      Can be disabled via --no-config-errors.
   2. Bulk physical properties: optimal lattice constant (a0), elastic constants (C11, C12, C44),
-     bulk modulus (B), and relaxed vacancy formation energy (Evac_f) for BCC Fe.
-     Optimization steps are capped at --max-steps (default: 100, as in validation).
+     bulk modulus (B), and relaxed vacancy formation energy (Evac_f) for a given crystal.
+     Lattice constant (-a / --lattice-constant) and crystal structure (-c / --crystal) are mandatory
+     CLI options unless bulk evaluation is disabled via --no-bulk / --skip-bulk.
 
 Usage:
-    python test_potential_with_ase.py <potential_file> [test_xyz] [--no-config-errors] [--skip-bulk] [--max-steps <N>]
+    python test_potential_with_ase.py <potential_file> [test_xyz] -c <crystal> -a <lattice_constant> [-e <element>]
+    python test_potential_with_ase.py <potential_file> [test_xyz] --no-bulk
 """
 
 import os
@@ -156,19 +158,30 @@ def evaluate_per_config_type_errors(test_xyz: str, calc: JGAPCalculator):
     print("=" * 115 + "\n")
 
 
-def evaluate_bulk_properties(calc: JGAPCalculator, max_steps: int = 100):
+def evaluate_bulk_properties(
+    calc: JGAPCalculator,
+    element: str = "Fe",
+    crystal: str = "bcc",
+    a_init: float = 2.87,
+    supercell_dim: tuple = None,
+    max_steps: int = 100,
+):
+    print("\n" + "=" * 60)
+    print(f"Bulk Properties: {element} ({crystal.upper()})")
+    print("=" * 60)
+
     # 1. Minimize structure and find Lattice Constant
-    print("Building Bulk Fe (BCC)...")
-    atoms = bulk('Fe', 'bcc', a=2.8, cubic=True)
+    print(f"Building Bulk {element} ({crystal.upper()}, initial a = {a_init:.4f} Å)...")
+    atoms = bulk(element, crystal, a=a_init, cubic=True)
     atoms.calc = calc
 
-    print(f"Minimizing bulk Fe to find optimal lattice constant (max {max_steps} steps)...")
+    print(f"Minimizing bulk {element} to find optimal lattice constant (max {max_steps} steps)...")
     ucf = FrechetCellFilter(atoms)
     opt = BFGS(ucf, logfile=None)
     opt.run(fmax=0.005, steps=max_steps)
 
-    a0 = atoms.cell[0, 0]
-    v0 = atoms.get_volume()
+    a0 = float(atoms.cell[0, 0])
+    v0 = float(atoms.get_volume())
     print(f"Relaxed lattice constant: a0 = {a0:.4f} Å (steps: {opt.nsteps})")
     print(f"Relaxed volume: V0 = {v0:.4f} Å^3\n")
 
@@ -180,7 +193,7 @@ def evaluate_bulk_properties(calc: JGAPCalculator, max_steps: int = 100):
         s.calc = calc
         s.get_stress()
 
-    Cij, Bij = get_elastic_tensor(atoms, systems=systems)
+    Cij, _ = get_elastic_tensor(atoms, systems=systems)
     C_GPa = Cij / units.GPa
 
     print("\n--- Elastic Tensor (GPa) ---")
@@ -197,32 +210,46 @@ def evaluate_bulk_properties(calc: JGAPCalculator, max_steps: int = 100):
     print(f"C11 = {c11:.1f} GPa, C12 = {c12:.1f} GPa, C44 = {c44:.1f} GPa, B = {b_mod:.1f} GPa")
 
     # 3. Compute Vacancy Formation Energy
-    print("\nCalculating Vacancy Formation Energy...")
-    supercell = atoms.repeat((6, 6, 6))
+    if supercell_dim is None:
+        supercell_dim = (3, 3, 3) if crystal.lower() == "fcc" else (4, 4, 4)
+
+    print(f"\nCalculating Vacancy Formation Energy (supercell {supercell_dim})...")
+    supercell = atoms.repeat(supercell_dim)
     supercell.calc = calc
 
     N = len(supercell)
-    E_perfect = supercell.get_potential_energy()
+    E_perfect = float(supercell.get_potential_energy())
     e_bulk = E_perfect / N
 
     vacancy_supercell = supercell.copy()
     del vacancy_supercell[0]
     vacancy_supercell.calc = calc
 
-    E_vac_unrelaxed = vacancy_supercell.get_potential_energy()
+    E_vac_unrelaxed = float(vacancy_supercell.get_potential_energy())
     E_vf_unrelaxed = E_vac_unrelaxed - (N - 1) * e_bulk
 
     print(f"Minimizing vacancy supercell (max {max_steps} steps)...")
     opt_vac = BFGS(vacancy_supercell, logfile=None)
     opt_vac.run(fmax=0.005, steps=max_steps)
 
-    E_vac_relaxed = vacancy_supercell.get_potential_energy()
+    E_vac_relaxed = float(vacancy_supercell.get_potential_energy())
     E_vf_relaxed = E_vac_relaxed - (N - 1) * e_bulk
 
     print(f"Supercell size: {N} atoms -> {N - 1} atoms with vacancy (steps: {opt_vac.nsteps})")
     print(f"Bulk energy per atom: {e_bulk:.4f} eV")
     print(f"Unrelaxed Vacancy Formation Energy: {E_vf_unrelaxed:.4f} eV")
     print(f"Relaxed Vacancy Formation Energy:   {E_vf_relaxed:.4f} eV\n")
+
+    return {
+        "element": element,
+        "crystal": crystal,
+        "a0": a0,
+        "c11": c11,
+        "c12": c12,
+        "c44": c44,
+        "b_mod": b_mod,
+        "e_vf": E_vf_relaxed,
+    }
 
 
 def main():
@@ -237,14 +264,44 @@ def main():
         help="Optional path to test XYZ dataset containing reference energies, forces, and virials",
     )
     parser.add_argument(
+        "-c",
+        "--crystal",
+        type=str,
+        default=None,
+        help="Crystal structure for bulk evaluation (e.g. 'bcc', 'fcc'). Mandatory unless bulk evaluation is disabled.",
+    )
+    parser.add_argument(
+        "-a",
+        "--lattice-constant",
+        type=float,
+        default=None,
+        help="Initial lattice constant in Å. Mandatory unless bulk evaluation is disabled.",
+    )
+    parser.add_argument(
+        "-e",
+        "--element",
+        type=str,
+        default="Fe",
+        help="Element symbol for bulk calculations (default: 'Fe')",
+    )
+    parser.add_argument(
+        "--supercell",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Supercell dimensions for vacancy calculation (e.g. --supercell 4 4 4). Default: 3x3x3 for FCC, 4x4x4 for BCC.",
+    )
+    parser.add_argument(
+        "--no-bulk",
+        "--skip-bulk",
+        dest="no_bulk",
+        action="store_true",
+        help="Skip bulk relaxation and physical property calculations",
+    )
+    parser.add_argument(
         "--no-config-errors",
         action="store_true",
         help="Disable per-config-type error summary table",
-    )
-    parser.add_argument(
-        "--skip-bulk",
-        action="store_true",
-        help="Skip bulk BCC relaxation and physical property calculations",
     )
     parser.add_argument(
         "--max-steps",
@@ -259,6 +316,19 @@ def main():
         print(f"Error: Potential file '{args.potential_file}' not found.")
         sys.exit(1)
 
+    # Validate that crystal and lattice-constant are provided if bulk evaluation is enabled
+    if not args.no_bulk:
+        missing = []
+        if args.crystal is None:
+            missing.append("--crystal (-c)")
+        if args.lattice_constant is None:
+            missing.append("--lattice-constant (-a)")
+        if missing:
+            parser.error(
+                f"The following option(s) are mandatory for bulk evaluation: {', '.join(missing)}. "
+                f"Specify them or pass --no-bulk to disable bulk calculation."
+            )
+
     print(f"Using potential: {args.potential_file}")
     calc = JGAPCalculator(args.potential_file)
 
@@ -271,8 +341,18 @@ def main():
             evaluate_per_config_type_errors(args.test_xyz, calc)
 
     # 2. Bulk physical properties calculation
-    if not args.skip_bulk:
-        evaluate_bulk_properties(calc, max_steps=args.max_steps)
+    if not args.no_bulk:
+        sc_dim = tuple(args.supercell) if args.supercell else None
+        if sc_dim and len(sc_dim) == 1:
+            sc_dim = (sc_dim[0], sc_dim[0], sc_dim[0])
+        evaluate_bulk_properties(
+            calc,
+            element=args.element,
+            crystal=args.crystal,
+            a_init=args.lattice_constant,
+            supercell_dim=sc_dim,
+            max_steps=args.max_steps,
+        )
 
 
 if __name__ == "__main__":

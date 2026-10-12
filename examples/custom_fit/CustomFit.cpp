@@ -19,13 +19,13 @@
 #include "jgap/core/UnseqFor.hpp"
 #include "jgap/core/fit/gap/regularization/PerConfigTypeRegularizationRules.hpp"
 #include "jgap/core/fit/gap/regularization/ScaledRegularizationRules.hpp"
-#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/impl/cutoff/PerriotPolynomialCutoff.hpp"
 #include "jgap/impl/fit/gap/ElementIncrementalQRGapFit.hpp"
 #include "jgap/impl/kernels/CauchyKernel.hpp"
 #include "jgap/impl/kernels/SquaredExpKernel.hpp"
 #include "jgap/impl/kernels/WendlandKernel.hpp"
 #include "jgap/impl/transform/manybody/ThreeBodySum.hpp"
+#include "jgap/impl/transform/manybody/TwoBodySum.hpp"
 #include "jgap/impl/transform/nbody/3b/MeamTransformation.hpp"
 #include "jgap/jgap.hpp"
 
@@ -89,7 +89,8 @@ int main(int argc, char** argv) {
     }
 
     std::string default_training = "test/structure-databases/feni-train.xyz";
-    if (!std::filesystem::exists(default_training) && std::filesystem::exists("../../test/structure-databases/feni-train.xyz")) {
+    if (!std::filesystem::exists(default_training)
+        && std::filesystem::exists("../../test/structure-databases/feni-train.xyz")) {
         default_training = "../../test/structure-databases/feni-train.xyz";
     }
 
@@ -98,7 +99,11 @@ int main(int argc, char** argv) {
 
     const auto start = std::chrono::steady_clock::now();
 
-    JGAP_LOG_INFO("Experimental Custom FeNi fit on {} using ElementIncrementalQRGapFit (RAM limit: {} GB)", training_file, ram_limit_gb);
+    JGAP_LOG_INFO(
+        "Experimental Custom FeNi fit on {} using ElementIncrementalQRGapFit (RAM limit: {} GB)",
+        training_file,
+        ram_limit_gb
+    );
     const auto training_data = Atoms::readAtoms(training_file);
 
     // Elements present in the training data.
@@ -137,9 +142,11 @@ int main(int argc, char** argv) {
                 meam_aggregator->extend({central, c1, c2}, meam_trans);
             }
         }
-        potential.addComponent(ManyBodyGapComponent<3, SquaredExpKernel<3, 0>>(
-            ValuePtr<NBodyAggregator<3>>(std::move(meam_aggregator)), meam_kernel, meam_sparsifier, training_data
-        ));
+        potential.addComponent(
+            ManyBodyGapComponent<3, SquaredExpKernel<3, 0>>(
+                ValuePtr<NBodyAggregator<3>>(std::move(meam_aggregator)), meam_kernel, meam_sparsifier, training_data
+            )
+        );
     }
 
     // ===== 3. 2-body: WendlandKernel (compact support) + PerriotPolynomialCutoff =====
@@ -180,8 +187,11 @@ int main(int argc, char** argv) {
     // Verify evaluation directly on training structure
     if (!training_data.empty()) {
         auto eval_result = potential.calculateEnergy(training_data[0]);
-        JGAP_LOG_INFO("Sample prediction on frame 0: energy = {:.6f} eV (ref = {:.6f} eV)",
-                      eval_result.value, training_data[0].getEnergy().value_or(0.0));
+        JGAP_LOG_INFO(
+            "Sample prediction on frame 0: energy = {:.6f} eV (ref = {:.6f} eV)",
+            eval_result.value,
+            training_data[0].getEnergy().value_or(0.0)
+        );
     }
 
     std::cout << "Execution time: " << formatDuration(elapsedMillisSince(start)) << std::endl;

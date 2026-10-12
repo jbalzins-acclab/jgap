@@ -24,7 +24,7 @@ test/
     ├── structure-databases/ # Training and test databases (feni-train.xyz, feni-test.xyz, db_*.xyz)
     ├── reference/        # Non-zip reference potentials and benchmark predictions for unit tests
     ├── quip_potentials/  # Baseline XML potentials
-    ├── validation.zip    # Compressed reference validation archives (52 MB)
+    ├── validation.zip    # Compressed reference validation archives 
     └── validation/       # Extracted reference baselines (QUIP, tabGAP, LAMMPS, DFT)
 ```
 
@@ -33,13 +33,7 @@ test/
 ## 2. Tier 1: Fast Unit Tests (`jgap_tests`)
 
 ### Purpose
-Unit tests verify the correctness, numerical stability, and edge cases of individual components, mathematical primitives, and data structures:
-* **Atomic Data Structures**: `Atoms`, `Matrix`, neighbor list construction, periodic boundary wrapping.
-* **Transformations & Kernels**: 2-body, 3-body, and EAM transformations, squared exponential kernels, permutation invariance.
-* **Sparsification**: `HistogramUniformSparsifier` distribution and binning.
-* **Linear Solvers & Fitters**: `QRGapFit`, `BlockIncrementalQRGapFit`, and `ElementIncrementalQRGapFit` mathematical equivalence and low-memory streaming.
-* **Splines & Tabulation**: 1D Natural, Hermite, and B-Spline interpolation, 3D cubic B-splines, and `TabGapPotential` evaluation.
-* **Serialization**: Complete HDF5 serialization and deserialization round-trips for all potentials, components, and transformations.
+Unit tests verify the correctness, numerical stability, and edge cases of individual components, mathematical primitives, and data structures.
 
 ### Building & Running Unit Tests
 Unit tests are automatically discovered from all `test/unit/**/*.cpp` files and compiled into the `jgap_tests` executable using GoogleTest:

@@ -30,7 +30,8 @@ int main(int argc, char** argv) {
         } else if (arg.starts_with("ram_limit=")) {
             ram_limit_gb = std::stod(arg.substr(10));
         } else if (arg == "-h" || arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n"
+            std::cout << "Usage: " << argv[0]
+                      << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n"
                       << "  --ram-limit <gb>   RAM limit in GB for ElementIncrementalQRGapFit (default: 2.0)\n";
             return 0;
         } else {
@@ -39,7 +40,8 @@ int main(int argc, char** argv) {
     }
 
     if (positional_args.size() < 2 || positional_args.size() > 3) {
-        std::cerr << "Usage: " << argv[0] << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " <training.xyz> <output_prefix> [screened_coulomb_dataset_file] [--ram-limit <gb>]\n";
         return 1;
     }
     const std::string training_file = positional_args[0];
@@ -60,7 +62,7 @@ int main(int argc, char** argv) {
     }
     if (params.default_3b) {
         params.default_3b->n_sparse = 625;
-        // Option: use Distances3bTransformation instead of Angle (default):
+        // Option: use Distances3bTransformation instead of Angle3b (default):
         // params.default_3b->transformation_type = ThreeBodyTransformationType::Distances;
     }
     // Default non-species parameters can be disabled by erasing them (setting to std::nullopt):

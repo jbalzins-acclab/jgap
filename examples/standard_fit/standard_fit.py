@@ -5,7 +5,7 @@ Example: fit a standard 2b+3b+EAM GAP on a training set, serialize it, and tabul
 Demonstrates full configuration flexibility:
   1. Custom XYZ property names (energy, force, virial/stress) via jgap.read_atoms.
   2. Hyperparameters for 2-body, EAM, and 3-body (cutoffs, n_sparse, energy_scale, length_scale).
-  3. Transformation type selection (Angle vs Distances for 3-body).
+  3. Transformation type selection (Angle3b vs Distances for 3-body).
   4. Disabling specific components or adding species-specific overrides.
   5. Multi-level regularization with isotropic and anisotropic virials per config_type.
   6. High-resolution tabulation grid tuning via StandardTabulationParams.
@@ -98,14 +98,16 @@ def main():
     params.default_eam.energy_scale = 1.0     # delta (eV)
     params.default_eam.length_scale = 1.0     # density correlation scale
 
-    # --- 3-Body Component (Angle or Distances) ---
+    # --- 3-Body Component (Angle3b or Distances) ---
     params.default_3b.cutoff = 4.0
     params.default_3b.cutoff_width = 0.6
     params.default_3b.n_sparse = 500
     params.default_3b.energy_scale = 1.0      # delta (eV)
     params.default_3b.length_scale = 1.0      # isotropic length scale (or length_scales=[1.0, 1.0, 1.0])
-    # Transformation type: Angle (theta_ijk) or Distances (rij, rik, rjk)
-    params.default_3b.transformation_type = jgap.ThreeBodyTransformationType.Angle
+    # Transformation type:
+    #   Angle3b:   (r01 + r02, (r01 - r02)**2, r12, f_cut(r01) * f_cut(r02))
+    #   Distances: (r01, r02, r12, f_cut(r01) * f_cut(r02))
+    params.default_3b.transformation_type = jgap.ThreeBodyTransformationType.Angle3b
 
     # --- Component Disabling Example ---
     # To fit without 2-body or without EAM, set the default to None:
@@ -177,17 +179,16 @@ def main():
         default_sigmas=default_sigmas,
         exact_config_type_sigmas={
             "isolated_atom": jgap.PerConfigTypeSigmas(energy=0.0001, force=0.01, virials=0.1),
-            "IsolatedAtom": jgap.PerConfigTypeSigmas(energy=0.0001, force=0.01, virials=0.1),
         },
         config_type_contains_sigmas={
             "liquid": jgap.PerConfigTypeSigmas(energy=0.005, force=0.1, virials_iso=0.2, virials_aniso=0.05),
-            "Liquid": jgap.PerConfigTypeSigmas(energy=0.005, force=0.1, virials_iso=0.2, virials_aniso=0.05),
         },
     )
 
     # Or via string (config:energy:force:virial:dummy, where dummy added to allow compatibility with the old QUIP format):
     # config_str = "isolated_atom:0.0001:0.01:0.1:0.0:liquid:0.005:0.1:0.2:0.0"
     # rules = jgap.PerConfigTypeRegularizationRules(default_sigmas, config_str)
+    
     sigmas = rules.determine_for_all(training_data)
 
     # -------------------------------------------------------------------------
