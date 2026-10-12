@@ -29,8 +29,12 @@ c++ -std=c++23 -O3 -march=native examples/custom_fit/CustomFit.cpp -ljgap -o exa
 c++ -std=c++23 -O3 -march=native examples/custom_experiment_fit/CustomExperimentFit.cpp -ljgap -o examples/custom_experiment_fit/custom_experiment_fit
 ```
 
-> [!NOTE]
-> If installed to a non-standard prefix (such as `$HOME/.local` or virtaul environment's prefix), ensure your compiler search paths include the include and library directories or pass `-I$HOME/.local/include -L$HOME/.local/lib -Wl,-rpath,$HOME/.local/lib`.
+> [!TIP]
+> Alternatively, pass the paths directly on the command line without exporting environment variables:
+> ```bash
+> PREFIX="${VIRTUAL_ENV:-$HOME/.local}"
+> c++ -std=c++23 -O3 -march=native examples/basic_fit/BasicFit.cpp -I"$PREFIX/include" -L"$PREFIX/lib" -Wl,-rpath,"$PREFIX/lib" -ljgap -o examples/basic_fit/basic_fit
+> ```
 
 ---
 

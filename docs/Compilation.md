@@ -20,7 +20,7 @@ Some tips for installing the dependencies based on your system can be found in:
 | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | Homebrew available | [**macOS Installation Guide**](installation/MacOS.md) |
 | **Linux** | No `sudo` — Conda | [**Linux (Conda / User-Space) Guide**](installation/Linux-Conda.md) |
-| **Linux on HPC Clusters** | No `sudo` - `module` command is available| [**Linux on  Guide**](installation/Linux-HPC.md) |
+| **Linux on HPC Clusters** | No `sudo` - `module` command is available| [**Linux on HPC Clusters Guide**](installation/Linux-HPC.md) |
 
 Regardless of installation type, its strongly recomnended that the following is performed in a virtual environment (e.g. `python -m venv ...`) to avoid all kinds of package conflicts.
 
@@ -40,7 +40,7 @@ JGAP can be compiled (including Python installation to your venv) via a simple c
 
 This will install JGAP with all its functionalities to your virtual environment, and when it is active you should be able to compile standalone tools with simple commands, like: 
 ```bash
-   c++ -std=c++23 -O3 -march=native BasicFit.cpp -ljgap -o basic_fit
+c++ -std=c++23 -O3 -march=native BasicFit.cpp -ljgap -o basic_fit
 ```
 
 > [!NOTE]
