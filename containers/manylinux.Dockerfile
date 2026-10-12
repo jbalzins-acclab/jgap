@@ -25,6 +25,7 @@ ENV CC=gcc-15
 ENV CXX=g++-15
 ENV CPATH="/usr/include"
 ENV LIBRARY_PATH="/usr/lib64"
+ENV LDFLAGS="-L/usr/lib64 -Wl,-rpath-link,/usr/lib64"
 ENV CMAKE_INCLUDE_PATH="/usr/include"
 ENV CMAKE_LIBRARY_PATH="/usr/lib64"
 ENV AUDITWHEEL_PLAT=manylinux_2_28_x86_64
