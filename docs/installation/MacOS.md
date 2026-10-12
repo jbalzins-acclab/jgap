@@ -31,6 +31,11 @@ If HDF5 Database is not installed:
   ```bash
   brew install hdf5 
   ```
+
+If you want multi-threaded QR / LAPACKE acceleration for Eigen (recommended):
+  ```bash
+  brew install lapack
+  ```
 ---
 
 ## 2. Setting Up Python Environment

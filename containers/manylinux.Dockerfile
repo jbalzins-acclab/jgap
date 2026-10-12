@@ -1,10 +1,12 @@
 FROM quay.io/pypa/manylinux_2_28_x86_64
 
-# Install EPEL repository and system development libraries (HDF5, OpenBLAS, Ninja)
+# Install EPEL repository and system development libraries (HDF5, OpenBLAS, LAPACK, Ninja)
 RUN dnf install -y epel-release \
+    && (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true) \
     && dnf install -y \
        hdf5-devel \
        openblas-devel \
+       lapack-devel \
        ninja-build \
     && dnf clean all
 
@@ -23,10 +25,10 @@ RUN ln -sf /opt/conda/envs/gcc15/bin/x86_64-conda-linux-gnu-gcc /usr/local/bin/g
 ENV PATH="/opt/conda/envs/gcc15/bin:${PATH}"
 ENV CC=gcc-15
 ENV CXX=g++-15
-ENV CPATH="/usr/include:/usr/include/openblas"
+ENV CPATH="/usr/include:/usr/include/openblas:/usr/include/lapacke"
 ENV LIBRARY_PATH="/usr/lib64"
 ENV LDFLAGS="-L/usr/lib64 -Wl,-rpath-link,/usr/lib64"
-ENV CMAKE_INCLUDE_PATH="/usr/include;/usr/include/openblas"
+ENV CMAKE_INCLUDE_PATH="/usr/include;/usr/include/openblas;/usr/include/lapacke"
 ENV CMAKE_LIBRARY_PATH="/usr/lib64"
 ENV AUDITWHEEL_PLAT=manylinux_2_28_x86_64
 ENV LC_ALL=C.UTF-8
