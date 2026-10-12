@@ -119,3 +119,57 @@ else ()
         message(STATUS "No BLAS and no OpenMP found: Eigen will run single-threaded")
     endif ()
 endif ()
+
+# ------------------------------------------------------------------------------
+# 6. LAPACKE Acceleration for Eigen (e.g. Multi-threaded QR / Cholesky)
+# ------------------------------------------------------------------------------
+include(CheckCXXSourceCompiles)
+
+find_path(LAPACKE_INCLUDE_DIR
+    NAMES lapacke.h
+    PATH_SUFFIXES openblas lapack lapacke
+    PATHS
+        /usr/include
+        /usr/include/openblas
+        /usr/local/include
+        /usr/local/include/openblas
+        /opt/homebrew/include
+        /opt/homebrew/opt/openblas/include
+        /opt/homebrew/opt/lapack/include
+)
+
+set(JGAP_LAPACK_LIBS "")
+set(LAPACKE_FOUND FALSE)
+if (LAPACKE_INCLUDE_DIR)
+    find_library(LAPACKE_LIBRARY NAMES lapacke)
+    if (LAPACKE_LIBRARY)
+        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+    endif ()
+
+    # Verify that LAPACKE actually links with the available BLAS/LAPACK libraries
+    set(_BACKUP_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+    set(_BACKUP_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+    set(CMAKE_REQUIRED_INCLUDES ${LAPACKE_INCLUDE_DIR})
+    set(CMAKE_REQUIRED_LIBRARIES ${JGAP_BLAS_LIBS} ${JGAP_LAPACK_LIBS})
+
+    check_cxx_source_compiles("
+    #include <lapacke.h>
+    int main() {
+        double a[1] = {0.0};
+        double tau[1] = {0.0};
+        return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
+    }
+    " LAPACKE_WORKS)
+
+    set(CMAKE_REQUIRED_INCLUDES ${_BACKUP_CMAKE_REQUIRED_INCLUDES})
+    set(CMAKE_REQUIRED_LIBRARIES ${_BACKUP_CMAKE_REQUIRED_LIBRARIES})
+
+    if (LAPACKE_WORKS)
+        set(LAPACKE_FOUND TRUE)
+        message(STATUS "LAPACKE acceleration enabled (${LAPACKE_INCLUDE_DIR})")
+    else ()
+        message(STATUS "LAPACKE header found at ${LAPACKE_INCLUDE_DIR} but linking failed: Eigen QR will use built-in routines")
+    endif ()
+else ()
+    message(STATUS "LAPACKE not found: Eigen QR and Cholesky will use built-in routines")
+endif ()

@@ -23,10 +23,10 @@ RUN ln -sf /opt/conda/envs/gcc15/bin/x86_64-conda-linux-gnu-gcc /usr/local/bin/g
 ENV PATH="/opt/conda/envs/gcc15/bin:${PATH}"
 ENV CC=gcc-15
 ENV CXX=g++-15
-ENV CPATH="/usr/include"
+ENV CPATH="/usr/include:/usr/include/openblas"
 ENV LIBRARY_PATH="/usr/lib64"
 ENV LDFLAGS="-L/usr/lib64 -Wl,-rpath-link,/usr/lib64"
-ENV CMAKE_INCLUDE_PATH="/usr/include"
+ENV CMAKE_INCLUDE_PATH="/usr/include;/usr/include/openblas"
 ENV CMAKE_LIBRARY_PATH="/usr/lib64"
 ENV AUDITWHEEL_PLAT=manylinux_2_28_x86_64
 ENV LC_ALL=C.UTF-8

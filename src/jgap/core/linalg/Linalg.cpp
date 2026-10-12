@@ -18,7 +18,11 @@ namespace jgap::linalg {
         Eigen::Map<EigenMatrixCol> A_map(A.flatData().data(), A.nRows(), A.nColumns());
         Eigen::Map<EigenVectorCol> b_map(b.data(), b.size());
 
+#ifdef EIGEN_USE_LAPACKE
+        JGAP_LOG_DEBUG("Init Eigen::HouseholderQR (LAPACKE accelerated)");
+#else
         JGAP_LOG_DEBUG("Init Eigen::HouseholderQR");
+#endif
         const Eigen::HouseholderQR<Eigen::Ref<EigenMatrixCol>> qr(A_map);
 
         JGAP_LOG_DEBUG("Q^t");
