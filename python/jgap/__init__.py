@@ -38,7 +38,10 @@ try:
         load_potential,
         read_atoms,
         write_atoms,
+        is_lapacke_enabled,
     )
+    from . import _jgap
+    __version__ = getattr(_jgap, "__version__", "7.2.9")
 except ImportError as err:
     try:
         from _jgap import (
@@ -72,7 +75,10 @@ except ImportError as err:
             load_potential,
             read_atoms,
             write_atoms,
+            is_lapacke_enabled,
         )
+        import _jgap
+        __version__ = getattr(_jgap, "__version__", "7.2.9")
     except ImportError:
         raise ImportError(
             "Failed to load the compiled _jgap C++ extension. "
@@ -190,4 +196,6 @@ __all__ = [
     "read_atoms",
     "write_atoms",
     "JGAPCalculator",
+    "is_lapacke_enabled",
+    "__version__",
 ]

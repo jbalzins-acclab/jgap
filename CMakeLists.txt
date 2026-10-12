@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.2.8 LANGUAGES C CXX)
+project(jgap VERSION 7.2.9 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -70,6 +70,9 @@ endif ()
 if (JGAP_BLAS_LIBS)
     target_link_libraries(jgap_lib PRIVATE ${JGAP_BLAS_LIBS})
 endif ()
+if (JGAP_LAPACK_LIBS)
+    target_link_libraries(jgap_lib PRIVATE ${JGAP_LAPACK_LIBS})
+endif ()
 
 target_link_libraries(jgap_lib PRIVATE
         Eigen3::Eigen
@@ -103,9 +106,13 @@ target_include_directories(jgap_lib PUBLIC
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
-target_compile_definitions(jgap_lib PRIVATE EIGEN_FAST_MATH EIGEN_NO_DEBUG)
+target_compile_definitions(jgap_lib PRIVATE EIGEN_FAST_MATH EIGEN_NO_DEBUG "JGAP_VERSION=\"${PROJECT_VERSION}\"")
 if (JGAP_BLAS_LIBS)
     target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_BLAS)
+endif ()
+if (LAPACKE_FOUND)
+    target_include_directories(jgap_lib PRIVATE ${LAPACKE_INCLUDE_DIR})
+    target_compile_definitions(jgap_lib PRIVATE EIGEN_USE_LAPACKE)
 endif ()
 
 if (NOT SKBUILD)

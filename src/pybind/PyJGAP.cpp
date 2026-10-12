@@ -228,6 +228,19 @@ namespace {
 PYBIND11_MODULE(_jgap, m) {
     m.doc() = "jgap Python C++ bindings";
 
+#ifndef JGAP_VERSION
+#error "JGAP_VERSION must be defined by the build system"
+#endif
+    m.attr("__version__") = JGAP_VERSION;
+
+    m.def("is_lapacke_enabled", []() {
+#ifdef EIGEN_USE_LAPACKE
+        return true;
+#else
+        return false;
+#endif
+    }, "Returns true if jgap was compiled with LAPACKE acceleration for Eigen (QR/Cholesky).");
+
     // =========================================================================
     // Vector3
     // =========================================================================
