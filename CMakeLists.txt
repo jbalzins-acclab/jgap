@@ -79,7 +79,9 @@ target_link_libraries(jgap_lib PRIVATE
         Eigen3::Eigen
         HighFive
         pugixml::pugixml
+        HDF5::HDF5
 )
+target_include_directories(jgap_lib PRIVATE ${HDF5_INCLUDE_DIRS})
 
 if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Resolve libc++ symbols required by pre-compiled static dependencies when building with GCC on macOS
