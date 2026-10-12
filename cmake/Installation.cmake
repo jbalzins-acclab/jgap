@@ -7,6 +7,11 @@
 #       c++ ... -ljgap ...
 # and gets jgap's headers automatically.
 
+if (SKBUILD)
+    # Python wheel installation is handled exclusively by PythonBindings.cmake
+    return()
+endif ()
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 

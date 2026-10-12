@@ -178,7 +178,7 @@ namespace jgap::utils {
         return components;
     }
 
-    std::map<Species, ValuePtr<NBodyAggregator<3>>> createMeamAggregators(
+    inline std::map<Species, ValuePtr<NBodyAggregator<3>>> createMeamAggregators(
         const ValuePtr<MeamTransformation>& base_transform, const std::vector<Atoms>& training_data
     ) {
         std::map<Species, ValuePtr<NBodyAggregator<3>>> aggregators;
