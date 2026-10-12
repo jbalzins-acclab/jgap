@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(jgap VERSION 7.2.9 LANGUAGES C CXX)
+project(jgap VERSION 7.2.10 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -41,7 +41,7 @@ try:
         is_lapacke_enabled,
     )
     from . import _jgap
-    __version__ = getattr(_jgap, "__version__", "7.2.9")
+    __version__ = getattr(_jgap, "__version__", "7.2.10")
 except ImportError as err:
     try:
         from _jgap import (
@@ -78,7 +78,7 @@ except ImportError as err:
             is_lapacke_enabled,
         )
         import _jgap
-        __version__ = getattr(_jgap, "__version__", "7.2.9")
+        __version__ = getattr(_jgap, "__version__", "7.2.10")
     except ImportError:
         raise ImportError(
             "Failed to load the compiled _jgap C++ extension. "
