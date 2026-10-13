@@ -64,7 +64,7 @@ namespace jgap {
             auto kernel_ptr = SerializationRegistry<Kernel<Dim>>::deserialize(kernel_group_opt.value());
             auto* kernel_typed = kernel_ptr.template as<TKernel>();
             if (!kernel_typed) {
-                JGAP_LOG_AND_THROW("Deserialized kernel is not of expected type {}", utils::typeName<TKernel>());
+                return nullptr;
             }
             TKernel kernel = *kernel_typed;
 
