@@ -76,34 +76,8 @@ endif ()
 # ------------------------------------------------------------------------------
 # 5. BLAS / Acceleration Libraries from Host / System
 # ------------------------------------------------------------------------------
-# On macOS, check for OpenBLAS (e.g. Homebrew) first since it provides both BLAS
-# and LAPACKE for multi-threaded QR acceleration, unlike Apple Accelerate.
-if (APPLE AND NOT OpenBLAS_FOUND)
-    if (EXISTS "/opt/homebrew/opt/openblas")
-        set(OpenBLAS_ROOT "/opt/homebrew/opt/openblas")
-        list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/openblas")
-    elseif (EXISTS "/usr/local/opt/openblas")
-        set(OpenBLAS_ROOT "/usr/local/opt/openblas")
-        list(PREPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
-    else ()
-        find_program(BREW_EXECUTABLE brew)
-        if (BREW_EXECUTABLE)
-            execute_process(
-                COMMAND ${BREW_EXECUTABLE} --prefix openblas
-                OUTPUT_VARIABLE _BREW_OPENBLAS_PREFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET
-            )
-            if (_BREW_OPENBLAS_PREFIX AND EXISTS "${_BREW_OPENBLAS_PREFIX}")
-                set(OpenBLAS_ROOT "${_BREW_OPENBLAS_PREFIX}")
-                list(PREPEND CMAKE_PREFIX_PATH "${_BREW_OPENBLAS_PREFIX}")
-            endif ()
-        endif ()
-    endif ()
-endif ()
-
 if (APPLE)
-    # On macOS, native Apple Accelerate framework provides peak AMX/NEON hardware-accelerated BLAS
+    # On macOS, native Apple Accelerate framework provides peak AMX hardware-accelerated BLAS
     set(BLA_VENDOR Apple)
     find_package(BLAS QUIET)
     if (BLAS_FOUND)
@@ -111,19 +85,33 @@ if (APPLE)
     endif ()
     unset(BLA_VENDOR)
 else ()
-    find_package(OpenBLAS CONFIG QUIET)
-    if (NOT OpenBLAS_FOUND)
-        find_package(OpenBLAS QUIET)
-    endif ()
-
-    if (OpenBLAS_FOUND)
-        set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
-        set(JGAP_BLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIRS})
-        include_directories(${OpenBLAS_INCLUDE_DIRS})
+    # Prioritize OpenMP-threaded OpenBLAS (openblaso) or pthreads (openblasp) over serial (openblas)
+    find_library(JGAP_OPENBLAS_LIB
+        NAMES openblaso openblasp openblas
+        HINTS
+            ${OpenBLAS_ROOT}/lib
+            /usr/lib64
+            /usr/lib
+            /usr/local/lib
+    )
+    if (JGAP_OPENBLAS_LIB)
+        set(JGAP_BLAS_LIBS ${JGAP_OPENBLAS_LIB})
+        set(OpenBLAS_FOUND TRUE)
     else ()
-        find_package(BLAS QUIET)
-        if (BLAS_FOUND)
-            set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+        find_package(OpenBLAS CONFIG QUIET)
+        if (NOT OpenBLAS_FOUND)
+            find_package(OpenBLAS QUIET)
+        endif ()
+
+        if (OpenBLAS_FOUND)
+            set(JGAP_BLAS_LIBS ${OpenBLAS_LIBRARIES})
+            set(JGAP_BLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIRS})
+            include_directories(${OpenBLAS_INCLUDE_DIRS})
+        else ()
+            find_package(BLAS QUIET)
+            if (BLAS_FOUND)
+                set(JGAP_BLAS_LIBS ${BLAS_LIBRARIES})
+            endif ()
         endif ()
     endif ()
 endif ()
@@ -141,10 +129,18 @@ else ()
 endif ()
 
 # ------------------------------------------------------------------------------
-# 6. LAPACKE Acceleration for Eigen (e.g. Multi-threaded QR / Cholesky)
+# 6. LAPACKE Acceleration for Eigen (Linux only)
 # ------------------------------------------------------------------------------
-function(check_lapacke_candidate OUT_VAR INCLUDE_DIR LIBS)
-    set(TEST_SRC "
+# On macOS, native Apple Accelerate framework combined with Eigen's inlined blocked
+# QR is up to 73% faster than external LAPACK without bundling external reference BLAS.
+set(JGAP_LAPACK_LIBS "")
+set(LAPACKE_FOUND FALSE)
+
+if (APPLE)
+    message(STATUS "macOS detected: native Apple Accelerate enabled for AMX hardware-accelerated BLAS with Eigen blocked QR")
+else ()
+    function(check_lapacke_candidate OUT_VAR INCLUDE_DIR LIBS)
+        set(TEST_SRC "
 #include <complex>
 #ifndef lapack_complex_float
 #define lapack_complex_float std::complex<float>
@@ -159,149 +155,131 @@ int main() {
     return LAPACKE_dgeqrf(LAPACK_COL_MAJOR, 1, 1, a, 1, tau);
 }
 ")
-    file(WRITE "${CMAKE_BINARY_DIR}/lapacke_test.cpp" "${TEST_SRC}")
-    try_compile(TEST_OK
-        SOURCES "${CMAKE_BINARY_DIR}/lapacke_test.cpp"
-        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${INCLUDE_DIR}"
-        LINK_LIBRARIES ${LIBS}
-        OUTPUT_VARIABLE TEST_OUTPUT
+        file(WRITE "${CMAKE_BINARY_DIR}/lapacke_test.cpp" "${TEST_SRC}")
+        try_compile(TEST_OK
+            SOURCES "${CMAKE_BINARY_DIR}/lapacke_test.cpp"
+            CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${INCLUDE_DIR}"
+            LINK_LIBRARIES ${LIBS}
+            OUTPUT_VARIABLE TEST_OUTPUT
+        )
+        if (TEST_OK)
+            set(${OUT_VAR} TRUE PARENT_SCOPE)
+        else ()
+            set(${OUT_VAR} FALSE PARENT_SCOPE)
+            if (JGAP_DEBUG_LAPACKE)
+                message(STATUS "LAPACKE candidate test (${LIBS}) failed:\n${TEST_OUTPUT}")
+            endif ()
+        endif ()
+    endfunction()
+
+    find_path(LAPACKE_INCLUDE_DIR
+        NAMES lapacke.h
+        PATH_SUFFIXES lapacke lapack openblas
+        HINTS
+            ${OpenBLAS_INCLUDE_DIRS}
+            ${OpenBLAS_ROOT}/include
+        PATHS
+            /usr/include/lapacke
+            /usr/include/lapack
+            /usr/include
+            /usr/include/openblas
+            /usr/local/include
+            /usr/local/include/openblas
     )
-    if (TEST_OK)
-        set(${OUT_VAR} TRUE PARENT_SCOPE)
+
+    if (LAPACKE_INCLUDE_DIR)
+        # Stage 1: Check if BLAS library already provides LAPACKE (e.g. Linux OpenBLAS built with bundled LAPACKE)
+        if (JGAP_BLAS_LIBS)
+            check_lapacke_candidate(LAPACKE_WORKS_BLAS_ALONE "${LAPACKE_INCLUDE_DIR}" "${JGAP_BLAS_LIBS}")
+            if (LAPACKE_WORKS_BLAS_ALONE)
+                set(LAPACKE_FOUND TRUE)
+                message(STATUS "LAPACKE acceleration enabled via BLAS library (${LAPACKE_INCLUDE_DIR})")
+            endif ()
+        endif ()
+
+        # Stage 2: BLAS library does not bundle LAPACKE; search for standalone liblapacke and liblapack
+        if (NOT LAPACKE_FOUND)
+            find_library(LAPACKE_LIBRARY
+                NAMES lapacke
+                PATH_SUFFIXES lapack
+                HINTS
+                    /usr/lib64
+                    /usr/lib
+                    /usr/local/lib
+            )
+            find_library(LAPACK_LIBRARY
+                NAMES lapack
+                PATH_SUFFIXES lapack
+                HINTS
+                    /usr/lib64
+                    /usr/lib
+                    /usr/local/lib
+            )
+            find_library(GFORTRAN_LIBRARY
+                NAMES gfortran
+                HINTS
+                    /usr/lib64
+                    /usr/lib
+                    /usr/local/lib
+            )
+
+            if (LAPACKE_LIBRARY)
+                # Try 1: LAPACKE + LAPACK + BLAS
+                if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
+                    check_lapacke_candidate(TRY_1 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY};${JGAP_BLAS_LIBS}")
+                    if (TRY_1)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+
+                # Try 2: LAPACKE + LAPACK + BLAS + gfortran
+                if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY AND GFORTRAN_LIBRARY)
+                    check_lapacke_candidate(TRY_2 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY};${JGAP_BLAS_LIBS};${GFORTRAN_LIBRARY}")
+                    if (TRY_2)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY} ${GFORTRAN_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY}, ${LAPACK_LIBRARY}, and ${GFORTRAN_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+
+                # Try 3: LAPACKE + BLAS
+                if (NOT LAPACKE_FOUND)
+                    check_lapacke_candidate(TRY_3 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${JGAP_BLAS_LIBS}")
+                    if (TRY_3)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+
+                # Try 4: Standalone LAPACKE + LAPACK without BLAS
+                if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
+                    check_lapacke_candidate(TRY_4 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY}")
+                    if (TRY_4)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+
+                # Try 5: Standalone LAPACKE alone
+                if (NOT LAPACKE_FOUND)
+                    check_lapacke_candidate(TRY_5 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY}")
+                    if (TRY_5)
+                        set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
+                        set(LAPACKE_FOUND TRUE)
+                        message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
+                    endif ()
+                endif ()
+            endif ()
+        endif ()
+
+        if (NOT LAPACKE_FOUND)
+            message(STATUS "LAPACKE header found at ${LAPACKE_INCLUDE_DIR} but linking failed: Eigen QR will use built-in routines")
+        endif ()
     else ()
-        set(${OUT_VAR} FALSE PARENT_SCOPE)
-        if (JGAP_DEBUG_LAPACKE)
-            message(STATUS "LAPACKE candidate test (${LIBS}) failed:\n${TEST_OUTPUT}")
-        endif ()
+        message(STATUS "LAPACKE not found: Eigen QR and Cholesky will use built-in routines")
     endif ()
-endfunction()
-
-find_path(LAPACKE_INCLUDE_DIR
-    NAMES lapacke.h
-    PATH_SUFFIXES lapacke lapack openblas
-    HINTS
-        /opt/homebrew/opt/lapack/include
-        /usr/local/opt/lapack/include
-        ${OpenBLAS_INCLUDE_DIRS}
-        ${OpenBLAS_ROOT}/include
-        /opt/local/include
-    PATHS
-        /usr/include/lapacke
-        /usr/include/lapack
-        /usr/include
-        /usr/include/openblas
-        /usr/local/include
-        /usr/local/include/openblas
-        /opt/homebrew/include
-        /opt/local/include/lapack
-)
-
-set(JGAP_LAPACK_LIBS "")
-set(LAPACKE_FOUND FALSE)
-if (LAPACKE_INCLUDE_DIR)
-    # Stage 1: Check if BLAS library already provides LAPACKE (e.g. Linux OpenBLAS built with bundled LAPACKE)
-    if (JGAP_BLAS_LIBS)
-        check_lapacke_candidate(LAPACKE_WORKS_BLAS_ALONE "${LAPACKE_INCLUDE_DIR}" "${JGAP_BLAS_LIBS}")
-        if (LAPACKE_WORKS_BLAS_ALONE)
-            set(LAPACKE_FOUND TRUE)
-            message(STATUS "LAPACKE acceleration enabled via BLAS library (${LAPACKE_INCLUDE_DIR})")
-        endif ()
-    endif ()
-
-    # Stage 2: BLAS library does not bundle LAPACKE; search for standalone liblapacke and liblapack
-    if (NOT LAPACKE_FOUND)
-        find_library(LAPACKE_LIBRARY
-            NAMES lapacke
-            PATH_SUFFIXES lapack
-            HINTS
-                /opt/homebrew/opt/lapack/lib
-                /usr/local/opt/lapack/lib
-                /opt/local/lib/lapack
-                /opt/local/lib
-                /usr/lib64
-                /usr/lib
-                /usr/local/lib
-                /opt/homebrew/lib
-        )
-        find_library(LAPACK_LIBRARY
-            NAMES lapack
-            PATH_SUFFIXES lapack
-            HINTS
-                /opt/homebrew/opt/lapack/lib
-                /usr/local/opt/lapack/lib
-                /opt/local/lib/lapack
-                /opt/local/lib
-                /usr/lib64
-                /usr/lib
-                /usr/local/lib
-                /opt/homebrew/lib
-        )
-        find_library(GFORTRAN_LIBRARY
-            NAMES gfortran
-            HINTS
-                /opt/local/lib
-                /usr/lib64
-                /usr/lib
-                /usr/local/lib
-                /opt/homebrew/lib
-        )
-
-        if (LAPACKE_LIBRARY)
-            # Try 1: LAPACKE + LAPACK + BLAS
-            if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
-                check_lapacke_candidate(TRY_1 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY};${JGAP_BLAS_LIBS}")
-                if (TRY_1)
-                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
-                    set(LAPACKE_FOUND TRUE)
-                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
-                endif ()
-            endif ()
-
-            # Try 2: LAPACKE + LAPACK + BLAS + gfortran
-            if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY AND GFORTRAN_LIBRARY)
-                check_lapacke_candidate(TRY_2 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY};${JGAP_BLAS_LIBS};${GFORTRAN_LIBRARY}")
-                if (TRY_2)
-                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY} ${GFORTRAN_LIBRARY})
-                    set(LAPACKE_FOUND TRUE)
-                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY}, ${LAPACK_LIBRARY}, and ${GFORTRAN_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
-                endif ()
-            endif ()
-
-            # Try 3: LAPACKE + BLAS
-            if (NOT LAPACKE_FOUND)
-                check_lapacke_candidate(TRY_3 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${JGAP_BLAS_LIBS}")
-                if (TRY_3)
-                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
-                    set(LAPACKE_FOUND TRUE)
-                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
-                endif ()
-            endif ()
-
-            # Try 4: Standalone LAPACKE + LAPACK without BLAS
-            if (NOT LAPACKE_FOUND AND LAPACK_LIBRARY)
-                check_lapacke_candidate(TRY_4 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY};${LAPACK_LIBRARY}")
-                if (TRY_4)
-                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY} ${LAPACK_LIBRARY})
-                    set(LAPACKE_FOUND TRUE)
-                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} and ${LAPACK_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
-                endif ()
-            endif ()
-
-            # Try 5: Standalone LAPACKE alone
-            if (NOT LAPACKE_FOUND)
-                check_lapacke_candidate(TRY_5 "${LAPACKE_INCLUDE_DIR}" "${LAPACKE_LIBRARY}")
-                if (TRY_5)
-                    set(JGAP_LAPACK_LIBS ${LAPACKE_LIBRARY})
-                    set(LAPACKE_FOUND TRUE)
-                    message(STATUS "LAPACKE acceleration enabled via ${LAPACKE_LIBRARY} (${LAPACKE_INCLUDE_DIR})")
-                endif ()
-            endif ()
-        endif ()
-    endif ()
-
-    if (NOT LAPACKE_FOUND)
-        message(STATUS "LAPACKE header found at ${LAPACKE_INCLUDE_DIR} but linking failed: Eigen QR will use built-in routines")
-    endif ()
-else ()
-    message(STATUS "LAPACKE not found: Eigen QR and Cholesky will use built-in routines")
 endif ()

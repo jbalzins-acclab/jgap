@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -15,19 +16,46 @@
 
 namespace jgap {
 
+    /// @brief Returns the number of parallel threads available / configured.
+    inline int getNumThreads() {
+#if defined(__APPLE__) || defined(HAS_GCD)
+        return static_cast<int>(std::thread::hardware_concurrency());
+#elif defined(_OPENMP) || defined(HAS_OPENMP)
+        return omp_get_max_threads();
+#else
+        return 1;
+#endif
+    }
+
+#if !defined(__APPLE__) && !defined(_WIN32)
+extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak));
+#endif
+
+    /// @brief Sets the number of threads used by OpenMP parallel loops.
+    /// Sets OpenBLAS to 1 thread per worker to prevent 20x20 thread oversubscription.
+    inline void setNumThreads(int num_threads) {
+#if defined(__APPLE__) || defined(HAS_GCD)
+        (void)num_threads;
+#elif defined(_OPENMP) || defined(HAS_OPENMP)
+        if (num_threads > 0) {
+            omp_set_num_threads(num_threads);
+        }
+        omp_set_max_active_levels(1);
+#else
+        (void)num_threads;
+#endif
+#if !defined(__APPLE__) && !defined(_WIN32)
+        if (openblas_set_num_threads) {
+            openblas_set_num_threads(1);
+        }
+#endif
+    }
+
     /// @brief Limits the number of threads used by @ref unseqForEach and @ref unseqForIndex.
     class GlobalThreadingControl {
     public:
         explicit GlobalThreadingControl(size_t num_threads) {
-#if defined(__APPLE__) || defined(HAS_GCD)
-            (void)num_threads;
-#elif defined(_OPENMP) || defined(HAS_OPENMP)
-            if (num_threads > 0) {
-                omp_set_num_threads(static_cast<int>(num_threads));
-            }
-#else
-            (void)num_threads;
-#endif
+            setNumThreads(static_cast<int>(num_threads));
         }
     };
 

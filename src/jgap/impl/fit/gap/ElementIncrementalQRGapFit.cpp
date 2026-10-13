@@ -35,6 +35,21 @@ namespace jgap {
             training_data.size()
         );
 
+#if defined(__APPLE__) || defined(HAS_GCD)
+        JGAP_LOG_INFO("Parallel execution backend: Grand Central Dispatch (GCD)");
+#elif defined(_OPENMP) || defined(HAS_OPENMP)
+        const int n_threads = getNumThreads();
+        JGAP_LOG_INFO("Parallel execution backend: OpenMP ({} threads)", n_threads);
+        if (n_threads <= 1) {
+            JGAP_LOG_WARN(
+                "OpenMP is running with only 1 thread! Set OMP_NUM_THREADS=<n> or call jgap.set_num_threads(<n>) to "
+                "enable multi-core parallelization."
+            );
+        }
+#else
+        JGAP_LOG_WARN("Parallel execution backend: sequential std::for_each (no multi-threading compiled)");
+#endif
+
         auto matrix_memory_space = allocateMatrixMemory(to_be_fit.components);
 
         std::vector<size_t> original_component_indices;

@@ -2,6 +2,7 @@
 jgap: Gaussian Approximation Potential framework for machine-learned interatomic potentials.
 """
 
+import os
 from typing import List, Optional, Union
 import numpy as np
 
@@ -39,9 +40,13 @@ try:
         read_atoms,
         write_atoms,
         is_lapacke_enabled,
+        is_blas_enabled,
+        is_accelerated,
+        get_num_threads,
+        set_num_threads,
     )
     from . import _jgap
-    __version__ = getattr(_jgap, "__version__", "7.2.10")
+    __version__ = getattr(_jgap, "__version__", "7.2.11")
 except ImportError as err:
     try:
         from _jgap import (
@@ -76,9 +81,13 @@ except ImportError as err:
             read_atoms,
             write_atoms,
             is_lapacke_enabled,
+            is_blas_enabled,
+            is_accelerated,
+            get_num_threads,
+            set_num_threads,
         )
         import _jgap
-        __version__ = getattr(_jgap, "__version__", "7.2.10")
+        __version__ = getattr(_jgap, "__version__", "7.2.11")
     except ImportError:
         raise ImportError(
             "Failed to load the compiled _jgap C++ extension. "
@@ -164,6 +173,14 @@ try:
 except ImportError:
     pass
 
+# Automatically configure thread pool if SLURM_CPUS_PER_TASK is defined
+_slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
+if _slurm_cpus and _slurm_cpus.isdigit():
+    try:
+        set_num_threads(int(_slurm_cpus))
+    except Exception:
+        pass
+
 __all__ = [
     "Vector3",
     "Species",
@@ -197,5 +214,9 @@ __all__ = [
     "write_atoms",
     "JGAPCalculator",
     "is_lapacke_enabled",
+    "is_blas_enabled",
+    "is_accelerated",
+    "get_num_threads",
+    "set_num_threads",
     "__version__",
 ]
