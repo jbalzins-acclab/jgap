@@ -2,7 +2,9 @@
 
 #include "jgap/core/atomic/species/composition/Species3AtomicSorted.hpp"
 #include "jgap/impl/cutoff/CosCutoff.hpp"
+#include "jgap/impl/kernels/CauchyKernel.hpp"
 #include "jgap/impl/kernels/SquaredExpKernel.hpp"
+#include "jgap/impl/kernels/WendlandKernel.hpp"
 #include "jgap/core/potentials/gap/component/ManyBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/ThreeBodyGapComponent.hpp"
 #include "jgap/core/potentials/gap/component/TwoBodyGapComponent.hpp"
@@ -11,6 +13,8 @@
 #include "jgap/impl/transform/nbody/2b/eam/PolycutoffPairFunction.hpp"
 #include "jgap/impl/transform/nbody/3b/Angle3bTransformation.hpp"
 #include "jgap/serialization/SerializationRegistry.hpp"
+
+#include <algorithm>
 
 using namespace jgap;
 
@@ -111,4 +115,85 @@ TEST(TestComponentSerialization, ThreeBody) {
             EXPECT_DOUBLE_EQ(restored->getSparsePoints()[i][d], sparse_points[i][d]);
         }
     }
+}
+
+TEST(TestComponentSerialization, NBodyTwoBodyWendland) {
+    std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}, Descriptor<2>{{2.5, 0.5}}};
+    std::vector<double> coefficients = {0.7, -0.4};
+
+    auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
+    TwoBodyGapComponent<2, WendlandKernel<1, 1>> component(
+        Species2Sorted(Species("Fe"), Species("Ni")), transform_ptr, WendlandKernel<1, 1>(12.0, {1.5}), sparse_points,
+        coefficients
+    );
+
+    auto rt = roundTrip(component, tmpFile("nbody_2b_wendland.h5"));
+    auto restored = rt.as<TwoBodyGapComponent<2, WendlandKernel<1, 1>>>();
+    ASSERT_NE(restored, nullptr);
+
+    EXPECT_NEAR(restored->getKernel().getEnergyScale(), 12.0, 1e-9);
+    EXPECT_NEAR(restored->getKernel().getLengthScales()[0], 1.5, 1e-9);
+    expectCoeffsEq(restored->getCoefficients(), coefficients);
+}
+
+TEST(TestComponentSerialization, NBodyTwoBodyCauchy) {
+    std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}};
+    std::vector<double> coefficients = {0.8};
+
+    auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
+    TwoBodyGapComponent<2, CauchyKernel<1, 1>> component(
+        Species2Sorted(Species("Fe"), Species("Cu")), transform_ptr, CauchyKernel<1, 1>(8.0, {2.0}), sparse_points,
+        coefficients
+    );
+
+    auto rt = roundTrip(component, tmpFile("nbody_2b_cauchy.h5"));
+    auto restored = rt.as<TwoBodyGapComponent<2, CauchyKernel<1, 1>>>();
+    ASSERT_NE(restored, nullptr);
+
+    EXPECT_NEAR(restored->getKernel().getEnergyScale(), 8.0, 1e-9);
+    EXPECT_NEAR(restored->getKernel().getLengthScales()[0], 2.0, 1e-9);
+    expectCoeffsEq(restored->getCoefficients(), coefficients);
+}
+
+TEST(TestComponentSerialization, DeserializationOrderInvariance) {
+    // Verifies that deserialization is invariant to the registration order of
+    // serializers in SerializationRegistry (which can vary across OSes/linkers).
+    std::vector<Descriptor<2>> sparse_points = {Descriptor<2>{{2.0, 1.0}}};
+    std::vector<double> coefficients = {0.5};
+
+    auto transform_ptr = ValuePtr<TwoBodyTransformation<2>>(PairDistanceTransformation(CosCutoff(5.0, 1.0)));
+    TwoBodyGapComponent<2, SquaredExpKernel<1, 1>> sq_comp(
+        Species2Sorted(Species("Fe"), Species("Fe")), transform_ptr, SquaredExpKernel<1, 1>(10.0, {1.3}), sparse_points,
+        coefficients
+    );
+    TwoBodyGapComponent<2, WendlandKernel<1, 1>> wend_comp(
+        Species2Sorted(Species("Fe"), Species("Fe")), transform_ptr, WendlandKernel<1, 1>(10.0, {1.3}), sparse_points,
+        coefficients
+    );
+
+    SerializationRegistry<GapComponent>::serialize(ValuePtr<GapComponent>(sq_comp), tmpFile("order_test_sq.h5"));
+    SerializationRegistry<GapComponent>::serialize(ValuePtr<GapComponent>(wend_comp), tmpFile("order_test_wend.h5"));
+
+    auto& registry = SerializationRegistry<GapComponent>::getRegistry();
+
+    // 1. Deserialization with registry in original order
+    auto d1 = SerializationRegistry<GapComponent>::deserialize(tmpFile("order_test_sq.h5"));
+    auto* r1 = d1.as<TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>>();
+    EXPECT_NE(r1, nullptr);
+    auto d2 = SerializationRegistry<GapComponent>::deserialize(tmpFile("order_test_wend.h5"));
+    auto* r2 = d2.as<TwoBodyGapComponent<2, WendlandKernel<1, 1>>>();
+    EXPECT_NE(r2, nullptr);
+
+    // 2. Reverse registry order (putting Wendland before SquaredExp or vice versa)
+    std::reverse(registry.begin(), registry.end());
+
+    auto d3 = SerializationRegistry<GapComponent>::deserialize(tmpFile("order_test_sq.h5"));
+    auto* r3 = d3.as<TwoBodyGapComponent<2, SquaredExpKernel<1, 1>>>();
+    EXPECT_NE(r3, nullptr);
+    auto d4 = SerializationRegistry<GapComponent>::deserialize(tmpFile("order_test_wend.h5"));
+    auto* r4 = d4.as<TwoBodyGapComponent<2, WendlandKernel<1, 1>>>();
+    EXPECT_NE(r4, nullptr);
+
+    // 3. Restore original order
+    std::reverse(registry.begin(), registry.end());
 }

@@ -46,7 +46,7 @@ try:
         set_num_threads,
     )
     from . import _jgap
-    __version__ = getattr(_jgap, "__version__", "7.2.11")
+    __version__ = getattr(_jgap, "__version__", "7.2.12")
 except ImportError as err:
     try:
         from _jgap import (
@@ -87,7 +87,7 @@ except ImportError as err:
             set_num_threads,
         )
         import _jgap
-        __version__ = getattr(_jgap, "__version__", "7.2.11")
+        __version__ = getattr(_jgap, "__version__", "7.2.12")
     except ImportError:
         raise ImportError(
             "Failed to load the compiled _jgap C++ extension. "
